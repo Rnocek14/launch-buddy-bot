@@ -42,6 +42,8 @@ export default function Admin() {
 
   // Email analytics
   const [emailAnalytics, setEmailAnalytics] = useState<any>(null);
+  const [emailEvents, setEmailEvents] = useState<any[]>([]);
+  const [emailEventsLoading, setEmailEventsLoading] = useState(false);
 
   // Redirect if not authenticated or not admin
   useEffect(() => {
@@ -239,6 +241,77 @@ export default function Admin() {
     }
   };
 
+  const fetchEmailEvents = async () => {
+    setEmailEventsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from("email_analytics")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(100);
+
+      if (error) throw error;
+
+      // Group events by email_id
+      const groupedEvents = data?.reduce((acc: any, event: any) => {
+        const emailId = event.email_id;
+        if (!acc[emailId]) {
+          acc[emailId] = {
+            email_id: emailId,
+            email_address: event.email_address,
+            email_subject: event.email_subject,
+            events: [],
+            sent_at: null,
+            delivered: false,
+            opened: false,
+            clicked: false,
+            bounced: false,
+            complained: false,
+            open_count: 0,
+            click_count: 0,
+          };
+        }
+
+        acc[emailId].events.push(event);
+
+        // Track event types
+        if (event.event_type === "sent") {
+          acc[emailId].sent_at = event.created_at;
+        }
+        if (event.event_type === "delivered") {
+          acc[emailId].delivered = true;
+        }
+        if (event.event_type === "opened") {
+          acc[emailId].opened = true;
+          acc[emailId].open_count++;
+        }
+        if (event.event_type === "clicked") {
+          acc[emailId].clicked = true;
+          acc[emailId].click_count++;
+        }
+        if (event.event_type === "bounced") {
+          acc[emailId].bounced = true;
+        }
+        if (event.event_type === "complained") {
+          acc[emailId].complained = true;
+        }
+
+        return acc;
+      }, {});
+
+      setEmailEvents(Object.values(groupedEvents || {}));
+    } catch (error: any) {
+      console.error("Error fetching email events:", error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch email events",
+        variant: "destructive",
+      });
+    } finally {
+      setEmailEventsLoading(false);
+    }
+  };
+
   const updateApplicationStatus = async (id: string, status: string, notes?: string) => {
     try {
       const updates: any = { status };
@@ -300,6 +373,7 @@ export default function Admin() {
       fetchWaitlist();
       fetchAlphaApplications();
       fetchEmailAnalytics();
+      fetchEmailEvents();
     }
   }, [isAdmin, authLoading]);
 
@@ -474,9 +548,109 @@ export default function Admin() {
                 <Alert>
                   <BarChart3 className="h-4 w-4" />
                   <AlertDescription>
-                    Email analytics are tracked via Resend webhooks. Make sure to configure the webhook URL in your Resend dashboard.
+                    Email analytics are tracked via Resend webhooks. Configure the webhook URL in your Resend dashboard:
+                    <code className="ml-2 text-xs">https://gqxkeezkajkiyjpnjgkx.supabase.co/functions/v1/resend-webhook</code>
                   </AlertDescription>
                 </Alert>
+
+                {/* Per-Email Analytics Table */}
+                <div className="mt-6">
+                  <h3 className="text-lg font-semibold mb-4">Individual Email Performance</h3>
+                  
+                  {emailEventsLoading ? (
+                    <div className="flex justify-center py-8">
+                      <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                    </div>
+                  ) : emailEvents.length > 0 ? (
+                    <div className="border rounded-lg">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Recipient</TableHead>
+                            <TableHead>Subject</TableHead>
+                            <TableHead>Sent At</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead>Opens</TableHead>
+                            <TableHead>Clicks</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {emailEvents.map((email: any) => (
+                            <TableRow key={email.email_id}>
+                              <TableCell className="font-medium">
+                                <div className="max-w-[200px] truncate" title={email.email_address}>
+                                  {email.email_address}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <div className="max-w-[250px] truncate" title={email.email_subject}>
+                                  {email.email_subject || "No subject"}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                {email.sent_at
+                                  ? new Date(email.sent_at).toLocaleDateString() + " " + 
+                                    new Date(email.sent_at).toLocaleTimeString()
+                                  : "—"}
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex flex-wrap gap-1">
+                                  {email.delivered && (
+                                    <Badge variant="default" className="text-xs">
+                                      Delivered
+                                    </Badge>
+                                  )}
+                                  {email.bounced && (
+                                    <Badge variant="destructive" className="text-xs">
+                                      Bounced
+                                    </Badge>
+                                  )}
+                                  {email.complained && (
+                                    <Badge variant="destructive" className="text-xs">
+                                      Spam
+                                    </Badge>
+                                  )}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-1">
+                                  {email.opened ? (
+                                    <>
+                                      <Eye className="w-4 h-4 text-green-500" />
+                                      <span className="text-sm">{email.open_count}x</span>
+                                    </>
+                                  ) : (
+                                    <span className="text-sm text-muted-foreground">—</span>
+                                  )}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-1">
+                                  {email.clicked ? (
+                                    <>
+                                      <MousePointerClick className="w-4 h-4 text-blue-500" />
+                                      <span className="text-sm">{email.click_count}x</span>
+                                    </>
+                                  ) : (
+                                    <span className="text-sm text-muted-foreground">—</span>
+                                  )}
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground border rounded-lg">
+                      No email events tracked yet. Emails will appear here once they're sent.
+                    </div>
+                  )}
+                  
+                  <p className="text-sm text-muted-foreground mt-4">
+                    Showing last 100 emails. Individual opens and clicks are tracked for detailed engagement metrics.
+                  </p>
+                </div>
               </div>
             ) : (
               <div className="text-center py-8 text-muted-foreground">
