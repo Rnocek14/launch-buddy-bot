@@ -48,8 +48,19 @@ export const WaitlistForm = () => {
         setIsSuccess(true);
         toast({
           title: "You're on the list!",
-          description: "We'll notify you when we launch.",
+          description: "Check your email for confirmation.",
         });
+        
+        // Send welcome email in background (don't block on success)
+        supabase.functions
+          .invoke("send-welcome-email", {
+            body: { email: validation.data },
+          })
+          .catch((emailError) => {
+            console.error("Failed to send welcome email:", emailError);
+            // Don't show error to user - email is secondary
+          });
+        
         setEmail("");
       }
     } catch (error) {
