@@ -32,16 +32,29 @@ const handler = async (req: Request): Promise<Response> => {
       // Send to specific email
       emailsToSend = [email];
     } else if (!testMode) {
-      // Fetch all waitlist emails
-      const { data: waitlist, error } = await supabase
+      // Fetch all waitlist emails that haven't unsubscribed
+      const { data: waitlist, error: waitlistError } = await supabase
         .from("waitlist")
         .select("email");
 
-      if (error) {
-        throw new Error(`Failed to fetch waitlist: ${error.message}`);
+      if (waitlistError) {
+        throw new Error(`Failed to fetch waitlist: ${waitlistError.message}`);
       }
 
-      emailsToSend = waitlist?.map((entry) => entry.email) || [];
+      // Filter out unsubscribed users
+      const { data: preferences, error: prefError } = await supabase
+        .from("email_preferences")
+        .select("email, unsubscribed")
+        .eq("unsubscribed", true);
+
+      if (prefError) {
+        console.error("Failed to fetch preferences:", prefError);
+      }
+
+      const unsubscribedEmails = new Set(preferences?.map(p => p.email) || []);
+      emailsToSend = waitlist
+        ?.map((entry) => entry.email)
+        .filter(email => !unsubscribedEmails.has(email)) || [];
     } else {
       throw new Error("Either provide an email or set testMode to false");
     }
@@ -49,6 +62,35 @@ const handler = async (req: Request): Promise<Response> => {
     const results = [];
 
     for (const recipientEmail of emailsToSend) {
+      // Get or create preference token for this email
+      let token: string;
+      const { data: existingPref } = await supabase
+        .from("email_preferences")
+        .select("token")
+        .eq("email", recipientEmail)
+        .single();
+
+      if (existingPref) {
+        token = existingPref.token;
+      } else {
+        // Create new preference record
+        const { data: newPref, error: insertError } = await supabase
+          .from("email_preferences")
+          .insert({ email: recipientEmail })
+          .select("token")
+          .single();
+
+        if (insertError || !newPref) {
+          console.error(`Failed to create preferences for ${recipientEmail}:`, insertError);
+          continue;
+        }
+        token = newPref.token;
+      }
+
+      const baseUrl = Deno.env.get("SUPABASE_URL")?.replace(".supabase.co", ".lovable.app") || "";
+      const preferencesUrl = `${baseUrl}/preferences?token=${token}`;
+      const unsubscribeUrl = `${baseUrl}/unsubscribe?token=${token}`;
+
       const emailResponse = await resend.emails.send({
         from: "Footprint Finder <onboarding@resend.dev>",
         to: [recipientEmail],
@@ -175,7 +217,7 @@ const handler = async (req: Request): Promise<Response> => {
               
               <div class="footer">
                 <p>You're receiving this because you joined our waitlist.</p>
-                <p>Want fewer emails? <a href="#">Manage preferences</a> | <a href="#">Unsubscribe</a></p>
+                <p>Want fewer emails? <a href="${preferencesUrl}">Manage preferences</a> | <a href="${unsubscribeUrl}">Unsubscribe</a></p>
               </div>
             </body>
           </html>

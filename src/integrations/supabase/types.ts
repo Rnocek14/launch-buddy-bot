@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      email_preferences: {
+        Row: {
+          created_at: string
+          email: string
+          email_frequency: string
+          id: string
+          token: string
+          unsubscribed: boolean
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          email_frequency?: string
+          id?: string
+          token?: string
+          unsubscribed?: boolean
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          email_frequency?: string
+          id?: string
+          token?: string
+          unsubscribed?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
       waitlist: {
         Row: {
           created_at: string

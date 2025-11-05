@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.send-progress-email]
 verify_jwt = false
+
+[functions.update-email-preferences]
+verify_jwt = false
