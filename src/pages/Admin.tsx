@@ -1,19 +1,21 @@
 import { useState, useEffect } from "react";
-import { Shield, Users, Mail, MailX, Send, Loader2, Download } from "lucide-react";
+import { Shield, Users, Mail, MailX, Send, Loader2, Download, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Link } from "react-router-dom";
+import { useAdminAuth } from "@/hooks/useAdminAuth";
+import { Link, useNavigate } from "react-router-dom";
 
 export default function Admin() {
   const { toast } = useToast();
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [password, setPassword] = useState("");
+  const navigate = useNavigate();
+  const { user, isAdmin, loading: authLoading, signOut } = useAdminAuth();
   const [loading, setLoading] = useState(false);
   
   // Stats
@@ -29,18 +31,21 @@ export default function Admin() {
   const [testEmail, setTestEmail] = useState("");
   const [sendingEmail, setSendingEmail] = useState(false);
 
-  const ADMIN_PASSWORD = "footprint2025"; // In production, use env variable
-
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (password === ADMIN_PASSWORD) {
-      setIsAuthenticated(true);
-      localStorage.setItem("admin_auth", "true");
-      toast({ title: "Access granted", description: "Welcome to the admin dashboard" });
-    } else {
-      toast({ title: "Access denied", description: "Invalid password", variant: "destructive" });
+  // Redirect if not authenticated or not admin
+  useEffect(() => {
+    if (!authLoading) {
+      if (!user) {
+        navigate("/auth");
+      } else if (!isAdmin) {
+        toast({
+          title: "Access Denied",
+          description: "You don't have admin privileges",
+          variant: "destructive",
+        });
+        navigate("/");
+      }
     }
-  };
+  }, [user, isAdmin, authLoading, navigate, toast]);
 
   const fetchStats = async () => {
     try {
@@ -163,53 +168,22 @@ export default function Admin() {
   };
 
   useEffect(() => {
-    const auth = localStorage.getItem("admin_auth");
-    if (auth === "true") {
-      setIsAuthenticated(true);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (isAuthenticated) {
+    if (isAdmin && !authLoading) {
       fetchStats();
       fetchWaitlist();
     }
-  }, [isAuthenticated]);
+  }, [isAdmin, authLoading]);
 
-  if (!isAuthenticated) {
+  if (authLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4 bg-background">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <Shield className="w-12 h-12 text-primary mx-auto mb-4" />
-            <CardTitle>Admin Access</CardTitle>
-            <CardDescription>Enter password to access the admin dashboard</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleLogin} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter admin password"
-                />
-              </div>
-              <Button type="submit" className="w-full">
-                Login
-              </Button>
-              <Link to="/" className="block">
-                <Button variant="ghost" className="w-full">
-                  Back to Home
-                </Button>
-              </Link>
-            </form>
-          </CardContent>
-        </Card>
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     );
+  }
+
+  if (!user || !isAdmin) {
+    return null; // Will redirect via useEffect
   }
 
   const filteredWaitlist = waitlist.filter(entry =>
@@ -226,12 +200,27 @@ export default function Admin() {
               <Shield className="w-8 h-8 text-primary" />
               Admin Dashboard
             </h1>
-            <p className="text-muted-foreground">Manage your waitlist and email campaigns</p>
+            <p className="text-muted-foreground">
+              Manage your waitlist and email campaigns • Logged in as {user?.email}
+            </p>
           </div>
-          <Link to="/">
-            <Button variant="outline">Back to Home</Button>
-          </Link>
+          <div className="flex gap-2">
+            <Link to="/">
+              <Button variant="outline">Back to Home</Button>
+            </Link>
+            <Button variant="ghost" onClick={signOut}>
+              <LogOut className="w-4 h-4 mr-2" />
+              Sign Out
+            </Button>
+          </div>
         </div>
+
+        <Alert>
+          <Shield className="h-4 w-4" />
+          <AlertDescription>
+            To grant admin access to other users, manually add their user ID to the user_roles table with role='admin' in Supabase.
+          </AlertDescription>
+        </Alert>
 
         {/* Stats Cards */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
