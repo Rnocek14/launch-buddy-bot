@@ -1,5 +1,6 @@
 import { Shield } from "lucide-react";
 import { WaitlistForm } from "./WaitlistForm";
+import { LiveCounter } from "./LiveCounter";
 
 export const Hero = () => {
   return (
@@ -32,9 +33,7 @@ export const Hero = () => {
 
         <WaitlistForm />
 
-        <p className="text-sm text-muted-foreground mt-6">
-          Join 500+ privacy-conscious users taking back control of their data
-        </p>
+        <LiveCounter />
       </div>
     </section>
   );
