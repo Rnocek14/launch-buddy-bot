@@ -1,6 +1,8 @@
-import { Shield } from "lucide-react";
+import { Shield, Rocket } from "lucide-react";
 import { WaitlistForm } from "./WaitlistForm";
 import { LiveCounter } from "./LiveCounter";
+import { Link } from "react-router-dom";
+import { Button } from "./ui/button";
 
 export const Hero = () => {
   return (
@@ -32,6 +34,15 @@ export const Hero = () => {
         </p>
 
         <WaitlistForm />
+
+        <div className="mt-6">
+          <Link to="/alpha">
+            <Button variant="ghost" size="lg" className="gap-2">
+              <Rocket className="w-4 h-4" />
+              Apply for Alpha Access
+            </Button>
+          </Link>
+        </div>
 
         <LiveCounter />
       </div>

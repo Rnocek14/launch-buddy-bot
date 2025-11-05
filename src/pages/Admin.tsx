@@ -1,12 +1,15 @@
 import { useState, useEffect } from "react";
-import { Shield, Users, Mail, MailX, Send, Loader2, Download, LogOut } from "lucide-react";
+import { Shield, Users, Mail, MailX, Send, Loader2, Download, LogOut, Rocket, Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
@@ -30,6 +33,12 @@ export default function Admin() {
   // Email sending
   const [testEmail, setTestEmail] = useState("");
   const [sendingEmail, setSendingEmail] = useState(false);
+
+  // Alpha applications
+  const [alphaApplications, setAlphaApplications] = useState<any[]>([]);
+  const [alphaStats, setAlphaStats] = useState({ pending: 0, approved: 0, rejected: 0 });
+  const [selectedApplication, setSelectedApplication] = useState<any>(null);
+  const [adminNotes, setAdminNotes] = useState("");
 
   // Redirect if not authenticated or not admin
   useEffect(() => {
@@ -69,6 +78,19 @@ export default function Admin() {
 
         setTotalUnsubscribed(unsubscribed);
         setFrequencyStats({ weekly, monthly, never });
+      }
+
+      // Fetch alpha application stats
+      const { data: applications } = await supabase
+        .from("alpha_applications")
+        .select("status");
+
+      if (applications) {
+        const pending = applications.filter(a => a.status === "pending").length;
+        const approved = applications.filter(a => a.status === "approved").length;
+        const rejected = applications.filter(a => a.status === "rejected").length;
+        
+        setAlphaStats({ pending, approved, rejected });
       }
     } catch (error) {
       console.error("Error fetching stats:", error);
@@ -167,10 +189,61 @@ export default function Admin() {
     a.click();
   };
 
+  const fetchAlphaApplications = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("alpha_applications")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+
+      setAlphaApplications(data || []);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: "Failed to fetch alpha applications",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const updateApplicationStatus = async (id: string, status: string, notes?: string) => {
+    try {
+      const updates: any = { status };
+      if (notes !== undefined) {
+        updates.admin_notes = notes;
+      }
+
+      const { error } = await supabase
+        .from("alpha_applications")
+        .update(updates)
+        .eq("id", id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Status Updated",
+        description: `Application ${status}`,
+      });
+
+      fetchAlphaApplications();
+      fetchStats();
+      setSelectedApplication(null);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: "Failed to update application",
+        variant: "destructive",
+      });
+    }
+  };
+
   useEffect(() => {
     if (isAdmin && !authLoading) {
       fetchStats();
       fetchWaitlist();
+      fetchAlphaApplications();
     }
   }, [isAdmin, authLoading]);
 
@@ -273,6 +346,228 @@ export default function Admin() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Alpha Applications Management */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <Rocket className="w-5 h-5" />
+                  Alpha Access Applications
+                </CardTitle>
+                <CardDescription>
+                  {alphaStats.pending} pending • {alphaStats.approved} approved • {alphaStats.rejected} rejected
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <Tabs defaultValue="pending">
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="pending">
+                  Pending ({alphaStats.pending})
+                </TabsTrigger>
+                <TabsTrigger value="approved">
+                  Approved ({alphaStats.approved})
+                </TabsTrigger>
+                <TabsTrigger value="rejected">
+                  Rejected ({alphaStats.rejected})
+                </TabsTrigger>
+              </TabsList>
+
+              {["pending", "approved", "rejected"].map((status) => (
+                <TabsContent key={status} value={status} className="mt-4">
+                  <div className="border rounded-lg">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Name</TableHead>
+                          <TableHead>Email</TableHead>
+                          <TableHead>Applied</TableHead>
+                          <TableHead>Platforms</TableHead>
+                          <TableHead>Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {alphaApplications
+                          .filter((app) => app.status === status)
+                          .map((app) => (
+                            <TableRow key={app.id}>
+                              <TableCell className="font-medium">{app.full_name}</TableCell>
+                              <TableCell>{app.email}</TableCell>
+                              <TableCell>
+                                {new Date(app.created_at).toLocaleDateString()}
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex gap-1">
+                                  {app.platform_preferences?.map((p: string) => (
+                                    <Badge key={p} variant="outline" className="text-xs">
+                                      {p}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <Dialog>
+                                  <DialogTrigger asChild>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => {
+                                        setSelectedApplication(app);
+                                        setAdminNotes(app.admin_notes || "");
+                                      }}
+                                    >
+                                      View Details
+                                    </Button>
+                                  </DialogTrigger>
+                                  <DialogContent className="max-w-2xl">
+                                    <DialogHeader>
+                                      <DialogTitle>Application Details</DialogTitle>
+                                      <DialogDescription>
+                                        Review and manage this alpha access application
+                                      </DialogDescription>
+                                    </DialogHeader>
+                                    {selectedApplication && (
+                                      <div className="space-y-4">
+                                        <div className="grid grid-cols-2 gap-4">
+                                          <div>
+                                            <Label className="text-sm font-semibold">Full Name</Label>
+                                            <p className="text-sm">{selectedApplication.full_name}</p>
+                                          </div>
+                                          <div>
+                                            <Label className="text-sm font-semibold">Email</Label>
+                                            <p className="text-sm">{selectedApplication.email}</p>
+                                          </div>
+                                          <div>
+                                            <Label className="text-sm font-semibold">Applied On</Label>
+                                            <p className="text-sm">
+                                              {new Date(selectedApplication.created_at).toLocaleString()}
+                                            </p>
+                                          </div>
+                                          <div>
+                                            <Label className="text-sm font-semibold">Status</Label>
+                                            <Badge
+                                              variant={
+                                                selectedApplication.status === "approved"
+                                                  ? "default"
+                                                  : selectedApplication.status === "rejected"
+                                                  ? "destructive"
+                                                  : "outline"
+                                              }
+                                            >
+                                              {selectedApplication.status}
+                                            </Badge>
+                                          </div>
+                                        </div>
+
+                                        <div>
+                                          <Label className="text-sm font-semibold">Platform Preferences</Label>
+                                          <div className="flex gap-2 mt-1">
+                                            {selectedApplication.platform_preferences?.map((p: string) => (
+                                              <Badge key={p} variant="secondary">
+                                                {p}
+                                              </Badge>
+                                            ))}
+                                          </div>
+                                        </div>
+
+                                        {selectedApplication.current_tools && (
+                                          <div>
+                                            <Label className="text-sm font-semibold">Current Tools</Label>
+                                            <p className="text-sm mt-1">{selectedApplication.current_tools}</p>
+                                          </div>
+                                        )}
+
+                                        <div>
+                                          <Label className="text-sm font-semibold">Use Case</Label>
+                                          <p className="text-sm mt-1 whitespace-pre-wrap">
+                                            {selectedApplication.use_case}
+                                          </p>
+                                        </div>
+
+                                        <div>
+                                          <Label htmlFor="admin-notes">Admin Notes</Label>
+                                          <Textarea
+                                            id="admin-notes"
+                                            value={adminNotes}
+                                            onChange={(e) => setAdminNotes(e.target.value)}
+                                            placeholder="Add internal notes about this application..."
+                                            rows={3}
+                                          />
+                                        </div>
+
+                                        <div className="flex gap-2">
+                                          {selectedApplication.status !== "approved" && (
+                                            <Button
+                                              onClick={() =>
+                                                updateApplicationStatus(
+                                                  selectedApplication.id,
+                                                  "approved",
+                                                  adminNotes
+                                                )
+                                              }
+                                              className="flex-1"
+                                            >
+                                              <Check className="w-4 h-4 mr-2" />
+                                              Approve
+                                            </Button>
+                                          )}
+                                          {selectedApplication.status !== "rejected" && (
+                                            <Button
+                                              onClick={() =>
+                                                updateApplicationStatus(
+                                                  selectedApplication.id,
+                                                  "rejected",
+                                                  adminNotes
+                                                )
+                                              }
+                                              variant="destructive"
+                                              className="flex-1"
+                                            >
+                                              <X className="w-4 h-4 mr-2" />
+                                              Reject
+                                            </Button>
+                                          )}
+                                          {selectedApplication.status !== "pending" && (
+                                            <Button
+                                              onClick={() =>
+                                                updateApplicationStatus(
+                                                  selectedApplication.id,
+                                                  "pending",
+                                                  adminNotes
+                                                )
+                                              }
+                                              variant="outline"
+                                              className="flex-1"
+                                            >
+                                              Reset to Pending
+                                            </Button>
+                                          )}
+                                        </div>
+                                      </div>
+                                    )}
+                                  </DialogContent>
+                                </Dialog>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        {alphaApplications.filter((app) => app.status === status).length === 0 && (
+                          <TableRow>
+                            <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                              No {status} applications
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </TabsContent>
+              ))}
+            </Tabs>
+          </CardContent>
+        </Card>
 
         {/* Email Campaign Controls */}
         <Card>

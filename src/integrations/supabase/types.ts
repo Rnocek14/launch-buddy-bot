@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      alpha_applications: {
+        Row: {
+          admin_notes: string | null
+          created_at: string
+          current_tools: string | null
+          email: string
+          full_name: string
+          id: string
+          platform_preferences: string[] | null
+          status: Database["public"]["Enums"]["alpha_status"]
+          updated_at: string
+          use_case: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          created_at?: string
+          current_tools?: string | null
+          email: string
+          full_name: string
+          id?: string
+          platform_preferences?: string[] | null
+          status?: Database["public"]["Enums"]["alpha_status"]
+          updated_at?: string
+          use_case: string
+        }
+        Update: {
+          admin_notes?: string | null
+          created_at?: string
+          current_tools?: string | null
+          email?: string
+          full_name?: string
+          id?: string
+          platform_preferences?: string[] | null
+          status?: Database["public"]["Enums"]["alpha_status"]
+          updated_at?: string
+          use_case?: string
+        }
+        Relationships: []
+      }
       email_preferences: {
         Row: {
           created_at: string
@@ -121,6 +160,7 @@ export type Database = {
       }
     }
     Enums: {
+      alpha_status: "pending" | "approved" | "rejected"
       app_role: "admin" | "user"
     }
     CompositeTypes: {
@@ -249,6 +289,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      alpha_status: ["pending", "approved", "rejected"],
       app_role: ["admin", "user"],
     },
   },
