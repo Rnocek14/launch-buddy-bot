@@ -20,7 +20,7 @@ const features = [
   {
     icon: Shield,
     title: "Privacy First",
-    description: "Your data never leaves your device. All scanning happens locally with zero data collection.",
+    description: "Secure server-side scanning with encryption. Your email content is never stored—only service names are saved.",
   },
   {
     icon: Zap,

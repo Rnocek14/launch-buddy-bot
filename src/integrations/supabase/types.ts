@@ -146,6 +146,36 @@ export type Database = {
         }
         Relationships: []
       }
+      service_catalog: {
+        Row: {
+          category: string | null
+          created_at: string
+          domain: string
+          homepage_url: string | null
+          id: string
+          logo_url: string | null
+          name: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          domain: string
+          homepage_url?: string | null
+          id?: string
+          logo_url?: string | null
+          name: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          domain?: string
+          homepage_url?: string | null
+          id?: string
+          logo_url?: string | null
+          name?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -166,6 +196,35 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      user_services: {
+        Row: {
+          discovered_at: string
+          last_scanned_at: string
+          service_id: string
+          user_id: string
+        }
+        Insert: {
+          discovered_at?: string
+          last_scanned_at?: string
+          service_id: string
+          user_id: string
+        }
+        Update: {
+          discovered_at?: string
+          last_scanned_at?: string
+          service_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_services_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "service_catalog"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       waitlist: {
         Row: {

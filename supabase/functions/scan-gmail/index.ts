@@ -1,0 +1,153 @@
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+
+interface ScanRequest {
+  accessToken: string;
+}
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      throw new Error("Missing authorization header");
+    }
+
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_ANON_KEY")!,
+      { global: { headers: { Authorization: authHeader } } }
+    );
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      throw new Error("Unauthorized");
+    }
+
+    const { accessToken } = await req.json() as ScanRequest;
+    if (!accessToken) {
+      throw new Error("Missing Gmail access token");
+    }
+
+    console.log(`Starting scan for user ${user.id}`);
+
+    // Query Gmail for welcome/confirmation emails
+    const gmailQuery = 'subject:(welcome OR "thank you for signing up" OR "confirm your" OR "verify your email" OR "account created") newer_than:2y';
+    const messagesResponse = await fetch(
+      `https://gmail.googleapis.com/gmail/v1/users/me/messages?q=${encodeURIComponent(gmailQuery)}&maxResults=200`,
+      { headers: { Authorization: `Bearer ${accessToken}` } }
+    );
+
+    if (!messagesResponse.ok) {
+      const error = await messagesResponse.text();
+      console.error("Gmail API error:", error);
+      throw new Error(`Gmail API failed: ${messagesResponse.status}`);
+    }
+
+    const { messages } = await messagesResponse.json();
+    if (!messages || messages.length === 0) {
+      console.log("No messages found");
+      return new Response(
+        JSON.stringify({ servicesFound: 0, message: "No signup emails found in the last 2 years" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
+      );
+    }
+
+    console.log(`Found ${messages.length} candidate emails`);
+
+    // Fetch service catalog
+    const { data: catalog, error: catalogError } = await supabase
+      .from("service_catalog")
+      .select("id, domain, name");
+
+    if (catalogError) throw catalogError;
+
+    const domainMap = new Map(catalog.map(s => [s.domain.toLowerCase(), s]));
+    const discoveredServices = new Set<string>();
+    const batchSize = 10;
+
+    // Process messages in batches
+    for (let i = 0; i < messages.length; i += batchSize) {
+      const batch = messages.slice(i, i + batchSize);
+      
+      await Promise.all(batch.map(async (msg: any) => {
+        try {
+          const msgResponse = await fetch(
+            `https://gmail.googleapis.com/gmail/v1/users/me/messages/${msg.id}?format=metadata&metadataHeaders=From`,
+            { headers: { Authorization: `Bearer ${accessToken}` } }
+          );
+
+          if (!msgResponse.ok) return;
+
+          const msgData = await msgResponse.json();
+          const fromHeader = msgData.payload?.headers?.find((h: any) => h.name === "From");
+          if (!fromHeader) return;
+
+          // Extract email from "Name <email@domain.com>" format
+          const emailMatch = fromHeader.value.match(/<(.+?)>|([^\s<>]+@[^\s<>]+)/);
+          if (!emailMatch) return;
+
+          const email = (emailMatch[1] || emailMatch[2]).toLowerCase();
+          const domain = email.split("@")[1];
+
+          // Match exact domain or base domain (e.g., mail.google.com -> google.com)
+          const baseDomain = domain.split(".").slice(-2).join(".");
+          
+          const service = domainMap.get(domain) || domainMap.get(baseDomain);
+          if (service) {
+            discoveredServices.add(service.id);
+          }
+        } catch (err) {
+          console.error(`Error processing message ${msg.id}:`, err);
+        }
+      }));
+    }
+
+    console.log(`Discovered ${discoveredServices.size} unique services`);
+
+    // Upsert into user_services
+    const servicesToInsert = Array.from(discoveredServices).map(serviceId => ({
+      user_id: user.id,
+      service_id: serviceId,
+      last_scanned_at: new Date().toISOString()
+    }));
+
+    if (servicesToInsert.length > 0) {
+      const { error: insertError } = await supabase
+        .from("user_services")
+        .upsert(servicesToInsert, { 
+          onConflict: "user_id,service_id",
+          ignoreDuplicates: false 
+        });
+
+      if (insertError) {
+        console.error("Insert error:", insertError);
+        throw insertError;
+      }
+    }
+
+    console.log(`Successfully saved ${discoveredServices.size} services for user ${user.id}`);
+
+    return new Response(
+      JSON.stringify({ 
+        servicesFound: discoveredServices.size,
+        message: `Found ${discoveredServices.size} accounts in your inbox`
+      }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
+    );
+
+  } catch (error: any) {
+    console.error("Scan error:", error);
+    return new Response(
+      JSON.stringify({ error: error.message }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+});

@@ -8,6 +8,7 @@ import { ThemeProvider } from "next-themes";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Admin from "./pages/Admin";
+import Dashboard from "./pages/Dashboard";
 import AlphaAccess from "./pages/AlphaAccess";
 import Unsubscribe from "./pages/Unsubscribe";
 import Preferences from "./pages/Preferences";
@@ -26,6 +27,7 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/admin" element={<Admin />} />
+            <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/alpha" element={<AlphaAccess />} />
             <Route path="/unsubscribe" element={<Unsubscribe />} />
             <Route path="/preferences" element={<Preferences />} />
