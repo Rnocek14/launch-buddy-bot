@@ -35,9 +35,15 @@ export const Hero = () => {
 
         <WaitlistForm />
 
-        <div className="mt-6">
+        <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center items-center">
+          <Link to="/dashboard">
+            <Button size="lg" className="gap-2 bg-primary hover:bg-primary/90">
+              <Shield className="w-4 h-4" />
+              Try Scanner Now
+            </Button>
+          </Link>
           <Link to="/alpha">
-            <Button variant="ghost" size="lg" className="gap-2">
+            <Button variant="outline" size="lg" className="gap-2">
               <Rocket className="w-4 h-4" />
               Apply for Alpha Access
             </Button>

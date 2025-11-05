@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Shield, Users, Mail, MailX, Send, Loader2, Download, LogOut, Rocket, Check, X, BarChart3, TrendingUp, MousePointerClick, Eye } from "lucide-react";
+import { Shield, Users, Mail, MailX, Send, Loader2, Download, LogOut, Rocket, Check, X, BarChart3, TrendingUp, MousePointerClick, Eye, ScanSearch } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -44,6 +44,14 @@ export default function Admin() {
   const [emailAnalytics, setEmailAnalytics] = useState<any>(null);
   const [emailEvents, setEmailEvents] = useState<any[]>([]);
   const [emailEventsLoading, setEmailEventsLoading] = useState(false);
+
+  // Scanner analytics
+  const [scannerStats, setScannerStats] = useState({
+    totalUsers: 0,
+    totalScans: 0,
+    avgAccountsPerUser: 0,
+    topServices: [] as Array<{ name: string; count: number; logo_url: string }>
+  });
 
   // Redirect if not authenticated or not admin
   useEffect(() => {
@@ -367,6 +375,73 @@ export default function Admin() {
     }
   };
 
+  const fetchScannerStats = async () => {
+    try {
+      // Get total users who have scanned
+      const { data: userServicesData, error: usersError } = await supabase
+        .from("user_services")
+        .select("user_id", { count: "exact", head: false });
+
+      if (usersError) throw usersError;
+
+      const uniqueUsers = new Set(userServicesData?.map(us => us.user_id) || []);
+      const totalUsers = uniqueUsers.size;
+
+      // Get total accounts discovered
+      const { count: totalScans, error: scansError } = await supabase
+        .from("user_services")
+        .select("*", { count: "exact", head: true });
+
+      if (scansError) throw scansError;
+
+      // Calculate average accounts per user
+      const avgAccountsPerUser = totalUsers > 0 ? Math.round((totalScans || 0) / totalUsers) : 0;
+
+      // Get most discovered services (top 10)
+      const { data: topServicesData, error: topError } = await supabase
+        .from("user_services")
+        .select(`
+          service_id,
+          service_catalog (
+            name,
+            logo_url
+          )
+        `);
+
+      if (topError) throw topError;
+
+      // Count occurrences of each service
+      const serviceCounts = new Map<string, { name: string; count: number; logo_url: string }>();
+      
+      topServicesData?.forEach((item: any) => {
+        const serviceId = item.service_id;
+        const serviceName = item.service_catalog.name;
+        const logoUrl = item.service_catalog.logo_url;
+        
+        if (serviceCounts.has(serviceId)) {
+          serviceCounts.get(serviceId)!.count++;
+        } else {
+          serviceCounts.set(serviceId, { name: serviceName, count: 1, logo_url: logoUrl });
+        }
+      });
+
+      // Sort and get top 10
+      const topServices = Array.from(serviceCounts.values())
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 10);
+
+      setScannerStats({
+        totalUsers,
+        totalScans: totalScans || 0,
+        avgAccountsPerUser,
+        topServices
+      });
+
+    } catch (error) {
+      console.error("Error fetching scanner stats:", error);
+    }
+  };
+
   useEffect(() => {
     if (isAdmin && !authLoading) {
       fetchStats();
@@ -374,6 +449,7 @@ export default function Admin() {
       fetchAlphaApplications();
       fetchEmailAnalytics();
       fetchEmailEvents();
+      fetchScannerStats();
     }
   }, [isAdmin, authLoading]);
 
@@ -476,6 +552,95 @@ export default function Admin() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Scanner Analytics */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <ScanSearch className="w-5 h-5" />
+              Scanner Analytics
+            </CardTitle>
+            <CardDescription>Track footprint scanner usage and discovered accounts</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-6">
+              {/* Scanner Stats Grid */}
+              <div className="grid gap-4 md:grid-cols-3">
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Users Scanned</CardTitle>
+                    <Users className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{scannerStats.totalUsers}</div>
+                    <p className="text-xs text-muted-foreground">
+                      Total users who ran scanner
+                    </p>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Total Accounts</CardTitle>
+                    <Shield className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{scannerStats.totalScans}</div>
+                    <p className="text-xs text-muted-foreground">
+                      Accounts discovered across all users
+                    </p>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Avg per User</CardTitle>
+                    <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{scannerStats.avgAccountsPerUser}</div>
+                    <p className="text-xs text-muted-foreground">
+                      Average accounts per user
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Top Discovered Services */}
+              {scannerStats.topServices.length > 0 && (
+                <div>
+                  <h3 className="text-lg font-semibold mb-4">Most Discovered Services</h3>
+                  <div className="grid gap-3 md:grid-cols-2">
+                    {scannerStats.topServices.map((service, index) => (
+                      <div 
+                        key={index}
+                        className="flex items-center gap-3 p-3 rounded-lg border border-border hover:border-primary/50 transition-colors"
+                      >
+                        <div className="flex items-center justify-center w-8 h-8 rounded bg-primary/10 text-primary font-semibold text-sm">
+                          {index + 1}
+                        </div>
+                        <img 
+                          src={service.logo_url}
+                          alt={service.name}
+                          className="w-10 h-10 rounded object-cover"
+                          onError={(e) => {
+                            e.currentTarget.src = "/placeholder.svg";
+                          }}
+                        />
+                        <div className="flex-1">
+                          <p className="font-semibold text-sm">{service.name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {service.count} {service.count === 1 ? 'user' : 'users'}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Email Analytics */}
         <Card>
