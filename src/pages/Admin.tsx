@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Shield, Users, Mail, MailX, Send, Loader2, Download, LogOut, Rocket, Check, X } from "lucide-react";
+import { Shield, Users, Mail, MailX, Send, Loader2, Download, LogOut, Rocket, Check, X, BarChart3, TrendingUp, MousePointerClick, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -39,6 +39,9 @@ export default function Admin() {
   const [alphaStats, setAlphaStats] = useState({ pending: 0, approved: 0, rejected: 0 });
   const [selectedApplication, setSelectedApplication] = useState<any>(null);
   const [adminNotes, setAdminNotes] = useState("");
+
+  // Email analytics
+  const [emailAnalytics, setEmailAnalytics] = useState<any>(null);
 
   // Redirect if not authenticated or not admin
   useEffect(() => {
@@ -208,6 +211,34 @@ export default function Admin() {
     }
   };
 
+  const fetchEmailAnalytics = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("email_analytics_summary")
+        .select("*")
+        .single();
+
+      if (error) throw error;
+
+      setEmailAnalytics(data);
+    } catch (error: any) {
+      console.error("Error fetching email analytics:", error);
+      // Set default values if no data exists yet
+      setEmailAnalytics({
+        total_sent: 0,
+        total_delivered: 0,
+        total_opened: 0,
+        total_clicked: 0,
+        total_bounced: 0,
+        total_complained: 0,
+        unique_opens: 0,
+        unique_clicks: 0,
+        open_rate: 0,
+        click_rate: 0,
+      });
+    }
+  };
+
   const updateApplicationStatus = async (id: string, status: string, notes?: string) => {
     try {
       const updates: any = { status };
@@ -268,6 +299,7 @@ export default function Admin() {
       fetchStats();
       fetchWaitlist();
       fetchAlphaApplications();
+      fetchEmailAnalytics();
     }
   }, [isAdmin, authLoading]);
 
@@ -370,6 +402,89 @@ export default function Admin() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Email Analytics */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <BarChart3 className="w-5 h-5" />
+              Email Analytics
+            </CardTitle>
+            <CardDescription>Track email delivery, opens, and engagement</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {emailAnalytics ? (
+              <div className="space-y-6">
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium">Delivered</CardTitle>
+                      <Mail className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">{emailAnalytics.total_delivered || 0}</div>
+                      <p className="text-xs text-muted-foreground">
+                        of {emailAnalytics.total_sent || 0} sent
+                      </p>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium">Open Rate</CardTitle>
+                      <Eye className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">{emailAnalytics.open_rate || 0}%</div>
+                      <p className="text-xs text-muted-foreground">
+                        {emailAnalytics.total_opened || 0} opens ({emailAnalytics.unique_opens || 0} unique)
+                      </p>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium">Click Rate</CardTitle>
+                      <MousePointerClick className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">{emailAnalytics.click_rate || 0}%</div>
+                      <p className="text-xs text-muted-foreground">
+                        {emailAnalytics.total_clicked || 0} clicks ({emailAnalytics.unique_clicks || 0} unique)
+                      </p>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium">Issues</CardTitle>
+                      <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">
+                        {(emailAnalytics.total_bounced || 0) + (emailAnalytics.total_complained || 0)}
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {emailAnalytics.total_bounced || 0} bounced, {emailAnalytics.total_complained || 0} complaints
+                      </p>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                <Alert>
+                  <BarChart3 className="h-4 w-4" />
+                  <AlertDescription>
+                    Email analytics are tracked via Resend webhooks. Make sure to configure the webhook URL in your Resend dashboard.
+                  </AlertDescription>
+                </Alert>
+              </div>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                Loading analytics...
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Alpha Applications Management */}
         <Card>
