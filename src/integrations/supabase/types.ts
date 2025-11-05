@@ -53,6 +53,45 @@ export type Database = {
         }
         Relationships: []
       }
+      email_analytics: {
+        Row: {
+          created_at: string
+          email_address: string
+          email_id: string
+          email_subject: string | null
+          event_type: Database["public"]["Enums"]["email_event_type"]
+          id: string
+          ip_address: string | null
+          link_url: string | null
+          metadata: Json | null
+          user_agent: string | null
+        }
+        Insert: {
+          created_at?: string
+          email_address: string
+          email_id: string
+          email_subject?: string | null
+          event_type: Database["public"]["Enums"]["email_event_type"]
+          id?: string
+          ip_address?: string | null
+          link_url?: string | null
+          metadata?: Json | null
+          user_agent?: string | null
+        }
+        Update: {
+          created_at?: string
+          email_address?: string
+          email_id?: string
+          email_subject?: string | null
+          event_type?: Database["public"]["Enums"]["email_event_type"]
+          id?: string
+          ip_address?: string | null
+          link_url?: string | null
+          metadata?: Json | null
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
       email_preferences: {
         Row: {
           created_at: string
@@ -148,7 +187,21 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      email_analytics_summary: {
+        Row: {
+          click_rate: number | null
+          open_rate: number | null
+          total_bounced: number | null
+          total_clicked: number | null
+          total_complained: number | null
+          total_delivered: number | null
+          total_opened: number | null
+          total_sent: number | null
+          unique_clicks: number | null
+          unique_opens: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       has_role: {
@@ -162,6 +215,15 @@ export type Database = {
     Enums: {
       alpha_status: "pending" | "approved" | "rejected"
       app_role: "admin" | "user"
+      email_event_type:
+        | "sent"
+        | "delivered"
+        | "delivery_delayed"
+        | "complained"
+        | "bounced"
+        | "opened"
+        | "clicked"
+        | "unsubscribed"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -291,6 +353,16 @@ export const Constants = {
     Enums: {
       alpha_status: ["pending", "approved", "rejected"],
       app_role: ["admin", "user"],
+      email_event_type: [
+        "sent",
+        "delivered",
+        "delivery_delayed",
+        "complained",
+        "bounced",
+        "opened",
+        "clicked",
+        "unsubscribed",
+      ],
     },
   },
 } as const
