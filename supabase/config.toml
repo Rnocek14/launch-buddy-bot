@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.update-email-preferences]
 verify_jwt = false
+
+[functions.send-alpha-status-email]
+verify_jwt = false

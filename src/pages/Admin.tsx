@@ -222,10 +222,34 @@ export default function Admin() {
 
       if (error) throw error;
 
-      toast({
-        title: "Status Updated",
-        description: `Application ${status}`,
-      });
+      // Send email notification if approved or rejected
+      if (status === "approved" || status === "rejected") {
+        const { error: emailError } = await supabase.functions.invoke(
+          "send-alpha-status-email",
+          {
+            body: { applicationId: id, status },
+          }
+        );
+
+        if (emailError) {
+          console.error("Failed to send email notification:", emailError);
+          toast({
+            title: "Status Updated",
+            description: `Application ${status} but email notification failed`,
+            variant: "default",
+          });
+        } else {
+          toast({
+            title: "Status Updated",
+            description: `Application ${status} and email sent to applicant`,
+          });
+        }
+      } else {
+        toast({
+          title: "Status Updated",
+          description: `Application ${status}`,
+        });
+      }
 
       fetchAlphaApplications();
       fetchStats();
