@@ -25,8 +25,23 @@ export async function validateGmailScope(accessToken: string): Promise<boolean> 
     const tokenInfo: GoogleTokenInfo = await response.json();
     const scopes = tokenInfo.scope.split(' ');
     
-    // Check if Gmail readonly scope is present
-    return scopes.includes('https://www.googleapis.com/auth/gmail.readonly');
+    // Debug: Log the scopes we actually have
+    console.log('Token scopes:', scopes);
+    
+    // Check for all required scopes
+    const requiredScopes = [
+      'openid',
+      'https://www.googleapis.com/auth/userinfo.email',
+      'https://www.googleapis.com/auth/gmail.readonly'
+    ];
+    
+    const hasAllScopes = requiredScopes.every(scope => scopes.includes(scope));
+    
+    if (!hasAllScopes) {
+      console.error('Missing required scopes. Required:', requiredScopes, 'Has:', scopes);
+    }
+    
+    return hasAllScopes;
   } catch (error) {
     console.error('Error validating token:', error);
     return false;

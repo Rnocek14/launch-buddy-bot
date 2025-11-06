@@ -93,7 +93,7 @@ export default function Dashboard() {
           provider: 'google',
           options: {
             redirectTo: `${window.location.origin}/dashboard`,
-            scopes: 'https://www.googleapis.com/auth/gmail.readonly',
+            scopes: 'openid email profile https://www.googleapis.com/auth/gmail.readonly',
             queryParams: {
               access_type: 'offline',
               prompt: 'consent'
@@ -112,6 +112,7 @@ export default function Dashboard() {
       }
 
       // Validate token has Gmail scope
+      console.log('Validating token scopes...');
       const hasGmailScope = await validateGmailScope(session.provider_token);
       if (!hasGmailScope) {
         setScanning(false);
@@ -126,7 +127,7 @@ export default function Dashboard() {
           provider: 'google',
           options: {
             redirectTo: `${window.location.origin}/dashboard`,
-            scopes: 'https://www.googleapis.com/auth/gmail.readonly',
+            scopes: 'openid email profile https://www.googleapis.com/auth/gmail.readonly',
             queryParams: {
               access_type: 'offline',
               prompt: 'consent'
@@ -159,7 +160,7 @@ export default function Dashboard() {
           provider: 'google',
           options: {
             redirectTo: `${window.location.origin}/dashboard`,
-            scopes: 'https://www.googleapis.com/auth/gmail.readonly',
+            scopes: 'openid email profile https://www.googleapis.com/auth/gmail.readonly',
             queryParams: {
               access_type: 'offline',
               prompt: 'consent'

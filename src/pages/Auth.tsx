@@ -99,7 +99,7 @@ export default function Auth() {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          scopes: 'https://www.googleapis.com/auth/gmail.readonly',
+          scopes: 'openid email profile https://www.googleapis.com/auth/gmail.readonly',
           redirectTo: `${window.location.origin}/dashboard`,
           queryParams: {
             access_type: 'offline',
