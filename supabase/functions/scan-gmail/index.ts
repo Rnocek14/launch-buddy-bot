@@ -89,7 +89,7 @@ Deno.serve(async (req) => {
     if (catalogError) throw catalogError;
 
     const domainMap = new Map(catalog.map(s => [s.domain.toLowerCase(), s]));
-    const discoveredServices = new Set<string>();
+    const discoveredServices = new Map<string, string | null>(); // service_id -> earliest first_seen_date
     const unmatchedDomains = new Map<string, string>(); // domain -> email
     const batchSize = 10;
 
@@ -123,10 +123,13 @@ Deno.serve(async (req) => {
           
           const service = domainMap.get(domain) || domainMap.get(baseDomain);
           if (service) {
-            discoveredServices.add(JSON.stringify({ 
-              id: service.id, 
-              firstSeenDate: internalDate ? new Date(parseInt(internalDate)).toISOString() : null 
-            }));
+            const newDate = internalDate ? new Date(parseInt(internalDate)).toISOString() : null;
+            const existingDate = discoveredServices.get(service.id);
+            
+            // Keep the earliest date (or set if first encounter)
+            if (!existingDate || (newDate && newDate < existingDate)) {
+              discoveredServices.set(service.id, newDate);
+            }
           } else {
             // Track unmatched domains for smart discovery
             unmatchedDomains.set(domain, email);
@@ -140,15 +143,12 @@ Deno.serve(async (req) => {
     console.log(`Discovered ${discoveredServices.size} unique services`);
 
     // Upsert into user_services
-    const servicesToInsert = Array.from(discoveredServices).map(serviceStr => {
-      const service = JSON.parse(serviceStr);
-      return {
-        user_id: user.id,
-        service_id: service.id,
-        first_seen_date: service.firstSeenDate,
-        last_scanned_at: new Date().toISOString()
-      };
-    });
+    const servicesToInsert = Array.from(discoveredServices.entries()).map(([serviceId, firstSeenDate]) => ({
+      user_id: user.id,
+      service_id: serviceId,
+      first_seen_date: firstSeenDate,
+      last_scanned_at: new Date().toISOString()
+    }));
 
     if (servicesToInsert.length > 0) {
       const { error: insertError } = await supabase
