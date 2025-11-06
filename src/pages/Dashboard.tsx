@@ -507,91 +507,86 @@ export default function Dashboard() {
         <Card className="mb-8 overflow-hidden border-primary/20 bg-gradient-to-br from-card to-primary/5">
           <CardContent className="pt-6">
             <div className="flex flex-col gap-6">
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-                <div className="flex-1">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="p-2 rounded-lg bg-primary/10">
-                    <Shield className="w-6 h-6 text-primary" />
-                  </div>
-                  <div>
-                    <h2 className="text-3xl font-bold text-foreground">{services.length}</h2>
-                    <p className="text-sm text-muted-foreground">Online accounts discovered</p>
-                  </div>
+              {/* Stats Row */}
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-primary/10">
+                  <Shield className="w-6 h-6 text-primary" />
                 </div>
-                
-                {scanStats && !scanning && (
-                  <div className="space-y-3">
-                    <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-                      <div className="flex items-center gap-1.5">
-                        <Mail className="w-4 h-4" />
-                        <span>{scanStats.emailsScanned} emails scanned</span>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <Sparkles className="w-4 h-4" />
-                        <span>{scanStats.servicesFound} services found</span>
-                      </div>
-                    </div>
-                    
-                    {scanStats.breakdown && (
-                      <div className="flex flex-wrap gap-2 pt-1">
-                        {scanStats.breakdown.signup > 0 && (
-                          <Badge variant="secondary" className="gap-1.5 text-xs">
-                            <Mail className="w-3 h-3" />
-                            {scanStats.breakdown.signup} signup
-                          </Badge>
-                        )}
-                        {scanStats.breakdown.financial > 0 && (
-                          <Badge variant="secondary" className="gap-1.5 text-xs">
-                            <DollarSign className="w-3 h-3" />
-                            {scanStats.breakdown.financial} invoices
-                          </Badge>
-                        )}
-                        {scanStats.breakdown.commerce > 0 && (
-                          <Badge variant="secondary" className="gap-1.5 text-xs">
-                            <Package className="w-3 h-3" />
-                            {scanStats.breakdown.commerce} orders
-                          </Badge>
-                        )}
-                        {scanStats.breakdown.security > 0 && (
-                          <Badge variant="secondary" className="gap-1.5 text-xs">
-                            <Lock className="w-3 h-3" />
-                            {scanStats.breakdown.security} security
-                          </Badge>
-                        )}
-                        {scanStats.breakdown.engagement > 0 && (
-                          <Badge variant="secondary" className="gap-1.5 text-xs">
-                            <Bell className="w-3 h-3" />
-                            {scanStats.breakdown.engagement} newsletters
-                          </Badge>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )}
+                <div>
+                  <h2 className="text-3xl font-bold text-foreground">{services.length}</h2>
+                  <p className="text-sm text-muted-foreground">Online accounts discovered</p>
+                </div>
               </div>
+              
+              {/* Scan Results */}
+              {scanStats && !scanning && (
+                <div className="space-y-3">
+                  <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
+                    <div className="flex items-center gap-1.5">
+                      <Mail className="w-4 h-4" />
+                      <span>{scanStats.emailsScanned} emails scanned</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Sparkles className="w-4 h-4" />
+                      <span>{scanStats.servicesFound} services found</span>
+                    </div>
+                  </div>
+                  
+                  {scanStats.breakdown && (
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      {scanStats.breakdown.signup > 0 && (
+                        <Badge variant="secondary" className="gap-1.5 text-xs">
+                          <Mail className="w-3 h-3" />
+                          {scanStats.breakdown.signup} signup
+                        </Badge>
+                      )}
+                      {scanStats.breakdown.financial > 0 && (
+                        <Badge variant="secondary" className="gap-1.5 text-xs">
+                          <DollarSign className="w-3 h-3" />
+                          {scanStats.breakdown.financial} invoices
+                        </Badge>
+                      )}
+                      {scanStats.breakdown.commerce > 0 && (
+                        <Badge variant="secondary" className="gap-1.5 text-xs">
+                          <Package className="w-3 h-3" />
+                          {scanStats.breakdown.commerce} orders
+                        </Badge>
+                      )}
+                      {scanStats.breakdown.security > 0 && (
+                        <Badge variant="secondary" className="gap-1.5 text-xs">
+                          <Lock className="w-3 h-3" />
+                          {scanStats.breakdown.security} security
+                        </Badge>
+                      )}
+                      {scanStats.breakdown.engagement > 0 && (
+                        <Badge variant="secondary" className="gap-1.5 text-xs">
+                          <Bell className="w-3 h-3" />
+                          {scanStats.breakdown.engagement} newsletters
+                        </Badge>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Scan Type Toggle */}
               {!scanning && (
-                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 pt-4 border-t border-border/50">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3">
-                      <Button
-                        variant={scanType === 'quick' ? 'default' : 'outline'}
-                        size="sm"
-                        onClick={() => setScanType('quick')}
-                        className="flex-1 sm:flex-none"
-                      >
-                        Quick Scan
-                      </Button>
-                      <Button
-                        variant={scanType === 'deep' ? 'default' : 'outline'}
-                        size="sm"
-                        onClick={() => setScanType('deep')}
-                        className="flex-1 sm:flex-none"
-                      >
-                        Deep Scan
-                      </Button>
-                    </div>
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pt-4 border-t border-border/50">
+                  <div className="flex items-center gap-3">
+                    <Button
+                      variant={scanType === 'quick' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setScanType('quick')}
+                    >
+                      Quick Scan
+                    </Button>
+                    <Button
+                      variant={scanType === 'deep' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setScanType('deep')}
+                    >
+                      Deep Scan
+                    </Button>
                   </div>
                   <div className="text-xs text-muted-foreground">
                     {scanType === 'quick' ? (
@@ -603,29 +598,29 @@ export default function Dashboard() {
                 </div>
               )}
 
-                {scanning && scanProgress && (
-                  <div className="mt-4 space-y-3">
-                    <div className="flex items-start gap-2 p-3 rounded-lg bg-primary/5 border border-primary/10">
-                      <Loader2 className="w-4 h-4 mt-0.5 animate-spin text-primary flex-shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm text-foreground font-medium">{scanProgress.status}</p>
-                        {scanProgress.currentEmail === 0 && (
-                          <p className="text-xs text-muted-foreground mt-1">
-                            We're checking signup emails, invoices, orders, security alerts, and newsletters
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">Progress</span>
-                        <span className="text-primary font-medium">{Math.round((scanProgress.currentEmail / scanProgress.totalEmails) * 100)}%</span>
-                      </div>
-                      <Progress value={(scanProgress.currentEmail / scanProgress.totalEmails) * 100} className="h-2" />
+              {/* Scanning Progress */}
+              {scanning && scanProgress && (
+                <div className="space-y-3">
+                  <div className="flex items-start gap-2 p-3 rounded-lg bg-primary/5 border border-primary/10">
+                    <Loader2 className="w-4 h-4 mt-0.5 animate-spin text-primary flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-foreground font-medium">{scanProgress.status}</p>
+                      {scanProgress.currentEmail === 0 && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          We're checking signup emails, invoices, orders, security alerts, and newsletters
+                        </p>
+                      )}
                     </div>
                   </div>
-                 )}
-              </div>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">Progress</span>
+                      <span className="text-primary font-medium">{Math.round((scanProgress.currentEmail / scanProgress.totalEmails) * 100)}%</span>
+                    </div>
+                    <Progress value={(scanProgress.currentEmail / scanProgress.totalEmails) * 100} className="h-2" />
+                  </div>
+                </div>
+              )}
 
               {/* Scan Button */}
               <div className="flex justify-center pt-2">
