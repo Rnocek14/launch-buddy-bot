@@ -83,11 +83,12 @@ export const Navbar = () => {
                     <span className="hidden md:inline">Dashboard</span>
                   </Button>
                 </Link>
-                <Link to="/settings">
-                  <Button variant="ghost" size="icon">
-                    <Settings className="w-4 h-4" />
-                  </Button>
-                </Link>
+            <Link to="/settings">
+              <Button variant="ghost" className="gap-2">
+                <Settings className="w-4 h-4" />
+                <span className="hidden md:inline">Settings</span>
+              </Button>
+            </Link>
               </>
             )}
             
