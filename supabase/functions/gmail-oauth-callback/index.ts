@@ -1,0 +1,109 @@
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.79.0";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+
+serve(async (req: Request): Promise<Response> => {
+  // Handle CORS preflight requests
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const url = new URL(req.url);
+    const code = url.searchParams.get("code");
+    const state = url.searchParams.get("state"); // Contains user_id
+
+    if (!code || !state) {
+      return new Response(
+        JSON.stringify({ error: "Missing authorization code or state" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log("Processing OAuth callback for user:", state);
+
+    // Exchange code for tokens
+    const clientId = Deno.env.get("GOOGLE_OAUTH_CLIENT_ID");
+    const clientSecret = Deno.env.get("GOOGLE_OAUTH_CLIENT_SECRET");
+    const redirectUri = `${Deno.env.get("SUPABASE_URL")}/functions/v1/gmail-oauth-callback`;
+
+    const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        code,
+        client_id: clientId!,
+        client_secret: clientSecret!,
+        redirect_uri: redirectUri,
+        grant_type: "authorization_code",
+      }),
+    });
+
+    if (!tokenResponse.ok) {
+      const error = await tokenResponse.text();
+      console.error("Token exchange failed:", error);
+      return new Response(
+        JSON.stringify({ error: "Failed to exchange authorization code" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const tokens = await tokenResponse.json();
+    console.log("Received tokens, expires_in:", tokens.expires_in);
+
+    // Get user's email from Google
+    const profileResponse = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
+      headers: { Authorization: `Bearer ${tokens.access_token}` },
+    });
+
+    const profile = await profileResponse.json();
+    console.log("Retrieved user email:", profile.email);
+
+    // Store tokens in database
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+
+    const expiresAt = new Date(Date.now() + tokens.expires_in * 1000);
+
+    const { error: dbError } = await supabase
+      .from("gmail_connections")
+      .upsert({
+        user_id: state,
+        email: profile.email,
+        access_token: tokens.access_token,
+        refresh_token: tokens.refresh_token,
+        token_expires_at: expiresAt.toISOString(),
+      });
+
+    if (dbError) {
+      console.error("Database error:", dbError);
+      return new Response(
+        JSON.stringify({ error: "Failed to store Gmail connection" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log("Gmail connection stored successfully");
+
+    // Redirect back to the app
+    return new Response(null, {
+      status: 302,
+      headers: {
+        ...corsHeaders,
+        Location: `${url.origin}/settings?gmail=connected`,
+      },
+    });
+  } catch (error: any) {
+    console.error("Error in gmail-oauth-callback:", error);
+    return new Response(
+      JSON.stringify({ error: error.message }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+});

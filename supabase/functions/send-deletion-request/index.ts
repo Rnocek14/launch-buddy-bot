@@ -72,6 +72,16 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
+    // Check if user has Gmail connected
+    const { data: gmailConnection } = await supabase
+      .from("gmail_connections")
+      .select("*")
+      .eq("user_id", user.id)
+      .single();
+
+    const useGmail = !!gmailConnection;
+    console.log(`User ${user.id} Gmail connection status:`, useGmail);
+
     // Parse request body
     const body: DeletionRequestBody = await req.json();
     const { service_id, identifier_id, account_identifier, template_type = "global" } = body;
@@ -222,28 +232,71 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log(`Sending email to: ${recipientEmail}`);
 
-    // Send email via Resend
-    const emailResponse = await resend.emails.send({
-      from: "Footprint Finder <onboarding@resend.dev>",
-      to: [recipientEmail],
-      cc: [profile.email || user.email!],
-      subject: subject,
-      text: personalizedBody,
-      reply_to: profile.email || user.email!,
-    });
+    // Send email via Gmail if connected, otherwise use Resend
+    let emailSent = false;
+    let emailId = null;
 
-    if (!emailResponse.data?.id) {
-      console.error("Failed to send email:", emailResponse.error);
-      return new Response(
-        JSON.stringify({ 
-          error: "Failed to send deletion request email",
-          details: emailResponse.error 
-        }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    if (useGmail) {
+      console.log("Attempting to send via Gmail...");
+      try {
+        const gmailResponse = await fetch(
+          `${supabaseUrl}/functions/v1/send-via-gmail`,
+          {
+            method: "POST",
+            headers: {
+              "Authorization": authHeader,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              to: recipientEmail,
+              subject: subject,
+              body: personalizedBody,
+            }),
+          }
+        );
+
+        if (gmailResponse.ok) {
+          const gmailData = await gmailResponse.json();
+          emailSent = true;
+          emailId = gmailData.messageId;
+          console.log("Email sent via Gmail successfully:", emailId);
+        } else {
+          const error = await gmailResponse.text();
+          console.error("Gmail send failed, falling back to Resend:", error);
+        }
+      } catch (error) {
+        console.error("Gmail send error, falling back to Resend:", error);
+      }
     }
 
-    console.log(`Email sent successfully. ID: ${emailResponse.data.id}`);
+    // Fallback to Resend if Gmail failed or not connected
+    if (!emailSent) {
+      console.log("Sending via Resend...");
+      const emailResponse = await resend.emails.send({
+        from: "Footprint Finder <onboarding@resend.dev>",
+        to: [recipientEmail],
+        cc: [profile.email || user.email!],
+        subject: subject,
+        text: personalizedBody,
+        reply_to: profile.email || user.email!,
+      });
+
+      if (!emailResponse.data?.id) {
+        console.error("Failed to send email:", emailResponse.error);
+        return new Response(
+          JSON.stringify({ 
+            error: "Failed to send deletion request email",
+            details: emailResponse.error 
+          }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      emailId = emailResponse.data.id;
+      console.log("Email sent via Resend successfully:", emailId);
+    }
+
+    console.log(`Email sent successfully. ID: ${emailId}`);
 
     // Log deletion request to database
     const insertData: any = {
@@ -305,7 +358,7 @@ const handler = async (req: Request): Promise<Response> => {
         success: true,
         message: "Deletion request sent successfully",
         request_id: deletionRequest?.id,
-        email_id: emailResponse.data.id,
+        email_id: emailId,
         service_name: service.name,
         recipient: recipientEmail,
       }),

@@ -26,3 +26,12 @@ verify_jwt = false
 
 [functions.suggest-usernames]
 verify_jwt = true
+
+[functions.gmail-oauth-callback]
+verify_jwt = false
+
+[functions.get-gmail-oauth-url]
+verify_jwt = true
+
+[functions.send-via-gmail]
+verify_jwt = true

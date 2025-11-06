@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Navbar } from "@/components/Navbar";
 import { AddIdentifierDialog } from "@/components/AddIdentifierDialog";
+import { GmailConnectButton } from "@/components/GmailConnectButton";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Mail, Phone, User, Plus, Trash2, Star } from "lucide-react";
 import {
@@ -271,6 +272,18 @@ export default function Settings() {
                   ))}
                 </div>
               )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Gmail Integration</CardTitle>
+              <CardDescription>
+                Send deletion requests from your own Gmail account for better success rates
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <GmailConnectButton />
             </CardContent>
           </Card>
 
