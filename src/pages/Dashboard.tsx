@@ -7,11 +7,13 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Shield, RefreshCw, LogOut, Loader2, ExternalLink, Search, Download, AlertCircle, Sparkles, Mail, Tag, TrendingUp } from "lucide-react";
+import { Shield, RefreshCw, LogOut, Loader2, ExternalLink, Search, Download, AlertCircle, Sparkles, Mail, Tag, TrendingUp, Trash2, CheckCircle } from "lucide-react";
 import { RiskScoreCard } from "@/components/RiskScoreCard";
 import { useToast } from "@/hooks/use-toast";
 import { validateGmailScope, isTokenValid } from "@/lib/googleAuth";
 import { Progress } from "@/components/ui/progress";
+import { useAuthorization } from "@/hooks/useAuthorization";
+import { DeletionRequestDialog } from "@/components/DeletionRequestDialog";
 
 interface Service {
   id: string;
@@ -55,6 +57,9 @@ export default function Dashboard() {
   const [scanProgress, setScanProgress] = useState<ScanProgress | null>(null);
   const [riskData, setRiskData] = useState<any>(null);
   const [loadingRisk, setLoadingRisk] = useState(false);
+  const [selectedService, setSelectedService] = useState<Service | null>(null);
+  const [deletionDialogOpen, setDeletionDialogOpen] = useState(false);
+  const { isAuthorized, loading: authLoading } = useAuthorization();
 
   useEffect(() => {
     checkAuth();
@@ -297,6 +302,19 @@ export default function Dashboard() {
     navigate("/");
   }
 
+  const handleRequestDeletion = (service: Service) => {
+    if (!isAuthorized) {
+      toast({
+        title: "Authorization Required",
+        description: "You need to complete the authorization wizard first.",
+      });
+      navigate("/authorize");
+      return;
+    }
+    setSelectedService(service);
+    setDeletionDialogOpen(true);
+  };
+
   const categoryColors: Record<string, string> = {
     "Social": "bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/20",
     "Shopping": "bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-500/20",
@@ -376,9 +394,39 @@ export default function Dashboard() {
       <div className="border-b border-border bg-card">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex justify-between items-center">
-            <div>
+            <div className="flex-1">
               <h1 className="text-2xl font-bold text-foreground">Digital Footprint</h1>
-              <p className="text-sm text-muted-foreground mt-0.5">{user?.email}</p>
+              <div className="flex items-center gap-3 mt-1">
+                <p className="text-sm text-muted-foreground">{user?.email}</p>
+                {!authLoading && (
+                  <Badge 
+                    variant={isAuthorized ? "default" : "outline"}
+                    className="text-xs"
+                  >
+                    {isAuthorized ? (
+                      <>
+                        <CheckCircle className="w-3 h-3 mr-1" />
+                        Authorized Agent
+                      </>
+                    ) : (
+                      <>
+                        <AlertCircle className="w-3 h-3 mr-1" />
+                        Not Authorized
+                      </>
+                    )}
+                  </Badge>
+                )}
+                {!isAuthorized && !authLoading && (
+                  <Button
+                    variant="link"
+                    size="sm"
+                    onClick={() => navigate("/authorize")}
+                    className="h-auto p-0 text-xs"
+                  >
+                    Complete Authorization →
+                  </Button>
+                )}
+              </div>
             </div>
             <Button variant="ghost" size="sm" onClick={handleSignOut}>
               <LogOut className="w-4 h-4 mr-2" />
@@ -616,24 +664,36 @@ export default function Dashboard() {
                           })}
                         </p>
 
-                        {/* Visit Button */}
-                        {service.homepage_url && (
-                          <a 
-                            href={service.homepage_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
+                        {/* Action Buttons */}
+                        <div className="w-full space-y-2">
+                          <Button
+                            variant="destructive"
+                            size="sm"
                             className="w-full"
+                            onClick={() => handleRequestDeletion(service)}
+                            disabled={authLoading}
                           >
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
-                              className="w-full group-hover:bg-primary group-hover:text-primary-foreground group-hover:border-primary transition-colors"
+                            <Trash2 className="w-3 h-3 mr-2" />
+                            Request Deletion
+                          </Button>
+                          {service.homepage_url && (
+                            <a 
+                              href={service.homepage_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="w-full block"
                             >
-                              Visit Site
-                              <ExternalLink className="w-3 h-3 ml-2" />
-                            </Button>
-                          </a>
-                        )}
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                className="w-full"
+                              >
+                                Visit Site
+                                <ExternalLink className="w-3 h-3 ml-2" />
+                              </Button>
+                            </a>
+                          )}
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
@@ -715,6 +775,19 @@ export default function Dashboard() {
           </p>
         </div>
       </div>
+
+      {/* Deletion Request Dialog */}
+      <DeletionRequestDialog
+        open={deletionDialogOpen}
+        onOpenChange={setDeletionDialogOpen}
+        service={selectedService}
+        onSuccess={() => {
+          toast({
+            title: "Success",
+            description: "Deletion request has been sent successfully.",
+          });
+        }}
+      />
     </div>
   );
 }
