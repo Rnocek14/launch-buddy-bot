@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -23,7 +23,9 @@ import {
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2 } from "lucide-react";
+import { Loader2, Sparkles } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
 import {
   Form,
   FormControl,
@@ -39,6 +41,12 @@ const formSchema = z.object({
   is_primary: z.boolean().default(false),
 });
 
+interface UsernameSuggestion {
+  value: string;
+  confidence: 'high' | 'medium' | 'low';
+  reasoning: string;
+}
+
 interface AddIdentifierDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -51,6 +59,9 @@ export const AddIdentifierDialog = ({
   onSuccess,
 }: AddIdentifierDialogProps) => {
   const [loading, setLoading] = useState(false);
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+  const [suggestions, setSuggestions] = useState<UsernameSuggestion[]>([]);
+  const [userEmail, setUserEmail] = useState<string>("");
   const { toast } = useToast();
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -61,6 +72,81 @@ export const AddIdentifierDialog = ({
       is_primary: false,
     },
   });
+
+  // Fetch user's primary email for AI suggestions
+  useEffect(() => {
+    const fetchUserEmail = async () => {
+      const { data: identifiers } = await supabase
+        .from("user_identifiers")
+        .select("value")
+        .eq("type", "email")
+        .eq("is_primary", true)
+        .maybeSingle();
+      
+      if (identifiers?.value) {
+        setUserEmail(identifiers.value);
+      }
+    };
+    
+    if (open) {
+      fetchUserEmail();
+      setSuggestions([]);
+    }
+  }, [open]);
+
+  const fetchAISuggestions = async () => {
+    if (!userEmail) {
+      toast({
+        title: "No Email Found",
+        description: "Add an email identifier first to get username suggestions",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setLoadingSuggestions(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('suggest-usernames', {
+        body: { email: userEmail }
+      });
+
+      if (error) throw error;
+
+      if (data?.suggestions) {
+        setSuggestions(data.suggestions);
+        toast({
+          title: "Suggestions Generated",
+          description: `Got ${data.suggestions.length} username suggestions`,
+        });
+      }
+    } catch (error: any) {
+      console.error('Error fetching suggestions:', error);
+      toast({
+        title: "Failed to Generate Suggestions",
+        description: error.message || "Please try again later",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingSuggestions(false);
+    }
+  };
+
+  const selectSuggestion = (suggestion: UsernameSuggestion) => {
+    form.setValue("value", suggestion.value);
+    toast({
+      title: "Suggestion Applied",
+      description: `Selected: ${suggestion.value}`,
+    });
+  };
+
+  const getConfidenceBadgeVariant = (confidence: string) => {
+    switch (confidence) {
+      case 'high': return 'default';
+      case 'medium': return 'secondary';
+      case 'low': return 'outline';
+      default: return 'outline';
+    }
+  };
 
   const validateValue = (type: string, value: string): string | null => {
     switch (type) {
@@ -109,12 +195,15 @@ export const AddIdentifierDialog = ({
           .eq("type", values.type);
       }
 
+      // Check if this value was from AI suggestions
+      const isAISuggested = suggestions.some(s => s.value === values.value);
+      
       const { error } = await supabase.from("user_identifiers").insert({
         user_id: session.user.id,
         type: values.type,
         value: values.value,
         is_primary: values.is_primary,
-        source: "manual",
+        source: isAISuggested ? "ai_suggested" : "manual",
         verified: false,
       });
 
@@ -131,6 +220,7 @@ export const AddIdentifierDialog = ({
       });
 
       form.reset();
+      setSuggestions([]);
       onOpenChange(false);
       onSuccess?.();
     } catch (error: any) {
@@ -187,21 +277,89 @@ export const AddIdentifierDialog = ({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Value</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder={
-                        form.watch("type") === "email"
-                          ? "your@email.com"
-                          : form.watch("type") === "phone"
-                          ? "+1 (555) 123-4567"
-                          : form.watch("type") === "username"
-                          ? "username123"
-                          : "Your identifier"
-                      }
-                      {...field}
-                      disabled={loading}
-                    />
-                  </FormControl>
+                  <div className="space-y-2">
+                    <FormControl>
+                      <Input
+                        placeholder={
+                          form.watch("type") === "email"
+                            ? "your@email.com"
+                            : form.watch("type") === "phone"
+                            ? "+1 (555) 123-4567"
+                            : form.watch("type") === "username"
+                            ? "username123"
+                            : "Your identifier"
+                        }
+                        {...field}
+                        disabled={loading}
+                      />
+                    </FormControl>
+                    
+                    {form.watch("type") === "username" && !suggestions.length && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={fetchAISuggestions}
+                        disabled={loadingSuggestions || !userEmail}
+                        className="w-full"
+                      >
+                        {loadingSuggestions ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Generating...
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="mr-2 h-4 w-4" />
+                            Get AI Suggestions
+                          </>
+                        )}
+                      </Button>
+                    )}
+                    
+                    {suggestions.length > 0 && form.watch("type") === "username" && (
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <p className="text-sm text-muted-foreground">AI Suggestions:</p>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setSuggestions([])}
+                            className="h-auto p-0 text-xs"
+                          >
+                            Clear
+                          </Button>
+                        </div>
+                        <div className="grid gap-2">
+                          {suggestions.map((suggestion, index) => (
+                            <Card
+                              key={index}
+                              className="p-3 cursor-pointer hover:bg-accent transition-colors"
+                              onClick={() => selectSuggestion(suggestion)}
+                            >
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <span className="font-medium truncate">{suggestion.value}</span>
+                                    <Badge
+                                      variant={getConfidenceBadgeVariant(suggestion.confidence)}
+                                      className="text-xs"
+                                    >
+                                      {suggestion.confidence}
+                                    </Badge>
+                                  </div>
+                                  <p className="text-xs text-muted-foreground line-clamp-2">
+                                    {suggestion.reasoning}
+                                  </p>
+                                </div>
+                              </div>
+                            </Card>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                   <FormMessage />
                 </FormItem>
               )}

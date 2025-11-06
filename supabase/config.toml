@@ -23,3 +23,6 @@ verify_jwt = true
 
 [functions.send-deletion-notification]
 verify_jwt = false
+
+[functions.suggest-usernames]
+verify_jwt = true
