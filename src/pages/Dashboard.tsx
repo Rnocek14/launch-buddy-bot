@@ -151,7 +151,7 @@ export default function Dashboard() {
 
   async function handleScan() {
     setScanning(true);
-    setScanProgress({ currentEmail: 0, totalEmails: 100, status: "Connecting to Gmail..." });
+    setScanProgress({ currentEmail: 0, totalEmails: 100, status: "Scanning 5 categories (~2,000 emails)... this may take 30-60 seconds" });
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -559,12 +559,25 @@ export default function Dashboard() {
                 )}
 
                 {scanning && scanProgress && (
-                  <div className="mt-4 space-y-2">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">{scanProgress.status}</span>
-                      <span className="text-primary font-medium">{Math.round((scanProgress.currentEmail / scanProgress.totalEmails) * 100)}%</span>
+                  <div className="mt-4 space-y-3">
+                    <div className="flex items-start gap-2 p-3 rounded-lg bg-primary/5 border border-primary/10">
+                      <Loader2 className="w-4 h-4 mt-0.5 animate-spin text-primary flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-foreground font-medium">{scanProgress.status}</p>
+                        {scanProgress.currentEmail === 0 && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            We're checking signup emails, invoices, orders, security alerts, and newsletters
+                          </p>
+                        )}
+                      </div>
                     </div>
-                    <Progress value={(scanProgress.currentEmail / scanProgress.totalEmails) * 100} className="h-2" />
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Progress</span>
+                        <span className="text-primary font-medium">{Math.round((scanProgress.currentEmail / scanProgress.totalEmails) * 100)}%</span>
+                      </div>
+                      <Progress value={(scanProgress.currentEmail / scanProgress.totalEmails) * 100} className="h-2" />
+                    </div>
                   </div>
                 )}
               </div>
