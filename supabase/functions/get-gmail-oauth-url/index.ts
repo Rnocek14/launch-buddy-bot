@@ -24,7 +24,7 @@ serve(async (req: Request): Promise<Response> => {
     const clientId = Deno.env.get("GOOGLE_OAUTH_CLIENT_ID");
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const redirectUri = `${supabaseUrl}/functions/v1/gmail-oauth-callback`;
-    const scope = "https://www.googleapis.com/auth/gmail.send";
+    const scope = "https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/userinfo.email";
 
     const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
       `client_id=${clientId}&` +

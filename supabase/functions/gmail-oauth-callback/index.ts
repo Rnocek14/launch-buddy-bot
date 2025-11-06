@@ -60,7 +60,26 @@ serve(async (req: Request): Promise<Response> => {
       headers: { Authorization: `Bearer ${tokens.access_token}` },
     });
 
+    if (!profileResponse.ok) {
+      const error = await profileResponse.text();
+      console.error("Failed to fetch user profile:", error);
+      return new Response(
+        JSON.stringify({ error: "Failed to retrieve user email from Google" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     const profile = await profileResponse.json();
+    console.log("Retrieved user profile:", profile);
+
+    if (!profile.email) {
+      console.error("No email in profile response:", profile);
+      return new Response(
+        JSON.stringify({ error: "Email not available from Google. Please ensure email scope is granted." }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     console.log("Retrieved user email:", profile.email);
 
     // Store tokens in database
