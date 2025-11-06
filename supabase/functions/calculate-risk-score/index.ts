@@ -145,7 +145,7 @@ Be conversational, empathetic, and avoid jargon. Each insight should be 2-3 sent
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-5-2025-08-07',
+        model: 'gpt-4o',
         messages: [
           { 
             role: 'system', 
@@ -153,7 +153,8 @@ Be conversational, empathetic, and avoid jargon. Each insight should be 2-3 sent
           },
           { role: 'user', content: aiPrompt }
         ],
-        max_completion_tokens: 800,
+        max_tokens: 800,
+        temperature: 0.7,
       }),
     });
 
