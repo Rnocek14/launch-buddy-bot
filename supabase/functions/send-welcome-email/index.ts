@@ -1,17 +1,18 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { Resend } from "https://esm.sh/resend@4.0.0";
+import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+    "authorization, x-client-info, apikey, content-type, x-email-secret",
 };
 
-interface WelcomeEmailRequest {
-  email: string;
-}
+const emailSchema = z.object({
+  email: z.string().email().max(255),
+});
 
 const handler = async (req: Request): Promise<Response> => {
   // Handle CORS preflight requests
@@ -20,7 +21,24 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { email }: WelcomeEmailRequest = await req.json();
+    // Verify internal secret - this endpoint should only be called from database triggers
+    const expectedSecret = Deno.env.get("EMAIL_SECRET");
+    const receivedSecret = req.headers.get("x-email-secret");
+
+    if (!expectedSecret || receivedSecret !== expectedSecret) {
+      console.error("Invalid or missing email secret");
+      return new Response(
+        JSON.stringify({ error: "Forbidden: Invalid secret" }),
+        { 
+          status: 403, 
+          headers: { "Content-Type": "application/json", ...corsHeaders } 
+        }
+      );
+    }
+
+    // Validate and parse request body
+    const body = await req.json();
+    const { email } = emailSchema.parse(body);
 
     console.log("Sending welcome email to:", email);
 
