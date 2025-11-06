@@ -76,7 +76,18 @@ export default function Dashboard() {
 
   useEffect(() => {
     checkAuth();
+    console.log('Dashboard mounted');
   }, []);
+
+  useEffect(() => {
+    console.log('State Debug:', {
+      scanning,
+      scanType,
+      hasScanStats: !!scanStats,
+      scanStatsBreakdown: scanStats?.breakdown,
+      servicesCount: services.length
+    });
+  }, [scanning, scanType, scanStats, services.length]);
 
   useEffect(() => {
     if (services.length > 0) {
@@ -576,14 +587,20 @@ export default function Dashboard() {
                     <Button
                       variant={scanType === 'quick' ? 'default' : 'outline'}
                       size="sm"
-                      onClick={() => setScanType('quick')}
+                      onClick={() => {
+                        console.log('Setting scan type to quick');
+                        setScanType('quick');
+                      }}
                     >
                       Quick Scan
                     </Button>
                     <Button
                       variant={scanType === 'deep' ? 'default' : 'outline'}
                       size="sm"
-                      onClick={() => setScanType('deep')}
+                      onClick={() => {
+                        console.log('Setting scan type to deep');
+                        setScanType('deep');
+                      }}
                     >
                       Deep Scan
                     </Button>
