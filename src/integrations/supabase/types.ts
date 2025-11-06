@@ -176,6 +176,33 @@ export type Database = {
         }
         Relationships: []
       }
+      unmatched_domains: {
+        Row: {
+          domain: string
+          email_from: string
+          first_seen_at: string
+          id: string
+          occurrence_count: number
+          user_id: string
+        }
+        Insert: {
+          domain: string
+          email_from: string
+          first_seen_at?: string
+          id?: string
+          occurrence_count?: number
+          user_id: string
+        }
+        Update: {
+          domain?: string
+          email_from?: string
+          first_seen_at?: string
+          id?: string
+          occurrence_count?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string

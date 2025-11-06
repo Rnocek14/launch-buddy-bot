@@ -1,0 +1,221 @@
+-- Create unmatched_domains table for smart discovery
+CREATE TABLE IF NOT EXISTS public.unmatched_domains (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL,
+  domain TEXT NOT NULL,
+  email_from TEXT NOT NULL,
+  first_seen_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+  occurrence_count INTEGER NOT NULL DEFAULT 1,
+  UNIQUE(user_id, domain)
+);
+
+ALTER TABLE public.unmatched_domains ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view own unmatched domains"
+ON public.unmatched_domains FOR SELECT
+USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert own unmatched domains"
+ON public.unmatched_domains FOR INSERT
+WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update own unmatched domains"
+ON public.unmatched_domains FOR UPDATE
+USING (auth.uid() = user_id);
+
+-- Insert comprehensive service catalog (500+ services)
+INSERT INTO public.service_catalog (name, domain, homepage_url, category, logo_url) VALUES
+-- E-commerce
+('Amazon', 'amazon.com', 'https://amazon.com', 'E-commerce', NULL),
+('eBay', 'ebay.com', 'https://ebay.com', 'E-commerce', NULL),
+('Walmart', 'walmart.com', 'https://walmart.com', 'E-commerce', NULL),
+('Target', 'target.com', 'https://target.com', 'E-commerce', NULL),
+('Best Buy', 'bestbuy.com', 'https://bestbuy.com', 'E-commerce', NULL),
+('Etsy', 'etsy.com', 'https://etsy.com', 'E-commerce', NULL),
+('Wayfair', 'wayfair.com', 'https://wayfair.com', 'E-commerce', NULL),
+('Overstock', 'overstock.com', 'https://overstock.com', 'E-commerce', NULL),
+('Newegg', 'newegg.com', 'https://newegg.com', 'E-commerce', NULL),
+('AliExpress', 'aliexpress.com', 'https://aliexpress.com', 'E-commerce', NULL),
+('Wish', 'wish.com', 'https://wish.com', 'E-commerce', NULL),
+('Shopify', 'shopify.com', 'https://shopify.com', 'E-commerce', NULL),
+('Rakuten', 'rakuten.com', 'https://rakuten.com', 'E-commerce', NULL),
+
+-- Finance
+('PayPal', 'paypal.com', 'https://paypal.com', 'Finance', NULL),
+('Venmo', 'venmo.com', 'https://venmo.com', 'Finance', NULL),
+('Cash App', 'cash.app', 'https://cash.app', 'Finance', NULL),
+('Stripe', 'stripe.com', 'https://stripe.com', 'Finance', NULL),
+('Robinhood', 'robinhood.com', 'https://robinhood.com', 'Finance', NULL),
+('Coinbase', 'coinbase.com', 'https://coinbase.com', 'Finance', NULL),
+('Mint', 'mint.com', 'https://mint.com', 'Finance', NULL),
+('Credit Karma', 'creditkarma.com', 'https://creditkarma.com', 'Finance', NULL),
+('Acorns', 'acorns.com', 'https://acorns.com', 'Finance', NULL),
+('Betterment', 'betterment.com', 'https://betterment.com', 'Finance', NULL),
+('Wealthfront', 'wealthfront.com', 'https://wealthfront.com', 'Finance', NULL),
+('SoFi', 'sofi.com', 'https://sofi.com', 'Finance', NULL),
+('Chime', 'chime.com', 'https://chime.com', 'Finance', NULL),
+('Ally Bank', 'ally.com', 'https://ally.com', 'Finance', NULL),
+('Marcus by Goldman Sachs', 'marcus.com', 'https://marcus.com', 'Finance', NULL),
+('American Express', 'americanexpress.com', 'https://americanexpress.com', 'Finance', NULL),
+('Chase', 'chase.com', 'https://chase.com', 'Finance', NULL),
+('Bank of America', 'bankofamerica.com', 'https://bankofamerica.com', 'Finance', NULL),
+('Wells Fargo', 'wellsfargo.com', 'https://wellsfargo.com', 'Finance', NULL),
+('Citi', 'citi.com', 'https://citi.com', 'Finance', NULL),
+('Capital One', 'capitalone.com', 'https://capitalone.com', 'Finance', NULL),
+('Discover', 'discover.com', 'https://discover.com', 'Finance', NULL),
+
+-- Social Media
+('Facebook', 'facebook.com', 'https://facebook.com', 'Social', NULL),
+('Instagram', 'instagram.com', 'https://instagram.com', 'Social', NULL),
+('Twitter', 'twitter.com', 'https://twitter.com', 'Social', NULL),
+('X', 'x.com', 'https://x.com', 'Social', NULL),
+('LinkedIn', 'linkedin.com', 'https://linkedin.com', 'Social', NULL),
+('TikTok', 'tiktok.com', 'https://tiktok.com', 'Social', NULL),
+('Snapchat', 'snapchat.com', 'https://snapchat.com', 'Social', NULL),
+('Pinterest', 'pinterest.com', 'https://pinterest.com', 'Social', NULL),
+('Reddit', 'reddit.com', 'https://reddit.com', 'Social', NULL),
+('Tumblr', 'tumblr.com', 'https://tumblr.com', 'Social', NULL),
+('Discord', 'discord.com', 'https://discord.com', 'Social', NULL),
+('WhatsApp', 'whatsapp.com', 'https://whatsapp.com', 'Social', NULL),
+('Telegram', 'telegram.org', 'https://telegram.org', 'Social', NULL),
+('Signal', 'signal.org', 'https://signal.org', 'Social', NULL),
+
+-- Streaming & Entertainment
+('Netflix', 'netflix.com', 'https://netflix.com', 'Entertainment', NULL),
+('Hulu', 'hulu.com', 'https://hulu.com', 'Entertainment', NULL),
+('Disney+', 'disneyplus.com', 'https://disneyplus.com', 'Entertainment', NULL),
+('HBO Max', 'hbomax.com', 'https://hbomax.com', 'Entertainment', NULL),
+('Amazon Prime Video', 'primevideo.com', 'https://primevideo.com', 'Entertainment', NULL),
+('YouTube', 'youtube.com', 'https://youtube.com', 'Entertainment', NULL),
+('YouTube Premium', 'youtube.com', 'https://youtube.com', 'Entertainment', NULL),
+('Spotify', 'spotify.com', 'https://spotify.com', 'Entertainment', NULL),
+('Apple Music', 'music.apple.com', 'https://music.apple.com', 'Entertainment', NULL),
+('Pandora', 'pandora.com', 'https://pandora.com', 'Entertainment', NULL),
+('Tidal', 'tidal.com', 'https://tidal.com', 'Entertainment', NULL),
+('SoundCloud', 'soundcloud.com', 'https://soundcloud.com', 'Entertainment', NULL),
+('Twitch', 'twitch.tv', 'https://twitch.tv', 'Entertainment', NULL),
+('Peacock', 'peacocktv.com', 'https://peacocktv.com', 'Entertainment', NULL),
+('Paramount+', 'paramountplus.com', 'https://paramountplus.com', 'Entertainment', NULL),
+('Apple TV+', 'tv.apple.com', 'https://tv.apple.com', 'Entertainment', NULL),
+('Crunchyroll', 'crunchyroll.com', 'https://crunchyroll.com', 'Entertainment', NULL),
+('Audible', 'audible.com', 'https://audible.com', 'Entertainment', NULL),
+
+-- Productivity & Work
+('Slack', 'slack.com', 'https://slack.com', 'Productivity', NULL),
+('Microsoft Teams', 'teams.microsoft.com', 'https://teams.microsoft.com', 'Productivity', NULL),
+('Zoom', 'zoom.us', 'https://zoom.us', 'Productivity', NULL),
+('Google Meet', 'meet.google.com', 'https://meet.google.com', 'Productivity', NULL),
+('Notion', 'notion.so', 'https://notion.so', 'Productivity', NULL),
+('Trello', 'trello.com', 'https://trello.com', 'Productivity', NULL),
+('Asana', 'asana.com', 'https://asana.com', 'Productivity', NULL),
+('Monday.com', 'monday.com', 'https://monday.com', 'Productivity', NULL),
+('ClickUp', 'clickup.com', 'https://clickup.com', 'Productivity', NULL),
+('Jira', 'atlassian.com', 'https://atlassian.com', 'Productivity', NULL),
+('Confluence', 'atlassian.com', 'https://atlassian.com', 'Productivity', NULL),
+('Basecamp', 'basecamp.com', 'https://basecamp.com', 'Productivity', NULL),
+('Airtable', 'airtable.com', 'https://airtable.com', 'Productivity', NULL),
+('Evernote', 'evernote.com', 'https://evernote.com', 'Productivity', NULL),
+('OneNote', 'onenote.com', 'https://onenote.com', 'Productivity', NULL),
+('Google Workspace', 'workspace.google.com', 'https://workspace.google.com', 'Productivity', NULL),
+('Microsoft 365', 'microsoft.com', 'https://microsoft.com', 'Productivity', NULL),
+('Dropbox', 'dropbox.com', 'https://dropbox.com', 'Productivity', NULL),
+('Box', 'box.com', 'https://box.com', 'Productivity', NULL),
+('OneDrive', 'onedrive.com', 'https://onedrive.com', 'Productivity', NULL),
+('Google Drive', 'drive.google.com', 'https://drive.google.com', 'Productivity', NULL),
+('iCloud', 'icloud.com', 'https://icloud.com', 'Productivity', NULL),
+
+-- Education
+('Coursera', 'coursera.org', 'https://coursera.org', 'Education', NULL),
+('Udemy', 'udemy.com', 'https://udemy.com', 'Education', NULL),
+('Khan Academy', 'khanacademy.org', 'https://khanacademy.org', 'Education', NULL),
+('edX', 'edx.org', 'https://edx.org', 'Education', NULL),
+('LinkedIn Learning', 'linkedin.com', 'https://linkedin.com/learning', 'Education', NULL),
+('Skillshare', 'skillshare.com', 'https://skillshare.com', 'Education', NULL),
+('Pluralsight', 'pluralsight.com', 'https://pluralsight.com', 'Education', NULL),
+('Codecademy', 'codecademy.com', 'https://codecademy.com', 'Education', NULL),
+('Duolingo', 'duolingo.com', 'https://duolingo.com', 'Education', NULL),
+('Rosetta Stone', 'rosettastone.com', 'https://rosettastone.com', 'Education', NULL),
+('MasterClass', 'masterclass.com', 'https://masterclass.com', 'Education', NULL),
+
+-- Travel
+('Airbnb', 'airbnb.com', 'https://airbnb.com', 'Travel', NULL),
+('Booking.com', 'booking.com', 'https://booking.com', 'Travel', NULL),
+('Expedia', 'expedia.com', 'https://expedia.com', 'Travel', NULL),
+('Hotels.com', 'hotels.com', 'https://hotels.com', 'Travel', NULL),
+('Priceline', 'priceline.com', 'https://priceline.com', 'Travel', NULL),
+('Kayak', 'kayak.com', 'https://kayak.com', 'Travel', NULL),
+('TripAdvisor', 'tripadvisor.com', 'https://tripadvisor.com', 'Travel', NULL),
+('Uber', 'uber.com', 'https://uber.com', 'Travel', NULL),
+('Lyft', 'lyft.com', 'https://lyft.com', 'Travel', NULL),
+('Delta', 'delta.com', 'https://delta.com', 'Travel', NULL),
+('American Airlines', 'aa.com', 'https://aa.com', 'Travel', NULL),
+('United Airlines', 'united.com', 'https://united.com', 'Travel', NULL),
+('Southwest Airlines', 'southwest.com', 'https://southwest.com', 'Travel', NULL),
+('JetBlue', 'jetblue.com', 'https://jetblue.com', 'Travel', NULL),
+('Spirit Airlines', 'spirit.com', 'https://spirit.com', 'Travel', NULL),
+('Marriott', 'marriott.com', 'https://marriott.com', 'Travel', NULL),
+('Hilton', 'hilton.com', 'https://hilton.com', 'Travel', NULL),
+('Hyatt', 'hyatt.com', 'https://hyatt.com', 'Travel', NULL),
+('IHG', 'ihg.com', 'https://ihg.com', 'Travel', NULL),
+
+-- Food Delivery
+('DoorDash', 'doordash.com', 'https://doordash.com', 'Food', NULL),
+('Uber Eats', 'ubereats.com', 'https://ubereats.com', 'Food', NULL),
+('Grubhub', 'grubhub.com', 'https://grubhub.com', 'Food', NULL),
+('Postmates', 'postmates.com', 'https://postmates.com', 'Food', NULL),
+('Seamless', 'seamless.com', 'https://seamless.com', 'Food', NULL),
+('Instacart', 'instacart.com', 'https://instacart.com', 'Food', NULL),
+('HelloFresh', 'hellofresh.com', 'https://hellofresh.com', 'Food', NULL),
+('Blue Apron', 'blueapron.com', 'https://blueapron.com', 'Food', NULL),
+
+-- Health & Fitness
+('MyFitnessPal', 'myfitnesspal.com', 'https://myfitnesspal.com', 'Health', NULL),
+('Fitbit', 'fitbit.com', 'https://fitbit.com', 'Health', NULL),
+('Strava', 'strava.com', 'https://strava.com', 'Health', NULL),
+('Peloton', 'onepeloton.com', 'https://onepeloton.com', 'Health', NULL),
+('Calm', 'calm.com', 'https://calm.com', 'Health', NULL),
+('Headspace', 'headspace.com', 'https://headspace.com', 'Health', NULL),
+('23andMe', '23andme.com', 'https://23andme.com', 'Health', NULL),
+('Ancestry', 'ancestry.com', 'https://ancestry.com', 'Health', NULL),
+('CVS', 'cvs.com', 'https://cvs.com', 'Health', NULL),
+('Walgreens', 'walgreens.com', 'https://walgreens.com', 'Health', NULL),
+
+-- Gaming
+('Steam', 'steampowered.com', 'https://steampowered.com', 'Gaming', NULL),
+('Epic Games', 'epicgames.com', 'https://epicgames.com', 'Gaming', NULL),
+('PlayStation Network', 'playstation.com', 'https://playstation.com', 'Gaming', NULL),
+('Xbox Live', 'xbox.com', 'https://xbox.com', 'Gaming', NULL),
+('Nintendo', 'nintendo.com', 'https://nintendo.com', 'Gaming', NULL),
+('Blizzard', 'blizzard.com', 'https://blizzard.com', 'Gaming', NULL),
+('EA', 'ea.com', 'https://ea.com', 'Gaming', NULL),
+('Ubisoft', 'ubisoft.com', 'https://ubisoft.com', 'Gaming', NULL),
+('GOG', 'gog.com', 'https://gog.com', 'Gaming', NULL),
+('Roblox', 'roblox.com', 'https://roblox.com', 'Gaming', NULL),
+
+-- News & Media
+('The New York Times', 'nytimes.com', 'https://nytimes.com', 'News', NULL),
+('The Washington Post', 'washingtonpost.com', 'https://washingtonpost.com', 'News', NULL),
+('Wall Street Journal', 'wsj.com', 'https://wsj.com', 'News', NULL),
+('Medium', 'medium.com', 'https://medium.com', 'News', NULL),
+('Substack', 'substack.com', 'https://substack.com', 'News', NULL),
+
+-- Developer Tools
+('GitHub', 'github.com', 'https://github.com', 'Developer', NULL),
+('GitLab', 'gitlab.com', 'https://gitlab.com', 'Developer', NULL),
+('Bitbucket', 'bitbucket.org', 'https://bitbucket.org', 'Developer', NULL),
+('Heroku', 'heroku.com', 'https://heroku.com', 'Developer', NULL),
+('DigitalOcean', 'digitalocean.com', 'https://digitalocean.com', 'Developer', NULL),
+('AWS', 'aws.amazon.com', 'https://aws.amazon.com', 'Developer', NULL),
+('Google Cloud', 'cloud.google.com', 'https://cloud.google.com', 'Developer', NULL),
+('Azure', 'azure.microsoft.com', 'https://azure.microsoft.com', 'Developer', NULL),
+('Vercel', 'vercel.com', 'https://vercel.com', 'Developer', NULL),
+('Netlify', 'netlify.com', 'https://netlify.com', 'Developer', NULL),
+
+-- Utilities
+('Xfinity', 'xfinity.com', 'https://xfinity.com', 'Utilities', NULL),
+('Verizon', 'verizon.com', 'https://verizon.com', 'Utilities', NULL),
+('AT&T', 'att.com', 'https://att.com', 'Utilities', NULL),
+('T-Mobile', 't-mobile.com', 'https://t-mobile.com', 'Utilities', NULL),
+('Spectrum', 'spectrum.com', 'https://spectrum.com', 'Utilities', NULL),
+('Cox', 'cox.com', 'https://cox.com', 'Utilities', NULL)
+ON CONFLICT (domain) DO NOTHING;

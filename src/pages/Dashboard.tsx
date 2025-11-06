@@ -16,6 +16,18 @@ interface Service {
   discovered_at: string;
 }
 
+interface ScanStats {
+  servicesFound: number;
+  emailsScanned: number;
+  unmatchedCount: number;
+}
+
+interface UnmatchedDomain {
+  domain: string;
+  email_from: string;
+  occurrence_count: number;
+}
+
 export default function Dashboard() {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -24,6 +36,8 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [scanning, setScanning] = useState(false);
   const [hasGmailAccess, setHasGmailAccess] = useState(false);
+  const [scanStats, setScanStats] = useState<ScanStats | null>(null);
+  const [unmatchedDomains, setUnmatchedDomains] = useState<UnmatchedDomain[]>([]);
 
   useEffect(() => {
     checkAuth();
@@ -39,6 +53,7 @@ export default function Dashboard() {
     setUser(session.user);
     setHasGmailAccess(!!session.provider_token);
     await fetchServices();
+    await fetchUnmatchedDomains();
     setLoading(false);
   }
 
@@ -77,6 +92,21 @@ export default function Dashboard() {
     }));
 
     setServices(mapped);
+  }
+
+  async function fetchUnmatchedDomains() {
+    const { data, error } = await supabase
+      .from("unmatched_domains")
+      .select("domain, email_from, occurrence_count")
+      .order("occurrence_count", { ascending: false })
+      .limit(20);
+
+    if (error) {
+      console.error("Error loading unmatched domains:", error);
+      return;
+    }
+
+    setUnmatchedDomains(data || []);
   }
 
   async function handleScan() {
@@ -185,13 +215,20 @@ export default function Dashboard() {
 
       if (error) throw error;
 
+      setScanStats({
+        servicesFound: data.servicesFound,
+        emailsScanned: data.emailsScanned,
+        unmatchedCount: data.unmatchedCount
+      });
+
       toast({
         title: "Scan complete!",
-        description: data.message,
+        description: `${data.message}. ${data.unmatchedCount > 0 ? `${data.unmatchedCount} unrecognized services found.` : ''}`,
         duration: 5000
       });
 
       await fetchServices();
+      await fetchUnmatchedDomains();
     } catch (error: any) {
       toast({
         title: "Scan failed",
@@ -244,6 +281,15 @@ export default function Dashboard() {
             <p className="text-muted-foreground mb-4">
               Active accounts discovered across the web
             </p>
+            {scanStats && (
+              <div className="text-sm text-muted-foreground mb-4 p-3 bg-muted/50 rounded-lg">
+                <p><strong>Last Scan:</strong> {scanStats.emailsScanned} emails analyzed</p>
+                <p><strong>Matched:</strong> {scanStats.servicesFound} known services</p>
+                {scanStats.unmatchedCount > 0 && (
+                  <p><strong>Unrecognized:</strong> {scanStats.unmatchedCount} domains (see below)</p>
+                )}
+              </div>
+            )}
             <Button 
               onClick={handleScan}
               disabled={scanning}
@@ -316,6 +362,35 @@ export default function Dashboard() {
             )}
           </CardContent>
         </Card>
+
+        {unmatchedDomains.length > 0 && (
+          <Card className="mt-8">
+            <CardHeader>
+              <CardTitle>Unrecognized Services</CardTitle>
+              <p className="text-sm text-muted-foreground">
+                These domains sent you signup emails but aren't in our database yet
+              </p>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {unmatchedDomains.map((item, idx) => (
+                  <div 
+                    key={idx}
+                    className="flex items-center justify-between p-3 rounded-lg border border-border hover:border-primary/50 transition-colors"
+                  >
+                    <div>
+                      <p className="font-medium text-foreground">{item.domain}</p>
+                      <p className="text-xs text-muted-foreground">From: {item.email_from}</p>
+                    </div>
+                    <span className="text-xs text-muted-foreground">
+                      {item.occurrence_count} {item.occurrence_count === 1 ? 'email' : 'emails'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         <div className="mt-8 p-4 bg-muted/50 rounded-lg text-sm text-muted-foreground">
           <p className="flex items-start gap-2">

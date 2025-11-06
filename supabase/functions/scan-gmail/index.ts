@@ -38,10 +38,10 @@ Deno.serve(async (req) => {
 
     console.log(`Starting scan for user ${user.id}`);
 
-    // Query Gmail for welcome/confirmation emails
-    const gmailQuery = 'subject:(welcome OR "thank you for signing up" OR "confirm your" OR "verify your email" OR "account created") newer_than:2y';
+    // Query Gmail for welcome/confirmation emails - enhanced search patterns
+    const gmailQuery = 'subject:(welcome OR "thank you for signing up" OR "confirm your" OR "verify your email" OR "account created" OR registration OR "activate your account" OR "get started" OR "setup your account" OR "new account" OR "complete your profile" OR "verify your identity" OR "email verification")';
     const messagesResponse = await fetch(
-      `https://gmail.googleapis.com/gmail/v1/users/me/messages?q=${encodeURIComponent(gmailQuery)}&maxResults=200`,
+      `https://gmail.googleapis.com/gmail/v1/users/me/messages?q=${encodeURIComponent(gmailQuery)}&maxResults=500`,
       { headers: { Authorization: `Bearer ${accessToken}` } }
     );
 
@@ -90,6 +90,7 @@ Deno.serve(async (req) => {
 
     const domainMap = new Map(catalog.map(s => [s.domain.toLowerCase(), s]));
     const discoveredServices = new Set<string>();
+    const unmatchedDomains = new Map<string, string>(); // domain -> email
     const batchSize = 10;
 
     // Process messages in batches
@@ -122,6 +123,9 @@ Deno.serve(async (req) => {
           const service = domainMap.get(domain) || domainMap.get(baseDomain);
           if (service) {
             discoveredServices.add(service.id);
+          } else {
+            // Track unmatched domains for smart discovery
+            unmatchedDomains.set(domain, email);
           }
         } catch (err) {
           console.error(`Error processing message ${msg.id}:`, err);
@@ -154,10 +158,34 @@ Deno.serve(async (req) => {
 
     console.log(`Successfully saved ${discoveredServices.size} services for user ${user.id}`);
 
+    // Save unmatched domains for user review
+    if (unmatchedDomains.size > 0) {
+      const domainsToInsert = Array.from(unmatchedDomains).map(([domain, emailFrom]) => ({
+        user_id: user.id,
+        domain,
+        email_from: emailFrom
+      }));
+
+      const { error: domainError } = await supabase
+        .from("unmatched_domains")
+        .upsert(domainsToInsert, {
+          onConflict: "user_id,domain",
+          ignoreDuplicates: false
+        });
+
+      if (domainError) {
+        console.error("Error saving unmatched domains:", domainError);
+      } else {
+        console.log(`Saved ${unmatchedDomains.size} unmatched domains`);
+      }
+    }
+
     return new Response(
       JSON.stringify({ 
         servicesFound: discoveredServices.size,
-        message: `Found ${discoveredServices.size} accounts in your inbox`
+        emailsScanned: messages.length,
+        unmatchedCount: unmatchedDomains.size,
+        message: `Found ${discoveredServices.size} accounts from ${messages.length} emails`
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
     );
