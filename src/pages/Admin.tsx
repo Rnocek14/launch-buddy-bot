@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Shield, Users, Mail, MailX, Send, Loader2, Download, LogOut, Rocket, Check, X, BarChart3, TrendingUp, MousePointerClick, Eye, ScanSearch } from "lucide-react";
+import { Shield, Users, Mail, MailX, Send, Loader2, Download, LogOut, Rocket, Check, X, BarChart3, TrendingUp, MousePointerClick, Eye, ScanSearch, GitPullRequest, CheckCircle2, XCircle, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -52,6 +52,10 @@ export default function Admin() {
     avgAccountsPerUser: 0,
     topServices: [] as Array<{ name: string; count: number; logo_url: string }>
   });
+
+  // Service submissions
+  const [serviceSubmissions, setServiceSubmissions] = useState<any[]>([]);
+  const [submissionsStats, setSubmissionsStats] = useState({ pending: 0, approved: 0, rejected: 0 });
 
   // Redirect if not authenticated or not admin
   useEffect(() => {
@@ -442,6 +446,102 @@ export default function Admin() {
     }
   };
 
+  const fetchServiceSubmissions = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("service_submissions")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+
+      setServiceSubmissions(data || []);
+
+      // Calculate stats
+      const pending = data?.filter(s => s.status === "pending").length || 0;
+      const approved = data?.filter(s => s.status === "approved").length || 0;
+      const rejected = data?.filter(s => s.status === "rejected").length || 0;
+      
+      setSubmissionsStats({ pending, approved, rejected });
+    } catch (error: any) {
+      console.error("Error fetching service submissions:", error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch service submissions",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleApproveSubmission = async (submission: any) => {
+    try {
+      // Add to service catalog
+      const { error: catalogError } = await supabase
+        .from("service_catalog")
+        .insert({
+          name: submission.suggested_name,
+          domain: submission.domain,
+          category: submission.suggested_category,
+        });
+
+      if (catalogError) throw catalogError;
+
+      // Update submission status
+      const { error: updateError } = await supabase
+        .from("service_submissions")
+        .update({
+          status: "approved",
+          reviewed_at: new Date().toISOString(),
+          reviewed_by: user?.id,
+        })
+        .eq("id", submission.id);
+
+      if (updateError) throw updateError;
+
+      toast({
+        title: "Success",
+        description: "Service added to catalog",
+      });
+
+      fetchServiceSubmissions();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to approve submission",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleRejectSubmission = async (submissionId: string, notes: string) => {
+    try {
+      const { error } = await supabase
+        .from("service_submissions")
+        .update({
+          status: "rejected",
+          reviewed_at: new Date().toISOString(),
+          reviewed_by: user?.id,
+          admin_notes: notes,
+        })
+        .eq("id", submissionId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Submission rejected",
+      });
+
+      fetchServiceSubmissions();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: "Failed to reject submission",
+        variant: "destructive",
+      });
+    }
+  };
+
   useEffect(() => {
     if (isAdmin && !authLoading) {
       fetchStats();
@@ -450,6 +550,7 @@ export default function Admin() {
       fetchEmailAnalytics();
       fetchEmailEvents();
       fetchScannerStats();
+      fetchServiceSubmissions();
     }
   }, [isAdmin, authLoading]);
 
@@ -1035,6 +1136,112 @@ export default function Admin() {
                           <TableRow>
                             <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
                               No {status} applications
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </TabsContent>
+              ))}
+            </Tabs>
+          </CardContent>
+        </Card>
+
+        {/* Service Submissions Management */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <GitPullRequest className="w-5 h-5" />
+                  Service Submissions
+                </CardTitle>
+                <CardDescription>
+                  {submissionsStats.pending} pending • {submissionsStats.approved} approved • {submissionsStats.rejected} rejected
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <Tabs defaultValue="pending">
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="pending">
+                  Pending ({submissionsStats.pending})
+                </TabsTrigger>
+                <TabsTrigger value="approved">
+                  Approved ({submissionsStats.approved})
+                </TabsTrigger>
+                <TabsTrigger value="rejected">
+                  Rejected ({submissionsStats.rejected})
+                </TabsTrigger>
+              </TabsList>
+
+              {["pending", "approved", "rejected"].map((status) => (
+                <TabsContent key={status} value={status} className="mt-4">
+                  <div className="border rounded-lg">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Domain</TableHead>
+                          <TableHead>Suggested Name</TableHead>
+                          <TableHead>Category</TableHead>
+                          <TableHead>Submitted</TableHead>
+                          <TableHead>Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {serviceSubmissions
+                          .filter((sub) => sub.status === status)
+                          .map((sub) => (
+                            <TableRow key={sub.id}>
+                              <TableCell className="font-medium">{sub.domain}</TableCell>
+                              <TableCell>{sub.suggested_name}</TableCell>
+                              <TableCell>
+                                {sub.suggested_category ? (
+                                  <Badge variant="outline">{sub.suggested_category}</Badge>
+                                ) : (
+                                  <span className="text-muted-foreground text-sm">Not specified</span>
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                {new Date(sub.created_at).toLocaleDateString()}
+                              </TableCell>
+                              <TableCell>
+                                {status === "pending" && (
+                                  <div className="flex gap-2">
+                                    <Button
+                                      size="sm"
+                                      onClick={() => handleApproveSubmission(sub)}
+                                    >
+                                      <CheckCircle2 className="w-4 h-4 mr-1" />
+                                      Approve
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="destructive"
+                                      onClick={() => handleRejectSubmission(sub.id, "Not suitable for catalog")}
+                                    >
+                                      <XCircle className="w-4 h-4 mr-1" />
+                                      Reject
+                                    </Button>
+                                  </div>
+                                )}
+                                {status !== "pending" && (
+                                  <Badge
+                                    variant={status === "approved" ? "default" : "destructive"}
+                                  >
+                                    <Clock className="w-3 h-3 mr-1" />
+                                    {new Date(sub.reviewed_at).toLocaleDateString()}
+                                  </Badge>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        {serviceSubmissions.filter((sub) => sub.status === status).length === 0 && (
+                          <TableRow>
+                            <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                              No {status} submissions
                             </TableCell>
                           </TableRow>
                         )}

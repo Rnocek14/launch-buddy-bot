@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Shield, RefreshCw, LogOut, Loader2, ExternalLink, Search, Download, AlertCircle, Sparkles, Mail } from "lucide-react";
+import { Shield, RefreshCw, LogOut, Loader2, ExternalLink, Search, Download, AlertCircle, Sparkles, Mail, Tag } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { validateGmailScope, isTokenValid } from "@/lib/googleAuth";
 import { Progress } from "@/components/ui/progress";
@@ -621,7 +621,7 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                {unmatchedDomains.map((item, idx) => (
+                {unmatchedDomains.slice(0, 5).map((item, idx) => (
                   <div 
                     key={idx}
                     className="flex items-center justify-between p-4 rounded-lg border border-orange-200 dark:border-orange-900/30 bg-background hover:border-orange-400 dark:hover:border-orange-600 transition-colors"
@@ -636,11 +636,19 @@ export default function Dashboard() {
                   </div>
                 ))}
               </div>
-              <div className="mt-4 p-4 rounded-lg bg-muted/50 border border-border">
-                <p className="text-sm text-muted-foreground">
-                  💡 <strong>Tip:</strong> These domains sent you signup or notification emails. 
-                  You may want to review them manually to see if they're services you forgot about or no longer use.
-                </p>
+              <div className="mt-4 flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                <div className="flex-1 p-4 rounded-lg bg-muted/50 border border-border">
+                  <p className="text-sm text-muted-foreground">
+                    💡 <strong>Tip:</strong> Tag these services and submit them for approval to add to our catalog.
+                  </p>
+                </div>
+                <Button 
+                  onClick={() => navigate("/unmatched-domains")}
+                  className="w-full sm:w-auto"
+                >
+                  <Tag className="w-4 h-4 mr-2" />
+                  Review & Tag All
+                </Button>
               </div>
             </CardContent>
           </Card>

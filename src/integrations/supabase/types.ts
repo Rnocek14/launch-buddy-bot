@@ -176,6 +176,51 @@ export type Database = {
         }
         Relationships: []
       }
+      service_submissions: {
+        Row: {
+          admin_notes: string | null
+          created_at: string
+          domain: string
+          email_from: string
+          id: string
+          occurrence_count: number
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          suggested_category: string | null
+          suggested_name: string
+          user_id: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          created_at?: string
+          domain: string
+          email_from: string
+          id?: string
+          occurrence_count?: number
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          suggested_category?: string | null
+          suggested_name: string
+          user_id: string
+        }
+        Update: {
+          admin_notes?: string | null
+          created_at?: string
+          domain?: string
+          email_from?: string
+          id?: string
+          occurrence_count?: number
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          suggested_category?: string | null
+          suggested_name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       unmatched_domains: {
         Row: {
           domain: string
@@ -184,6 +229,7 @@ export type Database = {
           id: string
           occurrence_count: number
           user_id: string
+          user_label: string | null
         }
         Insert: {
           domain: string
@@ -192,6 +238,7 @@ export type Database = {
           id?: string
           occurrence_count?: number
           user_id: string
+          user_label?: string | null
         }
         Update: {
           domain?: string
@@ -200,6 +247,7 @@ export type Database = {
           id?: string
           occurrence_count?: number
           user_id?: string
+          user_label?: string | null
         }
         Relationships: []
       }

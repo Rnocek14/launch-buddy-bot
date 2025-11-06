@@ -12,6 +12,7 @@ import Dashboard from "./pages/Dashboard";
 import AlphaAccess from "./pages/AlphaAccess";
 import Unsubscribe from "./pages/Unsubscribe";
 import Preferences from "./pages/Preferences";
+import UnmatchedDomains from "./pages/UnmatchedDomains";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -28,6 +29,7 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/admin" element={<Admin />} />
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/unmatched-domains" element={<UnmatchedDomains />} />
             <Route path="/alpha" element={<AlphaAccess />} />
             <Route path="/unsubscribe" element={<Unsubscribe />} />
             <Route path="/preferences" element={<Preferences />} />
