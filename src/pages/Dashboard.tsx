@@ -591,6 +591,15 @@ export default function Dashboard() {
               </div>
               <div className="flex items-center gap-3 w-full sm:w-auto">
                 <Button 
+                  variant="default" 
+                  size="sm"
+                  onClick={() => navigate("/cleanup")}
+                  className="flex-shrink-0 bg-gradient-to-r from-primary to-primary/80"
+                >
+                  <Sparkles className="w-4 h-4 mr-2" />
+                  AI Cleanup
+                </Button>
+                <Button 
                   variant="outline" 
                   size="sm"
                   onClick={() => navigate("/deletion-requests")}

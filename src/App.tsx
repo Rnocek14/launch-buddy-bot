@@ -14,6 +14,7 @@ import Unsubscribe from "./pages/Unsubscribe";
 import Preferences from "./pages/Preferences";
 import UnmatchedDomains from "./pages/UnmatchedDomains";
 import DeletionRequests from "./pages/DeletionRequests";
+import Cleanup from "./pages/Cleanup";
 import NotFound from "./pages/NotFound";
 import { AuthorizationWizard } from "./components/AuthorizationWizard";
 
@@ -33,6 +34,7 @@ const App = () => (
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/unmatched-domains" element={<UnmatchedDomains />} />
             <Route path="/deletion-requests" element={<DeletionRequests />} />
+            <Route path="/cleanup" element={<Cleanup />} />
             <Route path="/alpha" element={<AlphaAccess />} />
             <Route path="/unsubscribe" element={<Unsubscribe />} />
             <Route path="/preferences" element={<Preferences />} />
