@@ -138,12 +138,12 @@ ${JSON.stringify(servicesData, null, 2)}`;
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-5-2025-08-07',
+        model: 'gpt-4o',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt }
         ],
-        max_completion_tokens: 1500,
+        max_tokens: 1500,
         response_format: { type: "json_object" }
       }),
     });
