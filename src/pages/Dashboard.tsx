@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Shield, RefreshCw, LogOut, Loader2, ExternalLink, Search, Download, AlertCircle, Sparkles, Mail, Tag, TrendingUp, Trash2, CheckCircle, FileText } from "lucide-react";
+import { Shield, RefreshCw, LogOut, Loader2, ExternalLink, Search, Download, AlertCircle, Sparkles, Mail, Tag, TrendingUp, Trash2, CheckCircle, FileText, DollarSign, Package, Lock, Bell } from "lucide-react";
 import { RiskScoreCard } from "@/components/RiskScoreCard";
 import { useToast } from "@/hooks/use-toast";
 import { validateGmailScope, isTokenValid } from "@/lib/googleAuth";
@@ -31,6 +31,13 @@ interface ScanStats {
   servicesFound: number;
   emailsScanned: number;
   unmatchedCount: number;
+  breakdown?: {
+    signup: number;
+    financial: number;
+    commerce: number;
+    security: number;
+    engagement: number;
+  };
 }
 
 interface ScanProgress {
@@ -256,7 +263,8 @@ export default function Dashboard() {
       setScanStats({
         servicesFound: data.servicesFound,
         emailsScanned: data.emailsScanned,
-        unmatchedCount: data.unmatchedCount
+        unmatchedCount: data.unmatchedCount,
+        breakdown: data.breakdown
       });
 
       setScanProgress({ currentEmail: 100, totalEmails: 100, status: "Complete!" });
@@ -501,15 +509,52 @@ export default function Dashboard() {
                 </div>
                 
                 {scanStats && !scanning && (
-                  <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-                    <div className="flex items-center gap-1.5">
-                      <Mail className="w-4 h-4" />
-                      <span>{scanStats.emailsScanned} emails scanned</span>
+                  <div className="space-y-3">
+                    <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
+                      <div className="flex items-center gap-1.5">
+                        <Mail className="w-4 h-4" />
+                        <span>{scanStats.emailsScanned} emails scanned</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <Sparkles className="w-4 h-4" />
+                        <span>{scanStats.servicesFound} services found</span>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-1.5">
-                      <Sparkles className="w-4 h-4" />
-                      <span>{scanStats.servicesFound} services found</span>
-                    </div>
+                    
+                    {scanStats.breakdown && (
+                      <div className="flex flex-wrap gap-2 pt-1">
+                        {scanStats.breakdown.signup > 0 && (
+                          <Badge variant="secondary" className="gap-1.5 text-xs">
+                            <Mail className="w-3 h-3" />
+                            {scanStats.breakdown.signup} signup
+                          </Badge>
+                        )}
+                        {scanStats.breakdown.financial > 0 && (
+                          <Badge variant="secondary" className="gap-1.5 text-xs">
+                            <DollarSign className="w-3 h-3" />
+                            {scanStats.breakdown.financial} invoices
+                          </Badge>
+                        )}
+                        {scanStats.breakdown.commerce > 0 && (
+                          <Badge variant="secondary" className="gap-1.5 text-xs">
+                            <Package className="w-3 h-3" />
+                            {scanStats.breakdown.commerce} orders
+                          </Badge>
+                        )}
+                        {scanStats.breakdown.security > 0 && (
+                          <Badge variant="secondary" className="gap-1.5 text-xs">
+                            <Lock className="w-3 h-3" />
+                            {scanStats.breakdown.security} security
+                          </Badge>
+                        )}
+                        {scanStats.breakdown.engagement > 0 && (
+                          <Badge variant="secondary" className="gap-1.5 text-xs">
+                            <Bell className="w-3 h-3" />
+                            {scanStats.breakdown.engagement} newsletters
+                          </Badge>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
 
