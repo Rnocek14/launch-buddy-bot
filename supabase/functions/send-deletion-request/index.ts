@@ -221,11 +221,24 @@ const handler = async (req: Request): Promise<Response> => {
     const subject = template.subject_template || `Data Deletion Request - ${service.name}`;
 
     // Determine recipient email
-    const recipientEmail = service.privacy_email || service.domain;
-    if (!recipientEmail) {
-      console.error("No contact email found for service");
+    let recipientEmail = service.privacy_email;
+    
+    // If no privacy_email, construct one from domain
+    if (!recipientEmail && service.domain) {
+      // Try common privacy email patterns
+      recipientEmail = `privacy@${service.domain}`;
+      console.log(`No privacy_email found, using constructed address: ${recipientEmail}`);
+    }
+    
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!recipientEmail || !emailRegex.test(recipientEmail)) {
+      console.error("No valid contact email found for service");
       return new Response(
-        JSON.stringify({ error: "Service does not have a contact email configured" }),
+        JSON.stringify({ 
+          error: "Service does not have a valid contact email configured. Please check the service details or contact them manually.",
+          serviceDomain: service.domain 
+        }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
