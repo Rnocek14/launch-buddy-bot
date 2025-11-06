@@ -316,8 +316,8 @@ const handler = async (req: Request): Promise<Response> => {
       user_id: user.id,
       service_id: service_id,
       service_name: service.name,
-      request_type: template_type,
-      method: "email",
+      request_type: "email_sent",
+      method: useGmail ? "gmail" : "resend",
       request_body: {
         to: recipientEmail,
         subject: subject,
