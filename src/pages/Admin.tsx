@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { Shield, Users, Mail, MailX, Send, Loader2, Download, LogOut, Rocket, Check, X, BarChart3, TrendingUp, MousePointerClick, Eye, ScanSearch, GitPullRequest, CheckCircle2, XCircle, Clock } from "lucide-react";
+import { Shield, Users, Mail, MailX, Send, Loader2, Download, LogOut, Rocket, Check, X, BarChart3, TrendingUp, MousePointerClick, Eye, ScanSearch, GitPullRequest, CheckCircle2, XCircle, Clock, Search } from "lucide-react";
+import PrivacyContactDiscovery from "@/components/PrivacyContactDiscovery";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -1253,6 +1254,9 @@ export default function Admin() {
             </Tabs>
           </CardContent>
         </Card>
+
+        {/* Privacy Contact Discovery Testing */}
+        <PrivacyContactDiscovery />
 
         {/* Email Campaign Controls */}
         <Card>
