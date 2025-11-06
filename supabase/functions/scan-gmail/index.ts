@@ -108,6 +108,7 @@ Deno.serve(async (req) => {
 
           const msgData = await msgResponse.json();
           const fromHeader = msgData.payload?.headers?.find((h: any) => h.name === "From");
+          const internalDate = msgData.internalDate; // Capture email received date
           if (!fromHeader) return;
 
           // Extract email from "Name <email@domain.com>" format
@@ -122,7 +123,10 @@ Deno.serve(async (req) => {
           
           const service = domainMap.get(domain) || domainMap.get(baseDomain);
           if (service) {
-            discoveredServices.add(service.id);
+            discoveredServices.add(JSON.stringify({ 
+              id: service.id, 
+              firstSeenDate: internalDate ? new Date(parseInt(internalDate)).toISOString() : null 
+            }));
           } else {
             // Track unmatched domains for smart discovery
             unmatchedDomains.set(domain, email);
@@ -136,11 +140,15 @@ Deno.serve(async (req) => {
     console.log(`Discovered ${discoveredServices.size} unique services`);
 
     // Upsert into user_services
-    const servicesToInsert = Array.from(discoveredServices).map(serviceId => ({
-      user_id: user.id,
-      service_id: serviceId,
-      last_scanned_at: new Date().toISOString()
-    }));
+    const servicesToInsert = Array.from(discoveredServices).map(serviceStr => {
+      const service = JSON.parse(serviceStr);
+      return {
+        user_id: user.id,
+        service_id: service.id,
+        first_seen_date: service.firstSeenDate,
+        last_scanned_at: new Date().toISOString()
+      };
+    });
 
     if (servicesToInsert.length > 0) {
       const { error: insertError } = await supabase

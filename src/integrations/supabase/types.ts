@@ -275,18 +275,21 @@ export type Database = {
       user_services: {
         Row: {
           discovered_at: string
+          first_seen_date: string | null
           last_scanned_at: string
           service_id: string
           user_id: string
         }
         Insert: {
           discovered_at?: string
+          first_seen_date?: string | null
           last_scanned_at?: string
           service_id: string
           user_id: string
         }
         Update: {
           discovered_at?: string
+          first_seen_date?: string | null
           last_scanned_at?: string
           service_id?: string
           user_id?: string

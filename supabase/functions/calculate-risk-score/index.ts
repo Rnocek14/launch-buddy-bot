@@ -55,7 +55,8 @@ Deno.serve(async (req) => {
           name,
           category
         ),
-        discovered_at
+        discovered_at,
+        first_seen_date
       `);
 
     if (servicesError) throw servicesError;
@@ -69,7 +70,7 @@ Deno.serve(async (req) => {
     const serviceData: ServiceData[] = services?.map((s: any) => ({
       name: s.service_catalog.name,
       category: s.service_catalog.category || 'Other',
-      discovered_at: s.discovered_at,
+      discovered_at: s.first_seen_date || s.discovered_at, // Use actual signup date if available
     })) || [];
 
     // Calculate risk factors
