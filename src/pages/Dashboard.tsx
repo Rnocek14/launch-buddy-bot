@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Shield, RefreshCw, LogOut, Loader2, ExternalLink, Search, ChevronDown, ChevronUp } from "lucide-react";
+import { Shield, RefreshCw, LogOut, Loader2, ExternalLink, Search, ChevronDown, ChevronUp, Download, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { validateGmailScope, isTokenValid } from "@/lib/googleAuth";
 
@@ -281,6 +281,36 @@ export default function Dashboard() {
     return name.slice(0, 2).toUpperCase();
   };
 
+  const exportToCSV = () => {
+    const headers = ['Service Name', 'Category', 'Homepage URL', 'Discovered Date'];
+    const rows = services.map(service => [
+      service.name,
+      service.category || 'Other',
+      service.homepage_url || 'N/A',
+      new Date(service.discovered_at).toLocaleDateString()
+    ]);
+
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `digital-footprint-${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    toast({
+      title: "Export successful",
+      description: `Downloaded ${services.length} services to CSV`,
+    });
+  };
+
   const filteredServices = useMemo(() => {
     return services.filter(service => {
       const matchesSearch = service.name.toLowerCase().includes(searchQuery.toLowerCase());
@@ -380,7 +410,19 @@ export default function Dashboard() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Discovered Accounts ({services.length})</CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle>Discovered Accounts ({services.length})</CardTitle>
+              {services.length > 0 && (
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={exportToCSV}
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Export CSV
+                </Button>
+              )}
+            </div>
           </CardHeader>
           <CardContent>
             {services.length === 0 ? (
@@ -491,9 +533,11 @@ export default function Dashboard() {
                                 </Avatar>
                                 <div className="flex-1 min-w-0">
                                   <h3 className="font-semibold text-foreground truncate">{service.name}</h3>
-                                  <p className="text-xs text-muted-foreground">
-                                    Found {new Date(service.discovered_at).toLocaleDateString()}
-                                  </p>
+                                  <div className="flex items-center gap-2 mt-1">
+                                    <Badge variant="outline" className="text-xs">
+                                      {new Date(service.discovered_at).toLocaleDateString()}
+                                    </Badge>
+                                  </div>
                                 </div>
                                 {service.homepage_url && (
                                   <a 
@@ -503,8 +547,9 @@ export default function Dashboard() {
                                     className="shrink-0"
                                     title="Visit website"
                                   >
-                                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                                      <ExternalLink className="w-4 h-4" />
+                                    <Button variant="outline" size="sm" className="gap-2">
+                                      Visit
+                                      <ExternalLink className="w-3 h-3" />
                                     </Button>
                                   </a>
                                 )}
@@ -522,31 +567,45 @@ export default function Dashboard() {
         </Card>
 
         {unmatchedDomains.length > 0 && (
-          <Card className="mt-8 border-orange-500/20">
+          <Card className="mt-8 border-orange-500/20 bg-orange-500/5">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                🕵️ Unrecognized Services ({unmatchedDomains.length})
-              </CardTitle>
-              <p className="text-sm text-muted-foreground">
-                These domains sent you signup emails but aren't in our database yet. Help us improve by identifying them!
-              </p>
+              <div className="flex items-start gap-3">
+                <div className="p-2 rounded-lg bg-orange-500/10">
+                  <AlertCircle className="w-5 h-5 text-orange-600 dark:text-orange-400" />
+                </div>
+                <div className="flex-1">
+                  <CardTitle className="text-xl mb-2">
+                    Unrecognized Services Found
+                  </CardTitle>
+                  <p className="text-sm text-muted-foreground">
+                    We found <strong>{unmatchedDomains.length}</strong> services that aren't in our database yet. 
+                    These might be smaller services, regional platforms, or newer companies.
+                  </p>
+                </div>
+              </div>
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
                 {unmatchedDomains.map((item, idx) => (
                   <div 
                     key={idx}
-                    className="flex items-center justify-between p-3 rounded-lg border border-border hover:border-primary/50 transition-colors"
+                    className="flex items-center justify-between p-4 rounded-lg border border-orange-200 dark:border-orange-900/30 bg-background hover:border-orange-400 dark:hover:border-orange-600 transition-colors"
                   >
-                    <div>
-                      <p className="font-medium text-foreground">{item.domain}</p>
-                      <p className="text-xs text-muted-foreground">From: {item.email_from}</p>
+                    <div className="flex-1">
+                      <p className="font-semibold text-foreground">{item.domain}</p>
+                      <p className="text-xs text-muted-foreground mt-1">From: {item.email_from}</p>
                     </div>
-                    <span className="text-xs text-muted-foreground">
+                    <Badge variant="outline" className="ml-4">
                       {item.occurrence_count} {item.occurrence_count === 1 ? 'email' : 'emails'}
-                    </span>
+                    </Badge>
                   </div>
                 ))}
+              </div>
+              <div className="mt-4 p-4 rounded-lg bg-muted/50 border border-border">
+                <p className="text-sm text-muted-foreground">
+                  💡 <strong>Tip:</strong> These domains sent you signup or notification emails. 
+                  You may want to review them manually to see if they're services you forgot about or no longer use.
+                </p>
               </div>
             </CardContent>
           </Card>
