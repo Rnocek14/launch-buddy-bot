@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Shield, RefreshCw, LogOut, Loader2, ExternalLink } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { validateGmailScope, isTokenValid } from "@/lib/googleAuth";
 
 interface Service {
   id: string;
@@ -79,37 +80,104 @@ export default function Dashboard() {
   }
 
   async function handleScan() {
-    if (!hasGmailAccess) {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}/dashboard`,
-          scopes: 'email profile https://www.googleapis.com/auth/gmail.readonly',
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent'
-          }
-        }
-      });
-
-      if (error) {
-        toast({
-          title: "Authorization failed",
-          description: error.message,
-          variant: "destructive"
-        });
-      }
-      return;
-    }
-
     setScanning(true);
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
+      
+      // Check if we have a provider token
       if (!session?.provider_token) {
-        throw new Error("Gmail access token not found. Please reconnect.");
+        // Need to authorize with Google
+        setScanning(false);
+        const { error } = await supabase.auth.signInWithOAuth({
+          provider: 'google',
+          options: {
+            redirectTo: `${window.location.origin}/dashboard`,
+            scopes: 'https://www.googleapis.com/auth/gmail.readonly',
+            queryParams: {
+              access_type: 'offline',
+              prompt: 'consent'
+            }
+          }
+        });
+
+        if (error) {
+          toast({
+            title: "Authorization failed",
+            description: error.message,
+            variant: "destructive"
+          });
+        }
+        return;
       }
 
+      // Validate token has Gmail scope
+      const hasGmailScope = await validateGmailScope(session.provider_token);
+      if (!hasGmailScope) {
+        setScanning(false);
+        toast({
+          title: "Gmail Access Required",
+          description: "Your token doesn't have Gmail access. Please reconnect to grant permission.",
+          variant: "destructive"
+        });
+        
+        // Trigger re-authorization with consent prompt
+        const { error } = await supabase.auth.signInWithOAuth({
+          provider: 'google',
+          options: {
+            redirectTo: `${window.location.origin}/dashboard`,
+            scopes: 'https://www.googleapis.com/auth/gmail.readonly',
+            queryParams: {
+              access_type: 'offline',
+              prompt: 'consent'
+            }
+          }
+        });
+
+        if (error) {
+          toast({
+            title: "Authorization failed",
+            description: error.message,
+            variant: "destructive"
+          });
+        }
+        return;
+      }
+
+      // Check if token is still valid
+      const tokenIsValid = await isTokenValid(session.provider_token);
+      if (!tokenIsValid) {
+        setScanning(false);
+        toast({
+          title: "Token Expired",
+          description: "Your access token has expired. Please reconnect.",
+          variant: "destructive"
+        });
+        
+        // Trigger re-authorization
+        const { error } = await supabase.auth.signInWithOAuth({
+          provider: 'google',
+          options: {
+            redirectTo: `${window.location.origin}/dashboard`,
+            scopes: 'https://www.googleapis.com/auth/gmail.readonly',
+            queryParams: {
+              access_type: 'offline',
+              prompt: 'consent'
+            }
+          }
+        });
+
+        if (error) {
+          toast({
+            title: "Authorization failed",
+            description: error.message,
+            variant: "destructive"
+          });
+        }
+        return;
+      }
+
+      // All validations passed, proceed with scan
       const { data, error } = await supabase.functions.invoke("scan-gmail", {
         body: { accessToken: session.provider_token }
       });
@@ -126,7 +194,7 @@ export default function Dashboard() {
     } catch (error: any) {
       toast({
         title: "Scan failed",
-        description: error.message,
+        description: error.message || "Please try reconnecting your Google account",
         variant: "destructive"
       });
     } finally {

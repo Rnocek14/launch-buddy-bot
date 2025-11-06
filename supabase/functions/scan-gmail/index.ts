@@ -46,9 +46,28 @@ Deno.serve(async (req) => {
     );
 
     if (!messagesResponse.ok) {
-      const error = await messagesResponse.text();
-      console.error("Gmail API error:", error);
-      throw new Error(`Gmail API failed: ${messagesResponse.status}`);
+      const errorText = await messagesResponse.text();
+      let errorObj;
+      try {
+        errorObj = JSON.parse(errorText);
+      } catch {
+        errorObj = { error: errorText };
+      }
+      
+      console.error("Gmail API error:", errorObj);
+      
+      // Check for specific error types
+      if (messagesResponse.status === 401) {
+        throw new Error("Gmail access token is invalid or expired. Please reconnect your Google account.");
+      } else if (messagesResponse.status === 403) {
+        const errorMessage = errorObj.error?.message || errorText;
+        if (errorMessage.includes("insufficient")) {
+          throw new Error("Gmail access was not granted. Please sign in again and allow Gmail access when prompted.");
+        }
+        throw new Error(`Gmail access denied: ${errorMessage}`);
+      }
+      
+      throw new Error(`Gmail API failed with status ${messagesResponse.status}: ${errorText}`);
     }
 
     const { messages } = await messagesResponse.json();
