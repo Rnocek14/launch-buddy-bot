@@ -117,40 +117,50 @@ Deno.serve(async (req) => {
     else if (riskScore < 75) riskLevel = 'high';
     else riskLevel = 'critical';
 
-    // Generate AI insights
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-    if (!LOVABLE_API_KEY) throw new Error('LOVABLE_API_KEY not configured');
+    // Generate AI insights using GPT-5
+    const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
+    if (!OPENAI_API_KEY) throw new Error('OPENAI_API_KEY not configured');
 
-    const aiPrompt = `You are a privacy and digital security expert. Analyze this user's digital footprint and provide 3 actionable insights.
+    const aiPrompt = `You are a world-class privacy and digital security expert. Analyze this user's digital footprint and provide detailed, nuanced insights.
 
 Risk Score: ${riskScore}/100 (${riskLevel})
 Total Accounts: ${riskFactors.totalAccounts}
 Old Accounts (>3 years): ${riskFactors.oldAccountsCount}
-Sensitive Accounts: ${riskFactors.sensitiveAccountsCount}
+Sensitive Accounts (Finance, Healthcare, etc.): ${riskFactors.sensitiveAccountsCount}
 Unmatched/Unknown Services: ${riskFactors.unmatchedDomainsCount}
 Average Account Age: ${riskFactors.avgAccountAge.toFixed(1)} years
 
-Provide 3 specific, actionable insights in a conversational tone. Each insight should be 1-2 sentences. Focus on what matters most for this user.`;
+Provide 3-4 specific, actionable insights:
+1. What this risk score means for their digital privacy
+2. The biggest immediate concern they should address
+3. A practical step they can take today to improve their security
+4. (Optional) A long-term strategy for better digital hygiene
 
-    const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+Be conversational, empathetic, and avoid jargon. Each insight should be 2-3 sentences with concrete advice.`;
+
+    const aiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+        'Authorization': `Bearer ${OPENAI_API_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
+        model: 'gpt-5-2025-08-07',
         messages: [
-          { role: 'system', content: 'You are a privacy expert providing brief, actionable insights about digital footprints.' },
+          { 
+            role: 'system', 
+            content: 'You are an expert privacy and cybersecurity consultant specializing in digital footprint analysis. You provide clear, actionable advice that helps people take control of their online presence.' 
+          },
           { role: 'user', content: aiPrompt }
         ],
-        temperature: 0.7,
+        max_completion_tokens: 800,
       }),
     });
 
     if (!aiResponse.ok) {
-      console.error('AI gateway error:', await aiResponse.text());
-      throw new Error('Failed to generate insights');
+      const errorText = await aiResponse.text();
+      console.error('OpenAI API error:', aiResponse.status, errorText);
+      throw new Error(`Failed to generate insights: ${errorText}`);
     }
 
     const aiData = await aiResponse.json();
