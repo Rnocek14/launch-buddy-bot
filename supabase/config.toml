@@ -3,17 +3,8 @@ project_id = "gqxkeezkajkiyjpnjgkx"
 [functions.send-welcome-email]
 verify_jwt = false
 
-[functions.send-progress-email]
-verify_jwt = false
-
 [functions.update-email-preferences]
 verify_jwt = false
 
-[functions.send-alpha-status-email]
-verify_jwt = false
-
 [functions.resend-webhook]
-verify_jwt = false
-
-[functions.scan-gmail]
 verify_jwt = false

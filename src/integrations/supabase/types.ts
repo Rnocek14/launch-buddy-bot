@@ -290,6 +290,21 @@ export type Database = {
       }
     }
     Functions: {
+      get_email_analytics_summary: {
+        Args: never
+        Returns: {
+          click_rate: number
+          open_rate: number
+          total_bounced: number
+          total_clicked: number
+          total_complained: number
+          total_delivered: number
+          total_opened: number
+          total_sent: number
+          unique_clicks: number
+          unique_opens: number
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
