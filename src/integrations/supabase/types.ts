@@ -53,6 +53,71 @@ export type Database = {
         }
         Relationships: []
       }
+      deletion_requests: {
+        Row: {
+          completed_at: string | null
+          contact_email: string | null
+          created_at: string
+          id: string
+          method: string | null
+          notes: string | null
+          request_body: Json | null
+          request_type: string
+          response_data: Json | null
+          service_id: string | null
+          service_name: string
+          status: string
+          updated_at: string
+          user_id: string
+          verification_notes: string | null
+          verification_required: boolean | null
+        }
+        Insert: {
+          completed_at?: string | null
+          contact_email?: string | null
+          created_at?: string
+          id?: string
+          method?: string | null
+          notes?: string | null
+          request_body?: Json | null
+          request_type: string
+          response_data?: Json | null
+          service_id?: string | null
+          service_name: string
+          status?: string
+          updated_at?: string
+          user_id: string
+          verification_notes?: string | null
+          verification_required?: boolean | null
+        }
+        Update: {
+          completed_at?: string | null
+          contact_email?: string | null
+          created_at?: string
+          id?: string
+          method?: string | null
+          notes?: string | null
+          request_body?: Json | null
+          request_type?: string
+          response_data?: Json | null
+          service_id?: string | null
+          service_name?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+          verification_notes?: string | null
+          verification_required?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deletion_requests_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "service_catalog"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       email_analytics: {
         Row: {
           created_at: string
@@ -146,33 +211,108 @@ export type Database = {
         }
         Relationships: []
       }
+      request_templates: {
+        Row: {
+          body_template: string
+          created_at: string
+          id: string
+          is_active: boolean | null
+          jurisdiction: string | null
+          legal_citations: string[] | null
+          name: string
+          requires_fields: string[] | null
+          subject_template: string | null
+          template_type: string
+          updated_at: string
+        }
+        Insert: {
+          body_template: string
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          jurisdiction?: string | null
+          legal_citations?: string[] | null
+          name: string
+          requires_fields?: string[] | null
+          subject_template?: string | null
+          template_type: string
+          updated_at?: string
+        }
+        Update: {
+          body_template?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          jurisdiction?: string | null
+          legal_citations?: string[] | null
+          name?: string
+          requires_fields?: string[] | null
+          subject_template?: string | null
+          template_type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       service_catalog: {
         Row: {
           category: string | null
+          ccpa_compliant: boolean | null
           created_at: string
+          deletion_difficulty: string | null
+          deletion_instructions: Json | null
+          deletion_method: string | null
+          deletion_url: string | null
           domain: string
+          gdpr_compliant: boolean | null
           homepage_url: string | null
           id: string
+          justdelete_me_url: string | null
+          last_verified_at: string | null
           logo_url: string | null
           name: string
+          privacy_email: string | null
+          privacy_form_url: string | null
+          requires_2fa: boolean | null
         }
         Insert: {
           category?: string | null
+          ccpa_compliant?: boolean | null
           created_at?: string
+          deletion_difficulty?: string | null
+          deletion_instructions?: Json | null
+          deletion_method?: string | null
+          deletion_url?: string | null
           domain: string
+          gdpr_compliant?: boolean | null
           homepage_url?: string | null
           id?: string
+          justdelete_me_url?: string | null
+          last_verified_at?: string | null
           logo_url?: string | null
           name: string
+          privacy_email?: string | null
+          privacy_form_url?: string | null
+          requires_2fa?: boolean | null
         }
         Update: {
           category?: string | null
+          ccpa_compliant?: boolean | null
           created_at?: string
+          deletion_difficulty?: string | null
+          deletion_instructions?: Json | null
+          deletion_method?: string | null
+          deletion_url?: string | null
           domain?: string
+          gdpr_compliant?: boolean | null
           homepage_url?: string | null
           id?: string
+          justdelete_me_url?: string | null
+          last_verified_at?: string | null
           logo_url?: string | null
           name?: string
+          privacy_email?: string | null
+          privacy_form_url?: string | null
+          requires_2fa?: boolean | null
         }
         Relationships: []
       }
@@ -251,6 +391,45 @@ export type Database = {
         }
         Relationships: []
       }
+      user_authorizations: {
+        Row: {
+          authorized_at: string
+          consent_version: string
+          created_at: string
+          id: string
+          ip_address: string | null
+          jurisdiction: string | null
+          revoked_at: string | null
+          signature_data: Json | null
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          authorized_at?: string
+          consent_version?: string
+          created_at?: string
+          id?: string
+          ip_address?: string | null
+          jurisdiction?: string | null
+          revoked_at?: string | null
+          signature_data?: Json | null
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          authorized_at?: string
+          consent_version?: string
+          created_at?: string
+          id?: string
+          ip_address?: string | null
+          jurisdiction?: string | null
+          revoked_at?: string | null
+          signature_data?: Json | null
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -274,23 +453,35 @@ export type Database = {
       }
       user_services: {
         Row: {
+          deletion_notes: string | null
+          deletion_requested_at: string | null
+          deletion_status: string | null
           discovered_at: string
           first_seen_date: string | null
           last_scanned_at: string
+          marked_for_deletion: boolean | null
           service_id: string
           user_id: string
         }
         Insert: {
+          deletion_notes?: string | null
+          deletion_requested_at?: string | null
+          deletion_status?: string | null
           discovered_at?: string
           first_seen_date?: string | null
           last_scanned_at?: string
+          marked_for_deletion?: boolean | null
           service_id: string
           user_id: string
         }
         Update: {
+          deletion_notes?: string | null
+          deletion_requested_at?: string | null
+          deletion_status?: string | null
           discovered_at?: string
           first_seen_date?: string | null
           last_scanned_at?: string
+          marked_for_deletion?: boolean | null
           service_id?: string
           user_id?: string
         }
@@ -363,6 +554,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_authorized_agent: { Args: { user_uuid: string }; Returns: boolean }
     }
     Enums: {
       alpha_status: "pending" | "approved" | "rejected"
