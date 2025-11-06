@@ -74,7 +74,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Parse request body
     const body: DeletionRequestBody = await req.json();
-    const { service_id, identifier_id, account_identifier, template_type = "deletion" } = body;
+    const { service_id, identifier_id, account_identifier, template_type = "global" } = body;
 
     if (!service_id) {
       return new Response(
@@ -159,16 +159,32 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Get appropriate template based on jurisdiction
-    const jurisdiction = authorization.jurisdiction || "Global";
-    console.log(`Fetching template for jurisdiction: ${jurisdiction}`);
+    const jurisdiction = authorization.jurisdiction || "GLOBAL";
+    console.log(`Fetching template for jurisdiction: ${jurisdiction}, template_type: ${template_type}`);
 
-    const { data: templates, error: templateError } = await supabase
+    // Map jurisdiction to template lookup
+    let templateQuery = supabase
       .from("request_templates")
       .select("*")
-      .eq("template_type", template_type)
-      .eq("is_active", true)
-      .or(`jurisdiction.eq.${jurisdiction},jurisdiction.eq.Global`)
-      .order("jurisdiction", { ascending: false }); // Prioritize specific jurisdiction over Global
+      .eq("is_active", true);
+
+    // If template_type is provided, use it; otherwise select based on jurisdiction
+    if (template_type !== "auto") {
+      templateQuery = templateQuery.eq("template_type", template_type);
+    } else {
+      // Auto-select template based on jurisdiction
+      if (jurisdiction.includes("EU") || jurisdiction === "GDPR") {
+        templateQuery = templateQuery.eq("template_type", "gdpr");
+      } else if (jurisdiction === "US-CA" || jurisdiction === "CCPA") {
+        templateQuery = templateQuery.eq("template_type", "ccpa");
+      } else {
+        templateQuery = templateQuery.eq("template_type", "global");
+      }
+    }
+
+    const { data: templates, error: templateError } = await templateQuery
+      .or(`jurisdiction.eq.${jurisdiction},jurisdiction.eq.GLOBAL`)
+      .order("jurisdiction", { ascending: false }); // Prioritize specific jurisdiction over GLOBAL
 
     if (templateError || !templates || templates.length === 0) {
       console.error("No templates found:", templateError);
@@ -184,7 +200,9 @@ const handler = async (req: Request): Promise<Response> => {
     // Personalize the email template
     const signature = authorization.signature_data?.text || profile.full_name || "Authorized User";
     const personalizedBody = template.body_template
+      .replace(/\{\{user_full_name\}\}/g, profile.full_name || "User")
       .replace(/\{\{full_name\}\}/g, profile.full_name || "User")
+      .replace(/\{\{user_email\}\}/g, profile.email || user.email || "")
       .replace(/\{\{email\}\}/g, profile.email || user.email || "")
       .replace(/\{\{account_identifier\}\}/g, identifierValue || profile.email || user.email || "")
       .replace(/\{\{jurisdiction\}\}/g, jurisdiction)

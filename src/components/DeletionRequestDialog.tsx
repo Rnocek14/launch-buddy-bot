@@ -40,12 +40,14 @@ export const DeletionRequestDialog = ({
   const [identifiers, setIdentifiers] = useState<any[]>([]);
   const [selectedIdentifierId, setSelectedIdentifierId] = useState<string>("");
   const [success, setSuccess] = useState(false);
+  const [jurisdiction, setJurisdiction] = useState<string>("GLOBAL");
   const { toast } = useToast();
 
-  // Fetch user identifiers when dialog opens
+  // Fetch user identifiers and jurisdiction when dialog opens
   useEffect(() => {
     if (open && service) {
       fetchIdentifiers();
+      fetchJurisdiction();
     }
   }, [open, service]);
 
@@ -62,6 +64,33 @@ export const DeletionRequestDialog = ({
       const primary = data.find((i) => i.is_primary);
       setSelectedIdentifierId(primary?.id || data[0]?.id || "");
     }
+  };
+
+  const fetchJurisdiction = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { data } = await supabase
+      .from("user_authorizations")
+      .select("jurisdiction")
+      .eq("user_id", user.id)
+      .is("revoked_at", null)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .single();
+
+    if (data?.jurisdiction) {
+      setJurisdiction(data.jurisdiction);
+    }
+  };
+
+  const getTemplateType = (jurisdiction: string): string => {
+    if (jurisdiction.includes("EU") || jurisdiction === "GDPR") {
+      return "gdpr";
+    } else if (jurisdiction === "US-CA" || jurisdiction === "CCPA") {
+      return "ccpa";
+    }
+    return "global";
   };
 
   const handleSubmit = async () => {
@@ -82,6 +111,7 @@ export const DeletionRequestDialog = ({
             service_id: service.id,
             identifier_id: selectedIdentifierId || undefined,
             account_identifier: accountIdentifier || undefined,
+            template_type: getTemplateType(jurisdiction),
           },
         }
       );
