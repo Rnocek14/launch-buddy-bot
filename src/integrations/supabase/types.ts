@@ -242,6 +242,56 @@ export type Database = {
         }
         Relationships: []
       }
+      privacy_contacts: {
+        Row: {
+          added_by: string
+          confidence: string
+          contact_type: string
+          created_at: string
+          id: string
+          reasoning: string | null
+          service_id: string | null
+          source_url: string | null
+          updated_at: string
+          value: string
+          verified: boolean
+        }
+        Insert: {
+          added_by: string
+          confidence: string
+          contact_type: string
+          created_at?: string
+          id?: string
+          reasoning?: string | null
+          service_id?: string | null
+          source_url?: string | null
+          updated_at?: string
+          value: string
+          verified?: boolean
+        }
+        Update: {
+          added_by?: string
+          confidence?: string
+          contact_type?: string
+          created_at?: string
+          id?: string
+          reasoning?: string | null
+          service_id?: string | null
+          source_url?: string | null
+          updated_at?: string
+          value?: string
+          verified?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "privacy_contacts_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "service_catalog"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
