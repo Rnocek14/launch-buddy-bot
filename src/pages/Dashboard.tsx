@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Shield, RefreshCw, LogOut, Loader2, ExternalLink, Search, Download, AlertCircle, Sparkles, Mail, Tag, TrendingUp, Trash2, CheckCircle, FileText, DollarSign, Package, Lock, Bell } from "lucide-react";
+import { Shield, RefreshCw, LogOut, Loader2, ExternalLink, Search, Download, AlertCircle, Sparkles, Mail, Tag, TrendingUp, Trash2, CheckCircle, FileText, DollarSign, Package, Lock, Bell, Settings } from "lucide-react";
 import { RiskScoreCard } from "@/components/RiskScoreCard";
 import { useToast } from "@/hooks/use-toast";
 import { validateGmailScope, isTokenValid } from "@/lib/googleAuth";
@@ -521,10 +521,16 @@ export default function Dashboard() {
                 )}
               </div>
             </div>
-            <Button variant="ghost" size="sm" onClick={handleSignOut}>
-              <LogOut className="w-4 h-4 mr-2" />
-              Sign Out
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" size="sm" onClick={() => navigate("/settings")}>
+                <Settings className="w-4 h-4 mr-2" />
+                Settings
+              </Button>
+              <Button variant="ghost" size="sm" onClick={handleSignOut}>
+                <LogOut className="w-4 h-4 mr-2" />
+                Sign Out
+              </Button>
+            </div>
           </div>
         </div>
       </div>
