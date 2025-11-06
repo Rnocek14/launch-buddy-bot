@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { EmailPreviewModal } from "@/components/EmailPreviewModal";
 
 interface Service {
   id: string;
@@ -41,6 +42,12 @@ export const DeletionRequestDialog = ({
   const [selectedIdentifierId, setSelectedIdentifierId] = useState<string>("");
   const [success, setSuccess] = useState(false);
   const [jurisdiction, setJurisdiction] = useState<string>("GLOBAL");
+  const [showPreview, setShowPreview] = useState(false);
+  const [emailPreview, setEmailPreview] = useState<{
+    subject: string;
+    body: string;
+    recipientEmail: string;
+  } | null>(null);
   const { toast } = useToast();
 
   // Fetch user identifiers and jurisdiction when dialog opens
@@ -93,9 +100,96 @@ export const DeletionRequestDialog = ({
     return "global";
   };
 
-  const handleSubmit = async () => {
-    if (!service) return;
+  const handlePreview = async () => {
+    if (!service || (!selectedIdentifierId && !accountIdentifier)) {
+      toast({
+        variant: "destructive",
+        title: "Missing Information",
+        description: "Please provide an account identifier or select an existing one.",
+      });
+      return;
+    }
 
+    setLoading(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("User not authenticated");
+
+      // Fetch user profile and authorization
+      const [profileRes, authRes, identifierRes] = await Promise.all([
+        supabase.from("profiles").select("*").eq("id", user.id).single(),
+        supabase.from("user_authorizations").select("*").eq("user_id", user.id).is("revoked_at", null).order("created_at", { ascending: false }).limit(1).single(),
+        selectedIdentifierId ? supabase.from("user_identifiers").select("*").eq("id", selectedIdentifierId).single() : Promise.resolve({ data: null })
+      ]);
+
+      const profile = profileRes.data;
+      const authorization = authRes.data;
+      const identifier = identifierRes.data;
+
+      if (!profile || !authorization) {
+        throw new Error("User profile or authorization not found");
+      }
+
+      // Fetch service details
+      const { data: serviceData } = await supabase
+        .from("service_catalog")
+        .select("*")
+        .eq("id", service.id)
+        .single();
+
+      // Fetch template
+      const templateType = getTemplateType(jurisdiction);
+      const { data: templates } = await supabase
+        .from("request_templates")
+        .select("*")
+        .eq("is_active", true)
+        .eq("template_type", templateType)
+        .or(`jurisdiction.eq.${jurisdiction},jurisdiction.eq.GLOBAL`)
+        .order("jurisdiction", { ascending: false })
+        .limit(1);
+
+      if (!templates || templates.length === 0) {
+        throw new Error("No template found");
+      }
+
+      const template = templates[0];
+      const identifierValue = identifier?.value || accountIdentifier;
+      const signatureData = authorization.signature_data as any;
+      const signature = signatureData?.text || profile.full_name || "Authorized User";
+
+      // Personalize template
+      const personalizedBody = template.body_template
+        .replace(/\{\{user_full_name\}\}/g, profile.full_name || "User")
+        .replace(/\{\{full_name\}\}/g, profile.full_name || "User")
+        .replace(/\{\{user_email\}\}/g, profile.email || user.email || "")
+        .replace(/\{\{email\}\}/g, profile.email || user.email || "")
+        .replace(/\{\{account_identifier\}\}/g, identifierValue || profile.email || user.email || "")
+        .replace(/\{\{jurisdiction\}\}/g, jurisdiction)
+        .replace(/\{\{signature\}\}/g, signature)
+        .replace(/\{\{service_name\}\}/g, service.name);
+
+      const personalizedSubject = template.subject_template
+        .replace(/\{\{service_name\}\}/g, service.name);
+
+      setEmailPreview({
+        subject: personalizedSubject,
+        body: personalizedBody,
+        recipientEmail: serviceData?.privacy_email || "privacy@example.com",
+      });
+      setShowPreview(true);
+    } catch (error: any) {
+      console.error("Preview error:", error);
+      toast({
+        variant: "destructive",
+        title: "Preview Failed",
+        description: error.message || "Failed to generate preview",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleConfirmSend = async () => {
     setLoading(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -125,13 +219,13 @@ export const DeletionRequestDialog = ({
             variant: "destructive",
           });
           onOpenChange(false);
-          // Redirect to authorization wizard
           window.location.href = "/authorize";
           return;
         }
         throw error;
       }
 
+      setShowPreview(false);
       setSuccess(true);
       
       toast({
@@ -139,7 +233,6 @@ export const DeletionRequestDialog = ({
         description: `Request sent to ${service.name}. You'll receive a confirmation email.`,
       });
 
-      // Close dialog after 2 seconds
       setTimeout(() => {
         onOpenChange(false);
         setSuccess(false);
@@ -161,10 +254,14 @@ export const DeletionRequestDialog = ({
   const handleClose = () => {
     if (!loading) {
       onOpenChange(false);
-      setSuccess(false);
-      setAccountIdentifier("");
-      setSelectedIdentifierId("");
-      setIdentifiers([]);
+      setShowPreview(false);
+      setTimeout(() => {
+        setSuccess(false);
+        setAccountIdentifier("");
+        setSelectedIdentifierId("");
+        setIdentifiers([]);
+        setEmailPreview(null);
+      }, 300);
     }
   };
 
@@ -175,7 +272,20 @@ export const DeletionRequestDialog = ({
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
+    <>
+      <EmailPreviewModal
+        open={showPreview}
+        onOpenChange={setShowPreview}
+        subject={emailPreview?.subject || ""}
+        body={emailPreview?.body || ""}
+        recipientEmail={emailPreview?.recipientEmail || ""}
+        serviceName={service?.name || ""}
+        templateType={getTemplateType(jurisdiction)}
+        onConfirmSend={handleConfirmSend}
+        isLoading={loading}
+      />
+      
+      <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-md">
         {success ? (
           <div className="py-8 text-center">
@@ -264,16 +374,16 @@ export const DeletionRequestDialog = ({
                 Cancel
               </Button>
               <Button
-                onClick={handleSubmit}
-                disabled={loading}
+                onClick={handlePreview}
+                disabled={loading || (!selectedIdentifierId && !accountIdentifier)}
               >
                 {loading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Sending...
+                    Loading...
                   </>
                 ) : (
-                  "Send Deletion Request"
+                  "Review & Send"
                 )}
               </Button>
             </DialogFooter>
@@ -281,5 +391,6 @@ export const DeletionRequestDialog = ({
         )}
       </DialogContent>
     </Dialog>
+    </>
   );
 };
