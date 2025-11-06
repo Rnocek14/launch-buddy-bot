@@ -14,6 +14,7 @@ import Unsubscribe from "./pages/Unsubscribe";
 import Preferences from "./pages/Preferences";
 import UnmatchedDomains from "./pages/UnmatchedDomains";
 import NotFound from "./pages/NotFound";
+import { AuthorizationWizard } from "./components/AuthorizationWizard";
 
 const queryClient = new QueryClient();
 
@@ -33,6 +34,7 @@ const App = () => (
             <Route path="/alpha" element={<AlphaAccess />} />
             <Route path="/unsubscribe" element={<Unsubscribe />} />
             <Route path="/preferences" element={<Preferences />} />
+            <Route path="/authorize" element={<AuthorizationWizard />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

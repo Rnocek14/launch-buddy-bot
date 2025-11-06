@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.calculate-risk-score]
 verify_jwt = true
+
+[functions.send-deletion-request]
+verify_jwt = true
