@@ -1,9 +1,13 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Shield, RefreshCw, LogOut, Loader2, ExternalLink } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Shield, RefreshCw, LogOut, Loader2, ExternalLink, Search, ChevronDown, ChevronUp } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { validateGmailScope, isTokenValid } from "@/lib/googleAuth";
 
@@ -38,6 +42,9 @@ export default function Dashboard() {
   const [hasGmailAccess, setHasGmailAccess] = useState(false);
   const [scanStats, setScanStats] = useState<ScanStats | null>(null);
   const [unmatchedDomains, setUnmatchedDomains] = useState<UnmatchedDomain[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [openCategories, setOpenCategories] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     checkAuth();
@@ -245,6 +252,50 @@ export default function Dashboard() {
     navigate("/");
   }
 
+  const categoryColors: Record<string, string> = {
+    "Social": "bg-blue-500/10 text-blue-700 dark:text-blue-400",
+    "Shopping": "bg-purple-500/10 text-purple-700 dark:text-purple-400",
+    "Finance": "bg-red-500/10 text-red-700 dark:text-red-400",
+    "Streaming": "bg-pink-500/10 text-pink-700 dark:text-pink-400",
+    "Productivity": "bg-green-500/10 text-green-700 dark:text-green-400",
+    "Gaming": "bg-orange-500/10 text-orange-700 dark:text-orange-400",
+    "News": "bg-cyan-500/10 text-cyan-700 dark:text-cyan-400",
+    "Travel": "bg-indigo-500/10 text-indigo-700 dark:text-indigo-400",
+    "Other": "bg-gray-500/10 text-gray-700 dark:text-gray-400",
+  };
+
+  const filteredServices = useMemo(() => {
+    return services.filter(service => {
+      const matchesSearch = service.name.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesCategory = selectedCategory === "all" || service.category === selectedCategory;
+      return matchesSearch && matchesCategory;
+    });
+  }, [services, searchQuery, selectedCategory]);
+
+  const groupedServices = useMemo(() => {
+    const groups: Record<string, Service[]> = {};
+    filteredServices.forEach(service => {
+      const category = service.category || "Other";
+      if (!groups[category]) {
+        groups[category] = [];
+      }
+      groups[category].push(service);
+    });
+    return groups;
+  }, [filteredServices]);
+
+  const categories = useMemo(() => {
+    const cats = new Set(services.map(s => s.category || "Other"));
+    return Array.from(cats).sort();
+  }, [services]);
+
+  const toggleCategory = (category: string) => {
+    setOpenCategories(prev => ({
+      ...prev,
+      [category]: !prev[category]
+    }));
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -312,7 +363,7 @@ export default function Dashboard() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Discovered Accounts</CardTitle>
+            <CardTitle>Discovered Accounts ({services.length})</CardTitle>
           </CardHeader>
           <CardContent>
             {services.length === 0 ? (
@@ -326,49 +377,139 @@ export default function Dashboard() {
                 </p>
               </div>
             ) : (
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {services.map(service => (
-                  <div 
-                    key={service.id}
-                    className="flex items-center gap-3 p-4 rounded-lg border border-border hover:border-primary/50 transition-colors group"
-                  >
-                    <img 
-                      src={service.logo_url}
-                      alt={service.name}
-                      className="w-12 h-12 rounded-lg object-cover"
-                      onError={(e) => {
-                        e.currentTarget.src = "/placeholder.svg";
-                      }}
+              <div className="space-y-4">
+                {/* Search and Filter Controls */}
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search services..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-10"
                     />
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-foreground truncate">{service.name}</h3>
-                      <p className="text-xs text-muted-foreground">
-                        Found {new Date(service.discovered_at).toLocaleDateString()}
-                      </p>
-                    </div>
-                    {service.homepage_url && (
-                      <a 
-                        href={service.homepage_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        <ExternalLink className="w-4 h-4 text-muted-foreground hover:text-primary" />
-                      </a>
-                    )}
                   </div>
-                ))}
+                  <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                    <SelectTrigger className="w-full sm:w-[180px]">
+                      <SelectValue placeholder="All Categories" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Categories</SelectItem>
+                      {categories.map(cat => (
+                        <SelectItem key={cat} value={cat}>
+                          {cat} ({services.filter(s => (s.category || "Other") === cat).length})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Results Count */}
+                {(searchQuery || selectedCategory !== "all") && (
+                  <p className="text-sm text-muted-foreground">
+                    Showing {filteredServices.length} of {services.length} services
+                  </p>
+                )}
+
+                {/* No Results State */}
+                {filteredServices.length === 0 ? (
+                  <div className="text-center py-12">
+                    <Search className="w-16 h-16 mx-auto text-muted-foreground/50 mb-4" />
+                    <p className="text-muted-foreground text-lg mb-2">
+                      No services found
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Try adjusting your search or filters
+                    </p>
+                    <Button 
+                      variant="outline" 
+                      className="mt-4"
+                      onClick={() => {
+                        setSearchQuery("");
+                        setSelectedCategory("all");
+                      }}
+                    >
+                      Clear Filters
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {Object.entries(groupedServices).map(([category, categoryServices]) => (
+                      <Collapsible
+                        key={category}
+                        open={openCategories[category] ?? true}
+                        onOpenChange={() => toggleCategory(category)}
+                      >
+                        <CollapsibleTrigger className="flex items-center justify-between w-full p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
+                          <div className="flex items-center gap-2">
+                            <Badge className={categoryColors[category] || categoryColors["Other"]}>
+                              {category}
+                            </Badge>
+                            <span className="text-sm text-muted-foreground">
+                              {categoryServices.length} {categoryServices.length === 1 ? 'service' : 'services'}
+                            </span>
+                          </div>
+                          {openCategories[category] ?? true ? (
+                            <ChevronUp className="w-4 h-4 text-muted-foreground" />
+                          ) : (
+                            <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                          )}
+                        </CollapsibleTrigger>
+                        <CollapsibleContent className="pt-3">
+                          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+                            {categoryServices.map(service => (
+                              <div 
+                                key={service.id}
+                                className="flex items-center gap-3 p-4 rounded-lg border border-border hover:border-primary/50 transition-colors group"
+                              >
+                                <img 
+                                  src={service.logo_url}
+                                  alt={service.name}
+                                  className="w-12 h-12 rounded-lg object-cover"
+                                  onError={(e) => {
+                                    e.currentTarget.src = "/placeholder.svg";
+                                  }}
+                                />
+                                <div className="flex-1 min-w-0">
+                                  <h3 className="font-semibold text-foreground truncate">{service.name}</h3>
+                                  <p className="text-xs text-muted-foreground">
+                                    Found {new Date(service.discovered_at).toLocaleDateString()}
+                                  </p>
+                                </div>
+                                {service.homepage_url && (
+                                  <a 
+                                    href={service.homepage_url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="shrink-0"
+                                    title="Visit website"
+                                  >
+                                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                                      <ExternalLink className="w-4 h-4" />
+                                    </Button>
+                                  </a>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </CollapsibleContent>
+                      </Collapsible>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </CardContent>
         </Card>
 
         {unmatchedDomains.length > 0 && (
-          <Card className="mt-8">
+          <Card className="mt-8 border-orange-500/20">
             <CardHeader>
-              <CardTitle>Unrecognized Services</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                🕵️ Unrecognized Services ({unmatchedDomains.length})
+              </CardTitle>
               <p className="text-sm text-muted-foreground">
-                These domains sent you signup emails but aren't in our database yet
+                These domains sent you signup emails but aren't in our database yet. Help us improve by identifying them!
               </p>
             </CardHeader>
             <CardContent>
