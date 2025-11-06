@@ -18,5 +18,8 @@ verify_jwt = true
 [functions.analyze-cleanup-plan]
 verify_jwt = true
 
+[functions.analyze-unmatched-domains]
+verify_jwt = true
+
 [functions.send-deletion-notification]
 verify_jwt = false

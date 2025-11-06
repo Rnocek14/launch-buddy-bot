@@ -73,6 +73,14 @@ export default function Dashboard() {
   const [batchDialogOpen, setBatchDialogOpen] = useState(false);
   const { isAuthorized, loading: authLoading } = useAuthorization();
   const [scanType, setScanType] = useState<'quick' | 'deep'>('quick');
+  const [analyzingDomains, setAnalyzingDomains] = useState(false);
+  const [aiSuggestions, setAiSuggestions] = useState<Array<{
+    domain: string;
+    suggested_name: string;
+    category: string;
+    confidence: string;
+    reasoning: string;
+  }> | null>(null);
 
   useEffect(() => {
     checkAuth();
@@ -363,6 +371,37 @@ export default function Dashboard() {
   const handleBatchComplete = () => {
     setSelectedServices(new Set());
     fetchServices();
+  };
+
+  const handleAnalyzeDomains = async () => {
+    setAnalyzingDomains(true);
+    setAiSuggestions(null);
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('analyze-unmatched-domains', {
+        body: { 
+          domains: unmatchedDomains.slice(0, 10) // Analyze top 10
+        }
+      });
+
+      if (error) throw error;
+
+      setAiSuggestions(data.suggestions);
+      
+      toast({
+        title: "Analysis complete!",
+        description: `AI generated ${data.suggestions.length} suggestions for your unmatched domains.`,
+      });
+    } catch (error: any) {
+      console.error('AI analysis error:', error);
+      toast({
+        title: "Analysis failed",
+        description: error.message || "Could not analyze domains. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setAnalyzingDomains(false);
+    }
   };
 
   const selectedServicesArray = Array.from(selectedServices)
@@ -926,7 +965,43 @@ export default function Dashboard() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="space-y-2">
+              <div className="space-y-4">
+                {/* AI Suggestions */}
+                {aiSuggestions && aiSuggestions.length > 0 && (
+                  <div className="mb-6 p-4 rounded-lg bg-primary/5 border border-primary/20">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Sparkles className="w-4 h-4 text-primary" />
+                      <h4 className="font-semibold text-foreground">AI Suggestions</h4>
+                    </div>
+                    <div className="space-y-3">
+                      {aiSuggestions.map((suggestion, idx) => (
+                        <div key={idx} className="p-3 rounded-lg bg-background border border-border">
+                          <div className="flex items-start justify-between gap-3 mb-2">
+                            <div className="flex-1">
+                              <p className="font-medium text-foreground">{suggestion.suggested_name}</p>
+                              <p className="text-xs text-muted-foreground">{suggestion.domain}</p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Badge variant="outline" className="text-xs">
+                                {suggestion.category}
+                              </Badge>
+                              <Badge 
+                                variant={suggestion.confidence === 'high' ? 'default' : suggestion.confidence === 'medium' ? 'secondary' : 'outline'}
+                                className="text-xs"
+                              >
+                                {suggestion.confidence}
+                              </Badge>
+                            </div>
+                          </div>
+                          <p className="text-xs text-muted-foreground">{suggestion.reasoning}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Unmatched Domains List */}
+                <div className="space-y-2">
                 {unmatchedDomains.slice(0, 5).map((item, idx) => (
                   <div 
                     key={idx}
@@ -945,17 +1020,39 @@ export default function Dashboard() {
               <div className="mt-4 flex flex-col sm:flex-row items-start sm:items-center gap-4">
                 <div className="flex-1 p-4 rounded-lg bg-muted/50 border border-border">
                   <p className="text-sm text-muted-foreground">
-                    💡 <strong>Tip:</strong> Tag these services and submit them for approval to add to our catalog.
+                    💡 <strong>Tip:</strong> Use AI to automatically categorize these domains and suggest service names.
                   </p>
                 </div>
-                <Button 
-                  onClick={() => navigate("/unmatched-domains")}
-                  className="w-full sm:w-auto"
-                >
-                  <Tag className="w-4 h-4 mr-2" />
-                  Review & Tag All
-                </Button>
+                <div className="flex gap-2 w-full sm:w-auto">
+                  <Button 
+                    onClick={handleAnalyzeDomains}
+                    disabled={analyzingDomains}
+                    variant="default"
+                    className="flex-1 sm:flex-none bg-gradient-to-r from-primary to-primary/80"
+                  >
+                    {analyzingDomains ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Analyzing...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-4 h-4 mr-2" />
+                        Analyze with AI
+                      </>
+                    )}
+                  </Button>
+                  <Button 
+                    onClick={() => navigate("/unmatched-domains")}
+                    variant="outline"
+                    className="flex-1 sm:flex-none"
+                  >
+                    <Tag className="w-4 h-4 mr-2" />
+                    Review All
+                  </Button>
+                </div>
               </div>
+            </div>
             </CardContent>
           </Card>
         )}
