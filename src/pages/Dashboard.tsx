@@ -31,6 +31,7 @@ interface ScanStats {
   servicesFound: number;
   emailsScanned: number;
   unmatchedCount: number;
+  identifierMatches?: number;
   breakdown?: {
     signup: number;
     financial: number;
@@ -282,14 +283,19 @@ export default function Dashboard() {
         servicesFound: data.servicesFound,
         emailsScanned: data.emailsScanned,
         unmatchedCount: data.unmatchedCount,
+        identifierMatches: data.identifierMatches || 0,
         breakdown: data.breakdown
       });
 
       setScanProgress({ currentEmail: 100, totalEmails: 100, status: "Complete!" });
 
+      const matchMessage = data.identifierMatches > 0 
+        ? ` Matched ${data.identifierMatches} emails via your identifiers.`
+        : '';
+      
       toast({
         title: "Scan complete!",
-        description: `${data.message}. ${data.unmatchedCount > 0 ? `${data.unmatchedCount} unrecognized services found.` : ''}`,
+        description: `${data.message}. ${data.unmatchedCount > 0 ? `${data.unmatchedCount} unrecognized services found.` : ''}${matchMessage}`,
         duration: 5000
       });
 
@@ -575,6 +581,12 @@ export default function Dashboard() {
                       <Sparkles className="w-4 h-4" />
                       <span>{scanStats.servicesFound} services found</span>
                     </div>
+                    {scanStats.identifierMatches && scanStats.identifierMatches > 0 && (
+                      <div className="flex items-center gap-1.5 text-primary">
+                        <CheckCircle className="w-4 h-4" />
+                        <span>{scanStats.identifierMatches} matched via identifiers</span>
+                      </div>
+                    )}
                   </div>
                   
                   {scanStats.breakdown && (

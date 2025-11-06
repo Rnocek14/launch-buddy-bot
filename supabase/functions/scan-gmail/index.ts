@@ -44,6 +44,35 @@ Deno.serve(async (req) => {
     
     console.log(`Starting ${scanType} scan for user ${user.id} (${emailLimit} emails per category)`);
 
+    // Fetch user's identifiers for intelligent matching
+    const { data: userIdentifiers, error: identifierError } = await supabase
+      .from("user_identifiers")
+      .select("id, type, value")
+      .eq("user_id", user.id);
+
+    if (identifierError) {
+      console.error("Error fetching user identifiers:", identifierError);
+    }
+
+    // Create lookup maps for fast identifier matching
+    const emailIdentifiers = new Set<string>();
+    const usernameIdentifiers = new Set<string>();
+    const identifierMap = new Map<string, { id: string; type: string }>();
+
+    if (userIdentifiers) {
+      for (const identifier of userIdentifiers) {
+        const normalizedValue = identifier.value.toLowerCase();
+        identifierMap.set(normalizedValue, { id: identifier.id, type: identifier.type });
+        
+        if (identifier.type === 'email') {
+          emailIdentifiers.add(normalizedValue);
+        } else if (identifier.type === 'username') {
+          usernameIdentifiers.add(normalizedValue);
+        }
+      }
+      console.log(`Loaded ${userIdentifiers.length} identifiers for matching (${emailIdentifiers.size} emails, ${usernameIdentifiers.size} usernames)`);
+    }
+
     // Define 5 category-based queries for comprehensive coverage
     const queries = {
       signup: 'subject:(welcome OR "thank you for signing up" OR "confirm your" OR "verify your email" OR "account created" OR registration OR "activate your account" OR "get started" OR "setup your account" OR "new account" OR "complete your profile" OR "verify your identity" OR "email verification")',
@@ -158,6 +187,7 @@ Deno.serve(async (req) => {
     const domainMap = new Map(catalog.map(s => [s.domain.toLowerCase(), s]));
     const discoveredServices = new Map<string, string | null>(); // service_id -> earliest first_seen_date
     const unmatchedDomains = new Map<string, string>(); // domain -> email
+    const matchedViaIdentifier = new Map<string, number>(); // Track identifier matches for reporting
     const batchSize = 10;
 
     // Convert Map to array for batch processing
@@ -170,23 +200,55 @@ Deno.serve(async (req) => {
       await Promise.all(batch.map(async ({ msg, category }: { msg: any; category: string }) => {
         try {
           const msgResponse = await fetch(
-            `https://gmail.googleapis.com/gmail/v1/users/me/messages/${msg.id}?format=metadata&metadataHeaders=From`,
+            `https://gmail.googleapis.com/gmail/v1/users/me/messages/${msg.id}?format=metadata&metadataHeaders=From&metadataHeaders=To&metadataHeaders=Cc`,
             { headers: { Authorization: `Bearer ${accessToken}` } }
           );
 
           if (!msgResponse.ok) return;
 
           const msgData = await msgResponse.json();
-          const fromHeader = msgData.payload?.headers?.find((h: any) => h.name === "From");
+          const headers = msgData.payload?.headers || [];
+          const fromHeader = headers.find((h: any) => h.name === "From");
+          const toHeader = headers.find((h: any) => h.name === "To");
+          const ccHeader = headers.find((h: any) => h.name === "Cc");
           const internalDate = msgData.internalDate; // Capture email received date
+          
           if (!fromHeader) return;
 
-          // Extract email from "Name <email@domain.com>" format
+          // Extract sender email from "Name <email@domain.com>" format
           const emailMatch = fromHeader.value.match(/<(.+?)>|([^\s<>]+@[^\s<>]+)/);
           if (!emailMatch) return;
 
-          const email = (emailMatch[1] || emailMatch[2]).toLowerCase();
-          const domain = email.split("@")[1];
+          const senderEmail = (emailMatch[1] || emailMatch[2]).toLowerCase();
+          const domain = senderEmail.split("@")[1];
+
+          // Check if this email was sent to one of the user's identifiers
+          let matchedIdentifier = false;
+          const recipientFields = [toHeader?.value, ccHeader?.value].filter(Boolean);
+          
+          for (const field of recipientFields) {
+            // Extract all emails from To/Cc fields
+            const recipientMatches = field.matchAll(/<?([^\s<>]+@[^\s<>]+)>?/g);
+            for (const match of recipientMatches) {
+              const recipientEmail = match[1].toLowerCase();
+              
+              // Check if recipient matches any user identifier
+              if (emailIdentifiers.has(recipientEmail)) {
+                matchedIdentifier = true;
+                matchedViaIdentifier.set(domain, (matchedViaIdentifier.get(domain) || 0) + 1);
+                break;
+              }
+              
+              // Also check username portion for username identifiers
+              const recipientUsername = recipientEmail.split("@")[0];
+              if (usernameIdentifiers.has(recipientUsername)) {
+                matchedIdentifier = true;
+                matchedViaIdentifier.set(domain, (matchedViaIdentifier.get(domain) || 0) + 1);
+                break;
+              }
+            }
+            if (matchedIdentifier) break;
+          }
 
           // Match exact domain or base domain (e.g., mail.google.com -> google.com)
           const baseDomain = domain.split(".").slice(-2).join(".");
@@ -200,9 +262,13 @@ Deno.serve(async (req) => {
             if (!existingDate || (newDate && newDate < existingDate)) {
               discoveredServices.set(service.id, newDate);
             }
+          } else if (matchedIdentifier) {
+            // If we matched an identifier but don't have the service in catalog,
+            // this is likely a legitimate service - reduce unmatched count
+            console.log(`Matched identifier for unknown service: ${domain}`);
           } else {
-            // Track unmatched domains for smart discovery
-            unmatchedDomains.set(domain, email);
+            // Only mark as unmatched if it wasn't sent to user's identifiers
+            unmatchedDomains.set(domain, senderEmail);
           }
         } catch (err) {
           console.error(`Error processing message ${msg.id}:`, err);
@@ -258,13 +324,17 @@ Deno.serve(async (req) => {
       }
     }
 
+    const identifierMatchCount = Array.from(matchedViaIdentifier.values()).reduce((sum, count) => sum + count, 0);
+    console.log(`Matched ${identifierMatchCount} emails via user identifiers across ${matchedViaIdentifier.size} domains`);
+
     return new Response(
       JSON.stringify({ 
         servicesFound: discoveredServices.size,
         emailsScanned: allMessages.size,
         unmatchedCount: unmatchedDomains.size,
+        identifierMatches: identifierMatchCount,
         breakdown: categoryBreakdown,
-        message: `Found ${discoveredServices.size} accounts from ${allMessages.size} emails across ${Object.keys(queries).length} categories`
+        message: `Found ${discoveredServices.size} accounts from ${allMessages.size} emails across ${Object.keys(queries).length} categories. Matched ${identifierMatchCount} emails via your identifiers.`
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
     );
