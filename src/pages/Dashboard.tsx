@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Shield, RefreshCw, LogOut, Loader2, ExternalLink, Search, Download, AlertCircle, Sparkles, Mail, Tag, TrendingUp, Trash2, CheckCircle } from "lucide-react";
+import { Shield, RefreshCw, LogOut, Loader2, ExternalLink, Search, Download, AlertCircle, Sparkles, Mail, Tag, TrendingUp, Trash2, CheckCircle, FileText } from "lucide-react";
 import { RiskScoreCard } from "@/components/RiskScoreCard";
 import { useToast } from "@/hooks/use-toast";
 import { validateGmailScope, isTokenValid } from "@/lib/googleAuth";
@@ -554,6 +554,15 @@ export default function Dashboard() {
                 <span>services</span>
               </div>
               <div className="flex items-center gap-3 w-full sm:w-auto">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => navigate("/deletion-requests")}
+                  className="flex-shrink-0"
+                >
+                  <FileText className="w-4 h-4 mr-2" />
+                  View Requests
+                </Button>
                 <Button 
                   variant="outline" 
                   size="sm"

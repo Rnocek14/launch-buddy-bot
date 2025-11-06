@@ -13,6 +13,7 @@ import AlphaAccess from "./pages/AlphaAccess";
 import Unsubscribe from "./pages/Unsubscribe";
 import Preferences from "./pages/Preferences";
 import UnmatchedDomains from "./pages/UnmatchedDomains";
+import DeletionRequests from "./pages/DeletionRequests";
 import NotFound from "./pages/NotFound";
 import { AuthorizationWizard } from "./components/AuthorizationWizard";
 
@@ -31,6 +32,7 @@ const App = () => (
             <Route path="/admin" element={<Admin />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/unmatched-domains" element={<UnmatchedDomains />} />
+            <Route path="/deletion-requests" element={<DeletionRequests />} />
             <Route path="/alpha" element={<AlphaAccess />} />
             <Route path="/unsubscribe" element={<Unsubscribe />} />
             <Route path="/preferences" element={<Preferences />} />
