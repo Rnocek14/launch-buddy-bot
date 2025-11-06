@@ -14,6 +14,9 @@ import { validateGmailScope, isTokenValid } from "@/lib/googleAuth";
 import { Progress } from "@/components/ui/progress";
 import { useAuthorization } from "@/hooks/useAuthorization";
 import { DeletionRequestDialog } from "@/components/DeletionRequestDialog";
+import { BatchDeletionToolbar } from "@/components/BatchDeletionToolbar";
+import { BatchDeletionDialog } from "@/components/BatchDeletionDialog";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface Service {
   id: string;
@@ -59,6 +62,8 @@ export default function Dashboard() {
   const [loadingRisk, setLoadingRisk] = useState(false);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [deletionDialogOpen, setDeletionDialogOpen] = useState(false);
+  const [selectedServices, setSelectedServices] = useState<Set<string>>(new Set());
+  const [batchDialogOpen, setBatchDialogOpen] = useState(false);
   const { isAuthorized, loading: authLoading } = useAuthorization();
 
   useEffect(() => {
@@ -314,6 +319,37 @@ export default function Dashboard() {
     setSelectedService(service);
     setDeletionDialogOpen(true);
   };
+
+  const toggleServiceSelection = (serviceId: string) => {
+    const newSelection = new Set(selectedServices);
+    if (newSelection.has(serviceId)) {
+      newSelection.delete(serviceId);
+    } else {
+      newSelection.add(serviceId);
+    }
+    setSelectedServices(newSelection);
+  };
+
+  const handleBatchDeletion = () => {
+    if (!isAuthorized) {
+      toast({
+        title: "Authorization Required",
+        description: "You need to complete the authorization wizard first.",
+      });
+      navigate("/authorize");
+      return;
+    }
+    setBatchDialogOpen(true);
+  };
+
+  const handleBatchComplete = () => {
+    setSelectedServices(new Set());
+    fetchServices();
+  };
+
+  const selectedServicesArray = Array.from(selectedServices)
+    .map(id => services.find(s => s.id === id))
+    .filter((s): s is Service => s !== undefined);
 
   const categoryColors: Record<string, string> = {
     "Social": "bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/20",
@@ -605,6 +641,44 @@ export default function Dashboard() {
               </CardContent>
             </Card>
 
+            {/* Batch Selection Helper */}
+            {filteredServices.length > 0 && (
+              <div className="flex items-center justify-between text-sm text-muted-foreground">
+                <div className="flex items-center gap-4">
+                  <span>
+                    {selectedServices.size > 0 
+                      ? `${selectedServices.size} ${selectedServices.size === 1 ? 'service' : 'services'} selected`
+                      : 'Select services for batch deletion'}
+                  </span>
+                  {selectedServices.size > 0 && (
+                    <Button
+                      variant="link"
+                      size="sm"
+                      onClick={() => setSelectedServices(new Set())}
+                      className="h-auto p-0 text-xs"
+                    >
+                      Clear selection
+                    </Button>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      const oldServices = filteredServices
+                        .sort((a, b) => new Date(a.discovered_at).getTime() - new Date(b.discovered_at).getTime())
+                        .slice(0, 10)
+                        .map(s => s.id);
+                      setSelectedServices(new Set(oldServices));
+                    }}
+                  >
+                    Select Oldest 10
+                  </Button>
+                </div>
+              </div>
+            )}
+
             {/* Services Grid */}
             {filteredServices.length === 0 ? (
               <Card className="border-dashed">
@@ -632,9 +706,22 @@ export default function Dashboard() {
                 {filteredServices.map(service => (
                   <Card 
                     key={service.id}
-                    className="group hover:shadow-lg hover:border-primary/30 transition-all duration-200"
+                    className={`group hover:shadow-lg transition-all duration-200 relative ${
+                      selectedServices.has(service.id) 
+                        ? 'border-primary bg-primary/5' 
+                        : 'hover:border-primary/30'
+                    }`}
                   >
                     <CardContent className="p-4">
+                      {/* Selection Checkbox */}
+                      <div className="absolute top-3 right-3 z-10">
+                        <Checkbox
+                          checked={selectedServices.has(service.id)}
+                          onCheckedChange={() => toggleServiceSelection(service.id)}
+                          className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                        />
+                      </div>
+
                       <div className="flex flex-col items-center text-center space-y-3">
                         {/* Logo */}
                         <div className="relative">
@@ -796,6 +883,21 @@ export default function Dashboard() {
             description: "Deletion request has been sent successfully.",
           });
         }}
+      />
+
+      {/* Batch Deletion Toolbar */}
+      <BatchDeletionToolbar
+        selectedCount={selectedServices.size}
+        onClear={() => setSelectedServices(new Set())}
+        onDelete={handleBatchDeletion}
+      />
+
+      {/* Batch Deletion Dialog */}
+      <BatchDeletionDialog
+        open={batchDialogOpen}
+        onOpenChange={setBatchDialogOpen}
+        services={selectedServicesArray}
+        onComplete={handleBatchComplete}
       />
     </div>
   );
