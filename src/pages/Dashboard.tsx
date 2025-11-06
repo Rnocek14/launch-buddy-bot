@@ -7,10 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Shield, RefreshCw, LogOut, Loader2, ExternalLink, Search, ChevronDown, ChevronUp, Download, AlertCircle } from "lucide-react";
+import { Shield, RefreshCw, LogOut, Loader2, ExternalLink, Search, Download, AlertCircle, Sparkles, Mail } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { validateGmailScope, isTokenValid } from "@/lib/googleAuth";
+import { Progress } from "@/components/ui/progress";
 
 interface Service {
   id: string;
@@ -25,6 +25,12 @@ interface ScanStats {
   servicesFound: number;
   emailsScanned: number;
   unmatchedCount: number;
+}
+
+interface ScanProgress {
+  currentEmail: number;
+  totalEmails: number;
+  status: string;
 }
 
 interface UnmatchedDomain {
@@ -45,7 +51,7 @@ export default function Dashboard() {
   const [unmatchedDomains, setUnmatchedDomains] = useState<UnmatchedDomain[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
-  const [openCategories, setOpenCategories] = useState<Record<string, boolean>>({});
+  const [scanProgress, setScanProgress] = useState<ScanProgress | null>(null);
 
   useEffect(() => {
     checkAuth();
@@ -119,6 +125,7 @@ export default function Dashboard() {
 
   async function handleScan() {
     setScanning(true);
+    setScanProgress({ currentEmail: 0, totalEmails: 100, status: "Connecting to Gmail..." });
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -217,17 +224,23 @@ export default function Dashboard() {
       }
 
       // All validations passed, proceed with scan
+      setScanProgress({ currentEmail: 10, totalEmails: 100, status: "Fetching emails..." });
+      
       const { data, error } = await supabase.functions.invoke("scan-gmail", {
         body: { accessToken: session.provider_token }
       });
 
       if (error) throw error;
 
+      setScanProgress({ currentEmail: 90, totalEmails: 100, status: "Analyzing services..." });
+
       setScanStats({
         servicesFound: data.servicesFound,
         emailsScanned: data.emailsScanned,
         unmatchedCount: data.unmatchedCount
       });
+
+      setScanProgress({ currentEmail: 100, totalEmails: 100, status: "Complete!" });
 
       toast({
         title: "Scan complete!",
@@ -245,6 +258,7 @@ export default function Dashboard() {
       });
     } finally {
       setScanning(false);
+      setTimeout(() => setScanProgress(null), 2000);
     }
   }
 
@@ -254,30 +268,22 @@ export default function Dashboard() {
   }
 
   const categoryColors: Record<string, string> = {
-    "Social": "bg-blue-500/10 text-blue-700 dark:text-blue-400",
-    "Shopping": "bg-purple-500/10 text-purple-700 dark:text-purple-400",
-    "Finance": "bg-red-500/10 text-red-700 dark:text-red-400",
-    "Streaming": "bg-pink-500/10 text-pink-700 dark:text-pink-400",
-    "Productivity": "bg-green-500/10 text-green-700 dark:text-green-400",
-    "Gaming": "bg-orange-500/10 text-orange-700 dark:text-orange-400",
-    "News": "bg-cyan-500/10 text-cyan-700 dark:text-cyan-400",
-    "Travel": "bg-indigo-500/10 text-indigo-700 dark:text-indigo-400",
-    "Other": "bg-gray-500/10 text-gray-700 dark:text-gray-400",
-  };
-
-  const categoryAvatarColors: Record<string, string> = {
-    "Social": "bg-blue-500 text-white",
-    "Shopping": "bg-purple-500 text-white",
-    "Finance": "bg-red-500 text-white",
-    "Streaming": "bg-pink-500 text-white",
-    "Productivity": "bg-green-500 text-white",
-    "Gaming": "bg-orange-500 text-white",
-    "News": "bg-cyan-500 text-white",
-    "Travel": "bg-indigo-500 text-white",
-    "Other": "bg-gray-500 text-white",
+    "Social": "bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/20",
+    "Shopping": "bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-500/20",
+    "Finance": "bg-red-500/10 text-red-700 dark:text-red-300 border-red-500/20",
+    "Streaming": "bg-pink-500/10 text-pink-700 dark:text-pink-300 border-pink-500/20",
+    "Productivity": "bg-green-500/10 text-green-700 dark:text-green-300 border-green-500/20",
+    "Gaming": "bg-orange-500/10 text-orange-700 dark:text-orange-300 border-orange-500/20",
+    "News": "bg-cyan-500/10 text-cyan-700 dark:text-cyan-300 border-cyan-500/20",
+    "Travel": "bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border-indigo-500/20",
+    "Other": "bg-muted text-muted-foreground border-border",
   };
 
   const getServiceInitials = (name: string) => {
+    const words = name.split(' ');
+    if (words.length >= 2) {
+      return (words[0][0] + words[1][0]).toUpperCase();
+    }
     return name.slice(0, 2).toUpperCase();
   };
 
@@ -319,29 +325,12 @@ export default function Dashboard() {
     });
   }, [services, searchQuery, selectedCategory]);
 
-  const groupedServices = useMemo(() => {
-    const groups: Record<string, Service[]> = {};
-    filteredServices.forEach(service => {
-      const category = service.category || "Other";
-      if (!groups[category]) {
-        groups[category] = [];
-      }
-      groups[category].push(service);
-    });
-    return groups;
-  }, [filteredServices]);
 
   const categories = useMemo(() => {
     const cats = new Set(services.map(s => s.category || "Other"));
     return Array.from(cats).sort();
   }, [services]);
 
-  const toggleCategory = (category: string) => {
-    setOpenCategories(prev => ({
-      ...prev,
-      [category]: !prev[category]
-    }));
-  };
 
   if (loading) {
     return (
@@ -352,137 +341,183 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-background p-6">
-      <div className="max-w-6xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-foreground">Digital Footprint Dashboard</h1>
-            <p className="text-muted-foreground mt-1">Welcome back, {user?.email}</p>
-          </div>
-          <Button variant="ghost" onClick={handleSignOut}>
-            <LogOut className="w-4 h-4 mr-2" />
-            Sign Out
-          </Button>
-        </div>
-
-        <Card className="mb-8 border-primary/20">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Shield className="w-6 h-6 text-primary" />
-              Privacy Footprint Score
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-6xl font-bold text-primary mb-2">
-              {services.length}
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <div className="border-b border-border bg-card">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-2xl font-bold text-foreground">Digital Footprint</h1>
+              <p className="text-sm text-muted-foreground mt-0.5">{user?.email}</p>
             </div>
-            <p className="text-muted-foreground mb-4">
-              Active accounts discovered across the web
-            </p>
-            {scanStats && (
-              <div className="text-sm text-muted-foreground mb-4 p-3 bg-muted/50 rounded-lg">
-                <p><strong>Last Scan:</strong> {scanStats.emailsScanned} emails analyzed</p>
-                <p><strong>Matched:</strong> {scanStats.servicesFound} known services</p>
-                {scanStats.unmatchedCount > 0 && (
-                  <p><strong>Unrecognized:</strong> {scanStats.unmatchedCount} domains (see below)</p>
+            <Button variant="ghost" size="sm" onClick={handleSignOut}>
+              <LogOut className="w-4 h-4 mr-2" />
+              Sign Out
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Scan Hero Card */}
+        <Card className="mb-8 overflow-hidden border-primary/20 bg-gradient-to-br from-card to-primary/5">
+          <CardContent className="pt-6">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+              <div className="flex-1">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="p-2 rounded-lg bg-primary/10">
+                    <Shield className="w-6 h-6 text-primary" />
+                  </div>
+                  <div>
+                    <h2 className="text-3xl font-bold text-foreground">{services.length}</h2>
+                    <p className="text-sm text-muted-foreground">Online accounts discovered</p>
+                  </div>
+                </div>
+                
+                {scanStats && !scanning && (
+                  <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
+                    <div className="flex items-center gap-1.5">
+                      <Mail className="w-4 h-4" />
+                      <span>{scanStats.emailsScanned} emails scanned</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Sparkles className="w-4 h-4" />
+                      <span>{scanStats.servicesFound} services found</span>
+                    </div>
+                  </div>
+                )}
+
+                {scanning && scanProgress && (
+                  <div className="mt-4 space-y-2">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">{scanProgress.status}</span>
+                      <span className="text-primary font-medium">{Math.round((scanProgress.currentEmail / scanProgress.totalEmails) * 100)}%</span>
+                    </div>
+                    <Progress value={(scanProgress.currentEmail / scanProgress.totalEmails) * 100} className="h-2" />
+                  </div>
                 )}
               </div>
-            )}
-            <Button 
-              onClick={handleScan}
-              disabled={scanning}
-              size="lg"
-            >
-              {scanning ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Scanning inbox...
-                </>
-              ) : (
-                <>
-                  <RefreshCw className="w-4 h-4 mr-2" />
-                  {hasGmailAccess ? "Rescan Inbox" : "Connect Gmail & Scan"}
-                </>
-              )}
-            </Button>
+
+              <div className="flex-shrink-0">
+                <Button 
+                  onClick={handleScan}
+                  disabled={scanning}
+                  size="lg"
+                  className="w-full md:w-auto"
+                >
+                  {scanning ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Scanning...
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="w-4 h-4 mr-2" />
+                      {hasGmailAccess ? "Rescan Inbox" : "Connect Gmail"}
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle>Discovered Accounts ({services.length})</CardTitle>
-              {services.length > 0 && (
+        {/* Services Section */}
+        {services.length === 0 ? (
+          <Card className="border-dashed">
+            <CardContent className="py-16">
+              <div className="text-center max-w-md mx-auto">
+                <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Shield className="w-10 h-10 text-primary" />
+                </div>
+                <h3 className="text-xl font-semibold text-foreground mb-2">
+                  Discover Your Digital Footprint
+                </h3>
+                <p className="text-muted-foreground mb-6">
+                  Connect your Gmail to automatically scan for online accounts and services you've signed up for over the years.
+                </p>
+                <div className="flex flex-col gap-2 text-sm text-muted-foreground">
+                  <div className="flex items-center gap-2 justify-center">
+                    <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                    <span>Safe & secure - read-only access</span>
+                  </div>
+                  <div className="flex items-center gap-2 justify-center">
+                    <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                    <span>No email content stored</span>
+                  </div>
+                  <div className="flex items-center gap-2 justify-center">
+                    <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                    <span>Results in seconds</span>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="space-y-6">
+            {/* Controls */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <span className="font-medium text-foreground">{filteredServices.length}</span>
+                <span>of</span>
+                <span className="font-medium text-foreground">{services.length}</span>
+                <span>services</span>
+              </div>
+              <div className="flex items-center gap-3 w-full sm:w-auto">
                 <Button 
                   variant="outline" 
                   size="sm"
                   onClick={exportToCSV}
+                  className="flex-shrink-0"
                 >
                   <Download className="w-4 h-4 mr-2" />
-                  Export CSV
+                  Export
                 </Button>
-              )}
-            </div>
-          </CardHeader>
-          <CardContent>
-            {services.length === 0 ? (
-              <div className="text-center py-12">
-                <Shield className="w-16 h-16 mx-auto text-muted-foreground/50 mb-4" />
-                <p className="text-muted-foreground text-lg mb-2">
-                  No accounts found yet
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  Click "Connect Gmail & Scan" above to discover your digital footprint
-                </p>
               </div>
-            ) : (
-              <div className="space-y-4">
-                {/* Search and Filter Controls */}
-                <div className="flex flex-col sm:flex-row gap-3">
-                  <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Search services..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="pl-10"
-                    />
-                  </div>
-                  <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                    <SelectTrigger className="w-full sm:w-[180px]">
-                      <SelectValue placeholder="All Categories" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Categories</SelectItem>
-                      {categories.map(cat => (
-                        <SelectItem key={cat} value={cat}>
-                          {cat} ({services.filter(s => (s.category || "Other") === cat).length})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+            </div>
+
+            {/* Search and Filter */}
+            <Card>
+              <CardContent className="pt-6">
+              <div className="flex flex-col sm:flex-row gap-3">(
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search services..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10"
+                  />
                 </div>
+                <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                  <SelectTrigger className="w-full sm:w-[200px]">
+                    <SelectValue placeholder="All Categories" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Categories</SelectItem>
+                    {categories.map(cat => (
+                      <SelectItem key={cat} value={cat}>
+                        {cat} ({services.filter(s => (s.category || "Other") === cat).length})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              </CardContent>
+            </Card>
 
-                {/* Results Count */}
-                {(searchQuery || selectedCategory !== "all") && (
-                  <p className="text-sm text-muted-foreground">
-                    Showing {filteredServices.length} of {services.length} services
-                  </p>
-                )}
-
-                {/* No Results State */}
-                {filteredServices.length === 0 ? (
-                  <div className="text-center py-12">
-                    <Search className="w-16 h-16 mx-auto text-muted-foreground/50 mb-4" />
-                    <p className="text-muted-foreground text-lg mb-2">
-                      No services found
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      Try adjusting your search or filters
+            {/* Services Grid */}
+            {filteredServices.length === 0 ? (
+              <Card className="border-dashed">
+                <CardContent className="py-12">
+                  <div className="text-center">
+                    <Search className="w-12 h-12 mx-auto text-muted-foreground/50 mb-3" />
+                    <p className="text-muted-foreground mb-4">
+                      No services match your search
                     </p>
                     <Button 
                       variant="outline" 
-                      className="mt-4"
+                      size="sm"
                       onClick={() => {
                         setSearchQuery("");
                         setSelectedCategory("all");
@@ -491,80 +526,80 @@ export default function Dashboard() {
                       Clear Filters
                     </Button>
                   </div>
-                ) : (
-                  <div className="space-y-4">
-                    {Object.entries(groupedServices).map(([category, categoryServices]) => (
-                      <Collapsible
-                        key={category}
-                        open={openCategories[category] ?? true}
-                        onOpenChange={() => toggleCategory(category)}
-                      >
-                        <CollapsibleTrigger className="flex items-center justify-between w-full p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
-                          <div className="flex items-center gap-2">
-                            <Badge className={categoryColors[category] || categoryColors["Other"]}>
-                              {category}
-                            </Badge>
-                            <span className="text-sm text-muted-foreground">
-                              {categoryServices.length} {categoryServices.length === 1 ? 'service' : 'services'}
-                            </span>
-                          </div>
-                          {openCategories[category] ?? true ? (
-                            <ChevronUp className="w-4 h-4 text-muted-foreground" />
-                          ) : (
-                            <ChevronDown className="w-4 h-4 text-muted-foreground" />
-                          )}
-                        </CollapsibleTrigger>
-                        <CollapsibleContent className="pt-3">
-                          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-                            {categoryServices.map(service => (
-                              <div 
-                                key={service.id}
-                                className="flex items-center gap-3 p-4 rounded-lg border border-border hover:border-primary/50 transition-colors group"
-                              >
-                                <Avatar className="w-12 h-12 rounded-lg">
-                                  <AvatarImage 
-                                    src={service.logo_url || ''} 
-                                    alt={service.name}
-                                    className="object-cover"
-                                  />
-                                  <AvatarFallback className={`rounded-lg ${categoryAvatarColors[service.category] || categoryAvatarColors["Other"]}`}>
-                                    {getServiceInitials(service.name)}
-                                  </AvatarFallback>
-                                </Avatar>
-                                <div className="flex-1 min-w-0">
-                                  <h3 className="font-semibold text-foreground truncate">{service.name}</h3>
-                                  <div className="flex items-center gap-2 mt-1">
-                                    <Badge variant="outline" className="text-xs">
-                                      {new Date(service.discovered_at).toLocaleDateString()}
-                                    </Badge>
-                                  </div>
-                                </div>
-                                {service.homepage_url && (
-                                  <a 
-                                    href={service.homepage_url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="shrink-0"
-                                    title="Visit website"
-                                  >
-                                    <Button variant="outline" size="sm" className="gap-2">
-                                      Visit
-                                      <ExternalLink className="w-3 h-3" />
-                                    </Button>
-                                  </a>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        </CollapsibleContent>
-                      </Collapsible>
-                    ))}
-                  </div>
-                )}
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {filteredServices.map(service => (
+                  <Card 
+                    key={service.id}
+                    className="group hover:shadow-lg hover:border-primary/30 transition-all duration-200"
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex flex-col items-center text-center space-y-3">
+                        {/* Logo */}
+                        <div className="relative">
+                          <Avatar className="w-16 h-16 rounded-xl ring-2 ring-border group-hover:ring-primary/30 transition-all">
+                            <AvatarImage 
+                              src={service.logo_url || ''} 
+                              alt={service.name}
+                              className="object-cover"
+                            />
+                            <AvatarFallback className="rounded-xl bg-primary/10 text-primary text-lg font-semibold">
+                              {getServiceInitials(service.name)}
+                            </AvatarFallback>
+                          </Avatar>
+                        </div>
+
+                        {/* Service Name */}
+                        <div className="space-y-1 w-full">
+                          <h3 className="font-semibold text-foreground line-clamp-2 min-h-[2.5rem]">
+                            {service.name}
+                          </h3>
+                          
+                          {/* Category Badge */}
+                          <Badge 
+                            variant="outline" 
+                            className={`text-xs ${categoryColors[service.category] || categoryColors["Other"]}`}
+                          >
+                            {service.category || "Other"}
+                          </Badge>
+                        </div>
+
+                        {/* Date */}
+                        <p className="text-xs text-muted-foreground">
+                          Joined {new Date(service.discovered_at).toLocaleDateString('en-US', { 
+                            month: 'short', 
+                            year: 'numeric' 
+                          })}
+                        </p>
+
+                        {/* Visit Button */}
+                        {service.homepage_url && (
+                          <a 
+                            href={service.homepage_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="w-full"
+                          >
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              className="w-full group-hover:bg-primary group-hover:text-primary-foreground group-hover:border-primary transition-colors"
+                            >
+                              Visit Site
+                              <ExternalLink className="w-3 h-3 ml-2" />
+                            </Button>
+                          </a>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
               </div>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        )}
 
         {unmatchedDomains.length > 0 && (
           <Card className="mt-8 border-orange-500/20 bg-orange-500/5">
