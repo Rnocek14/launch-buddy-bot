@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Dialog,
@@ -37,8 +37,32 @@ export const DeletionRequestDialog = ({
 }: DeletionRequestDialogProps) => {
   const [loading, setLoading] = useState(false);
   const [accountIdentifier, setAccountIdentifier] = useState("");
+  const [identifiers, setIdentifiers] = useState<any[]>([]);
+  const [selectedIdentifierId, setSelectedIdentifierId] = useState<string>("");
   const [success, setSuccess] = useState(false);
   const { toast } = useToast();
+
+  // Fetch user identifiers when dialog opens
+  useEffect(() => {
+    if (open && service) {
+      fetchIdentifiers();
+    }
+  }, [open, service]);
+
+  const fetchIdentifiers = async () => {
+    const { data, error } = await supabase
+      .from("user_identifiers")
+      .select("*")
+      .order("is_primary", { ascending: false })
+      .order("created_at", { ascending: true });
+
+    if (!error && data && data.length > 0) {
+      setIdentifiers(data);
+      // Pre-select primary identifier or first one
+      const primary = data.find((i) => i.is_primary);
+      setSelectedIdentifierId(primary?.id || data[0]?.id || "");
+    }
+  };
 
   const handleSubmit = async () => {
     if (!service) return;
@@ -56,6 +80,7 @@ export const DeletionRequestDialog = ({
         {
           body: {
             service_id: service.id,
+            identifier_id: selectedIdentifierId || undefined,
             account_identifier: accountIdentifier || undefined,
           },
         }
@@ -108,10 +133,16 @@ export const DeletionRequestDialog = ({
       onOpenChange(false);
       setSuccess(false);
       setAccountIdentifier("");
+      setSelectedIdentifierId("");
+      setIdentifiers([]);
     }
   };
 
   if (!service) return null;
+
+  const getTypeLabel = (type: string) => {
+    return type.charAt(0).toUpperCase() + type.slice(1);
+  };
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -142,21 +173,46 @@ export const DeletionRequestDialog = ({
             </Alert>
 
             <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="accountIdentifier">
-                  Account Identifier (Optional)
-                </Label>
-                <Input
-                  id="accountIdentifier"
-                  placeholder="Username, email, or account ID"
-                  value={accountIdentifier}
-                  onChange={(e) => setAccountIdentifier(e.target.value)}
-                  disabled={loading}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Helps the service identify your account faster. Your email will be used if left empty.
-                </p>
-              </div>
+              {identifiers.length > 0 ? (
+                <div className="space-y-2">
+                  <Label htmlFor="identifier">
+                    Account Identifier
+                  </Label>
+                  <select
+                    id="identifier"
+                    value={selectedIdentifierId}
+                    onChange={(e) => setSelectedIdentifierId(e.target.value)}
+                    disabled={loading}
+                    className="w-full px-3 py-2 border rounded-md bg-background"
+                  >
+                    {identifiers.map((identifier) => (
+                      <option key={identifier.id} value={identifier.id}>
+                        {getTypeLabel(identifier.type)}: {identifier.value}
+                        {identifier.is_primary ? " (Primary)" : ""}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-muted-foreground">
+                    Select which identifier to use for this request. You can manage your identifiers in Settings.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <Label htmlFor="accountIdentifier">
+                    Account Identifier (Optional)
+                  </Label>
+                  <Input
+                    id="accountIdentifier"
+                    placeholder="Username, email, or account ID"
+                    value={accountIdentifier}
+                    onChange={(e) => setAccountIdentifier(e.target.value)}
+                    disabled={loading}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Helps the service identify your account faster. Your email will be used if left empty.
+                  </p>
+                </div>
+              )}
 
               <div className="text-sm text-muted-foreground space-y-1">
                 <p className="font-medium text-foreground">What happens next:</p>

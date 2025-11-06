@@ -59,6 +59,11 @@ export type Database = {
           contact_email: string | null
           created_at: string
           id: string
+          identifier_used_id: string | null
+          identifier_used_type:
+            | Database["public"]["Enums"]["identifier_type"]
+            | null
+          identifier_used_value: string | null
           method: string | null
           notes: string | null
           request_body: Json | null
@@ -77,6 +82,11 @@ export type Database = {
           contact_email?: string | null
           created_at?: string
           id?: string
+          identifier_used_id?: string | null
+          identifier_used_type?:
+            | Database["public"]["Enums"]["identifier_type"]
+            | null
+          identifier_used_value?: string | null
           method?: string | null
           notes?: string | null
           request_body?: Json | null
@@ -95,6 +105,11 @@ export type Database = {
           contact_email?: string | null
           created_at?: string
           id?: string
+          identifier_used_id?: string | null
+          identifier_used_type?:
+            | Database["public"]["Enums"]["identifier_type"]
+            | null
+          identifier_used_value?: string | null
           method?: string | null
           notes?: string | null
           request_body?: Json | null
@@ -109,6 +124,13 @@ export type Database = {
           verification_required?: boolean | null
         }
         Relationships: [
+          {
+            foreignKeyName: "deletion_requests_identifier_used_id_fkey"
+            columns: ["identifier_used_id"]
+            isOneToOne: false
+            referencedRelation: "user_identifiers"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "deletion_requests_service_id_fkey"
             columns: ["service_id"]
@@ -430,6 +452,42 @@ export type Database = {
         }
         Relationships: []
       }
+      user_identifiers: {
+        Row: {
+          created_at: string
+          id: string
+          is_primary: boolean
+          source: string
+          type: Database["public"]["Enums"]["identifier_type"]
+          updated_at: string
+          user_id: string
+          value: string
+          verified: boolean
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_primary?: boolean
+          source?: string
+          type: Database["public"]["Enums"]["identifier_type"]
+          updated_at?: string
+          user_id: string
+          value: string
+          verified?: boolean
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_primary?: boolean
+          source?: string
+          type?: Database["public"]["Enums"]["identifier_type"]
+          updated_at?: string
+          user_id?: string
+          value?: string
+          verified?: boolean
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -568,6 +626,7 @@ export type Database = {
         | "opened"
         | "clicked"
         | "unsubscribed"
+      identifier_type: "email" | "phone" | "username" | "other"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -707,6 +766,7 @@ export const Constants = {
         "clicked",
         "unsubscribed",
       ],
+      identifier_type: ["email", "phone", "username", "other"],
     },
   },
 } as const

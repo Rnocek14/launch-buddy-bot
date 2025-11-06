@@ -16,6 +16,7 @@ import UnmatchedDomains from "./pages/UnmatchedDomains";
 import DeletionRequests from "./pages/DeletionRequests";
 import Cleanup from "./pages/Cleanup";
 import NotFound from "./pages/NotFound";
+import Settings from "./pages/Settings";
 import { AuthorizationWizard } from "./components/AuthorizationWizard";
 
 const queryClient = new QueryClient();
@@ -38,6 +39,7 @@ const App = () => (
             <Route path="/alpha" element={<AlphaAccess />} />
             <Route path="/unsubscribe" element={<Unsubscribe />} />
             <Route path="/preferences" element={<Preferences />} />
+            <Route path="/settings" element={<Settings />} />
             <Route path="/authorize" element={<AuthorizationWizard />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />

@@ -12,6 +12,7 @@ const corsHeaders = {
 
 interface DeletionRequestBody {
   service_id: string;
+  identifier_id?: string;
   account_identifier?: string;
   template_type?: string;
 }
@@ -73,13 +74,38 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Parse request body
     const body: DeletionRequestBody = await req.json();
-    const { service_id, account_identifier, template_type = "deletion" } = body;
+    const { service_id, identifier_id, account_identifier, template_type = "deletion" } = body;
 
     if (!service_id) {
       return new Response(
         JSON.stringify({ error: "Missing required field: service_id" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
+    }
+
+    // Fetch identifier if provided
+    let selectedIdentifier: any = null;
+    let identifierValue = account_identifier;
+
+    if (identifier_id) {
+      const { data: identifierData, error: identifierError } = await supabase
+        .from("user_identifiers")
+        .select("*")
+        .eq("id", identifier_id)
+        .eq("user_id", user.id)
+        .single();
+
+      if (identifierError || !identifierData) {
+        console.error("Identifier not found or unauthorized:", identifierError);
+        return new Response(
+          JSON.stringify({ error: "Invalid or unauthorized identifier" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      selectedIdentifier = identifierData;
+      identifierValue = identifierData.value;
+      console.log(`Using identifier: ${identifierData.type} - ${identifierData.value}`);
     }
 
     console.log(`Fetching service details for: ${service_id}`);
@@ -160,7 +186,7 @@ const handler = async (req: Request): Promise<Response> => {
     const personalizedBody = template.body_template
       .replace(/\{\{full_name\}\}/g, profile.full_name || "User")
       .replace(/\{\{email\}\}/g, profile.email || user.email || "")
-      .replace(/\{\{account_identifier\}\}/g, account_identifier || profile.email || user.email || "")
+      .replace(/\{\{account_identifier\}\}/g, identifierValue || profile.email || user.email || "")
       .replace(/\{\{jurisdiction\}\}/g, jurisdiction)
       .replace(/\{\{signature\}\}/g, signature);
 
@@ -202,23 +228,32 @@ const handler = async (req: Request): Promise<Response> => {
     console.log(`Email sent successfully. ID: ${emailResponse.data.id}`);
 
     // Log deletion request to database
+    const insertData: any = {
+      user_id: user.id,
+      service_id: service_id,
+      service_name: service.name,
+      request_type: template_type,
+      method: "email",
+      request_body: {
+        to: recipientEmail,
+        subject: subject,
+        body: personalizedBody,
+        template_id: template.id,
+        account_identifier: identifierValue,
+      },
+      status: "sent",
+    };
+
+    // Add identifier tracking if used
+    if (selectedIdentifier) {
+      insertData.identifier_used_id = selectedIdentifier.id;
+      insertData.identifier_used_value = selectedIdentifier.value;
+      insertData.identifier_used_type = selectedIdentifier.type;
+    }
+
     const { data: deletionRequest, error: insertError } = await supabase
       .from("deletion_requests")
-      .insert({
-        user_id: user.id,
-        service_id: service_id,
-        service_name: service.name,
-        request_type: template_type,
-        method: "email",
-        request_body: {
-          to: recipientEmail,
-          subject: subject,
-          body: personalizedBody,
-          template_id: template.id,
-          account_identifier: account_identifier,
-        },
-        status: "sent",
-      })
+      .insert(insertData)
       .select()
       .single();
 

@@ -1,4 +1,4 @@
-import { Shield, ScanSearch } from "lucide-react";
+import { Shield, ScanSearch, Settings } from "lucide-react";
 import { ThemeToggle } from "./ThemeToggle";
 import { Button } from "./ui/button";
 import { Link, useNavigate } from "react-router-dom";
@@ -76,12 +76,19 @@ export const Navbar = () => {
             </Button>
             
             {user && (
-              <Link to="/dashboard">
-                <Button variant="ghost" className="gap-2">
-                  <ScanSearch className="w-4 h-4" />
-                  <span className="hidden md:inline">Dashboard</span>
-                </Button>
-              </Link>
+              <>
+                <Link to="/dashboard">
+                  <Button variant="ghost" className="gap-2">
+                    <ScanSearch className="w-4 h-4" />
+                    <span className="hidden md:inline">Dashboard</span>
+                  </Button>
+                </Link>
+                <Link to="/settings">
+                  <Button variant="ghost" size="icon">
+                    <Settings className="w-4 h-4" />
+                  </Button>
+                </Link>
+              </>
             )}
             
             <ThemeToggle />
