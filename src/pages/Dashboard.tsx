@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Shield, RefreshCw, LogOut, Loader2, ExternalLink, Search, ChevronDown, ChevronUp } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -264,6 +265,22 @@ export default function Dashboard() {
     "Other": "bg-gray-500/10 text-gray-700 dark:text-gray-400",
   };
 
+  const categoryAvatarColors: Record<string, string> = {
+    "Social": "bg-blue-500 text-white",
+    "Shopping": "bg-purple-500 text-white",
+    "Finance": "bg-red-500 text-white",
+    "Streaming": "bg-pink-500 text-white",
+    "Productivity": "bg-green-500 text-white",
+    "Gaming": "bg-orange-500 text-white",
+    "News": "bg-cyan-500 text-white",
+    "Travel": "bg-indigo-500 text-white",
+    "Other": "bg-gray-500 text-white",
+  };
+
+  const getServiceInitials = (name: string) => {
+    return name.slice(0, 2).toUpperCase();
+  };
+
   const filteredServices = useMemo(() => {
     return services.filter(service => {
       const matchesSearch = service.name.toLowerCase().includes(searchQuery.toLowerCase());
@@ -462,14 +479,16 @@ export default function Dashboard() {
                                 key={service.id}
                                 className="flex items-center gap-3 p-4 rounded-lg border border-border hover:border-primary/50 transition-colors group"
                               >
-                                <img 
-                                  src={service.logo_url}
-                                  alt={service.name}
-                                  className="w-12 h-12 rounded-lg object-cover"
-                                  onError={(e) => {
-                                    e.currentTarget.src = "/placeholder.svg";
-                                  }}
-                                />
+                                <Avatar className="w-12 h-12 rounded-lg">
+                                  <AvatarImage 
+                                    src={service.logo_url || ''} 
+                                    alt={service.name}
+                                    className="object-cover"
+                                  />
+                                  <AvatarFallback className={`rounded-lg ${categoryAvatarColors[service.category] || categoryAvatarColors["Other"]}`}>
+                                    {getServiceInitials(service.name)}
+                                  </AvatarFallback>
+                                </Avatar>
                                 <div className="flex-1 min-w-0">
                                   <h3 className="font-semibold text-foreground truncate">{service.name}</h3>
                                   <p className="text-xs text-muted-foreground">
