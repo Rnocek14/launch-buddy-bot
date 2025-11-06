@@ -72,6 +72,7 @@ export default function Dashboard() {
   const [selectedServices, setSelectedServices] = useState<Set<string>>(new Set());
   const [batchDialogOpen, setBatchDialogOpen] = useState(false);
   const { isAuthorized, loading: authLoading } = useAuthorization();
+  const [scanType, setScanType] = useState<'quick' | 'deep'>('quick');
 
   useEffect(() => {
     checkAuth();
@@ -151,7 +152,13 @@ export default function Dashboard() {
 
   async function handleScan() {
     setScanning(true);
-    setScanProgress({ currentEmail: 0, totalEmails: 100, status: "Scanning 5 categories (~2,000 emails)... this may take 30-60 seconds" });
+    const estimatedTime = scanType === 'quick' ? '30-60 seconds' : '2-5 minutes';
+    const estimatedEmails = scanType === 'quick' ? '~2,500' : '~25,000';
+    setScanProgress({ 
+      currentEmail: 0, 
+      totalEmails: 100, 
+      status: `${scanType === 'quick' ? 'Quick' : 'Deep'} scan: checking 5 categories (${estimatedEmails} emails)... this may take ${estimatedTime}` 
+    });
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -250,10 +257,13 @@ export default function Dashboard() {
       }
 
       // All validations passed, proceed with scan
-      setScanProgress({ currentEmail: 10, totalEmails: 100, status: "Fetching emails..." });
+      setScanProgress({ currentEmail: 10, totalEmails: 100, status: "Fetching emails from Gmail..." });
       
       const { data, error } = await supabase.functions.invoke("scan-gmail", {
-        body: { accessToken: session.provider_token }
+        body: { 
+          accessToken: session.provider_token,
+          scanType: scanType
+        }
       });
 
       if (error) throw error;
@@ -496,8 +506,9 @@ export default function Dashboard() {
         {/* Scan Hero Card */}
         <Card className="mb-8 overflow-hidden border-primary/20 bg-gradient-to-br from-card to-primary/5">
           <CardContent className="pt-6">
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-              <div className="flex-1">
+            <div className="flex flex-col gap-6">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+                <div className="flex-1">
                 <div className="flex items-center gap-3 mb-3">
                   <div className="p-2 rounded-lg bg-primary/10">
                     <Shield className="w-6 h-6 text-primary" />
@@ -557,6 +568,40 @@ export default function Dashboard() {
                     )}
                   </div>
                 )}
+              </div>
+
+              {/* Scan Type Toggle */}
+              {!scanning && (
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 pt-4 border-t border-border/50">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3">
+                      <Button
+                        variant={scanType === 'quick' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setScanType('quick')}
+                        className="flex-1 sm:flex-none"
+                      >
+                        Quick Scan
+                      </Button>
+                      <Button
+                        variant={scanType === 'deep' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setScanType('deep')}
+                        className="flex-1 sm:flex-none"
+                      >
+                        Deep Scan
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {scanType === 'quick' ? (
+                      <span>500 emails per category • ~30-60 seconds</span>
+                    ) : (
+                      <span>Up to 5,000 emails per category • ~2-5 minutes</span>
+                    )}
+                  </div>
+                </div>
+              )}
 
                 {scanning && scanProgress && (
                   <div className="mt-4 space-y-3">
@@ -579,15 +624,16 @@ export default function Dashboard() {
                       <Progress value={(scanProgress.currentEmail / scanProgress.totalEmails) * 100} className="h-2" />
                     </div>
                   </div>
-                )}
+                 )}
               </div>
 
-              <div className="flex-shrink-0">
+              {/* Scan Button */}
+              <div className="flex justify-center pt-2">
                 <Button 
                   onClick={handleScan}
                   disabled={scanning}
                   size="lg"
-                  className="w-full md:w-auto"
+                  className="w-full sm:w-auto min-w-[200px]"
                 >
                   {scanning ? (
                     <>
@@ -597,7 +643,7 @@ export default function Dashboard() {
                   ) : (
                     <>
                       <RefreshCw className="w-4 h-4 mr-2" />
-                      {hasGmailAccess ? "Rescan Inbox" : "Connect Gmail"}
+                      {hasGmailAccess ? `Start ${scanType === 'quick' ? 'Quick' : 'Deep'} Scan` : "Connect Gmail"}
                     </>
                   )}
                 </Button>

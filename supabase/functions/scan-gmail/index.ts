@@ -7,6 +7,8 @@ const corsHeaders = {
 
 interface ScanRequest {
   accessToken: string;
+  scanType?: 'quick' | 'deep';
+  maxEmailsPerCategory?: number;
 }
 
 Deno.serve(async (req) => {
@@ -31,12 +33,16 @@ Deno.serve(async (req) => {
       throw new Error("Unauthorized");
     }
 
-    const { accessToken } = await req.json() as ScanRequest;
+    const { accessToken, scanType = 'quick', maxEmailsPerCategory } = await req.json() as ScanRequest;
     if (!accessToken) {
       throw new Error("Missing Gmail access token");
     }
 
-    console.log(`Starting scan for user ${user.id}`);
+    const emailLimit = scanType === 'quick' 
+      ? 500 
+      : (maxEmailsPerCategory || 5000); // Deep scan up to 5000 per category
+    
+    console.log(`Starting ${scanType} scan for user ${user.id} (${emailLimit} emails per category)`);
 
     // Define 5 category-based queries for comprehensive coverage
     const queries = {
@@ -59,12 +65,20 @@ Deno.serve(async (req) => {
 
     for (const [category, query] of Object.entries(queries)) {
       try {
-        const messagesResponse = await fetch(
-          `https://gmail.googleapis.com/gmail/v1/users/me/messages?q=${encodeURIComponent(query)}&maxResults=500`,
-          { headers: { Authorization: `Bearer ${accessToken}` } }
-        );
+        let pageToken: string | undefined = undefined;
+        let categoryEmailCount = 0;
+        
+        // Pagination loop for deep scans
+        do {
+          const url: string = pageToken
+            ? `https://gmail.googleapis.com/gmail/v1/users/me/messages?q=${encodeURIComponent(query)}&maxResults=500&pageToken=${pageToken}`
+            : `https://gmail.googleapis.com/gmail/v1/users/me/messages?q=${encodeURIComponent(query)}&maxResults=500`;
+          
+          const messagesResponse: Response = await fetch(url, {
+            headers: { Authorization: `Bearer ${accessToken}` }
+          });
 
-        if (!messagesResponse.ok) {
+          if (!messagesResponse.ok) {
           const errorText = await messagesResponse.text();
           let errorObj;
           try {
@@ -86,20 +100,33 @@ Deno.serve(async (req) => {
             throw new Error(`Gmail access denied: ${errorMessage}`);
           }
           
-          throw new Error(`Gmail API failed with status ${messagesResponse.status}: ${errorText}`);
-        }
-
-        const { messages } = await messagesResponse.json();
-        if (messages && messages.length > 0) {
-          console.log(`Found ${messages.length} ${category} emails`);
-          for (const msg of messages) {
-            // Deduplicate by message ID - first category wins
-            if (!allMessages.has(msg.id)) {
-              allMessages.set(msg.id, { msg, category });
-              categoryBreakdown[category]++;
-            }
+            throw new Error(`Gmail API failed with status ${messagesResponse.status}: ${errorText}`);
           }
-        }
+
+          const data: any = await messagesResponse.json();
+          const { messages, nextPageToken }: { messages?: any[]; nextPageToken?: string } = data;
+          
+          if (messages && messages.length > 0) {
+            console.log(`Found ${messages.length} ${category} emails (total: ${categoryEmailCount + messages.length})`);
+            for (const msg of messages) {
+              // Deduplicate by message ID - first category wins
+              if (!allMessages.has(msg.id)) {
+                allMessages.set(msg.id, { msg, category });
+                categoryBreakdown[category]++;
+              }
+            }
+            categoryEmailCount += messages.length;
+          }
+
+          // For quick scan, stop after first batch
+          // For deep scan, continue until no more pages or hit limit
+          pageToken = scanType === 'deep' && nextPageToken && categoryEmailCount < emailLimit
+            ? nextPageToken
+            : undefined;
+            
+        } while (pageToken);
+        
+        console.log(`Completed ${category} scan: ${categoryEmailCount} emails processed, ${categoryBreakdown[category]} unique accounts`);
       } catch (error) {
         console.error(`Error fetching ${category} emails:`, error);
         // Continue with other categories even if one fails
