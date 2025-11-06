@@ -7,7 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Shield, RefreshCw, LogOut, Loader2, ExternalLink, Search, Download, AlertCircle, Sparkles, Mail, Tag } from "lucide-react";
+import { Shield, RefreshCw, LogOut, Loader2, ExternalLink, Search, Download, AlertCircle, Sparkles, Mail, Tag, TrendingUp } from "lucide-react";
+import { RiskScoreCard } from "@/components/RiskScoreCard";
 import { useToast } from "@/hooks/use-toast";
 import { validateGmailScope, isTokenValid } from "@/lib/googleAuth";
 import { Progress } from "@/components/ui/progress";
@@ -52,10 +53,18 @@ export default function Dashboard() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [scanProgress, setScanProgress] = useState<ScanProgress | null>(null);
+  const [riskData, setRiskData] = useState<any>(null);
+  const [loadingRisk, setLoadingRisk] = useState(false);
 
   useEffect(() => {
     checkAuth();
   }, []);
+
+  useEffect(() => {
+    if (services.length > 0) {
+      fetchRiskScore();
+    }
+  }, [services.length]);
 
   async function checkAuth() {
     const { data: { session } } = await supabase.auth.getSession();
@@ -250,6 +259,7 @@ export default function Dashboard() {
 
       await fetchServices();
       await fetchUnmatchedDomains();
+      await fetchRiskScore();
     } catch (error: any) {
       toast({
         title: "Scan failed",
@@ -259,6 +269,26 @@ export default function Dashboard() {
     } finally {
       setScanning(false);
       setTimeout(() => setScanProgress(null), 2000);
+    }
+  }
+
+  async function fetchRiskScore() {
+    setLoadingRisk(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('calculate-risk-score');
+      
+      if (error) throw error;
+      
+      setRiskData(data);
+    } catch (error: any) {
+      console.error('Failed to fetch risk score:', error);
+      toast({
+        title: "Could not calculate risk score",
+        description: error.message,
+        variant: "destructive"
+      });
+    } finally {
+      setLoadingRisk(false);
     }
   }
 
@@ -359,6 +389,18 @@ export default function Dashboard() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Risk Score Card */}
+        {riskData && (
+          <div className="mb-8">
+            <RiskScoreCard
+              score={riskData.riskScore}
+              level={riskData.riskLevel}
+              factors={riskData.riskFactors}
+              insights={riskData.insights}
+            />
+          </div>
+        )}
+
         {/* Scan Hero Card */}
         <Card className="mb-8 overflow-hidden border-primary/20 bg-gradient-to-br from-card to-primary/5">
           <CardContent className="pt-6">
