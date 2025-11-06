@@ -229,6 +229,24 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log(`Deletion request logged. ID: ${deletionRequest?.id}`);
 
+    // Send confirmation email notification
+    try {
+      await supabase.functions.invoke("send-deletion-notification", {
+        body: {
+          user_email: profile.email || user.email,
+          user_name: profile.full_name || "User",
+          service_name: service.name,
+          request_id: deletionRequest?.id || "unknown",
+          recipient_email: recipientEmail,
+          notification_type: "confirmation",
+        },
+      });
+      console.log("Confirmation email notification sent");
+    } catch (notifError) {
+      console.error("Failed to send notification email (non-critical):", notifError);
+      // Continue even if notification fails
+    }
+
     return new Response(
       JSON.stringify({
         success: true,
