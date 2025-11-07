@@ -17,6 +17,16 @@ interface DeletionRequestBody {
   template_type?: string;
 }
 
+// Sanitize user input to prevent template injection
+function sanitizeForEmail(text: string): string {
+  if (!text) return '';
+  return text
+    .replace(/<[^>]*>/g, '') // Strip HTML tags
+    .replace(/[\r\n]+/g, ' ') // Remove newlines that could manipulate email content
+    .trim()
+    .substring(0, 500); // Limit length to reasonable size
+}
+
 const handler = async (req: Request): Promise<Response> => {
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
@@ -207,15 +217,15 @@ const handler = async (req: Request): Promise<Response> => {
     const template = templates[0];
     console.log(`Using template: ${template.name}`);
 
-    // Personalize the email template
-    const signature = authorization.signature_data?.text || profile.full_name || "Authorized User";
+    // Personalize the email template with sanitized user inputs
+    const signature = sanitizeForEmail(authorization.signature_data?.text || profile.full_name || "Authorized User");
     const personalizedBody = template.body_template
-      .replace(/\{\{user_full_name\}\}/g, profile.full_name || "User")
-      .replace(/\{\{full_name\}\}/g, profile.full_name || "User")
-      .replace(/\{\{user_email\}\}/g, profile.email || user.email || "")
-      .replace(/\{\{email\}\}/g, profile.email || user.email || "")
-      .replace(/\{\{account_identifier\}\}/g, identifierValue || profile.email || user.email || "")
-      .replace(/\{\{jurisdiction\}\}/g, jurisdiction)
+      .replace(/\{\{user_full_name\}\}/g, sanitizeForEmail(profile.full_name || "User"))
+      .replace(/\{\{full_name\}\}/g, sanitizeForEmail(profile.full_name || "User"))
+      .replace(/\{\{user_email\}\}/g, sanitizeForEmail(profile.email || user.email || ""))
+      .replace(/\{\{email\}\}/g, sanitizeForEmail(profile.email || user.email || ""))
+      .replace(/\{\{account_identifier\}\}/g, sanitizeForEmail(identifierValue || profile.email || user.email || ""))
+      .replace(/\{\{jurisdiction\}\}/g, sanitizeForEmail(jurisdiction))
       .replace(/\{\{signature\}\}/g, signature);
 
     const subject = template.subject_template || `Data Deletion Request - ${service.name}`;
@@ -298,8 +308,8 @@ const handler = async (req: Request): Promise<Response> => {
         console.error("Failed to send email:", emailResponse.error);
         return new Response(
           JSON.stringify({ 
-            error: "Failed to send deletion request email",
-            details: emailResponse.error 
+            error: "Unable to send deletion request. Please try again or contact support.",
+            error_code: "EMAIL_SEND_FAILED"
           }),
           { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
@@ -384,8 +394,8 @@ const handler = async (req: Request): Promise<Response> => {
     console.error("Error in send-deletion-request function:", error);
     return new Response(
       JSON.stringify({ 
-        error: "Internal server error",
-        details: error.message 
+        error: "Unable to process deletion request. Please try again or contact support.",
+        error_code: "REQUEST_PROCESSING_FAILED"
       }),
       {
         status: 500,

@@ -47,7 +47,7 @@ serve(async (req: Request): Promise<Response> => {
       const error = await tokenResponse.text();
       console.error("Token exchange failed:", error);
       return new Response(
-        JSON.stringify({ error: "Failed to exchange authorization code" }),
+        JSON.stringify({ error: "Unable to connect Gmail. Please try again.", error_code: "OAUTH_FAILED" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -64,7 +64,7 @@ serve(async (req: Request): Promise<Response> => {
       const error = await profileResponse.text();
       console.error("Failed to fetch user profile:", error);
       return new Response(
-        JSON.stringify({ error: "Failed to retrieve user email from Google" }),
+        JSON.stringify({ error: "Unable to retrieve account information. Please try again.", error_code: "PROFILE_FETCH_FAILED" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -121,7 +121,7 @@ serve(async (req: Request): Promise<Response> => {
   } catch (error: any) {
     console.error("Error in gmail-oauth-callback:", error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: "Unable to complete Gmail connection. Please try again.", error_code: "OAUTH_CALLBACK_FAILED" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
