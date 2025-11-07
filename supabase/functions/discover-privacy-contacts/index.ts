@@ -1,6 +1,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { DOMParser } from "https://esm.sh/linkedom@0.16.7";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -29,126 +30,408 @@ interface StructuredError {
   details?: any;
 }
 
-// Enhanced: Score and extract privacy policy URLs from HTML
+// Phase 1.1: i18n keyword expansion
+const PRIVACY_KEYWORDS = {
+  en: {
+    high: ['privacy-policy', 'privacy policy', 'privacypolicy', 'data-request', 'dsar', 'delete-data', 'data deletion'],
+    medium: ['privacy', 'gdpr', 'ccpa', 'data-protection', 'personal-data', 'privacy-notice', 'data protection'],
+    low: ['legal', 'terms', 'about', 'help']
+  },
+  es: {
+    high: ['política de privacidad', 'solicitud de datos', 'eliminación de datos'],
+    medium: ['privacidad', 'protección de datos', 'aviso de privacidad'],
+    low: ['legal', 'términos']
+  },
+  fr: {
+    high: ['politique de confidentialité', 'demande de données', 'suppression de données'],
+    medium: ['confidentialité', 'protection des données'],
+    low: ['légal', 'conditions']
+  },
+  de: {
+    high: ['datenschutzerklärung', 'datenanfrage', 'datenlöschung'],
+    medium: ['datenschutz', 'datenschutzrichtlinie'],
+    low: ['rechtliches', 'bedingungen']
+  },
+  it: {
+    high: ['informativa sulla privacy', 'richiesta di dati', 'cancellazione dei dati'],
+    medium: ['privacy', 'protezione dei dati'],
+    low: ['legale', 'termini']
+  },
+  jp: {
+    high: ['プライバシーポリシー', '個人情報保護方針', 'データ削除'],
+    medium: ['プライバシー', '個人情報'],
+    low: ['法的事項']
+  }
+};
+
+// Phase 1.1: URL canonicalization
+function canonicalizeUrl(url: string, baseDomain: string): string {
+  try {
+    // Handle relative URLs
+    if (!url.startsWith('http')) {
+      if (url.startsWith('//')) {
+        url = `https:${url}`;
+      } else if (url.startsWith('/')) {
+        url = `https://${baseDomain}${url}`;
+      } else if (!url.startsWith('#')) {
+        url = `https://${baseDomain}/${url}`;
+      } else {
+        return ''; // Skip fragment-only links
+      }
+    }
+
+    const urlObj = new URL(url);
+    
+    // Lowercase host
+    urlObj.hostname = urlObj.hostname.toLowerCase();
+    
+    // Remove tracking parameters
+    const trackingParams = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'ref', 'referrer', 'fbclid', 'gclid'];
+    trackingParams.forEach(param => urlObj.searchParams.delete(param));
+    
+    // Remove trailing slash (but keep if it's just the domain)
+    if (urlObj.pathname.length > 1 && urlObj.pathname.endsWith('/')) {
+      urlObj.pathname = urlObj.pathname.slice(0, -1);
+    }
+    
+    // Normalize locale paths (but keep them for now - we'll try both)
+    // Just return the canonical version
+    return urlObj.toString();
+  } catch (e) {
+    console.warn(`[Canonicalize] Invalid URL: ${url}`, e);
+    return '';
+  }
+}
+
+// Phase 1.1: Enhanced validation ladder
+async function smartValidateUrl(url: string): Promise<{ valid: boolean; status?: number; contentType?: string; isPDF?: boolean; redirectUrl?: string }> {
+  try {
+    // Try HEAD first
+    let response = await fetch(url, {
+      method: 'HEAD',
+      signal: AbortSignal.timeout(5000),
+      redirect: 'manual', // Don't follow redirects automatically
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      }
+    });
+
+    // Handle redirects (301, 302, 307, 308)
+    if ([301, 302, 307, 308].includes(response.status)) {
+      const location = response.headers.get('location');
+      if (location) {
+        const redirectUrl = location.startsWith('http') ? location : new URL(location, url).toString();
+        console.log(`[Validate] Following redirect: ${url} → ${redirectUrl}`);
+        return await smartValidateUrl(redirectUrl); // Follow one redirect
+      }
+    }
+
+    // If HEAD blocked (405, 403), try GET with Range header
+    if (!response.ok && [405, 403].includes(response.status)) {
+      console.log(`[Validate] HEAD blocked (${response.status}), trying GET with Range...`);
+      response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Range': 'bytes=0-8192',
+          'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        },
+        signal: AbortSignal.timeout(5000),
+        redirect: 'follow'
+      });
+    }
+
+    const contentType = response.headers.get('content-type') || '';
+    const isPDF = contentType.includes('application/pdf');
+
+    return {
+      valid: response.ok,
+      status: response.status,
+      contentType,
+      isPDF,
+      redirectUrl: response.url !== url ? response.url : undefined
+    };
+  } catch (error) {
+    console.warn(`[Validate] Error validating ${url}:`, error);
+    return { valid: false };
+  }
+}
+
+// Phase 1.1: Better privacy policy detection heuristics
+function isPrivacyPolicy(html: string, url: string): { isPolicy: boolean; score: number; reasons: string[] } {
+  const reasons: string[] = [];
+  let score = 0;
+
+  try {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+
+    // Check <title> tag
+    const title = doc.querySelector('title')?.textContent?.toLowerCase() || '';
+    if (title.match(/privacy\s*(policy|notice|statement)/i)) {
+      score += 20;
+      reasons.push('Title contains privacy policy keywords');
+    }
+
+    // Check <h1> tags
+    const h1Elements = Array.from(doc.querySelectorAll('h1'));
+    const h1Texts = h1Elements.map((el: any) => el.textContent?.toLowerCase() || '');
+    if (h1Texts.some(text => text.match(/privacy\s*(policy|notice)/i))) {
+      score += 20;
+      reasons.push('H1 heading contains privacy policy keywords');
+    }
+
+    // Check for table of contents structure (common in privacy policies)
+    const h2Elements = Array.from(doc.querySelectorAll('h2'));
+    const anchorLinks = Array.from(doc.querySelectorAll('a[href^="#"]'));
+    
+    if (h2Elements.length >= 5 && anchorLinks.length >= 3) {
+      score += 15;
+      reasons.push('Document has TOC structure (multiple sections with anchor links)');
+    }
+
+    // Check for privacy policy sections - use innerHTML or fallback to original html
+    const bodyText = (doc.body as any)?.textContent?.toLowerCase() || html.toLowerCase();
+    const privacySections = [
+      'information we collect',
+      'how we use',
+      'data protection',
+      'your rights',
+      'cookies',
+      'data retention',
+      'third parties',
+      'contact us'
+    ];
+
+    const foundSections = privacySections.filter(section => bodyText.includes(section));
+    
+    if (foundSections.length >= 4) {
+      score += 25;
+      reasons.push(`Contains ${foundSections.length} common privacy policy sections`);
+    } else if (foundSections.length >= 2) {
+      score += 10;
+      reasons.push(`Contains ${foundSections.length} privacy policy sections`);
+    }
+
+    // Check URL path
+    if (url.match(/privacy|gdpr|ccpa|data-protection/i)) {
+      score += 10;
+      reasons.push('URL path indicates privacy policy');
+    }
+
+    // Check for GDPR/CCPA keywords
+    if (bodyText.match(/gdpr|general data protection regulation/i)) {
+      score += 5;
+      reasons.push('Contains GDPR references');
+    }
+    if (bodyText.match(/ccpa|california consumer privacy act/i)) {
+      score += 5;
+      reasons.push('Contains CCPA references');
+    }
+
+    const isPolicy = score >= 30; // Threshold for confidence
+    return { isPolicy, score, reasons };
+  } catch (e) {
+    console.warn('[Privacy Detection] Error parsing HTML:', e);
+    // Fallback to simple text matching
+    const hasPrivacyKeywords = html.toLowerCase().includes('privacy') && 
+                               html.toLowerCase().includes('personal data');
+    return { isPolicy: hasPrivacyKeywords, score: hasPrivacyKeywords ? 30 : 0, reasons: ['Fallback text match'] };
+  }
+}
+
+// Phase 1.1 Enhanced: Score and extract privacy policy URLs from HTML using DOM parser
 function extractAndScorePrivacyLinks(html: string, baseDomain: string): ScoredLink[] {
   const scoredLinks: ScoredLink[] = [];
   
-  // Define privacy-related keywords with weights
+  try {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+
+    // Detect site language from <html lang="...">
+    const htmlLang = doc.documentElement.getAttribute('lang')?.substring(0, 2).toLowerCase() || 'en';
+    const languageKeywords = (PRIVACY_KEYWORDS as any)[htmlLang] || PRIVACY_KEYWORDS.en;
+
+    // Extract footer for higher scoring (proper DOM query)
+    const footerElements = doc.querySelectorAll('footer');
+    const footerLinks = new Set<string>();
+    footerElements.forEach((footer: any) => {
+      const links = footer.querySelectorAll('a');
+      links.forEach((link: any) => {
+        if (link.href) footerLinks.add(link.href);
+      });
+    });
+
+    // Extract all <a> tags using DOM
+    const allAnchors = doc.querySelectorAll('a');
+    
+    allAnchors.forEach((anchor: any) => {
+      let href = anchor.getAttribute('href');
+      if (!href) return;
+
+      const linkText = anchor.textContent?.trim() || '';
+      
+      // Skip non-HTTP links
+      if (href.includes('mailto:') || href.includes('javascript:') || href.includes('tel:')) {
+        return;
+      }
+
+      // Skip fragment-only links
+      if (href.startsWith('#')) {
+        return;
+      }
+
+      // Canonicalize URL
+      const canonicalHref = canonicalizeUrl(href, baseDomain);
+      if (!canonicalHref) return;
+
+      // Filter out pure fragment links
+      try {
+        const urlObj = new URL(canonicalHref);
+        if (urlObj.pathname === '/' && urlObj.search === '' && urlObj.hash) {
+          return;
+        }
+      } catch {
+        return;
+      }
+
+      // Calculate score
+      let score = 0;
+      const combined = (canonicalHref + ' ' + linkText).toLowerCase();
+
+      // Use language-specific keywords
+      languageKeywords.high.forEach((keyword: string) => {
+        if (combined.includes(keyword.toLowerCase())) score += 15;
+      });
+
+      languageKeywords.medium.forEach((keyword: string) => {
+        if (combined.includes(keyword.toLowerCase())) score += 10;
+      });
+
+      languageKeywords.low.forEach((keyword: string) => {
+        if (combined.includes(keyword.toLowerCase())) score += 5;
+      });
+
+      // Location bonus - check if this anchor's href is in footer
+      const isInFooter = footerLinks.has(canonicalHref) || footerLinks.has(href);
+      const location = isInFooter ? 'footer' : 'body';
+      if (isInFooter) score += 10;
+
+      // Exact match bonus (language-aware)
+      const lowerLinkText = linkText.toLowerCase();
+      if (lowerLinkText === 'privacy policy' || lowerLinkText === 'privacy' ||
+          lowerLinkText === 'política de privacidad' || lowerLinkText === 'privacidad' ||
+          lowerLinkText === 'politique de confidentialité' || lowerLinkText === 'confidentialité' ||
+          lowerLinkText === 'datenschutzerklärung' || lowerLinkText === 'datenschutz' ||
+          lowerLinkText === 'informativa sulla privacy' ||
+          lowerLinkText === 'プライバシーポリシー') {
+        score += 20;
+      }
+
+      // Penalize if URL is too generic
+      const urlPath = canonicalHref.split('?')[0];
+      if (urlPath.endsWith('/') || urlPath === `https://${baseDomain}` || urlPath === `https://www.${baseDomain}`) {
+        score -= 10;
+      }
+
+      // Only include links with positive score
+      if (score > 0) {
+        scoredLinks.push({ url: canonicalHref, score, linkText, location });
+      }
+    });
+
+    // Sort by score descending
+    scoredLinks.sort((a, b) => b.score - a.score);
+
+    // Deduplicate
+    const seen = new Set<string>();
+    const uniqueLinks = scoredLinks.filter(link => {
+      if (seen.has(link.url)) return false;
+      seen.add(link.url);
+      return true;
+    });
+
+    return uniqueLinks;
+  } catch (e) {
+    console.warn('[Link Extraction] Error parsing with DOM, falling back to regex:', e);
+    
+    // Fallback to regex-based extraction if DOM parsing fails
+    return extractAndScorePrivacyLinksRegex(html, baseDomain);
+  }
+}
+
+// Fallback: Regex-based extraction (kept for backward compatibility)
+function extractAndScorePrivacyLinksRegex(html: string, baseDomain: string): ScoredLink[] {
+  const scoredLinks: ScoredLink[] = [];
+  
   const highPriorityKeywords = ['privacy-policy', 'privacy policy', 'privacypolicy', 'data-request', 'dsar', 'delete-data'];
   const mediumPriorityKeywords = ['privacy', 'gdpr', 'ccpa', 'data-protection', 'personal-data', 'privacy-notice'];
   const lowPriorityKeywords = ['legal', 'terms', 'about', 'help'];
   
-  // Extract footer HTML for higher scoring
   const footerRegex = /<footer[^>]*>(.*?)<\/footer>/gis;
   const footerMatch = footerRegex.exec(html);
   const footerHtml = footerMatch ? footerMatch[1] : '';
   
-  // Extract all <a> tags
   const allAnchorsRegex = /<a[^>]*href=["']([^"']+)["'][^>]*>(.*?)<\/a>/gi;
   let match;
   
   while ((match = allAnchorsRegex.exec(html)) !== null) {
     let href = match[1];
-    const linkText = match[2].replace(/<[^>]+>/g, '').trim(); // Strip HTML tags from link text
+    const linkText = match[2].replace(/<[^>]+>/g, '').trim();
     
-    // Skip non-HTTP links
-    if (href.includes('mailto:') || href.includes('javascript:') || href.includes('tel:')) {
+    if (href.includes('mailto:') || href.includes('javascript:') || href.includes('tel:') || href.startsWith('#')) {
       continue;
     }
     
-    // Normalize URL
-    if (href.startsWith('http')) {
-      // Already absolute
-    } else if (href.startsWith('//')) {
-      href = `https:${href}`;
-    } else if (href.startsWith('/')) {
-      href = `https://${baseDomain}${href}`;
-    } else if (href.startsWith('#')) {
-      continue; // Skip anchor links
-    } else {
-      href = `https://${baseDomain}/${href}`;
-    }
+    const canonicalHref = canonicalizeUrl(href, baseDomain);
+    if (!canonicalHref) continue;
     
-    // Filter out fragments without paths
-    try {
-      const urlObj = new URL(href);
-      if (urlObj.pathname === '/' && urlObj.search === '' && urlObj.hash) {
-        continue; // Skip pure fragment links
-      }
-    } catch {
-      continue; // Invalid URL
-    }
-    
-    // Calculate score
     let score = 0;
-    const combined = (href + ' ' + linkText).toLowerCase();
+    const combined = (canonicalHref + ' ' + linkText).toLowerCase();
     
-    // High priority keywords (15 points each)
     highPriorityKeywords.forEach(keyword => {
       if (combined.includes(keyword)) score += 15;
     });
     
-    // Medium priority keywords (10 points each)
     mediumPriorityKeywords.forEach(keyword => {
       if (combined.includes(keyword)) score += 10;
     });
     
-    // Low priority keywords (5 points each)
     lowPriorityKeywords.forEach(keyword => {
       if (combined.includes(keyword)) score += 5;
     });
     
-    // Location bonus
     const isInFooter = footerHtml.includes(match[0]);
     const location = isInFooter ? 'footer' : 'body';
-    if (isInFooter) score += 10; // Footer links get bonus
+    if (isInFooter) score += 10;
     
-    // Exact match bonus
     if (linkText.toLowerCase() === 'privacy policy' || linkText.toLowerCase() === 'privacy') {
       score += 20;
     }
     
-    // Penalize if URL is too generic
-    const urlPath = href.split('?')[0];
+    const urlPath = canonicalHref.split('?')[0];
     if (urlPath.endsWith('/') || urlPath === `https://${baseDomain}`) {
-      score -= 10; // Penalize homepage
+      score -= 10;
     }
     
-    // Only include links with positive score
     if (score > 0) {
-      scoredLinks.push({ url: href, score, linkText, location });
+      scoredLinks.push({ url: canonicalHref, score, linkText, location });
     }
   }
   
-  // Sort by score descending
   scoredLinks.sort((a, b) => b.score - a.score);
   
-  // Deduplicate
   const seen = new Set<string>();
-  const uniqueLinks = scoredLinks.filter(link => {
+  return scoredLinks.filter(link => {
     if (seen.has(link.url)) return false;
     seen.add(link.url);
     return true;
   });
-  
-  return uniqueLinks;
 }
 
-// Helper: Validate URL returns 200
+// Helper: Validate URL returns 200 (deprecated - use smartValidateUrl)
 async function quickValidateUrl(url: string): Promise<{ valid: boolean; status?: number }> {
-  try {
-    const response = await fetch(url, {
-      method: 'HEAD',
-      signal: AbortSignal.timeout(5000),
-      redirect: 'follow',
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; PrivacyContactBot/1.0)',
-      }
-    });
-    return { valid: response.ok, status: response.status };
-  } catch (error) {
-    return { valid: false };
-  }
+  const result = await smartValidateUrl(url);
+  return { valid: result.valid, status: result.status };
 }
 
 // Phase 1: Enhanced fetch with smart link discovery and scoring
@@ -218,19 +501,27 @@ async function trySimpleFetch(urlsToTry: string[], domain: string): Promise<{ co
           .trim()
           .substring(0, 8000);
         
-        // Check content quality
+        // Check content quality and verify it's actually privacy policy content
         if (content.length > 200) {
-          // Verify it's actually privacy policy content
-          const privacyIndicators = ['privacy', 'personal data', 'information we collect', 'gdpr', 'ccpa', 'data protection'];
-          const hasPrivacyContent = privacyIndicators.some(indicator => 
-            content.toLowerCase().includes(indicator)
-          );
+          // Phase 1.1: Use enhanced privacy policy detection
+          const policyCheck = isPrivacyPolicy(html, url);
           
-          if (hasPrivacyContent) {
-            console.log(`[Phase 1] ✓ Successfully fetched privacy content from: ${url} (${content.length} chars)`);
+          console.log(`[Phase 1] Privacy detection for ${url}:`);
+          console.log(`  Score: ${policyCheck.score}/100`);
+          console.log(`  Is Policy: ${policyCheck.isPolicy}`);
+          console.log(`  Reasons: ${policyCheck.reasons.join(', ')}`);
+          
+          if (policyCheck.isPolicy) {
+            console.log(`[Phase 1] ✓ Successfully fetched privacy content from: ${url} (${content.length} chars, score: ${policyCheck.score})`);
             return { content, url, discoveredUrls: attemptedUrls };
           } else {
-            console.warn(`[Phase 1] Content doesn't appear to be a privacy policy: ${url}`);
+            console.warn(`[Phase 1] Content doesn't appear to be a privacy policy: ${url} (score: ${policyCheck.score})`);
+            
+            // If score is borderline (20-29), still try it but log the concern
+            if (policyCheck.score >= 20) {
+              console.log(`[Phase 1] ⚠️  Borderline score, will try it anyway: ${url}`);
+              return { content, url, discoveredUrls: attemptedUrls };
+            }
           }
         } else {
           console.warn(`[Phase 1] Content too short from ${url} (${content.length} chars)`);
