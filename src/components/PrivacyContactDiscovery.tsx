@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, Search, CheckCircle, XCircle, Mail, Link as LinkIcon, Phone, ThumbsUp, ThumbsDown } from "lucide-react";
+import { Loader2, Search, CheckCircle, XCircle, Mail, Link as LinkIcon, Phone, ThumbsUp, ThumbsDown, ExternalLink, Copy } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -200,6 +200,66 @@ export default function PrivacyContactDiscovery() {
     return contacts.filter((c) => c.service_id === serviceId);
   };
 
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast({
+      title: "Copied",
+      description: "Contact information copied to clipboard",
+    });
+  };
+
+  const renderContactAction = (contact: PrivacyContact) => {
+    if (contact.contact_type === "email") {
+      return (
+        <Button
+          size="sm"
+          variant="outline"
+          className="h-7 text-xs gap-1"
+          onClick={() => copyToClipboard(contact.value)}
+        >
+          <Copy className="w-3 h-3" />
+          Copy
+        </Button>
+      );
+    } else if (contact.contact_type === "form") {
+      return (
+        <Button
+          size="sm"
+          variant="outline"
+          className="h-7 text-xs gap-1"
+          onClick={() => window.open(contact.value, '_blank')}
+        >
+          <ExternalLink className="w-3 h-3" />
+          Open Form
+        </Button>
+      );
+    } else if (contact.contact_type === "phone") {
+      return (
+        <div className="flex gap-1">
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7 text-xs gap-1"
+            onClick={() => copyToClipboard(contact.value)}
+          >
+            <Copy className="w-3 h-3" />
+            Copy
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7 text-xs gap-1"
+            onClick={() => window.open(`tel:${contact.value}`, '_self')}
+          >
+            <Phone className="w-3 h-3" />
+            Call
+          </Button>
+        </div>
+      );
+    }
+    return null;
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -277,37 +337,53 @@ export default function PrivacyContactDiscovery() {
                             {serviceContacts.map((contact) => (
                               <div
                                 key={contact.id}
-                                className="flex items-center gap-2 text-xs"
+                                className="flex items-start gap-2 text-xs border-l-2 border-primary/20 pl-2 py-1"
                               >
-                                {getContactIcon(contact.contact_type)}
-                                <span className="truncate max-w-[150px]" title={contact.value}>
-                                  {contact.value}
-                                </span>
-                                {getConfidenceBadge(contact.confidence)}
-                                {contact.verified ? (
-                                  <CheckCircle className="w-3 h-3 text-green-500" />
-                                ) : (
-                                  <div className="flex gap-1">
-                                    <Button
-                                      size="sm"
-                                      variant="ghost"
-                                      className="h-6 w-6 p-0"
-                                      onClick={() => approveContact(contact)}
-                                      title="Approve and add to service catalog"
-                                    >
-                                      <ThumbsUp className="w-3 h-3 text-green-600" />
-                                    </Button>
-                                    <Button
-                                      size="sm"
-                                      variant="ghost"
-                                      className="h-6 w-6 p-0"
-                                      onClick={() => rejectContact(contact.id)}
-                                      title="Reject this contact"
-                                    >
-                                      <ThumbsDown className="w-3 h-3 text-red-600" />
-                                    </Button>
+                                <div className="flex-1 space-y-1">
+                                  <div className="flex items-center gap-2">
+                                    {getContactIcon(contact.contact_type)}
+                                    <span className="font-medium">
+                                      {contact.contact_type === "email" ? "Email" : 
+                                       contact.contact_type === "form" ? "Web Form" : 
+                                       contact.contact_type === "phone" ? "Phone" : 
+                                       contact.contact_type}
+                                    </span>
+                                    {getConfidenceBadge(contact.confidence)}
                                   </div>
-                                )}
+                                  <div className="text-muted-foreground break-all">
+                                    {contact.value}
+                                  </div>
+                                  <div className="flex gap-2">
+                                    {renderContactAction(contact)}
+                                    {contact.verified ? (
+                                      <Badge variant="outline" className="h-7 gap-1">
+                                        <CheckCircle className="w-3 h-3" />
+                                        Verified
+                                      </Badge>
+                                    ) : (
+                                      <div className="flex gap-1">
+                                        <Button
+                                          size="sm"
+                                          variant="ghost"
+                                          className="h-7 w-7 p-0"
+                                          onClick={() => approveContact(contact)}
+                                          title="Approve and add to service catalog"
+                                        >
+                                          <ThumbsUp className="w-3 h-3 text-green-600" />
+                                        </Button>
+                                        <Button
+                                          size="sm"
+                                          variant="ghost"
+                                          className="h-7 w-7 p-0"
+                                          onClick={() => rejectContact(contact.id)}
+                                          title="Reject this contact"
+                                        >
+                                          <ThumbsDown className="w-3 h-3 text-red-600" />
+                                        </Button>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
                               </div>
                             ))}
                           </div>
