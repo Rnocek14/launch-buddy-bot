@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, Search, CheckCircle, XCircle, Mail, Link as LinkIcon, Phone } from "lucide-react";
+import { Loader2, Search, CheckCircle, XCircle, Mail, Link as LinkIcon, Phone, ThumbsUp, ThumbsDown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -91,6 +91,7 @@ export default function PrivacyContactDiscovery() {
       });
 
       await fetchContacts();
+      await fetchServices();
     } catch (error: any) {
       toast({
         title: "Error",
@@ -99,6 +100,73 @@ export default function PrivacyContactDiscovery() {
       });
     } finally {
       setDiscovering(null);
+    }
+  };
+
+  const approveContact = async (contact: PrivacyContact) => {
+    try {
+      // Mark contact as verified
+      const { error: verifyError } = await supabase
+        .from("privacy_contacts")
+        .update({ verified: true })
+        .eq("id", contact.id);
+
+      if (verifyError) throw verifyError;
+
+      // Update service catalog with the approved contact
+      const updateData: any = {};
+      if (contact.contact_type === "email") {
+        updateData.privacy_email = contact.value;
+      } else if (contact.contact_type === "form") {
+        updateData.privacy_form_url = contact.value;
+      }
+
+      if (Object.keys(updateData).length > 0) {
+        const { error: updateError } = await supabase
+          .from("service_catalog")
+          .update(updateData)
+          .eq("id", contact.service_id);
+
+        if (updateError) throw updateError;
+      }
+
+      toast({
+        title: "Contact Approved",
+        description: "Contact has been verified and added to the service catalog",
+      });
+
+      await fetchContacts();
+      await fetchServices();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to approve contact",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const rejectContact = async (contactId: string) => {
+    try {
+      const { error } = await supabase
+        .from("privacy_contacts")
+        .delete()
+        .eq("id", contactId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Contact Rejected",
+        description: "Contact has been removed",
+      });
+
+      await fetchContacts();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to reject contact",
+        variant: "destructive",
+      });
     }
   };
 
@@ -216,8 +284,29 @@ export default function PrivacyContactDiscovery() {
                                   {contact.value}
                                 </span>
                                 {getConfidenceBadge(contact.confidence)}
-                                {contact.verified && (
+                                {contact.verified ? (
                                   <CheckCircle className="w-3 h-3 text-green-500" />
+                                ) : (
+                                  <div className="flex gap-1">
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      className="h-6 w-6 p-0"
+                                      onClick={() => approveContact(contact)}
+                                      title="Approve and add to service catalog"
+                                    >
+                                      <ThumbsUp className="w-3 h-3 text-green-600" />
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      className="h-6 w-6 p-0"
+                                      onClick={() => rejectContact(contact.id)}
+                                      title="Reject this contact"
+                                    >
+                                      <ThumbsDown className="w-3 h-3 text-red-600" />
+                                    </Button>
+                                  </div>
                                 )}
                               </div>
                             ))}
