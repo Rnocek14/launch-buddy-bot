@@ -48,33 +48,53 @@ async function validateEmailMX(email: string): Promise<ValidationResult> {
   }
 
   try {
-    // Resolve MX records using Deno's DNS API
-    const command = new Deno.Command("nslookup", {
-      args: ["-query=mx", domain],
-      stdout: "piped",
-      stderr: "piped",
-    });
+    // Try Google DNS-over-HTTPS first
+    let dnsResponse = await fetch(
+      `https://dns.google/resolve?name=${domain}&type=MX`,
+      {
+        headers: { 'Accept': 'application/dns-json' },
+        signal: AbortSignal.timeout(10000),
+      }
+    );
 
-    const { stdout, stderr } = await command.output();
-    const output = new TextDecoder().decode(stdout);
-    const errorOutput = new TextDecoder().decode(stderr);
+    // Fallback to Cloudflare DNS if Google fails
+    if (!dnsResponse.ok) {
+      console.log(`Google DNS failed, trying Cloudflare DNS for ${domain}`);
+      dnsResponse = await fetch(
+        `https://cloudflare-dns.com/dns-query?name=${domain}&type=MX`,
+        {
+          headers: { 'Accept': 'application/dns-json' },
+          signal: AbortSignal.timeout(10000),
+        }
+      );
+    }
 
-    console.log(`DNS lookup for ${domain}:`, output);
+    if (!dnsResponse.ok) {
+      result.error = `DNS lookup failed with status ${dnsResponse.status}`;
+      return result;
+    }
 
-    // Parse MX records from output
-    const mxLines = output
-      .split("\n")
-      .filter(line => line.includes("mail exchanger"))
-      .map(line => {
-        const match = line.match(/mail exchanger = (.+)/);
-        return match ? match[1].trim().replace(/\.$/, "") : null;
-      })
-      .filter(Boolean) as string[];
+    const dnsData = await dnsResponse.json();
+    console.log(`DNS lookup for ${domain}:`, JSON.stringify(dnsData, null, 2));
 
-    if (mxLines.length > 0) {
-      result.mxRecords = mxLines;
-      result.hasMxRecords = true;
-      result.isValid = true;
+    // Parse MX records from DNS-over-HTTPS response
+    if (dnsData.Answer && dnsData.Answer.length > 0) {
+      const mxRecords = dnsData.Answer
+        .filter((record: any) => record.type === 15) // MX record type
+        .map((record: any) => {
+          // MX record format: "priority mailserver.domain.com."
+          const parts = record.data.split(' ');
+          return parts.length > 1 ? parts[1].replace(/\.$/, '') : record.data.replace(/\.$/, '');
+        })
+        .filter(Boolean);
+
+      if (mxRecords.length > 0) {
+        result.mxRecords = mxRecords;
+        result.hasMxRecords = true;
+        result.isValid = true;
+      } else {
+        result.error = "No MX records found for domain";
+      }
     } else {
       result.error = "No MX records found for domain";
     }

@@ -283,6 +283,21 @@ Extract all relevant contact methods for data deletion requests.`;
 
     console.log('Calling OpenAI for contact extraction...');
 
+    // Helper function to validate URLs
+    async function validateContactUrl(url: string): Promise<boolean> {
+      try {
+        const response = await fetch(url, {
+          method: 'HEAD',
+          signal: AbortSignal.timeout(5000),
+          redirect: 'follow',
+        });
+        return response.ok;
+      } catch (error) {
+        console.log(`[URL Validation] Failed for ${url}:`, error);
+        return false;
+      }
+    }
+
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -358,6 +373,25 @@ Extract all relevant contact methods for data deletion requests.`;
     const findings: { contacts: ContactFinding[] } = JSON.parse(toolCall.function.arguments);
 
     console.log(`Found ${findings.contacts.length} contact methods`);
+
+    // Validate URLs for form contacts
+    for (const contact of findings.contacts) {
+      if (contact.contact_type === 'form' && contact.value) {
+        console.log(`[URL Validation] Checking form URL: ${contact.value}`);
+        const isValid = await validateContactUrl(contact.value);
+        
+        if (!isValid) {
+          console.warn(`[URL Validation] Invalid form URL detected: ${contact.value}`);
+          // Reduce confidence for invalid URLs
+          if (contact.confidence === 'high') contact.confidence = 'medium';
+          else if (contact.confidence === 'medium') contact.confidence = 'low';
+          
+          contact.reasoning = `${contact.reasoning} (Note: URL validation failed - this form may not be accessible)`;
+        } else {
+          console.log(`[URL Validation] ✓ Valid form URL: ${contact.value}`);
+        }
+      }
+    }
 
     // Store findings in database
     const contactsToInsert = findings.contacts.map(contact => ({
