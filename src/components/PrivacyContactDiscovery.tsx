@@ -40,8 +40,7 @@ export default function PrivacyContactDiscovery() {
       const { data, error } = await supabase
         .from("service_catalog")
         .select("id, name, domain, privacy_email, privacy_form_url")
-        .order("name")
-        .limit(20);
+        .order("name");
 
       if (error) throw error;
 
