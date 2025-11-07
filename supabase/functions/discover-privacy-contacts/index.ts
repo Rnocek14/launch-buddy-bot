@@ -109,21 +109,17 @@ async function tryBrowserlessFetch(urlsToTry: string[], browserlessApiKey: strin
     console.log(`[Phase 2] Trying Browserless: ${url}`);
     
     try {
-      const response = await fetch('https://chrome.browserless.io/content', {
+      const response = await fetch(`https://production-sfo.browserless.io/content?token=${browserlessApiKey}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Cache-Control': 'no-cache',
         },
         body: JSON.stringify({
-          token: browserlessApiKey,
           url: url,
-          waitFor: 2000, // Wait 2s for JS to load
-          gotoOptions: {
-            waitUntil: 'networkidle2',
-            timeout: 30000
-          }
-        })
+          waitForTimeout: 3000,
+        }),
+        signal: AbortSignal.timeout(45000) // 45s timeout for Browserless
       });
 
       if (response.ok) {
@@ -234,6 +230,7 @@ serve(async (req) => {
 
     // Phase 1: Try simple fetch with enhanced URL discovery
     let result = await trySimpleFetch(urlsToTry, service.domain);
+    let methodUsed = 'simple_fetch';
     
     // Phase 2: If Phase 1 failed, try Browserless.io
     if (!result) {
@@ -241,6 +238,7 @@ serve(async (req) => {
       if (browserlessApiKey) {
         console.log('[Strategy] Phase 1 failed, attempting Phase 2 with Browserless...');
         result = await tryBrowserlessFetch(urlsToTry.slice(0, 5), browserlessApiKey); // Try top 5 URLs only
+        if (result) methodUsed = 'browserless';
       } else {
         console.warn('[Strategy] BROWSERLESS_API_KEY not configured, skipping Phase 2');
       }
@@ -391,7 +389,7 @@ Extract all relevant contact methods for data deletion requests.`;
         service: service.name,
         contacts_found: insertedContacts.length,
         contacts: insertedContacts,
-        method_used: result.url.includes('browserless') ? 'browserless' : 'simple_fetch'
+        method_used: methodUsed
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
