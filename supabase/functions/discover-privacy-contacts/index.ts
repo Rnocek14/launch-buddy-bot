@@ -14,110 +14,196 @@ interface ContactFinding {
   reasoning: string;
 }
 
-// Helper: Extract privacy policy URLs from HTML
-function extractPrivacyLinksFromHTML(html: string, baseDomain: string): string[] {
-  const urls = new Set<string>();
+interface ScoredLink {
+  url: string;
+  score: number;
+  linkText: string;
+  location: 'footer' | 'header' | 'body';
+}
+
+interface StructuredError {
+  error_code: string;
+  error_type: 'no_policy_found' | 'fetch_failed' | 'bot_protection' | 'invalid_content' | 'ai_error' | 'validation_failed';
+  message: string;
+  suggested_action: 'manual_entry' | 'try_again_later' | 'contact_support' | 'provide_url';
+  details?: any;
+}
+
+// Enhanced: Score and extract privacy policy URLs from HTML
+function extractAndScorePrivacyLinks(html: string, baseDomain: string): ScoredLink[] {
+  const scoredLinks: ScoredLink[] = [];
   
-  // Look for <link rel="privacy-policy"> or similar
-  const linkRegex = /<link[^>]*rel=["']privacy[-_]?policy["'][^>]*href=["']([^"']+)["']/gi;
-  let match;
-  while ((match = linkRegex.exec(html)) !== null) {
-    urls.add(match[1]);
-  }
+  // Define privacy-related keywords with weights
+  const highPriorityKeywords = ['privacy-policy', 'privacy policy', 'privacypolicy', 'data-request', 'dsar', 'delete-data'];
+  const mediumPriorityKeywords = ['privacy', 'gdpr', 'ccpa', 'data-protection', 'personal-data', 'privacy-notice'];
+  const lowPriorityKeywords = ['legal', 'terms', 'about', 'help'];
   
-  // Extract ALL <a> tags with href attributes
+  // Extract footer HTML for higher scoring
+  const footerRegex = /<footer[^>]*>(.*?)<\/footer>/gis;
+  const footerMatch = footerRegex.exec(html);
+  const footerHtml = footerMatch ? footerMatch[1] : '';
+  
+  // Extract all <a> tags
   const allAnchorsRegex = /<a[^>]*href=["']([^"']+)["'][^>]*>(.*?)<\/a>/gi;
+  let match;
+  
   while ((match = allAnchorsRegex.exec(html)) !== null) {
-    const href = match[1];
-    const linkText = match[2];
+    let href = match[1];
+    const linkText = match[2].replace(/<[^>]+>/g, '').trim(); // Strip HTML tags from link text
     
     // Skip non-HTTP links
     if (href.includes('mailto:') || href.includes('javascript:') || href.includes('tel:')) {
       continue;
     }
     
-    // Check if URL or link text contains privacy-related keywords (case-insensitive)
-    const privacyKeywords = [
-      'privacy', 'privacidad', 'confidentialité', 'datenschutz',
-      'gdpr', 'ccpa', 'data-protection', 'data protection',
-      'personal-data', 'personal data', 'dpo',
-      'privacy-policy', 'privacy policy', 'privacy-notice',
-      'data-request', 'data request', 'dsar'
-    ];
-    
-    const combined = (href + ' ' + linkText).toLowerCase();
-    const isPrivacyRelated = privacyKeywords.some(keyword => combined.includes(keyword.toLowerCase()));
-    
-    if (isPrivacyRelated) {
-      urls.add(href);
+    // Normalize URL
+    if (href.startsWith('http')) {
+      // Already absolute
+    } else if (href.startsWith('//')) {
+      href = `https:${href}`;
+    } else if (href.startsWith('/')) {
+      href = `https://${baseDomain}${href}`;
+    } else if (href.startsWith('#')) {
+      continue; // Skip anchor links
+    } else {
+      href = `https://${baseDomain}/${href}`;
     }
-  }
-  
-  // Also look for common footer privacy links (often in <footer> or class="footer")
-  const footerRegex = /<footer[^>]*>(.*?)<\/footer>/gis;
-  const footerMatch = footerRegex.exec(html);
-  if (footerMatch) {
-    const footerHtml = footerMatch[1];
-    const footerAnchors = /<a[^>]*href=["']([^"']+)["'][^>]*>(.*?)<\/a>/gi;
-    let footerAnchorMatch;
-    while ((footerAnchorMatch = footerAnchors.exec(footerHtml)) !== null) {
-      const href = footerAnchorMatch[1];
-      const text = footerAnchorMatch[2];
-      if ((href + text).toLowerCase().includes('privacy')) {
-        urls.add(href);
-      }
-    }
-  }
-  
-  // Resolve relative URLs and return unique list
-  return Array.from(urls).map(url => {
-    if (url.startsWith('http')) return url;
-    if (url.startsWith('//')) return `https:${url}`;
-    if (url.startsWith('/')) return `https://${baseDomain}${url}`;
-    return `https://${baseDomain}/${url}`;
-  }).filter(url => {
-    // Filter out fragments and anchors
+    
+    // Filter out fragments without paths
     try {
-      const urlObj = new URL(url);
-      return urlObj.pathname !== '/' || urlObj.search !== '' || urlObj.hash !== '';
+      const urlObj = new URL(href);
+      if (urlObj.pathname === '/' && urlObj.search === '' && urlObj.hash) {
+        continue; // Skip pure fragment links
+      }
     } catch {
-      return false;
+      continue; // Invalid URL
     }
+    
+    // Calculate score
+    let score = 0;
+    const combined = (href + ' ' + linkText).toLowerCase();
+    
+    // High priority keywords (15 points each)
+    highPriorityKeywords.forEach(keyword => {
+      if (combined.includes(keyword)) score += 15;
+    });
+    
+    // Medium priority keywords (10 points each)
+    mediumPriorityKeywords.forEach(keyword => {
+      if (combined.includes(keyword)) score += 10;
+    });
+    
+    // Low priority keywords (5 points each)
+    lowPriorityKeywords.forEach(keyword => {
+      if (combined.includes(keyword)) score += 5;
+    });
+    
+    // Location bonus
+    const isInFooter = footerHtml.includes(match[0]);
+    const location = isInFooter ? 'footer' : 'body';
+    if (isInFooter) score += 10; // Footer links get bonus
+    
+    // Exact match bonus
+    if (linkText.toLowerCase() === 'privacy policy' || linkText.toLowerCase() === 'privacy') {
+      score += 20;
+    }
+    
+    // Penalize if URL is too generic
+    const urlPath = href.split('?')[0];
+    if (urlPath.endsWith('/') || urlPath === `https://${baseDomain}`) {
+      score -= 10; // Penalize homepage
+    }
+    
+    // Only include links with positive score
+    if (score > 0) {
+      scoredLinks.push({ url: href, score, linkText, location });
+    }
+  }
+  
+  // Sort by score descending
+  scoredLinks.sort((a, b) => b.score - a.score);
+  
+  // Deduplicate
+  const seen = new Set<string>();
+  const uniqueLinks = scoredLinks.filter(link => {
+    if (seen.has(link.url)) return false;
+    seen.add(link.url);
+    return true;
   });
+  
+  return uniqueLinks;
 }
 
-// Phase 1: Simple fetch with enhanced URL discovery
-async function trySimpleFetch(urlsToTry: string[], domain: string): Promise<{ content: string; url: string } | null> {
+// Helper: Validate URL returns 200
+async function quickValidateUrl(url: string): Promise<{ valid: boolean; status?: number }> {
+  try {
+    const response = await fetch(url, {
+      method: 'HEAD',
+      signal: AbortSignal.timeout(5000),
+      redirect: 'follow',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; PrivacyContactBot/1.0)',
+      }
+    });
+    return { valid: response.ok, status: response.status };
+  } catch (error) {
+    return { valid: false };
+  }
+}
+
+// Phase 1: Enhanced fetch with smart link discovery and scoring
+async function trySimpleFetch(urlsToTry: string[], domain: string): Promise<{ content: string; url: string; discoveredUrls?: string[] } | null> {
+  const attemptedUrls: string[] = [];
+  const failedUrls: Map<string, number> = new Map();
+  
   for (const url of urlsToTry) {
     console.log(`[Phase 1] Trying simple fetch: ${url}`);
+    attemptedUrls.push(url);
     
     try {
       const pageResponse = await fetch(url, {
         headers: {
-          'User-Agent': 'Mozilla/5.0 (compatible; PrivacyContactBot/1.0)',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
           'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+          'Accept-Language': 'en-US,en;q=0.9',
         },
         redirect: 'follow',
-        signal: AbortSignal.timeout(15000) // 15s timeout
+        signal: AbortSignal.timeout(15000)
       });
 
       if (pageResponse.ok) {
         const html = await pageResponse.text();
         
-        // If this is the homepage or a generic page, try to extract privacy policy links
+        // If this is the homepage or a generic page, extract and score privacy links
         if (url.includes(domain) && !url.match(/privacy|legal|terms|dsar|data-request/i)) {
-          console.log(`[Phase 1] Parsing page for privacy links: ${url}`);
-          const extractedUrls = extractPrivacyLinksFromHTML(html, domain);
-          if (extractedUrls.length > 0) {
-            console.log(`[Phase 1] Found ${extractedUrls.length} privacy links in HTML:`, extractedUrls.slice(0, 5));
-            // Recursively try the extracted URLs (try top 5)
-            for (const extractedUrl of extractedUrls.slice(0, 5)) {
-              console.log(`[Phase 1] Trying extracted URL: ${extractedUrl}`);
-              const result = await trySimpleFetch([extractedUrl], domain);
-              if (result) return result;
+          console.log(`[Phase 1] Analyzing page for privacy links: ${url}`);
+          const scoredLinks = extractAndScorePrivacyLinks(html, domain);
+          
+          if (scoredLinks.length > 0) {
+            console.log(`[Phase 1] Found ${scoredLinks.length} scored privacy links:`);
+            scoredLinks.slice(0, 5).forEach(link => {
+              console.log(`  - [Score: ${link.score}] ${link.url} (${link.linkText})`);
+            });
+            
+            // Try top 5 scored links
+            for (const link of scoredLinks.slice(0, 5)) {
+              // Quick validate before trying
+              const validation = await quickValidateUrl(link.url);
+              if (!validation.valid) {
+                console.log(`[Phase 1] Skipping invalid URL (${validation.status}): ${link.url}`);
+                failedUrls.set(link.url, validation.status || 0);
+                continue;
+              }
+              
+              console.log(`[Phase 1] Trying validated URL: ${link.url}`);
+              const result = await trySimpleFetch([link.url], domain);
+              if (result) {
+                result.discoveredUrls = scoredLinks.slice(0, 10).map(l => l.url);
+                return result;
+              }
             }
           } else {
-            console.log(`[Phase 1] No privacy links found in HTML`);
+            console.log(`[Phase 1] No privacy-related links found in HTML`);
           }
         }
         
@@ -126,23 +212,43 @@ async function trySimpleFetch(urlsToTry: string[], domain: string): Promise<{ co
           .replace(/<script[^>]*>.*?<\/script>/gis, '')
           .replace(/<style[^>]*>.*?<\/style>/gis, '')
           .replace(/<[^>]+>/g, ' ')
+          .replace(/&nbsp;/g, ' ')
+          .replace(/&[a-z]+;/g, ' ')
           .replace(/\s+/g, ' ')
           .trim()
           .substring(0, 8000);
         
-        if (content.length > 200) { // Ensure we got meaningful content
-          console.log(`[Phase 1] Successfully fetched from: ${url} (${content.length} chars)`);
-          return { content, url };
+        // Check content quality
+        if (content.length > 200) {
+          // Verify it's actually privacy policy content
+          const privacyIndicators = ['privacy', 'personal data', 'information we collect', 'gdpr', 'ccpa', 'data protection'];
+          const hasPrivacyContent = privacyIndicators.some(indicator => 
+            content.toLowerCase().includes(indicator)
+          );
+          
+          if (hasPrivacyContent) {
+            console.log(`[Phase 1] ✓ Successfully fetched privacy content from: ${url} (${content.length} chars)`);
+            return { content, url, discoveredUrls: attemptedUrls };
+          } else {
+            console.warn(`[Phase 1] Content doesn't appear to be a privacy policy: ${url}`);
+          }
         } else {
-          console.warn(`[Phase 1] Content too short from ${url}, trying next...`);
+          console.warn(`[Phase 1] Content too short from ${url} (${content.length} chars)`);
         }
       } else {
-        console.warn(`[Phase 1] Failed: ${url} - Status ${pageResponse.status}`);
+        console.warn(`[Phase 1] HTTP ${pageResponse.status}: ${url}`);
+        failedUrls.set(url, pageResponse.status);
       }
     } catch (fetchError) {
       const errorMsg = fetchError instanceof Error ? fetchError.message : String(fetchError);
-      console.warn(`[Phase 1] Error fetching ${url}:`, errorMsg);
+      console.warn(`[Phase 1] Error fetching ${url}: ${errorMsg}`);
+      failedUrls.set(url, 0);
     }
+  }
+  
+  // Log failed URLs summary
+  if (failedUrls.size > 0) {
+    console.log(`[Phase 1] Failed URLs summary:`, Object.fromEntries(failedUrls));
   }
   
   return null;
@@ -631,25 +737,57 @@ Extract all relevant contact methods for data deletion requests.`;
   } catch (error: any) {
     console.error('❌ Error in discover-privacy-contacts:', error);
     
-    // Determine failure type
-    let failureType = 'ai_error';
-    const isNotFound = error.message?.includes('Unable to find privacy policy');
-    const isFetchError = error.message?.includes('Failed to fetch') || error.message?.includes('http2 error');
+    // Create structured error
+    const structuredError: StructuredError = {
+      error_code: 'DISCOVERY_FAILED',
+      error_type: 'ai_error',
+      message: error.message || 'Unknown error occurred',
+      suggested_action: 'contact_support'
+    };
     
-    if (isNotFound) {
-      failureType = 'no_policy_found';
-    } else if (isFetchError) {
-      failureType = 'fetch_failed';
+    // Determine specific error type and action
+    if (error.message?.includes('Unable to find privacy policy')) {
+      structuredError.error_type = 'no_policy_found';
+      structuredError.error_code = 'POLICY_NOT_FOUND';
+      structuredError.suggested_action = 'provide_url';
+      structuredError.message = 'Could not find privacy policy on the website. Please provide the direct URL to the privacy policy page.';
+    } else if (error.message?.includes('Failed to fetch') || error.message?.includes('http2 error')) {
+      structuredError.error_type = 'fetch_failed';
+      structuredError.error_code = 'NETWORK_ERROR';
+      structuredError.suggested_action = 'try_again_later';
+      structuredError.message = 'Network error while fetching the page. The website may be down or blocking our requests.';
+    } else if (error.message?.includes('timeout') || error.message?.includes('timed out')) {
+      structuredError.error_type = 'fetch_failed';
+      structuredError.error_code = 'TIMEOUT';
+      structuredError.suggested_action = 'try_again_later';
+      structuredError.message = 'Request timed out. The website is taking too long to respond.';
+    } else if (error.message?.includes('OpenAI')) {
+      structuredError.error_type = 'ai_error';
+      structuredError.error_code = 'AI_PROCESSING_ERROR';
+      structuredError.suggested_action = 'try_again_later';
+      structuredError.message = 'AI analysis failed. Please try again in a moment.';
+    } else if (error.message?.includes('403') || error.message?.includes('Forbidden')) {
+      structuredError.error_type = 'bot_protection';
+      structuredError.error_code = 'ACCESS_DENIED';
+      structuredError.suggested_action = 'manual_entry';
+      structuredError.message = 'Website is blocking automated access. Please manually find and enter the privacy contact information.';
+    } else if (error.message?.includes('404')) {
+      structuredError.error_type = 'no_policy_found';
+      structuredError.error_code = 'PAGE_NOT_FOUND';
+      structuredError.suggested_action = 'provide_url';
+      structuredError.message = 'The privacy policy page was not found (404). Please verify the URL and try again.';
     }
     
     // Log failure to database for admin review
     try {
       const failureData: any = {
         service_id: service_id,
-        user_id: user.id,
-        failure_type: failureType,
-        error_message: error.message || 'Unknown error',
+        user_id: user?.id,
+        failure_type: structuredError.error_type,
+        error_message: structuredError.message,
         urls_tried: urlsToTry,
+        error_code: structuredError.error_code,
+        suggested_action: structuredError.suggested_action,
       };
 
       // Add HTTP status codes if available
@@ -657,23 +795,40 @@ Extract all relevant contact methods for data deletion requests.`;
         failureData.http_status_codes = error.statusCodes;
       }
 
-      await supabase
-        .from('contact_discovery_failures')
-        .insert(failureData);
-      
-      console.log('[Failure Log] Logged to admin dashboard');
+      if (supabase) {
+        await supabase
+          .from('contact_discovery_failures')
+          .insert(failureData);
+        
+        console.log('[Failure Log] Structured error logged to admin dashboard');
+      }
     } catch (logError) {
       console.error('[Failure Log] Failed to log error:', logError);
     }
     
-    // Return different status codes based on error type
-    const status = isNotFound ? 404 : 500;
+    // Return appropriate status code
+    const statusMap: Record<StructuredError['error_type'], number> = {
+      no_policy_found: 404,
+      fetch_failed: 503,
+      bot_protection: 403,
+      invalid_content: 422,
+      ai_error: 500,
+      validation_failed: 400
+    };
+    
+    const status = statusMap[structuredError.error_type] || 500;
     
     return new Response(
       JSON.stringify({ 
         success: false,
-        error: error.message || 'Internal server error',
-        error_type: isNotFound ? 'privacy_policy_not_found' : 'internal_error'
+        error: structuredError.message,
+        error_code: structuredError.error_code,
+        error_type: structuredError.error_type,
+        suggested_action: structuredError.suggested_action,
+        details: {
+          urls_attempted: urlsToTry.length,
+          service_domain: supabase ? service_id : null
+        }
       }),
       { 
         status,

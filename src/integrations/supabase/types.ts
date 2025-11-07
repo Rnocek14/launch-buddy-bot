@@ -110,31 +110,37 @@ export type Database = {
       contact_discovery_failures: {
         Row: {
           created_at: string
+          error_code: string | null
           error_message: string | null
           failure_type: string
           http_status_codes: Json | null
           id: string
           service_id: string
+          suggested_action: string | null
           urls_tried: string[] | null
           user_id: string | null
         }
         Insert: {
           created_at?: string
+          error_code?: string | null
           error_message?: string | null
           failure_type: string
           http_status_codes?: Json | null
           id?: string
           service_id: string
+          suggested_action?: string | null
           urls_tried?: string[] | null
           user_id?: string | null
         }
         Update: {
           created_at?: string
+          error_code?: string | null
           error_message?: string | null
           failure_type?: string
           http_status_codes?: Json | null
           id?: string
           service_id?: string
+          suggested_action?: string | null
           urls_tried?: string[] | null
           user_id?: string | null
         }
