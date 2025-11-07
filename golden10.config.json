@@ -1,0 +1,25 @@
+{
+  "functionUrl": "https://gqxkeezkajkiyjpnjgkx.supabase.co/functions/v1/discover-privacy-contacts",
+  "timeoutMs": 30000,
+  "domains": [
+    {
+      "domain": "grubhub.com",
+      "expect": ["privacy", "policy"],
+      "deny": ["terms"],
+      "kind": "html|pdf"
+    },
+    {
+      "domain": "united.com",
+      "expect": ["privacy", "securiti", "privacy-central"],
+      "deny": ["terms"]
+    },
+    { "domain": "amazon.com",  "expect": ["privacy"], "deny": ["conditions","terms"] },
+    { "domain": "netflix.com", "expect": ["privacy"], "deny": ["terms"] },
+    { "domain": "uber.com",    "expect": ["privacy"], "deny": ["eula"] },
+    { "domain": "doordash.com","expect": ["privacy"], "deny": ["terms"] },
+    { "domain": "airbnb.com",  "expect": ["privacy"], "deny": ["terms"] },
+    { "domain": "facebook.com","expect": ["privacy","policy"], "deny": ["terms"] },
+    { "domain": "google.com",  "expect": ["privacy","policies"], "deny": ["terms"] },
+    { "domain": "apple.com",   "expect": ["privacy"], "deny": ["terms"] }
+  ]
+}

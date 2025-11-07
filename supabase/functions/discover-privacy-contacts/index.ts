@@ -375,6 +375,15 @@ function extractAndScorePrivacyLinks(html: string, baseDomain: string, pageUrl: 
       const location = isInFooter ? 'footer' : 'body';
       if (isInFooter) score += 10;
 
+      // Tiny polish: Check for canonical link hint
+      const canonicalLink = doc.querySelector('link[rel="canonical"]');
+      if (canonicalLink) {
+        const canonicalUrl = canonicalLink.getAttribute('href');
+        if (canonicalUrl && canonicalizeUrl(canonicalUrl, pageUrl, doc) === canonicalHref) {
+          score += 5;
+        }
+      }
+
       // Exact match bonus (language-aware)
       const lowerLinkText = linkText.toLowerCase();
       if (lowerLinkText === 'privacy policy' || lowerLinkText === 'privacy' ||
@@ -445,6 +454,7 @@ function extractAndScorePrivacyLinksRegex(html: string, baseDomain: string, page
       continue;
     }
     
+    // Phase 1.1 Refinement #2: Canonicalize with base support (regex fallback doesn't have doc)
     const canonicalHref = canonicalizeUrl(href, pageUrl);
     if (!canonicalHref) continue;
     
@@ -823,7 +833,7 @@ serve(async (req) => {
 
     const { content: privacyContent, url: successUrl, policy_type } = result;
 
-    // Phase 1.1 Refinement #5: Handle PDF policies differently
+// Phase 1.1 Refinement #5: Handle PDF policies differently
     if (policy_type === 'pdf') {
       console.log(`[PDF Policy] Found PDF policy at ${sanitizeForLog(successUrl)}`);
       console.log(`[PDF Policy] Storing PDF URL for manual review - AI text extraction not implemented yet`);
@@ -856,6 +866,8 @@ serve(async (req) => {
           contacts: insertedContacts,
           method_used: methodUsed,
           policy_type: 'pdf',
+          confidence: 'medium',
+          url: successUrl,
           message: 'Privacy policy is a PDF. Please review manually for contact information.'
         }),
         { 
@@ -1154,13 +1166,22 @@ Extract all relevant contact methods for data deletion requests.`;
 
     console.log(`✅ Successfully stored ${insertedContacts.length} privacy contacts`);
 
+    // Calculate aggregate confidence and score
+    const highCount = insertedContacts.filter((c: any) => c.confidence === 'high').length;
+    const overallConfidence = highCount > 0 ? 'high' : 'medium';
+    
     return new Response(
       JSON.stringify({
         success: true,
         service: service.name,
         contacts_found: insertedContacts.length,
         contacts: insertedContacts,
-        method_used: methodUsed
+        method_used: methodUsed,
+        policy_type: 'html',
+        confidence: overallConfidence,
+        url: successUrl,
+        lang_detected: 'en', // TODO: Add language detection in Phase 1.2
+        reasons: insertedContacts.map((c: any) => c.reasoning)
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
