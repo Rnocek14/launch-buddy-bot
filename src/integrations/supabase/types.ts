@@ -212,31 +212,40 @@ export type Database = {
       gmail_connections: {
         Row: {
           access_token: string
+          access_token_encrypted: string | null
           created_at: string
           email: string
           id: string
           refresh_token: string
+          refresh_token_encrypted: string | null
           token_expires_at: string
+          tokens_encrypted: boolean | null
           updated_at: string
           user_id: string
         }
         Insert: {
           access_token: string
+          access_token_encrypted?: string | null
           created_at?: string
           email: string
           id?: string
           refresh_token: string
+          refresh_token_encrypted?: string | null
           token_expires_at: string
+          tokens_encrypted?: boolean | null
           updated_at?: string
           user_id: string
         }
         Update: {
           access_token?: string
+          access_token_encrypted?: string | null
           created_at?: string
           email?: string
           id?: string
           refresh_token?: string
+          refresh_token_encrypted?: string | null
           token_expires_at?: string
+          tokens_encrypted?: boolean | null
           updated_at?: string
           user_id?: string
         }
