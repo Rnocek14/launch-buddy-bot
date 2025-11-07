@@ -25,6 +25,18 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
+    // Verify this is an internal request using service role key
+    const authHeader = req.headers.get('Authorization');
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    
+    if (!authHeader || !authHeader.includes(serviceRoleKey || '')) {
+      console.error('Unauthorized request to send-deletion-notification');
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized - Internal function only' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const body: NotificationRequest = await req.json();
     const { 
       user_email, 

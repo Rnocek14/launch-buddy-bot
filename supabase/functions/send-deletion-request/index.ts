@@ -360,7 +360,11 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Send confirmation email notification
     try {
+      const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
       await supabase.functions.invoke("send-deletion-notification", {
+        headers: {
+          Authorization: `Bearer ${serviceRoleKey}`,
+        },
         body: {
           user_email: profile.email || user.email,
           user_name: profile.full_name || "User",
