@@ -179,6 +179,10 @@ export const DeletionRequestDialog = ({
       title: "Contact Verified",
       description: "You can now proceed with the deletion request",
     });
+    // Notify parent component to refresh services
+    if (onSuccess) {
+      onSuccess();
+    }
   };
 
   const getTemplateType = (jurisdiction: string): string => {

@@ -25,6 +25,7 @@ interface Service {
   homepage_url: string;
   category: string;
   discovered_at: string;
+  contact_status?: 'verified' | 'ai_discovered' | 'needs_discovery';
 }
 
 interface ScanStats {
@@ -118,7 +119,9 @@ export default function Dashboard() {
           name,
           logo_url,
           homepage_url,
-          category
+          category,
+          contact_verified,
+          domain
         )
       `)
       .order("discovered_at", { ascending: false });
@@ -132,13 +135,42 @@ export default function Dashboard() {
       return;
     }
 
+    // Fetch contact statuses for all services in parallel
+    const serviceIds = data.map((item: any) => item.service_catalog.id);
+    const { data: contactsData } = await supabase
+      .from("privacy_contacts")
+      .select("service_id, verified, mx_validated")
+      .in("service_id", serviceIds)
+      .eq("contact_type", "email");
+
+    // Create a map of service_id to contact status
+    const contactStatusMap = new Map<string, 'verified' | 'ai_discovered' | 'needs_discovery'>();
+    
+    for (const item of data) {
+      const serviceId = item.service_catalog.id;
+      const catalogVerified = item.service_catalog.contact_verified;
+      const contacts = contactsData?.filter(c => c.service_id === serviceId) || [];
+      
+      const hasVerifiedContact = contacts.some(c => c.verified);
+      const hasAiDiscoveredContact = contacts.length > 0 && !hasVerifiedContact;
+      
+      if (catalogVerified || hasVerifiedContact) {
+        contactStatusMap.set(serviceId, 'verified');
+      } else if (hasAiDiscoveredContact) {
+        contactStatusMap.set(serviceId, 'ai_discovered');
+      } else {
+        contactStatusMap.set(serviceId, 'needs_discovery');
+      }
+    }
+
     const mapped = data.map((item: any) => ({
       id: item.service_catalog.id,
       name: item.service_catalog.name,
       logo_url: item.service_catalog.logo_url,
       homepage_url: item.service_catalog.homepage_url,
       category: item.service_catalog.category,
-      discovered_at: item.discovered_at
+      discovered_at: item.discovered_at,
+      contact_status: contactStatusMap.get(item.service_catalog.id) || 'needs_discovery'
     }));
 
     setServices(mapped);
@@ -352,6 +384,11 @@ export default function Dashboard() {
     setDeletionDialogOpen(true);
   };
 
+  const handleDeletionSuccess = () => {
+    // Refresh services to update contact status badges
+    fetchServices();
+  };
+
   const toggleServiceSelection = (serviceId: string) => {
     const newSelection = new Set(selectedServices);
     if (newSelection.has(serviceId)) {
@@ -432,6 +469,41 @@ export default function Dashboard() {
       return (words[0][0] + words[1][0]).toUpperCase();
     }
     return name.slice(0, 2).toUpperCase();
+  };
+
+  const getContactStatusBadge = (status?: 'verified' | 'ai_discovered' | 'needs_discovery') => {
+    if (!status) return null;
+
+    const configs = {
+      verified: {
+        icon: CheckCircle,
+        text: 'Verified',
+        className: 'bg-green-500/10 text-green-700 dark:text-green-300 border-green-500/30 hover:bg-green-500/20'
+      },
+      ai_discovered: {
+        icon: Sparkles,
+        text: 'AI Discovered',
+        className: 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30 hover:bg-amber-500/20'
+      },
+      needs_discovery: {
+        icon: AlertCircle,
+        text: 'Needs Discovery',
+        className: 'bg-red-500/10 text-red-700 dark:text-red-300 border-red-500/30 hover:bg-red-500/20'
+      }
+    };
+
+    const config = configs[status];
+    const Icon = config.icon;
+
+    return (
+      <Badge 
+        variant="outline" 
+        className={`text-xs gap-1 ${config.className}`}
+      >
+        <Icon className="w-3 h-3" />
+        {config.text}
+      </Badge>
+    );
   };
 
   const exportToCSV = () => {
@@ -908,13 +980,18 @@ export default function Dashboard() {
                             {service.name}
                           </h3>
                           
-                          {/* Category Badge */}
-                          <Badge 
-                            variant="outline" 
-                            className={`text-xs ${categoryColors[service.category] || categoryColors["Other"]}`}
-                          >
-                            {service.category || "Other"}
-                          </Badge>
+                          <div className="flex flex-wrap gap-2 justify-center">
+                            {/* Category Badge */}
+                            <Badge 
+                              variant="outline" 
+                              className={`text-xs ${categoryColors[service.category] || categoryColors["Other"]}`}
+                            >
+                              {service.category || "Other"}
+                            </Badge>
+                            
+                            {/* Contact Status Badge */}
+                            {getContactStatusBadge(service.contact_status)}
+                          </div>
                         </div>
 
                         {/* Date */}
@@ -1101,6 +1178,7 @@ export default function Dashboard() {
         onOpenChange={setDeletionDialogOpen}
         service={selectedService}
         onSuccess={() => {
+          fetchServices(); // Refresh to update contact status badges
           toast({
             title: "Success",
             description: "Deletion request has been sent successfully.",
