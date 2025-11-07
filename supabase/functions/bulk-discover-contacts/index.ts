@@ -231,14 +231,34 @@ async function processJobInBackground(supabaseClient: any, jobId: string, batchS
           // Discover contacts
           const { data: discoveryData, error: discoveryError } = await supabaseClient.functions.invoke(
             'discover-privacy-contacts',
-            { body: { domain: service.domain, serviceName: service.name } }
+            { body: { service_id: serviceId } }
           );
 
           if (discoveryError) {
-            console.error(`Discovery failed for ${service.name}:`, discoveryError);
+            console.error(`Discovery failed for ${service.name}:`, discoveryError.message || discoveryError);
+            
+            // Track errors with details
+            const errorDetails = {
+              serviceId,
+              serviceName: service.name,
+              error: discoveryError.message || 'Unknown error',
+              timestamp: new Date().toISOString()
+            };
+            
+            console.log('Error details:', JSON.stringify(errorDetails));
+            
             processedIds.push(serviceId);
             failCount++;
             totalCost += 0.011; // Add cost even on failure
+            continue;
+          }
+
+          // Check if discovery was successful
+          if (!discoveryData?.success) {
+            console.warn(`No contacts found for ${service.name}`);
+            processedIds.push(serviceId);
+            failCount++;
+            totalCost += 0.011;
             continue;
           }
 
@@ -247,26 +267,37 @@ async function processJobInBackground(supabaseClient: any, jobId: string, batchS
           // If email contact found, validate it
           const emailContact = discoveryData.contacts?.find((c: any) => c.contact_type === 'email');
           if (emailContact) {
-            const { data: validationData } = await supabaseClient.functions.invoke(
-              'validate-email-contact',
-              { 
-                body: { 
-                  email: emailContact.value,
-                  serviceId,
-                  contactId: emailContact.id,
-                  updateDatabase: true
-                } 
-              }
-            );
+            try {
+              const { data: validationData, error: validationError } = await supabaseClient.functions.invoke(
+                'validate-email-contact',
+                { 
+                  body: { 
+                    email: emailContact.value,
+                    serviceId,
+                    contactId: emailContact.id,
+                    updateDatabase: true
+                  } 
+                }
+              );
 
-            totalCost += 0.001; // Validation cost
-            
-            if (validationData?.isValid) {
-              successCount++;
-            } else {
+              totalCost += 0.001; // Validation cost
+              
+              if (validationError) {
+                console.error(`Validation failed for ${service.name}:`, validationError);
+                failCount++;
+              } else if (validationData?.validation?.isValid) {
+                successCount++;
+              } else {
+                failCount++;
+              }
+            } catch (validationErr) {
+              console.error(`Validation error for ${service.name}:`, validationErr);
               failCount++;
+              totalCost += 0.001;
             }
           } else {
+            // No email contact found
+            console.log(`No email contact found for ${service.name}`);
             failCount++;
           }
 

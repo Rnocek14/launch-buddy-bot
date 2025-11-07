@@ -92,12 +92,33 @@ export const ContactDiscoveryDialog = ({
       }
     } catch (err: any) {
       console.error("Discovery error:", err);
-      setError(err.message || "Failed to discover contacts. Please try again.");
-      toast({
-        title: "Discovery Failed",
-        description: err.message || "Unable to find privacy contacts",
-        variant: "destructive",
-      });
+      
+      // Parse the error to provide better feedback
+      let errorMessage = "Failed to discover contacts. Please try again.";
+      let errorType = "unknown";
+      
+      if (err.message) {
+        errorMessage = err.message;
+        
+        if (err.message.includes("Unable to find privacy policy")) {
+          errorType = "not_found";
+          errorMessage = `Could not locate ${service.name}'s privacy policy. Their privacy page may be at a non-standard URL or requires JavaScript to load.`;
+        } else if (err.message.includes("Authentication failed")) {
+          errorType = "auth";
+          errorMessage = "Authentication failed. Please sign in again.";
+        }
+      }
+      
+      setError(errorMessage);
+      
+      // Only show toast for non-404 errors to avoid spam
+      if (errorType !== "not_found") {
+        toast({
+          title: "Discovery Failed",
+          description: errorMessage,
+          variant: "destructive",
+        });
+      }
     } finally {
       setDiscovering(false);
     }

@@ -257,10 +257,19 @@ Extract all relevant contact methods for data deletion requests.`;
 
   } catch (error: any) {
     console.error('Error in discover-privacy-contacts:', error);
+    
+    // Return different status codes based on error type
+    const isNotFound = error.message?.includes('Unable to find privacy policy');
+    const status = isNotFound ? 404 : 500;
+    
     return new Response(
-      JSON.stringify({ error: error.message || 'Internal server error' }),
+      JSON.stringify({ 
+        success: false,
+        error: error.message || 'Internal server error',
+        error_type: isNotFound ? 'privacy_policy_not_found' : 'internal_error'
+      }),
       { 
-        status: 500,
+        status,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
       }
     );

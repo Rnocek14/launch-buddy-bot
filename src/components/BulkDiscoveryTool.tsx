@@ -344,6 +344,20 @@ export const BulkDiscoveryTool = () => {
                 <AlertDescription>{currentJob.error_message}</AlertDescription>
               </Alert>
             )}
+
+            {/* Information about failures */}
+            {(currentJob.status === 'running' || currentJob.status === 'completed') && currentJob.failed_discoveries > 0 && (
+              <Alert>
+                <AlertTriangle className="w-4 h-4" />
+                <AlertDescription>
+                  <p className="font-semibold mb-1">Some services couldn't be discovered automatically</p>
+                  <p className="text-sm">
+                    Common reasons: Privacy policy at non-standard URL, JavaScript-required pages, or missing contact information. 
+                    You can manually add contacts for these services via the Contact Verification tool.
+                  </p>
+                </AlertDescription>
+              </Alert>
+            )}
           </div>
         )}
 
