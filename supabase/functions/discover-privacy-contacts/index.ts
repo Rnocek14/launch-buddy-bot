@@ -16,29 +16,73 @@ interface ContactFinding {
 
 // Helper: Extract privacy policy URLs from HTML
 function extractPrivacyLinksFromHTML(html: string, baseDomain: string): string[] {
-  const urls: string[] = [];
+  const urls = new Set<string>();
   
   // Look for <link rel="privacy-policy"> or similar
   const linkRegex = /<link[^>]*rel=["']privacy[-_]?policy["'][^>]*href=["']([^"']+)["']/gi;
   let match;
   while ((match = linkRegex.exec(html)) !== null) {
-    urls.push(match[1]);
+    urls.add(match[1]);
   }
   
-  // Look for <a> tags with privacy-related text
-  const anchorRegex = /<a[^>]*href=["']([^"']*(?:privacy|legal|terms)[^"']*)["'][^>]*>([^<]*(?:privacy|data\s+protection)[^<]*)<\/a>/gi;
-  while ((match = anchorRegex.exec(html)) !== null) {
-    if (!match[1].includes('mailto:') && !match[1].includes('javascript:')) {
-      urls.push(match[1]);
+  // Extract ALL <a> tags with href attributes
+  const allAnchorsRegex = /<a[^>]*href=["']([^"']+)["'][^>]*>(.*?)<\/a>/gi;
+  while ((match = allAnchorsRegex.exec(html)) !== null) {
+    const href = match[1];
+    const linkText = match[2];
+    
+    // Skip non-HTTP links
+    if (href.includes('mailto:') || href.includes('javascript:') || href.includes('tel:')) {
+      continue;
+    }
+    
+    // Check if URL or link text contains privacy-related keywords (case-insensitive)
+    const privacyKeywords = [
+      'privacy', 'privacidad', 'confidentialité', 'datenschutz',
+      'gdpr', 'ccpa', 'data-protection', 'data protection',
+      'personal-data', 'personal data', 'dpo',
+      'privacy-policy', 'privacy policy', 'privacy-notice',
+      'data-request', 'data request', 'dsar'
+    ];
+    
+    const combined = (href + ' ' + linkText).toLowerCase();
+    const isPrivacyRelated = privacyKeywords.some(keyword => combined.includes(keyword.toLowerCase()));
+    
+    if (isPrivacyRelated) {
+      urls.add(href);
     }
   }
   
-  // Resolve relative URLs
-  return urls.map(url => {
+  // Also look for common footer privacy links (often in <footer> or class="footer")
+  const footerRegex = /<footer[^>]*>(.*?)<\/footer>/gis;
+  const footerMatch = footerRegex.exec(html);
+  if (footerMatch) {
+    const footerHtml = footerMatch[1];
+    const footerAnchors = /<a[^>]*href=["']([^"']+)["'][^>]*>(.*?)<\/a>/gi;
+    let footerAnchorMatch;
+    while ((footerAnchorMatch = footerAnchors.exec(footerHtml)) !== null) {
+      const href = footerAnchorMatch[1];
+      const text = footerAnchorMatch[2];
+      if ((href + text).toLowerCase().includes('privacy')) {
+        urls.add(href);
+      }
+    }
+  }
+  
+  // Resolve relative URLs and return unique list
+  return Array.from(urls).map(url => {
     if (url.startsWith('http')) return url;
     if (url.startsWith('//')) return `https:${url}`;
     if (url.startsWith('/')) return `https://${baseDomain}${url}`;
     return `https://${baseDomain}/${url}`;
+  }).filter(url => {
+    // Filter out fragments and anchors
+    try {
+      const urlObj = new URL(url);
+      return urlObj.pathname !== '/' || urlObj.search !== '' || urlObj.hash !== '';
+    } catch {
+      return false;
+    }
   });
 }
 
@@ -61,16 +105,19 @@ async function trySimpleFetch(urlsToTry: string[], domain: string): Promise<{ co
         const html = await pageResponse.text();
         
         // If this is the homepage or a generic page, try to extract privacy policy links
-        if (url.includes(domain) && !url.match(/privacy|legal|terms/i)) {
-          console.log(`[Phase 1] Parsing homepage for privacy links...`);
+        if (url.includes(domain) && !url.match(/privacy|legal|terms|dsar|data-request/i)) {
+          console.log(`[Phase 1] Parsing page for privacy links: ${url}`);
           const extractedUrls = extractPrivacyLinksFromHTML(html, domain);
           if (extractedUrls.length > 0) {
-            console.log(`[Phase 1] Found ${extractedUrls.length} privacy links in HTML, trying them...`);
-            // Recursively try the extracted URLs
-            for (const extractedUrl of extractedUrls.slice(0, 3)) { // Try top 3
+            console.log(`[Phase 1] Found ${extractedUrls.length} privacy links in HTML:`, extractedUrls.slice(0, 5));
+            // Recursively try the extracted URLs (try top 5)
+            for (const extractedUrl of extractedUrls.slice(0, 5)) {
+              console.log(`[Phase 1] Trying extracted URL: ${extractedUrl}`);
               const result = await trySimpleFetch([extractedUrl], domain);
               if (result) return result;
             }
+          } else {
+            console.log(`[Phase 1] No privacy links found in HTML`);
           }
         }
         
@@ -207,32 +254,50 @@ serve(async (req) => {
           // Explicit privacy form URL from catalog
           service.privacy_form_url,
           
+          // Try homepage FIRST for link extraction (moved up for better discovery)
+          `https://www.${service.domain}`,
+          `https://${service.domain}`,
+          
           // .well-known standard (RFC 8615)
           `https://${service.domain}/.well-known/privacy-policy.txt`,
           `https://www.${service.domain}/.well-known/privacy-policy.txt`,
           
           // Common privacy policy paths
           `https://${service.domain}/privacy`,
+          `https://www.${service.domain}/privacy`,
           `https://${service.domain}/privacy-policy`,
+          `https://www.${service.domain}/privacy-policy`,
           `https://${service.domain}/privacy-notice`,
           `https://${service.domain}/privacypolicy`,
+          `https://www.${service.domain}/privacypolicy`,
           
           // Legal section paths
           `https://${service.domain}/legal/privacy`,
+          `https://www.${service.domain}/legal/privacy`,
           `https://${service.domain}/legal/privacy-policy`,
+          `https://www.${service.domain}/legal/privacy-policy`,
+          `https://${service.domain}/legal`,
+          `https://www.${service.domain}/legal`,
+          
+          // CCPA/GDPR specific paths
+          `https://${service.domain}/ccpa`,
+          `https://www.${service.domain}/ccpa`,
+          `https://${service.domain}/gdpr`,
+          `https://www.${service.domain}/gdpr`,
+          `https://${service.domain}/privacy-rights`,
+          `https://www.${service.domain}/privacy-rights`,
+          `https://${service.domain}/your-privacy-rights`,
+          `https://www.${service.domain}/your-privacy-rights`,
           
           // Help/Support section paths
           `https://${service.domain}/help/privacy`,
+          `https://www.${service.domain}/help/privacy`,
           `https://${service.domain}/support/privacy`,
+          `https://www.${service.domain}/support/privacy`,
           
-          // With www subdomain
-          `https://www.${service.domain}/privacy`,
-          `https://www.${service.domain}/privacy-policy`,
-          `https://www.${service.domain}/legal/privacy`,
-          
-          // Try homepage for link extraction
-          `https://${service.domain}`,
-          `https://www.${service.domain}`,
+          // About section
+          `https://${service.domain}/about/privacy`,
+          `https://www.${service.domain}/about/privacy`,
         ].filter(Boolean);
 
     console.log(`Prepared ${urlsToTry.length} URLs to try`);
