@@ -17,6 +17,7 @@ import { DeletionRequestDialog } from "@/components/DeletionRequestDialog";
 import { BatchDeletionToolbar } from "@/components/BatchDeletionToolbar";
 import { BatchDeletionDialog } from "@/components/BatchDeletionDialog";
 import { Checkbox } from "@/components/ui/checkbox";
+import { ContactDiscoveryDialog } from "@/components/ContactDiscoveryDialog";
 
 interface Service {
   id: string;
@@ -26,6 +27,7 @@ interface Service {
   category: string;
   discovered_at: string;
   contact_status?: 'verified' | 'ai_discovered' | 'needs_discovery';
+  domain: string;
 }
 
 interface ScanStats {
@@ -74,6 +76,8 @@ export default function Dashboard() {
   const [deletionDialogOpen, setDeletionDialogOpen] = useState(false);
   const [selectedServices, setSelectedServices] = useState<Set<string>>(new Set());
   const [batchDialogOpen, setBatchDialogOpen] = useState(false);
+  const [quickDiscoveryOpen, setQuickDiscoveryOpen] = useState(false);
+  const [quickDiscoveryService, setQuickDiscoveryService] = useState<Service | null>(null);
   const { isAuthorized, loading: authLoading } = useAuthorization();
   const [scanType, setScanType] = useState<'quick' | 'deep'>('quick');
   const [analyzingDomains, setAnalyzingDomains] = useState(false);
@@ -171,7 +175,8 @@ export default function Dashboard() {
       homepage_url: item.service_catalog.homepage_url,
       category: item.service_catalog.category,
       discovered_at: item.discovered_at,
-      contact_status: contactStatusMap.get(item.service_catalog.id) || 'needs_discovery'
+      contact_status: contactStatusMap.get(item.service_catalog.id) || 'needs_discovery',
+      domain: item.service_catalog.domain || ''
     }));
 
     setServices(mapped);
@@ -388,6 +393,20 @@ export default function Dashboard() {
   const handleDeletionSuccess = () => {
     // Refresh services to update contact status badges
     fetchServices();
+  };
+
+  const handleQuickDiscovery = (service: Service) => {
+    setQuickDiscoveryService(service);
+    setQuickDiscoveryOpen(true);
+  };
+
+  const handleQuickDiscoveryComplete = () => {
+    fetchServices();
+    setQuickDiscoveryOpen(false);
+    toast({
+      title: "Contact Discovered",
+      description: "Contact has been verified and service status updated.",
+    });
   };
 
   const toggleServiceSelection = (serviceId: string) => {
@@ -1024,6 +1043,19 @@ export default function Dashboard() {
 
                         {/* Action Buttons */}
                         <div className="w-full space-y-2">
+                          {/* Quick Discovery Button - Only for needs_discovery status */}
+                          {service.contact_status === 'needs_discovery' && (
+                            <Button
+                              variant="default"
+                              size="sm"
+                              className="w-full bg-gradient-to-r from-primary to-primary/80"
+                              onClick={() => handleQuickDiscovery(service)}
+                            >
+                              <Sparkles className="w-3 h-3 mr-2" />
+                              Discover Contact
+                            </Button>
+                          )}
+                          
                           <Button
                             variant="destructive"
                             size="sm"
@@ -1204,6 +1236,14 @@ export default function Dashboard() {
             description: "Deletion request has been sent successfully.",
           });
         }}
+      />
+
+      {/* Quick Contact Discovery Dialog */}
+      <ContactDiscoveryDialog
+        open={quickDiscoveryOpen}
+        onOpenChange={setQuickDiscoveryOpen}
+        service={quickDiscoveryService}
+        onContactVerified={handleQuickDiscoveryComplete}
       />
 
       {/* Batch Deletion Toolbar */}
