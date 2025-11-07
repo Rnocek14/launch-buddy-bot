@@ -36,15 +36,7 @@ serve(async (req) => {
       throw new Error('Authentication failed');
     }
 
-    // Check if user is admin
-    const { data: hasAdminRole } = await supabase.rpc('has_role', {
-      _user_id: user.id,
-      _role: 'admin'
-    });
-
-    if (!hasAdminRole) {
-      throw new Error('Unauthorized: Admin access required');
-    }
+    // Allow all authenticated users (not just admins)
 
     const { service_id, privacy_url } = await req.json();
 
@@ -65,36 +57,57 @@ serve(async (req) => {
 
     console.log(`Discovering privacy contacts for: ${service.name}`);
 
-    // Determine URL to fetch
-    const urlToFetch = privacy_url || service.privacy_form_url || `https://${service.domain}/privacy`;
-    
-    console.log(`Fetching privacy policy from: ${urlToFetch}`);
+    // Try multiple common privacy policy URL patterns
+    const urlsToTry = privacy_url 
+      ? [privacy_url]
+      : [
+          service.privacy_form_url,
+          `https://${service.domain}/privacy`,
+          `https://${service.domain}/privacy-policy`,
+          `https://${service.domain}/legal/privacy`,
+          `https://www.${service.domain}/privacy`,
+          `https://www.${service.domain}/privacy-policy`,
+        ].filter(Boolean);
 
-    // Fetch the privacy policy page
     let privacyContent = '';
-    try {
-      const pageResponse = await fetch(urlToFetch, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (compatible; PrivacyContactBot/1.0)'
-        }
-      });
+    let successUrl = '';
+    
+    // Try each URL until one works
+    for (const url of urlsToTry) {
+      console.log(`Trying: ${url}`);
+      
+      try {
+        const pageResponse = await fetch(url, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (compatible; PrivacyContactBot/1.0)'
+          },
+          redirect: 'follow'
+        });
 
-      if (!pageResponse.ok) {
-        console.warn(`Failed to fetch ${urlToFetch}: ${pageResponse.status}`);
-        privacyContent = `Unable to fetch privacy policy (HTTP ${pageResponse.status})`;
-      } else {
-        const html = await pageResponse.text();
-        // Simple HTML stripping - just remove tags for AI processing
-        privacyContent = html
-          .replace(/<script[^>]*>.*?<\/script>/gis, '')
-          .replace(/<style[^>]*>.*?<\/style>/gis, '')
-          .replace(/<[^>]+>/g, ' ')
-          .replace(/\s+/g, ' ')
-          .substring(0, 8000); // Limit content length
+        if (pageResponse.ok) {
+          const html = await pageResponse.text();
+          // Simple HTML stripping - just remove tags for AI processing
+          privacyContent = html
+            .replace(/<script[^>]*>.*?<\/script>/gis, '')
+            .replace(/<style[^>]*>.*?<\/style>/gis, '')
+            .replace(/<[^>]+>/g, ' ')
+            .replace(/\s+/g, ' ')
+            .substring(0, 8000); // Limit content length
+          
+          successUrl = url;
+          console.log(`Successfully fetched from: ${url}`);
+          break;
+        } else {
+          console.warn(`Failed to fetch ${url}: ${pageResponse.status}`);
+        }
+      } catch (fetchError) {
+        console.warn(`Error fetching ${url}:`, fetchError);
       }
-    } catch (fetchError) {
-      console.error(`Error fetching privacy policy:`, fetchError);
-      privacyContent = 'Unable to fetch privacy policy due to network error';
+    }
+
+    // If all URLs failed, return error
+    if (!privacyContent) {
+      throw new Error(`Unable to find privacy policy. Tried ${urlsToTry.length} URL(s). Please provide a direct URL to the privacy policy.`);
     }
 
     // Call OpenAI with tool calling for structured extraction
@@ -208,7 +221,7 @@ Extract all relevant contact methods for data deletion requests.`;
     // Store findings in database
     const contactsToInsert = findings.contacts.map(contact => ({
       service_id: service_id,
-      source_url: urlToFetch,
+      source_url: successUrl,
       contact_type: contact.contact_type,
       value: contact.value,
       confidence: contact.confidence,

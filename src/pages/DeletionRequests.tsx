@@ -7,8 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowLeft, Loader2, Search, FileText, CheckCircle2, Clock, AlertCircle, XCircle, Mail } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ArrowLeft, Loader2, Search, FileText, CheckCircle2, Clock, AlertCircle, XCircle, Mail, ScanSearch } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import PrivacyContactDiscovery from "@/components/PrivacyContactDiscovery";
 
 interface DeletionRequest {
   id: string;
@@ -172,6 +174,19 @@ export default function DeletionRequests() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <Tabs defaultValue="requests" className="space-y-6">
+          <TabsList>
+            <TabsTrigger value="requests" className="gap-2">
+              <FileText className="w-4 h-4" />
+              My Requests
+            </TabsTrigger>
+            <TabsTrigger value="discover" className="gap-2">
+              <ScanSearch className="w-4 h-4" />
+              Discover Contacts
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="requests" className="space-y-6">
         {/* Stats Cards */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
           <Card>
@@ -391,6 +406,12 @@ export default function DeletionRequests() {
             </div>
           </CardContent>
         </Card>
+          </TabsContent>
+
+          <TabsContent value="discover">
+            <PrivacyContactDiscovery />
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );

@@ -84,17 +84,28 @@ export default function PrivacyContactDiscovery() {
 
       if (error) throw error;
 
-      toast({
-        title: "Success",
-        description: `Found ${data.contacts_found} contact method(s) for ${data.service}`,
-      });
+      if (data.contacts_found === 0) {
+        toast({
+          title: "No contacts found",
+          description: `Could not find privacy contacts for ${data.service}. The privacy policy may not be publicly accessible.`,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Success",
+          description: `Found ${data.contacts_found} contact method(s) for ${data.service}`,
+        });
+      }
 
       await fetchContacts();
       await fetchServices();
     } catch (error: any) {
+      const errorMessage = error.message || "Failed to discover contacts";
       toast({
-        title: "Error",
-        description: error.message || "Failed to discover contacts",
+        title: "Discovery Failed",
+        description: errorMessage.includes("privacy policy") 
+          ? errorMessage 
+          : "Could not access the privacy policy. The page may be behind a login or doesn't exist.",
         variant: "destructive",
       });
     } finally {
@@ -267,15 +278,14 @@ export default function PrivacyContactDiscovery() {
           AI Privacy Contact Discovery
         </CardTitle>
         <CardDescription>
-          Test the AI-powered system for discovering privacy contact methods from service privacy policies
+          Use AI to automatically find email addresses, forms, and phone numbers for data deletion requests by analyzing privacy policies
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <Alert>
           <Search className="h-4 w-4" />
           <AlertDescription>
-            Click "Discover" to use OpenAI to extract privacy contact information from each service's privacy policy.
-            The AI will find email addresses, forms, and other contact methods for data deletion requests.
+            Click "Discover" to automatically find contact information. The AI will try multiple common privacy policy URLs and extract contact details. If a service's privacy policy is behind a login or doesn't exist, discovery may fail.
           </AlertDescription>
         </Alert>
 
