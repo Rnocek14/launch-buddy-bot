@@ -66,6 +66,7 @@ export default function Dashboard() {
   const [unmatchedDomains, setUnmatchedDomains] = useState<UnmatchedDomain[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [selectedContactStatus, setSelectedContactStatus] = useState<string>("all");
   const [scanProgress, setScanProgress] = useState<ScanProgress | null>(null);
   const [riskData, setRiskData] = useState<any>(null);
   const [loadingRisk, setLoadingRisk] = useState(false);
@@ -540,9 +541,10 @@ export default function Dashboard() {
     return services.filter(service => {
       const matchesSearch = service.name.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesCategory = selectedCategory === "all" || service.category === selectedCategory;
-      return matchesSearch && matchesCategory;
+      const matchesContactStatus = selectedContactStatus === "all" || service.contact_status === selectedContactStatus;
+      return matchesSearch && matchesCategory && matchesContactStatus;
     });
-  }, [services, searchQuery, selectedCategory]);
+  }, [services, searchQuery, selectedCategory, selectedContactStatus]);
 
 
   const categories = useMemo(() => {
@@ -851,7 +853,7 @@ export default function Dashboard() {
             {/* Search and Filter */}
             <Card>
               <CardContent className="pt-6">
-              <div className="flex flex-col sm:flex-row gap-3">(
+              <div className="flex flex-col sm:flex-row gap-3">
                 <div className="relative flex-1">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input
@@ -872,6 +874,23 @@ export default function Dashboard() {
                         {cat} ({services.filter(s => (s.category || "Other") === cat).length})
                       </SelectItem>
                     ))}
+                  </SelectContent>
+                </Select>
+                <Select value={selectedContactStatus} onValueChange={setSelectedContactStatus}>
+                  <SelectTrigger className="w-full sm:w-[200px]">
+                    <SelectValue placeholder="All Contact Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Status</SelectItem>
+                    <SelectItem value="verified">
+                      🟢 Verified ({services.filter(s => s.contact_status === 'verified').length})
+                    </SelectItem>
+                    <SelectItem value="ai_discovered">
+                      🟡 AI Discovered ({services.filter(s => s.contact_status === 'ai_discovered').length})
+                    </SelectItem>
+                    <SelectItem value="needs_discovery">
+                      🔴 Needs Discovery ({services.filter(s => s.contact_status === 'needs_discovery').length})
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -931,6 +950,7 @@ export default function Dashboard() {
                       onClick={() => {
                         setSearchQuery("");
                         setSelectedCategory("all");
+                        setSelectedContactStatus("all");
                       }}
                     >
                       Clear Filters
