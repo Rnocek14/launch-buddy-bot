@@ -53,6 +53,60 @@ export type Database = {
         }
         Relationships: []
       }
+      bulk_discovery_jobs: {
+        Row: {
+          actual_cost: number | null
+          completed_at: string | null
+          created_at: string
+          created_by: string
+          error_message: string | null
+          estimated_cost: number | null
+          failed_discoveries: number
+          id: string
+          processed_services: number
+          progress_data: Json | null
+          started_at: string | null
+          status: string
+          successful_discoveries: number
+          total_services: number
+          updated_at: string
+        }
+        Insert: {
+          actual_cost?: number | null
+          completed_at?: string | null
+          created_at?: string
+          created_by: string
+          error_message?: string | null
+          estimated_cost?: number | null
+          failed_discoveries?: number
+          id?: string
+          processed_services?: number
+          progress_data?: Json | null
+          started_at?: string | null
+          status?: string
+          successful_discoveries?: number
+          total_services?: number
+          updated_at?: string
+        }
+        Update: {
+          actual_cost?: number | null
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string
+          error_message?: string | null
+          estimated_cost?: number | null
+          failed_discoveries?: number
+          id?: string
+          processed_services?: number
+          progress_data?: Json | null
+          started_at?: string | null
+          status?: string
+          successful_discoveries?: number
+          total_services?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       deletion_requests: {
         Row: {
           completed_at: string | null
