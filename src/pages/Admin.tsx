@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
-import { Shield, Users, Mail, MailX, Send, Loader2, Download, LogOut, Rocket, Check, X, BarChart3, TrendingUp, MousePointerClick, Eye, ScanSearch, GitPullRequest, CheckCircle2, XCircle, Clock, Search } from "lucide-react";
+import { Shield, Users, Mail, MailX, Send, Loader2, Download, LogOut, Rocket, Check, X, BarChart3, TrendingUp, MousePointerClick, Eye, ScanSearch, GitPullRequest, CheckCircle2, XCircle, Clock, Search, AlertTriangle } from "lucide-react";
 import PrivacyContactDiscovery from "@/components/PrivacyContactDiscovery";
 import { ContactVerification } from "@/components/ContactVerification";
 import { BulkDiscoveryTool } from "@/components/BulkDiscoveryTool";
+import { FailedDiscoveriesLog } from "@/components/FailedDiscoveriesLog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -1259,6 +1260,9 @@ export default function Admin() {
 
         {/* Bulk Discovery Tool */}
         <BulkDiscoveryTool />
+
+        {/* Failed Discoveries Log */}
+        <FailedDiscoveriesLog />
 
         {/* Contact Verification Tool */}
         <ContactVerification />

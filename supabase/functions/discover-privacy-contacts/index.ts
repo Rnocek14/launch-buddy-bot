@@ -155,24 +155,33 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Declare variables outside try block for access in catch block
+  let service_id: string | null = null;
+  let user: any = null;
+  let urlsToTry: string[] = [];
+  let supabase: any = null;
+
   try {
     const authHeader = req.headers.get('authorization');
     if (!authHeader) {
       throw new Error('No authorization header');
     }
 
-    const supabase = createClient(
+    supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
       { global: { headers: { Authorization: authHeader } } }
     );
 
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) {
+    const { data: { user: authenticatedUser }, error: userError } = await supabase.auth.getUser();
+    if (userError || !authenticatedUser) {
       throw new Error('Authentication failed');
     }
+    user = authenticatedUser;
 
-    const { service_id, privacy_url } = await req.json();
+    const requestBody = await req.json();
+    service_id = requestBody.service_id;
+    const privacy_url = requestBody.privacy_url;
 
     if (!service_id) {
       throw new Error('service_id is required');
@@ -192,7 +201,7 @@ serve(async (req) => {
     console.log(`=== Discovering privacy contacts for: ${service.name} (${service.domain}) ===`);
 
     // Build comprehensive URL list with Phase 1 enhancements
-    const urlsToTry = privacy_url 
+    urlsToTry = privacy_url 
       ? [privacy_url]
       : [
           // Explicit privacy form URL from catalog
@@ -457,6 +466,24 @@ Extract all relevant contact methods for data deletion requests.`;
     });
 
     console.log(`[Filter] ${findings.contacts.length} → ${validContacts.length} after filtering`);
+    
+    // If all contacts were filtered out, log this as a failure
+    if (findings.contacts.length > 0 && validContacts.length === 0) {
+      try {
+        await supabase
+          .from('contact_discovery_failures')
+          .insert({
+            service_id: service_id,
+            user_id: user.id,
+            failure_type: 'all_filtered',
+            error_message: `AI found ${findings.contacts.length} contacts but all were filtered out as low quality`,
+            urls_tried: urlsToTry,
+          });
+        console.log('[Failure Log] All contacts filtered - logged for review');
+      } catch (logError) {
+        console.error('[Failure Log] Failed to log filtering issue:', logError);
+      }
+    }
 
     // Validate URLs for form contacts
     for (const contact of validContacts) {
@@ -539,8 +566,42 @@ Extract all relevant contact methods for data deletion requests.`;
   } catch (error: any) {
     console.error('❌ Error in discover-privacy-contacts:', error);
     
-    // Return different status codes based on error type
+    // Determine failure type
+    let failureType = 'ai_error';
     const isNotFound = error.message?.includes('Unable to find privacy policy');
+    const isFetchError = error.message?.includes('Failed to fetch') || error.message?.includes('http2 error');
+    
+    if (isNotFound) {
+      failureType = 'no_policy_found';
+    } else if (isFetchError) {
+      failureType = 'fetch_failed';
+    }
+    
+    // Log failure to database for admin review
+    try {
+      const failureData: any = {
+        service_id: service_id,
+        user_id: user.id,
+        failure_type: failureType,
+        error_message: error.message || 'Unknown error',
+        urls_tried: urlsToTry,
+      };
+
+      // Add HTTP status codes if available
+      if (error.statusCodes) {
+        failureData.http_status_codes = error.statusCodes;
+      }
+
+      await supabase
+        .from('contact_discovery_failures')
+        .insert(failureData);
+      
+      console.log('[Failure Log] Logged to admin dashboard');
+    } catch (logError) {
+      console.error('[Failure Log] Failed to log error:', logError);
+    }
+    
+    // Return different status codes based on error type
     const status = isNotFound ? 404 : 500;
     
     return new Response(

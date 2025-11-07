@@ -107,6 +107,47 @@ export type Database = {
         }
         Relationships: []
       }
+      contact_discovery_failures: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          failure_type: string
+          http_status_codes: Json | null
+          id: string
+          service_id: string
+          urls_tried: string[] | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          failure_type: string
+          http_status_codes?: Json | null
+          id?: string
+          service_id: string
+          urls_tried?: string[] | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          failure_type?: string
+          http_status_codes?: Json | null
+          id?: string
+          service_id?: string
+          urls_tried?: string[] | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contact_discovery_failures_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "service_catalog"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       deletion_requests: {
         Row: {
           completed_at: string | null
