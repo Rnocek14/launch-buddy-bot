@@ -12,13 +12,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { Loader2, AlertTriangle, CheckCircle2, Sparkles } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { EmailPreviewModal } from "@/components/EmailPreviewModal";
+import { ContactDiscoveryDialog } from "@/components/ContactDiscoveryDialog";
 
 interface Service {
   id: string;
   name: string;
+  domain?: string;
   logo_url?: string;
   homepage_url?: string;
 }
@@ -53,6 +55,7 @@ export const DeletionRequestDialog = ({
     contactMethod: string;
     needsVerification: boolean;
   }>({ hasVerifiedContact: false, contactMethod: "none", needsVerification: false });
+  const [showDiscovery, setShowDiscovery] = useState(false);
   const { toast } = useToast();
 
   // Fetch user identifiers and jurisdiction when dialog opens
@@ -123,7 +126,7 @@ export const DeletionRequestDialog = ({
       // Check service catalog for verified email
       const { data: serviceData } = await supabase
         .from("service_catalog")
-        .select("privacy_email, contact_verified, privacy_form_url")
+        .select("privacy_email, contact_verified, privacy_form_url, domain")
         .eq("id", service.id)
         .single();
 
@@ -133,6 +136,10 @@ export const DeletionRequestDialog = ({
           contactMethod: "email",
           needsVerification: false,
         });
+        // Update service with domain if not already set
+        if (serviceData.domain && !service.domain) {
+          (service as any).domain = serviceData.domain;
+        }
         return;
       }
 
@@ -159,6 +166,19 @@ export const DeletionRequestDialog = ({
         needsVerification: true,
       });
     }
+  };
+
+  const handleDiscoverContact = () => {
+    setShowDiscovery(true);
+  };
+
+  const handleContactDiscovered = () => {
+    // Refresh contact status after discovery
+    checkContactStatus();
+    toast({
+      title: "Contact Verified",
+      description: "You can now proceed with the deletion request",
+    });
   };
 
   const getTemplateType = (jurisdiction: string): string => {
@@ -343,6 +363,18 @@ export const DeletionRequestDialog = ({
 
   return (
     <>
+      <ContactDiscoveryDialog
+        open={showDiscovery}
+        onOpenChange={setShowDiscovery}
+        service={service ? { 
+          id: service.id, 
+          name: service.name, 
+          domain: service.domain || "",
+          logo_url: service.logo_url 
+        } : null}
+        onContactVerified={handleContactDiscovered}
+      />
+
       <EmailPreviewModal
         open={showPreview}
         onOpenChange={setShowPreview}
@@ -375,11 +407,21 @@ export const DeletionRequestDialog = ({
             </DialogHeader>
 
             {contactStatus.needsVerification ? (
-              <Alert className="border-red-500/50 bg-red-500/10">
-                <AlertTriangle className="h-4 w-4 text-red-600" />
-                <AlertDescription className="text-sm">
-                  <strong>Contact Not Verified:</strong> {service.name} does not have a verified contact email in our system. 
-                  We're working to verify contacts for all services. Please check back soon or contact the service manually.
+              <Alert className="border-amber-500/50 bg-amber-500/10">
+                <AlertTriangle className="h-4 w-4 text-amber-600" />
+                <AlertDescription className="space-y-2">
+                  <div>
+                    <strong>Contact Not Verified:</strong> {service.name} does not have a verified contact email in our system.
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleDiscoverContact}
+                    className="gap-2"
+                  >
+                    <Sparkles className="h-4 w-4" />
+                    Discover Contact with AI
+                  </Button>
                 </AlertDescription>
               </Alert>
             ) : contactStatus.contactMethod === "form" ? (
