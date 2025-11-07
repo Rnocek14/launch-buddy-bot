@@ -30,6 +30,15 @@ interface StructuredError {
   details?: any;
 }
 
+// Phase 1.1: Constants
+const USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+const STRIP_PARAMS = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'gclid', 'fbclid', 'ref', 'ref_src', 'referrer'];
+const REDACT_PARAMS = ['email', 'e', 'token', 'auth', 'code', 'sid', 'session', 'user', 'uid'];
+const MAX_REDIRECT_DEPTH = 1;
+const VALIDATION_TIMEOUT_MS = 5000;
+const FETCH_TIMEOUT_MS = 7000;
+const DOMAIN_BUDGET_MS = 25000;
+
 // Phase 1.1: i18n keyword expansion
 const PRIVACY_KEYWORDS = {
   en: {
@@ -64,94 +73,154 @@ const PRIVACY_KEYWORDS = {
   }
 };
 
-// Phase 1.1: URL canonicalization
-function canonicalizeUrl(url: string, baseDomain: string): string {
+// Phase 1.1 Refinement #2: <base> tag support
+function resolveAgainstBase(href: string, docUrl: string, doc?: any): string {
   try {
-    // Handle relative URLs
-    if (!url.startsWith('http')) {
-      if (url.startsWith('//')) {
-        url = `https:${url}`;
-      } else if (url.startsWith('/')) {
-        url = `https://${baseDomain}${url}`;
-      } else if (!url.startsWith('#')) {
-        url = `https://${baseDomain}/${url}`;
-      } else {
-        return ''; // Skip fragment-only links
+    const baseTag = doc?.querySelector?.('base[href]');
+    const baseHref = baseTag?.getAttribute?.('href') || docUrl;
+    return new URL(href, baseHref).toString();
+  } catch {
+    return '';
+  }
+}
+
+// Phase 1.1 Refinement #3: www/apex normalization
+function normalizeHost(hostname: string): string {
+  const lower = hostname.toLowerCase();
+  return lower.startsWith('www.') ? lower.slice(4) : lower;
+}
+
+// Phase 1.1 Refinement #3: URL key for deduplication (normalizes www/apex)
+function urlKey(urlString: string): string {
+  try {
+    const url = new URL(urlString);
+    url.hostname = normalizeHost(url.hostname);
+    url.hash = ''; // ignore fragments for dedupe
+    return url.toString();
+  } catch {
+    return urlString;
+  }
+}
+
+// Phase 1.1 Refinement #6: Logging hygiene
+function sanitizeForLog(urlString: string): string {
+  try {
+    const url = new URL(urlString);
+    url.hash = ''; // strip fragments
+    
+    // Redact sensitive params
+    for (const key of [...url.searchParams.keys()]) {
+      if (REDACT_PARAMS.includes(key.toLowerCase())) {
+        url.searchParams.set(key, 'REDACTED');
       }
     }
+    return url.toString();
+  } catch {
+    return '';
+  }
+}
 
-    const urlObj = new URL(url);
+// Phase 1.1: URL canonicalization (enhanced with base tag support)
+function canonicalizeUrl(href: string, pageUrl: string, doc?: any): string {
+  try {
+    // Resolve relative URL (respecting <base> tag)
+    const abs = resolveAgainstBase(href, pageUrl, doc);
+    if (!abs) return '';
     
-    // Lowercase host
-    urlObj.hostname = urlObj.hostname.toLowerCase();
+    const urlObj = new URL(abs);
     
-    // Remove tracking parameters
-    const trackingParams = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'ref', 'referrer', 'fbclid', 'gclid'];
-    trackingParams.forEach(param => urlObj.searchParams.delete(param));
+    // Phase 1.1 Refinement #3: Normalize host (www/apex)
+    urlObj.hostname = normalizeHost(urlObj.hostname);
+    
+    // Phase 1.1 Refinement #2: Strip tracking parameters
+    STRIP_PARAMS.forEach(param => urlObj.searchParams.delete(param));
+    
+    // Drop fragments for fetch attempts (keep for display only)
+    urlObj.hash = '';
     
     // Remove trailing slash (but keep if it's just the domain)
     if (urlObj.pathname.length > 1 && urlObj.pathname.endsWith('/')) {
       urlObj.pathname = urlObj.pathname.slice(0, -1);
     }
     
-    // Normalize locale paths (but keep them for now - we'll try both)
-    // Just return the canonical version
     return urlObj.toString();
   } catch (e) {
-    console.warn(`[Canonicalize] Invalid URL: ${url}`, e);
+    console.warn(`[Canonicalize] Invalid URL: ${href}`, e);
     return '';
   }
 }
 
-// Phase 1.1: Enhanced validation ladder
-async function smartValidateUrl(url: string): Promise<{ valid: boolean; status?: number; contentType?: string; isPDF?: boolean; redirectUrl?: string }> {
+// Phase 1.1 Refinement #4: Enhanced validation ladder
+interface ValidateResult {
+  valid: boolean;
+  status?: number;
+  contentType?: string;
+  isPDF?: boolean;
+  finalUrl?: string;
+  redirected?: boolean;
+}
+
+async function smartValidateUrl(url: string, depth = 0): Promise<ValidateResult> {
+  // Phase 1.1 Refinement #4: Cap redirects to prevent loops
+  if (depth > MAX_REDIRECT_DEPTH) {
+    console.warn(`[Validate] Exceeded max redirect depth (${MAX_REDIRECT_DEPTH}) for ${sanitizeForLog(url)}`);
+    return { valid: false, status: 310 }; // Custom status for "too many redirects"
+  }
+
   try {
     // Try HEAD first
     let response = await fetch(url, {
       method: 'HEAD',
-      signal: AbortSignal.timeout(5000),
-      redirect: 'manual', // Don't follow redirects automatically
+      signal: AbortSignal.timeout(VALIDATION_TIMEOUT_MS),
+      redirect: 'manual', // Handle redirects manually
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'User-Agent': USER_AGENT,
+        'Accept-Language': 'en-US,en;q=0.9',
       }
     });
 
-    // Handle redirects (301, 302, 307, 308)
+    // Phase 1.1 Refinement #4: Follow one redirect manually
     if ([301, 302, 307, 308].includes(response.status)) {
       const location = response.headers.get('location');
       if (location) {
         const redirectUrl = location.startsWith('http') ? location : new URL(location, url).toString();
-        console.log(`[Validate] Following redirect: ${url} → ${redirectUrl}`);
-        return await smartValidateUrl(redirectUrl); // Follow one redirect
+        console.log(`[Validate] Following redirect: ${sanitizeForLog(url)} → ${sanitizeForLog(redirectUrl)}`);
+        return await smartValidateUrl(redirectUrl, depth + 1);
       }
     }
 
-    // If HEAD blocked (405, 403), try GET with Range header
-    if (!response.ok && [405, 403].includes(response.status)) {
-      console.log(`[Validate] HEAD blocked (${response.status}), trying GET with Range...`);
+    // Phase 1.1 Refinement #4: If HEAD blocked or returns empty content, try GET with Range
+    const headEmpty = response.headers.get('content-length') === '0';
+    if (!response.ok || headEmpty || [403, 405].includes(response.status)) {
+      console.log(`[Validate] HEAD ${response.ok ? 'empty' : 'blocked'} (${response.status}), trying GET with Range...`);
       response = await fetch(url, {
         method: 'GET',
         headers: {
           'Range': 'bytes=0-8192',
-          'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'User-Agent': USER_AGENT,
+          'Accept-Language': 'en-US,en;q=0.9',
         },
-        signal: AbortSignal.timeout(5000),
+        signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
         redirect: 'follow'
       });
     }
 
     const contentType = response.headers.get('content-type') || '';
-    const isPDF = contentType.includes('application/pdf');
+    const isPDF = contentType.toLowerCase().includes('application/pdf');
+    
+    // Phase 1.1 Refinement #4: Accept 206 (partial content) as valid
+    const valid = response.ok || response.status === 206;
 
     return {
-      valid: response.ok,
+      valid,
       status: response.status,
       contentType,
       isPDF,
-      redirectUrl: response.url !== url ? response.url : undefined
+      finalUrl: response.url !== url ? response.url : undefined,
+      redirected: response.url !== url
     };
   } catch (error) {
-    console.warn(`[Validate] Error validating ${url}:`, error);
+    console.warn(`[Validate] Error validating ${sanitizeForLog(url)}:`, error);
     return { valid: false };
   }
 }
@@ -240,7 +309,7 @@ function isPrivacyPolicy(html: string, url: string): { isPolicy: boolean; score:
 }
 
 // Phase 1.1 Enhanced: Score and extract privacy policy URLs from HTML using DOM parser
-function extractAndScorePrivacyLinks(html: string, baseDomain: string): ScoredLink[] {
+function extractAndScorePrivacyLinks(html: string, baseDomain: string, pageUrl: string): ScoredLink[] {
   const scoredLinks: ScoredLink[] = [];
   
   try {
@@ -250,16 +319,6 @@ function extractAndScorePrivacyLinks(html: string, baseDomain: string): ScoredLi
     // Detect site language from <html lang="...">
     const htmlLang = doc.documentElement.getAttribute('lang')?.substring(0, 2).toLowerCase() || 'en';
     const languageKeywords = (PRIVACY_KEYWORDS as any)[htmlLang] || PRIVACY_KEYWORDS.en;
-
-    // Extract footer for higher scoring (proper DOM query)
-    const footerElements = doc.querySelectorAll('footer');
-    const footerLinks = new Set<string>();
-    footerElements.forEach((footer: any) => {
-      const links = footer.querySelectorAll('a');
-      links.forEach((link: any) => {
-        if (link.href) footerLinks.add(link.href);
-      });
-    });
 
     // Extract all <a> tags using DOM
     const allAnchors = doc.querySelectorAll('a');
@@ -280,8 +339,8 @@ function extractAndScorePrivacyLinks(html: string, baseDomain: string): ScoredLi
         return;
       }
 
-      // Canonicalize URL
-      const canonicalHref = canonicalizeUrl(href, baseDomain);
+      // Phase 1.1 Refinement #2: Canonicalize URL with base tag support
+      const canonicalHref = canonicalizeUrl(href, pageUrl, doc);
       if (!canonicalHref) return;
 
       // Filter out pure fragment links
@@ -311,8 +370,8 @@ function extractAndScorePrivacyLinks(html: string, baseDomain: string): ScoredLi
         if (combined.includes(keyword.toLowerCase())) score += 5;
       });
 
-      // Location bonus - check if this anchor's href is in footer
-      const isInFooter = footerLinks.has(canonicalHref) || footerLinks.has(href);
+      // Phase 1.1 Refinement #1: DOM ancestry footer check (more reliable)
+      const isInFooter = !!(anchor.closest && anchor.closest('footer'));
       const location = isInFooter ? 'footer' : 'body';
       if (isInFooter) score += 10;
 
@@ -329,7 +388,10 @@ function extractAndScorePrivacyLinks(html: string, baseDomain: string): ScoredLi
 
       // Penalize if URL is too generic
       const urlPath = canonicalHref.split('?')[0];
-      if (urlPath.endsWith('/') || urlPath === `https://${baseDomain}` || urlPath === `https://www.${baseDomain}`) {
+      const normalizedDomain = normalizeHost(baseDomain);
+      if (urlPath.endsWith('/') || 
+          urlPath === `https://${normalizedDomain}` || 
+          urlPath === `https://www.${normalizedDomain}`) {
         score -= 10;
       }
 
@@ -342,11 +404,12 @@ function extractAndScorePrivacyLinks(html: string, baseDomain: string): ScoredLi
     // Sort by score descending
     scoredLinks.sort((a, b) => b.score - a.score);
 
-    // Deduplicate
+    // Phase 1.1 Refinement #3: Deduplicate using urlKey (normalizes www/apex)
     const seen = new Set<string>();
     const uniqueLinks = scoredLinks.filter(link => {
-      if (seen.has(link.url)) return false;
-      seen.add(link.url);
+      const key = urlKey(link.url);
+      if (seen.has(key)) return false;
+      seen.add(key);
       return true;
     });
 
@@ -355,12 +418,12 @@ function extractAndScorePrivacyLinks(html: string, baseDomain: string): ScoredLi
     console.warn('[Link Extraction] Error parsing with DOM, falling back to regex:', e);
     
     // Fallback to regex-based extraction if DOM parsing fails
-    return extractAndScorePrivacyLinksRegex(html, baseDomain);
+    return extractAndScorePrivacyLinksRegex(html, baseDomain, pageUrl);
   }
 }
 
 // Fallback: Regex-based extraction (kept for backward compatibility)
-function extractAndScorePrivacyLinksRegex(html: string, baseDomain: string): ScoredLink[] {
+function extractAndScorePrivacyLinksRegex(html: string, baseDomain: string, pageUrl: string): ScoredLink[] {
   const scoredLinks: ScoredLink[] = [];
   
   const highPriorityKeywords = ['privacy-policy', 'privacy policy', 'privacypolicy', 'data-request', 'dsar', 'delete-data'];
@@ -382,7 +445,7 @@ function extractAndScorePrivacyLinksRegex(html: string, baseDomain: string): Sco
       continue;
     }
     
-    const canonicalHref = canonicalizeUrl(href, baseDomain);
+    const canonicalHref = canonicalizeUrl(href, pageUrl);
     if (!canonicalHref) continue;
     
     let score = 0;
@@ -409,7 +472,8 @@ function extractAndScorePrivacyLinksRegex(html: string, baseDomain: string): Sco
     }
     
     const urlPath = canonicalHref.split('?')[0];
-    if (urlPath.endsWith('/') || urlPath === `https://${baseDomain}`) {
+    const normalizedDomain = normalizeHost(baseDomain);
+    if (urlPath.endsWith('/') || urlPath === `https://${normalizedDomain}`) {
       score -= 10;
     }
     
@@ -422,8 +486,9 @@ function extractAndScorePrivacyLinksRegex(html: string, baseDomain: string): Sco
   
   const seen = new Set<string>();
   return scoredLinks.filter(link => {
-    if (seen.has(link.url)) return false;
-    seen.add(link.url);
+    const key = urlKey(link.url);
+    if (seen.has(key)) return false;
+    seen.add(key);
     return true;
   });
 }
@@ -435,18 +500,27 @@ async function quickValidateUrl(url: string): Promise<{ valid: boolean; status?:
 }
 
 // Phase 1: Enhanced fetch with smart link discovery and scoring
-async function trySimpleFetch(urlsToTry: string[], domain: string): Promise<{ content: string; url: string; discoveredUrls?: string[] } | null> {
+async function trySimpleFetch(urlsToTry: string[], domain: string): Promise<{ content: string; url: string; discoveredUrls?: string[]; policy_type?: string } | null> {
   const attemptedUrls: string[] = [];
   const failedUrls: Map<string, number> = new Map();
+  const startTime = Date.now();
+  
+  // Phase 1.1 Refinement: Budget timer to prevent runaway discovery
+  const budgetOk = () => (Date.now() - startTime) < DOMAIN_BUDGET_MS;
   
   for (const url of urlsToTry) {
-    console.log(`[Phase 1] Trying simple fetch: ${url}`);
+    if (!budgetOk()) {
+      console.warn(`[Phase 1] Budget exceeded (${DOMAIN_BUDGET_MS}ms), stopping discovery`);
+      break;
+    }
+    
+    console.log(`[Phase 1] Trying simple fetch: ${sanitizeForLog(url)}`);
     attemptedUrls.push(url);
     
     try {
       const pageResponse = await fetch(url, {
         headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'User-Agent': USER_AGENT,
           'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
           'Accept-Language': 'en-US,en;q=0.9',
         },
@@ -455,30 +529,55 @@ async function trySimpleFetch(urlsToTry: string[], domain: string): Promise<{ co
       });
 
       if (pageResponse.ok) {
+        // Phase 1.1 Refinement #5: Check for PDF early
+        const contentType = pageResponse.headers.get('content-type') || '';
+        if (contentType.toLowerCase().includes('application/pdf')) {
+          console.log(`[Phase 1] ✓ Found PDF policy: ${sanitizeForLog(url)}`);
+          return {
+            content: '',
+            url,
+            discoveredUrls: attemptedUrls,
+            policy_type: 'pdf'
+          };
+        }
+        
         const html = await pageResponse.text();
         
         // If this is the homepage or a generic page, extract and score privacy links
         if (url.includes(domain) && !url.match(/privacy|legal|terms|dsar|data-request/i)) {
-          console.log(`[Phase 1] Analyzing page for privacy links: ${url}`);
-          const scoredLinks = extractAndScorePrivacyLinks(html, domain);
+          console.log(`[Phase 1] Analyzing page for privacy links: ${sanitizeForLog(url)}`);
+          const scoredLinks = extractAndScorePrivacyLinks(html, domain, url);
           
           if (scoredLinks.length > 0) {
             console.log(`[Phase 1] Found ${scoredLinks.length} scored privacy links:`);
             scoredLinks.slice(0, 5).forEach(link => {
-              console.log(`  - [Score: ${link.score}] ${link.url} (${link.linkText})`);
+              console.log(`  - [Score: ${link.score}] ${sanitizeForLog(link.url)} (${link.linkText})`);
             });
             
             // Try top 5 scored links
             for (const link of scoredLinks.slice(0, 5)) {
-              // Quick validate before trying
-              const validation = await quickValidateUrl(link.url);
+              if (!budgetOk()) break;
+              
+              // Phase 1.1 Refinement #4 & #5: Quick validate with PDF detection
+              const validation = await smartValidateUrl(link.url);
               if (!validation.valid) {
-                console.log(`[Phase 1] Skipping invalid URL (${validation.status}): ${link.url}`);
+                console.log(`[Phase 1] Skipping invalid URL (${validation.status}): ${sanitizeForLog(link.url)}`);
                 failedUrls.set(link.url, validation.status || 0);
                 continue;
               }
               
-              console.log(`[Phase 1] Trying validated URL: ${link.url}`);
+              // Phase 1.1 Refinement #5: Handle PDF policies
+              if (validation.isPDF) {
+                console.log(`[Phase 1] ✓ Found PDF policy via link discovery: ${sanitizeForLog(link.url)}`);
+                return {
+                  content: '',
+                  url: validation.finalUrl || link.url,
+                  discoveredUrls: scoredLinks.slice(0, 10).map(l => l.url),
+                  policy_type: 'pdf'
+                };
+              }
+              
+              console.log(`[Phase 1] Trying validated URL: ${sanitizeForLog(link.url)}`);
               const result = await trySimpleFetch([link.url], domain);
               if (result) {
                 result.discoveredUrls = scoredLinks.slice(0, 10).map(l => l.url);
@@ -506,40 +605,42 @@ async function trySimpleFetch(urlsToTry: string[], domain: string): Promise<{ co
           // Phase 1.1: Use enhanced privacy policy detection
           const policyCheck = isPrivacyPolicy(html, url);
           
-          console.log(`[Phase 1] Privacy detection for ${url}:`);
+          console.log(`[Phase 1] Privacy detection for ${sanitizeForLog(url)}:`);
           console.log(`  Score: ${policyCheck.score}/100`);
           console.log(`  Is Policy: ${policyCheck.isPolicy}`);
           console.log(`  Reasons: ${policyCheck.reasons.join(', ')}`);
           
           if (policyCheck.isPolicy) {
-            console.log(`[Phase 1] ✓ Successfully fetched privacy content from: ${url} (${content.length} chars, score: ${policyCheck.score})`);
+            console.log(`[Phase 1] ✓ Successfully fetched privacy content from: ${sanitizeForLog(url)} (${content.length} chars, score: ${policyCheck.score})`);
             return { content, url, discoveredUrls: attemptedUrls };
           } else {
-            console.warn(`[Phase 1] Content doesn't appear to be a privacy policy: ${url} (score: ${policyCheck.score})`);
+            console.warn(`[Phase 1] Content doesn't appear to be a privacy policy: ${sanitizeForLog(url)} (score: ${policyCheck.score})`);
             
             // If score is borderline (20-29), still try it but log the concern
             if (policyCheck.score >= 20) {
-              console.log(`[Phase 1] ⚠️  Borderline score, will try it anyway: ${url}`);
+              console.log(`[Phase 1] ⚠️  Borderline score, will try it anyway: ${sanitizeForLog(url)}`);
               return { content, url, discoveredUrls: attemptedUrls };
             }
           }
         } else {
-          console.warn(`[Phase 1] Content too short from ${url} (${content.length} chars)`);
+          console.warn(`[Phase 1] Content too short from ${sanitizeForLog(url)} (${content.length} chars)`);
         }
       } else {
-        console.warn(`[Phase 1] HTTP ${pageResponse.status}: ${url}`);
+        console.warn(`[Phase 1] HTTP ${pageResponse.status}: ${sanitizeForLog(url)}`);
         failedUrls.set(url, pageResponse.status);
       }
     } catch (fetchError) {
       const errorMsg = fetchError instanceof Error ? fetchError.message : String(fetchError);
-      console.warn(`[Phase 1] Error fetching ${url}: ${errorMsg}`);
+      console.warn(`[Phase 1] Error fetching ${sanitizeForLog(url)}: ${errorMsg}`);
       failedUrls.set(url, 0);
     }
   }
   
   // Log failed URLs summary
   if (failedUrls.size > 0) {
-    console.log(`[Phase 1] Failed URLs summary:`, Object.fromEntries(failedUrls));
+    console.log(`[Phase 1] Failed URLs summary:`, Object.fromEntries(
+      Array.from(failedUrls.entries()).map(([url, status]) => [sanitizeForLog(url), status])
+    ));
   }
   
   return null;
@@ -720,7 +821,49 @@ serve(async (req) => {
       throw new Error(`Unable to find privacy policy. Tried ${urlsToTry.length} URL(s) with both simple and JavaScript rendering. Please provide a direct URL to the privacy policy.`);
     }
 
-    const { content: privacyContent, url: successUrl } = result;
+    const { content: privacyContent, url: successUrl, policy_type } = result;
+
+    // Phase 1.1 Refinement #5: Handle PDF policies differently
+    if (policy_type === 'pdf') {
+      console.log(`[PDF Policy] Found PDF policy at ${sanitizeForLog(successUrl)}`);
+      console.log(`[PDF Policy] Storing PDF URL for manual review - AI text extraction not implemented yet`);
+      
+      // Store the PDF URL as a form contact for now (user can open and review)
+      const { data: insertedContacts, error: insertError } = await supabase
+        .from('privacy_contacts')
+        .insert([{
+          service_id: service_id,
+          contact_type: 'form',
+          value: successUrl,
+          confidence: 'medium',
+          reasoning: 'Privacy policy is available as a PDF document. Manual review required to extract contact information.',
+          verified: false,
+          added_by: 'ai',
+          source_url: successUrl,
+        }])
+        .select();
+
+      if (insertError) {
+        console.error('Error inserting PDF policy contact:', insertError);
+        throw insertError;
+      }
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          service: service.name,
+          contacts_found: 1,
+          contacts: insertedContacts,
+          method_used: methodUsed,
+          policy_type: 'pdf',
+          message: 'Privacy policy is a PDF. Please review manually for contact information.'
+        }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200 
+        }
+      );
+    }
 
     // Call OpenAI with tool calling for structured extraction
     const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
