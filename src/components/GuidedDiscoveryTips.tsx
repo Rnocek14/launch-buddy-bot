@@ -60,7 +60,7 @@ export const GuidedDiscoveryTips = ({ domain }: GuidedDiscoveryTipsProps) => {
           href={`https://www.${domain}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center justify-center gap-2 px-4 py-3 bg-white border border-border rounded-lg hover:bg-accent hover:border-primary transition-all group"
+          className="flex items-center justify-center gap-2 px-4 py-3 bg-primary/10 text-foreground border border-border rounded-lg hover:bg-primary/20 hover:border-primary transition-all group"
         >
           <ExternalLink className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
           <span className="text-sm font-medium">Open Website</span>
@@ -71,7 +71,7 @@ export const GuidedDiscoveryTips = ({ domain }: GuidedDiscoveryTipsProps) => {
             href={privacyPolicyUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center justify-center gap-2 px-4 py-3 bg-white border border-border rounded-lg hover:bg-accent hover:border-primary transition-all group"
+            className="flex items-center justify-center gap-2 px-4 py-3 bg-primary/10 text-foreground border border-border rounded-lg hover:bg-primary/20 hover:border-primary transition-all group"
           >
             <ExternalLink className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
             <span className="text-sm font-medium">Try Privacy Policy</span>

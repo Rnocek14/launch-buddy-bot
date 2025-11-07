@@ -16,7 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, CheckCircle2, XCircle, Mail, Globe, Phone, AlertTriangle, Sparkles, PlusCircle, RefreshCw, Search, X } from "lucide-react";
+import { Loader2, CheckCircle2, XCircle, Mail, Globe, Phone, AlertTriangle, Sparkles, PlusCircle, RefreshCw, Search } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ServiceTypeGuides } from "./ServiceTypeGuides";
 import { GuidedDiscoveryTips } from "./GuidedDiscoveryTips";
@@ -62,7 +62,6 @@ export const ContactDiscoveryDialog = ({
   const [error, setError] = useState<string | null>(null);
   const [showManualEntry, setShowManualEntry] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [showGuidedDiscovery, setShowGuidedDiscovery] = useState(false);
   
   // Manual entry form state
   const [manualContactType, setManualContactType] = useState<"email" | "form" | "phone">("email");
@@ -162,9 +161,9 @@ export const ContactDiscoveryDialog = ({
       
       setError(errorMessage);
       
-      // Show guided discovery for permanent failures
+      // Show manual entry with guided tips for permanent failures
       if (showGuidedMode) {
-        setShowGuidedDiscovery(true);
+        setShowManualEntry(true);
       }
     } finally {
       setDiscovering(false);
@@ -462,7 +461,6 @@ export const ContactDiscoveryDialog = ({
         setSelectedContact(null);
         setError(null);
         setShowManualEntry(false);
-        setShowGuidedDiscovery(false);
         setManualValue("");
         setManualNotes("");
         setValidationError(null);
@@ -515,8 +513,8 @@ export const ContactDiscoveryDialog = ({
           </div>
         )}
 
-        {/* Error State with Guided Discovery */}
-        {error && !discovering && !showGuidedDiscovery && (
+        {/* Error State - Show only if manual entry not open */}
+        {error && !discovering && !showManualEntry && (
           <div className="space-y-4">
             <Alert variant="default" className="border-amber-200 bg-amber-50">
               <AlertTriangle className="h-4 w-4 text-amber-600" />
@@ -535,7 +533,7 @@ export const ContactDiscoveryDialog = ({
                   <RefreshCw className="mr-2 h-4 w-4" />
                   Try Again
                 </Button>
-                <Button onClick={() => setShowGuidedDiscovery(true)} variant="default" size="sm">
+                <Button onClick={() => setShowManualEntry(true)} variant="default" size="sm">
                   <Search className="mr-2 h-4 w-4" />
                   Help Find Contact
                 </Button>
@@ -544,54 +542,19 @@ export const ContactDiscoveryDialog = ({
           </div>
         )}
 
-        {/* Guided Discovery Mode */}
-        {showGuidedDiscovery && !showManualEntry && service && (
+        {/* Manual Entry Form with Guided Tips */}
+        {showManualEntry && (
           <div className="space-y-4">
-            <div className="text-center space-y-2 pb-4 border-b">
-              <h3 className="font-semibold text-lg">Let's Find the Privacy Contact Together</h3>
-              <p className="text-sm text-muted-foreground">
-                We'll guide you through finding {service.name}'s privacy contact information
+            <div className="pb-3 border-b">
+              <h3 className="text-sm font-semibold">Let's Find the Contact Together</h3>
+              <p className="text-xs text-muted-foreground mt-1">
+                Follow the steps below, then submit what you find
               </p>
             </div>
 
             <GuidedDiscoveryTips domain={service.domain} />
 
-            <div className="pt-2">
-              <Button 
-                onClick={() => setShowManualEntry(true)} 
-                className="w-full"
-                size="lg"
-              >
-                <CheckCircle2 className="mr-2 h-5 w-5" />
-                I Found the Contact - Submit It
-              </Button>
-            </div>
-          </div>
-        )}
-        
-        {/* Manual Entry Form with Service-Specific Guidance */}
-        {showManualEntry && service && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b">
-              <div>
-                <h3 className="text-sm font-semibold">Submit Privacy Contact for {service.name}</h3>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Fill in what you found - we'll review and add it to our database
-                </p>
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setShowManualEntry(false);
-                  setShowGuidedDiscovery(true);
-                }}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-
-            <ServiceTypeGuides 
+            <ServiceTypeGuides
               serviceName={service.name}
               domain={service.domain}
               contactType={manualContactType}
