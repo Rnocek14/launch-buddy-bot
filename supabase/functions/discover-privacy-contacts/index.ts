@@ -14,6 +14,146 @@ interface ContactFinding {
   reasoning: string;
 }
 
+// Helper: Extract privacy policy URLs from HTML
+function extractPrivacyLinksFromHTML(html: string, baseDomain: string): string[] {
+  const urls: string[] = [];
+  
+  // Look for <link rel="privacy-policy"> or similar
+  const linkRegex = /<link[^>]*rel=["']privacy[-_]?policy["'][^>]*href=["']([^"']+)["']/gi;
+  let match;
+  while ((match = linkRegex.exec(html)) !== null) {
+    urls.push(match[1]);
+  }
+  
+  // Look for <a> tags with privacy-related text
+  const anchorRegex = /<a[^>]*href=["']([^"']*(?:privacy|legal|terms)[^"']*)["'][^>]*>([^<]*(?:privacy|data\s+protection)[^<]*)<\/a>/gi;
+  while ((match = anchorRegex.exec(html)) !== null) {
+    if (!match[1].includes('mailto:') && !match[1].includes('javascript:')) {
+      urls.push(match[1]);
+    }
+  }
+  
+  // Resolve relative URLs
+  return urls.map(url => {
+    if (url.startsWith('http')) return url;
+    if (url.startsWith('//')) return `https:${url}`;
+    if (url.startsWith('/')) return `https://${baseDomain}${url}`;
+    return `https://${baseDomain}/${url}`;
+  });
+}
+
+// Phase 1: Simple fetch with enhanced URL discovery
+async function trySimpleFetch(urlsToTry: string[], domain: string): Promise<{ content: string; url: string } | null> {
+  for (const url of urlsToTry) {
+    console.log(`[Phase 1] Trying simple fetch: ${url}`);
+    
+    try {
+      const pageResponse = await fetch(url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (compatible; PrivacyContactBot/1.0)',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        },
+        redirect: 'follow',
+        signal: AbortSignal.timeout(15000) // 15s timeout
+      });
+
+      if (pageResponse.ok) {
+        const html = await pageResponse.text();
+        
+        // If this is the homepage or a generic page, try to extract privacy policy links
+        if (url.includes(domain) && !url.match(/privacy|legal|terms/i)) {
+          console.log(`[Phase 1] Parsing homepage for privacy links...`);
+          const extractedUrls = extractPrivacyLinksFromHTML(html, domain);
+          if (extractedUrls.length > 0) {
+            console.log(`[Phase 1] Found ${extractedUrls.length} privacy links in HTML, trying them...`);
+            // Recursively try the extracted URLs
+            for (const extractedUrl of extractedUrls.slice(0, 3)) { // Try top 3
+              const result = await trySimpleFetch([extractedUrl], domain);
+              if (result) return result;
+            }
+          }
+        }
+        
+        // Strip HTML for AI processing
+        const content = html
+          .replace(/<script[^>]*>.*?<\/script>/gis, '')
+          .replace(/<style[^>]*>.*?<\/style>/gis, '')
+          .replace(/<[^>]+>/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim()
+          .substring(0, 8000);
+        
+        if (content.length > 200) { // Ensure we got meaningful content
+          console.log(`[Phase 1] Successfully fetched from: ${url} (${content.length} chars)`);
+          return { content, url };
+        } else {
+          console.warn(`[Phase 1] Content too short from ${url}, trying next...`);
+        }
+      } else {
+        console.warn(`[Phase 1] Failed: ${url} - Status ${pageResponse.status}`);
+      }
+    } catch (fetchError) {
+      const errorMsg = fetchError instanceof Error ? fetchError.message : String(fetchError);
+      console.warn(`[Phase 1] Error fetching ${url}:`, errorMsg);
+    }
+  }
+  
+  return null;
+}
+
+// Phase 2: Browserless.io fallback for JavaScript-heavy sites
+async function tryBrowserlessFetch(urlsToTry: string[], browserlessApiKey: string): Promise<{ content: string; url: string } | null> {
+  console.log('[Phase 2] Falling back to Browserless.io for JavaScript rendering...');
+  
+  for (const url of urlsToTry) {
+    console.log(`[Phase 2] Trying Browserless: ${url}`);
+    
+    try {
+      const response = await fetch('https://chrome.browserless.io/content', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache',
+        },
+        body: JSON.stringify({
+          token: browserlessApiKey,
+          url: url,
+          waitFor: 2000, // Wait 2s for JS to load
+          gotoOptions: {
+            waitUntil: 'networkidle2',
+            timeout: 30000
+          }
+        })
+      });
+
+      if (response.ok) {
+        const html = await response.text();
+        
+        // Strip HTML for AI processing
+        const content = html
+          .replace(/<script[^>]*>.*?<\/script>/gis, '')
+          .replace(/<style[^>]*>.*?<\/style>/gis, '')
+          .replace(/<[^>]+>/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim()
+          .substring(0, 8000);
+        
+        if (content.length > 200) {
+          console.log(`[Phase 2] Successfully fetched via Browserless: ${url} (${content.length} chars)`);
+          return { content, url };
+        }
+      } else {
+        console.warn(`[Phase 2] Browserless failed for ${url}: ${response.status}`);
+      }
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      console.error(`[Phase 2] Browserless error for ${url}:`, errorMsg);
+    }
+  }
+  
+  return null;
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -36,8 +176,6 @@ serve(async (req) => {
       throw new Error('Authentication failed');
     }
 
-    // Allow all authenticated users (not just admins)
-
     const { service_id, privacy_url } = await req.json();
 
     if (!service_id) {
@@ -55,60 +193,65 @@ serve(async (req) => {
       throw new Error('Service not found');
     }
 
-    console.log(`Discovering privacy contacts for: ${service.name}`);
+    console.log(`=== Discovering privacy contacts for: ${service.name} (${service.domain}) ===`);
 
-    // Try multiple common privacy policy URL patterns
+    // Build comprehensive URL list with Phase 1 enhancements
     const urlsToTry = privacy_url 
       ? [privacy_url]
       : [
+          // Explicit privacy form URL from catalog
           service.privacy_form_url,
+          
+          // .well-known standard (RFC 8615)
+          `https://${service.domain}/.well-known/privacy-policy.txt`,
+          `https://www.${service.domain}/.well-known/privacy-policy.txt`,
+          
+          // Common privacy policy paths
           `https://${service.domain}/privacy`,
           `https://${service.domain}/privacy-policy`,
+          `https://${service.domain}/privacy-notice`,
+          `https://${service.domain}/privacypolicy`,
+          
+          // Legal section paths
           `https://${service.domain}/legal/privacy`,
+          `https://${service.domain}/legal/privacy-policy`,
+          
+          // Help/Support section paths
+          `https://${service.domain}/help/privacy`,
+          `https://${service.domain}/support/privacy`,
+          
+          // With www subdomain
           `https://www.${service.domain}/privacy`,
           `https://www.${service.domain}/privacy-policy`,
+          `https://www.${service.domain}/legal/privacy`,
+          
+          // Try homepage for link extraction
+          `https://${service.domain}`,
+          `https://www.${service.domain}`,
         ].filter(Boolean);
 
-    let privacyContent = '';
-    let successUrl = '';
-    
-    // Try each URL until one works
-    for (const url of urlsToTry) {
-      console.log(`Trying: ${url}`);
-      
-      try {
-        const pageResponse = await fetch(url, {
-          headers: {
-            'User-Agent': 'Mozilla/5.0 (compatible; PrivacyContactBot/1.0)'
-          },
-          redirect: 'follow'
-        });
+    console.log(`Prepared ${urlsToTry.length} URLs to try`);
 
-        if (pageResponse.ok) {
-          const html = await pageResponse.text();
-          // Simple HTML stripping - just remove tags for AI processing
-          privacyContent = html
-            .replace(/<script[^>]*>.*?<\/script>/gis, '')
-            .replace(/<style[^>]*>.*?<\/style>/gis, '')
-            .replace(/<[^>]+>/g, ' ')
-            .replace(/\s+/g, ' ')
-            .substring(0, 8000); // Limit content length
-          
-          successUrl = url;
-          console.log(`Successfully fetched from: ${url}`);
-          break;
-        } else {
-          console.warn(`Failed to fetch ${url}: ${pageResponse.status}`);
-        }
-      } catch (fetchError) {
-        console.warn(`Error fetching ${url}:`, fetchError);
+    // Phase 1: Try simple fetch with enhanced URL discovery
+    let result = await trySimpleFetch(urlsToTry, service.domain);
+    
+    // Phase 2: If Phase 1 failed, try Browserless.io
+    if (!result) {
+      const browserlessApiKey = Deno.env.get('BROWSERLESS_API_KEY');
+      if (browserlessApiKey) {
+        console.log('[Strategy] Phase 1 failed, attempting Phase 2 with Browserless...');
+        result = await tryBrowserlessFetch(urlsToTry.slice(0, 5), browserlessApiKey); // Try top 5 URLs only
+      } else {
+        console.warn('[Strategy] BROWSERLESS_API_KEY not configured, skipping Phase 2');
       }
     }
 
-    // If all URLs failed, return error
-    if (!privacyContent) {
-      throw new Error(`Unable to find privacy policy. Tried ${urlsToTry.length} URL(s). Please provide a direct URL to the privacy policy.`);
+    // If both phases failed, return error
+    if (!result) {
+      throw new Error(`Unable to find privacy policy. Tried ${urlsToTry.length} URL(s) with both simple and JavaScript rendering. Please provide a direct URL to the privacy policy.`);
     }
+
+    const { content: privacyContent, url: successUrl } = result;
 
     // Call OpenAI with tool calling for structured extraction
     const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
@@ -240,14 +383,15 @@ Extract all relevant contact methods for data deletion requests.`;
       throw insertError;
     }
 
-    console.log(`Successfully stored ${insertedContacts.length} privacy contacts`);
+    console.log(`✅ Successfully stored ${insertedContacts.length} privacy contacts`);
 
     return new Response(
       JSON.stringify({
         success: true,
         service: service.name,
         contacts_found: insertedContacts.length,
-        contacts: insertedContacts
+        contacts: insertedContacts,
+        method_used: result.url.includes('browserless') ? 'browserless' : 'simple_fetch'
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -256,7 +400,7 @@ Extract all relevant contact methods for data deletion requests.`;
     );
 
   } catch (error: any) {
-    console.error('Error in discover-privacy-contacts:', error);
+    console.error('❌ Error in discover-privacy-contacts:', error);
     
     // Return different status codes based on error type
     const isNotFound = error.message?.includes('Unable to find privacy policy');
