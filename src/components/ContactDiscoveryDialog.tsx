@@ -16,8 +16,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, CheckCircle2, XCircle, Mail, Globe, Phone, AlertTriangle, Sparkles, PlusCircle } from "lucide-react";
+import { Loader2, CheckCircle2, XCircle, Mail, Globe, Phone, AlertTriangle, Sparkles, PlusCircle, RefreshCw, Search, X } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { ServiceTypeGuides } from "./ServiceTypeGuides";
+import { GuidedDiscoveryTips } from "./GuidedDiscoveryTips";
 
 // Validation schemas
 const emailSchema = z.string().trim().email("Invalid email address").max(255, "Email too long");
@@ -60,12 +62,18 @@ export const ContactDiscoveryDialog = ({
   const [error, setError] = useState<string | null>(null);
   const [showManualEntry, setShowManualEntry] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [showGuidedDiscovery, setShowGuidedDiscovery] = useState(false);
   
   // Manual entry form state
   const [manualContactType, setManualContactType] = useState<"email" | "form" | "phone">("email");
   const [manualValue, setManualValue] = useState("");
   const [manualNotes, setManualNotes] = useState("");
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [realtimeValidation, setRealtimeValidation] = useState<{
+    isValid: boolean;
+    message: string;
+    confidence: number;
+  } | null>(null);
   
   const { toast } = useToast();
 
@@ -112,31 +120,51 @@ export const ContactDiscoveryDialog = ({
     } catch (err: any) {
       console.error("Discovery error:", err);
       
-      // Parse the error to provide better feedback
-      let errorMessage = "Failed to discover contacts. Please try again.";
-      let errorType = "unknown";
+      let errorMessage = "We couldn't automatically discover privacy contacts.";
+      let showGuidedMode = true;
       
-      if (err.message) {
-        errorMessage = err.message;
+      // Try to parse structured error response from edge function
+      try {
+        const errorData = err.context?.body || err.body;
         
-        if (err.message.includes("Unable to find privacy policy")) {
-          errorType = "not_found";
-          errorMessage = `Could not locate ${service.name}'s privacy policy. Their privacy page may be at a non-standard URL or requires JavaScript to load.`;
-        } else if (err.message.includes("Authentication failed")) {
-          errorType = "auth";
-          errorMessage = "Authentication failed. Please sign in again.";
+        if (errorData?.error_type) {
+          switch (errorData.error_type) {
+            case 'bot_protection':
+              errorMessage = `${service.name} has security protections that prevent automated discovery. Many companies use anti-bot technology.`;
+              break;
+              
+            case 'privacy_policy_not_found':
+              errorMessage = `We couldn't locate ${service.name}'s privacy policy. It may be at an unusual URL or require a login.`;
+              break;
+              
+            case 'timeout':
+              errorMessage = `${service.name}'s website took too long to respond.`;
+              showGuidedMode = false;
+              break;
+              
+            case 'network_error':
+              errorMessage = `Having trouble connecting to ${service.name}. Please check your connection.`;
+              showGuidedMode = false;
+              break;
+              
+            case 'ai_error':
+              errorMessage = `Our AI analysis service is temporarily unavailable.`;
+              showGuidedMode = false;
+              break;
+              
+            default:
+              errorMessage = `Unable to automatically discover ${service.name}'s privacy contact.`;
+          }
         }
+      } catch (parseError) {
+        console.warn("Could not parse error response:", parseError);
       }
       
       setError(errorMessage);
       
-      // Only show toast for non-404 errors to avoid spam
-      if (errorType !== "not_found") {
-        toast({
-          title: "Discovery Failed",
-          description: errorMessage,
-          variant: "destructive",
-        });
+      // Show guided discovery for permanent failures
+      if (showGuidedMode) {
+        setShowGuidedDiscovery(true);
       }
     } finally {
       setDiscovering(false);
@@ -274,6 +302,105 @@ export const ContactDiscoveryDialog = ({
     }
   };
 
+  // Real-time validation with confidence scoring
+  const performRealtimeValidation = (type: string, value: string) => {
+    if (!value.trim() || !service) {
+      setRealtimeValidation(null);
+      return;
+    }
+
+    const trimmedValue = value.trim().toLowerCase();
+    const serviceDomain = service.domain.toLowerCase();
+    let isValid = false;
+    let message = "";
+    let confidence = 0;
+
+    try {
+      switch (type) {
+        case "email": {
+          emailSchema.parse(value);
+          const emailDomain = trimmedValue.split('@')[1] || '';
+          
+          const domainMatch = emailDomain.includes(serviceDomain) || serviceDomain.includes(emailDomain.replace('www.', ''));
+          const hasPrivacyKeywords = /(privacy|dpo|data.?protection|legal|compliance)/i.test(trimmedValue);
+          
+          if (domainMatch && hasPrivacyKeywords) {
+            isValid = true;
+            message = "Great match! Domain and keywords look correct.";
+            confidence = 95;
+          } else if (domainMatch) {
+            isValid = true;
+            message = "Domain matches, but consider checking if this is the privacy-specific contact.";
+            confidence = 70;
+          } else if (hasPrivacyKeywords) {
+            isValid = true;
+            message = "Keywords look good, but domain doesn't match - double check this is correct.";
+            confidence = 50;
+          } else {
+            isValid = true;
+            message = "Email format is valid, but verify this is for privacy requests.";
+            confidence = 30;
+          }
+          break;
+        }
+        
+        case "form": {
+          urlSchema.parse(value);
+          const urlObj = new URL(value);
+          const urlDomain = urlObj.hostname.toLowerCase().replace('www.', '');
+          const urlPath = urlObj.pathname.toLowerCase();
+          
+          const domainMatch = urlDomain.includes(serviceDomain) || serviceDomain.includes(urlDomain);
+          const hasPrivacyKeywords = /(privacy|data.?request|gdpr|ccpa|data.?rights|delete|opt.?out|do.?not.?sell)/i.test(urlPath);
+          const isHomepage = urlPath === '/' || urlPath === '';
+          
+          if (!domainMatch) {
+            isValid = false;
+            message = "⚠️ Domain doesn't match - make sure this is the right website!";
+            confidence = 10;
+          } else if (isHomepage) {
+            isValid = true;
+            message = "This looks like the homepage. Try to find a specific privacy request page.";
+            confidence = 20;
+          } else if (hasPrivacyKeywords) {
+            isValid = true;
+            message = "Perfect! This looks like a privacy request form.";
+            confidence = 95;
+          } else {
+            isValid = true;
+            message = "Domain matches. Verify this page has a privacy request form.";
+            confidence = 60;
+          }
+          break;
+        }
+        
+        case "phone": {
+          phoneSchema.parse(value);
+          const digitsOnly = trimmedValue.replace(/\D/g, '');
+          
+          if (digitsOnly.length >= 10 && digitsOnly.length <= 15) {
+            isValid = true;
+            message = "Phone format looks good. Make sure this is for privacy requests specifically.";
+            confidence = 60;
+          } else {
+            isValid = false;
+            message = "Phone number length seems unusual.";
+            confidence = 20;
+          }
+          break;
+        }
+      }
+
+      setRealtimeValidation({ isValid, message, confidence });
+    } catch {
+      setRealtimeValidation({
+        isValid: false,
+        message: type === "email" ? "Invalid email format" : type === "form" ? "Invalid URL format" : "Invalid phone format",
+        confidence: 0,
+      });
+    }
+  };
+
   const submitManualContact = async () => {
     if (!service) return;
     
@@ -335,9 +462,11 @@ export const ContactDiscoveryDialog = ({
         setSelectedContact(null);
         setError(null);
         setShowManualEntry(false);
+        setShowGuidedDiscovery(false);
         setManualValue("");
         setManualNotes("");
         setValidationError(null);
+        setRealtimeValidation(null);
       }, 300);
     }
   };
@@ -386,34 +515,87 @@ export const ContactDiscoveryDialog = ({
           </div>
         )}
 
-        {/* Error State */}
-        {error && !discovering && !showManualEntry && (
+        {/* Error State with Guided Discovery */}
+        {error && !discovering && !showGuidedDiscovery && (
           <div className="space-y-4">
-            <Alert variant="destructive">
-              <AlertTriangle className="h-4 w-4" />
-              <AlertDescription>{error}</AlertDescription>
+            <Alert variant="default" className="border-amber-200 bg-amber-50">
+              <AlertTriangle className="h-4 w-4 text-amber-600" />
+              <AlertDescription className="text-amber-900">
+                <p className="font-medium mb-1">Automatic Discovery Unavailable</p>
+                <p className="text-sm">{error}</p>
+              </AlertDescription>
             </Alert>
-            <div className="flex justify-center gap-2">
-              <Button onClick={startDiscovery} variant="outline">
-                Try Again
-              </Button>
-              <Button onClick={() => setShowManualEntry(true)} variant="secondary">
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Add Manually
+            
+            <div className="text-center space-y-3">
+              <p className="text-sm text-muted-foreground">
+                You can help us find the contact, or try discovery again later.
+              </p>
+              <div className="flex justify-center gap-2">
+                <Button onClick={startDiscovery} variant="outline" size="sm">
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  Try Again
+                </Button>
+                <Button onClick={() => setShowGuidedDiscovery(true)} variant="default" size="sm">
+                  <Search className="mr-2 h-4 w-4" />
+                  Help Find Contact
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Guided Discovery Mode */}
+        {showGuidedDiscovery && !showManualEntry && service && (
+          <div className="space-y-4">
+            <div className="text-center space-y-2 pb-4 border-b">
+              <h3 className="font-semibold text-lg">Let's Find the Privacy Contact Together</h3>
+              <p className="text-sm text-muted-foreground">
+                We'll guide you through finding {service.name}'s privacy contact information
+              </p>
+            </div>
+
+            <GuidedDiscoveryTips domain={service.domain} />
+
+            <div className="pt-2">
+              <Button 
+                onClick={() => setShowManualEntry(true)} 
+                className="w-full"
+                size="lg"
+              >
+                <CheckCircle2 className="mr-2 h-5 w-5" />
+                I Found the Contact - Submit It
               </Button>
             </div>
           </div>
         )}
         
-        {/* Manual Entry Form */}
-        {showManualEntry && (
+        {/* Manual Entry Form with Service-Specific Guidance */}
+        {showManualEntry && service && (
           <div className="space-y-4">
-            <Alert>
-              <PlusCircle className="h-4 w-4" />
-              <AlertDescription>
-                Submit a contact manually for admin review. Your submission will be verified before use.
-              </AlertDescription>
-            </Alert>
+            <div className="flex items-center justify-between pb-3 border-b">
+              <div>
+                <h3 className="text-sm font-semibold">Submit Privacy Contact for {service.name}</h3>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Fill in what you found - we'll review and add it to our database
+                </p>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setShowManualEntry(false);
+                  setShowGuidedDiscovery(true);
+                }}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+
+            <ServiceTypeGuides 
+              serviceName={service.name}
+              domain={service.domain}
+              contactType={manualContactType}
+            />
             
             <div className="space-y-4">
               <div className="space-y-2">
@@ -423,6 +605,7 @@ export const ContactDiscoveryDialog = ({
                   onValueChange={(value: "email" | "form" | "phone") => {
                     setManualContactType(value);
                     setValidationError(null);
+                    setRealtimeValidation(null);
                   }}
                 >
                   <SelectTrigger id="contact-type">
@@ -461,35 +644,80 @@ export const ContactDiscoveryDialog = ({
                   id="contact-value"
                   type={manualContactType === "email" ? "email" : manualContactType === "form" ? "url" : "tel"}
                   placeholder={
-                    manualContactType === "email" ? "privacy@example.com" :
-                    manualContactType === "form" ? "https://example.com/privacy/delete" :
-                    "+1 (555) 123-4567"
+                    manualContactType === "email" ? `privacy@${service.domain}` :
+                    manualContactType === "form" ? `https://${service.domain}/privacy-request` :
+                    "+1-XXX-XXX-XXXX"
                   }
                   value={manualValue}
                   onChange={(e) => {
                     setManualValue(e.target.value);
                     setValidationError(null);
+                    performRealtimeValidation(manualContactType, e.target.value);
                   }}
                   maxLength={manualContactType === "phone" ? 20 : manualContactType === "email" ? 255 : 500}
+                  className={
+                    realtimeValidation
+                      ? realtimeValidation.isValid && realtimeValidation.confidence > 50
+                        ? "border-green-500 focus-visible:ring-green-500"
+                        : realtimeValidation.confidence < 30
+                        ? "border-amber-500 focus-visible:ring-amber-500"
+                        : ""
+                      : ""
+                  }
                 />
+                {realtimeValidation && (
+                  <div className={`text-xs mt-2 flex items-start gap-2 ${
+                    realtimeValidation.confidence > 70 
+                      ? "text-green-700" 
+                      : realtimeValidation.confidence > 40 
+                      ? "text-blue-700" 
+                      : "text-amber-700"
+                  }`}>
+                    {realtimeValidation.confidence > 70 ? (
+                      <CheckCircle2 className="h-3 w-3 mt-0.5 flex-shrink-0" />
+                    ) : (
+                      <AlertTriangle className="h-3 w-3 mt-0.5 flex-shrink-0" />
+                    )}
+                    <span>{realtimeValidation.message}</span>
+                  </div>
+                )}
                 {validationError && (
                   <p className="text-sm text-destructive">{validationError}</p>
                 )}
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="contact-notes">Notes (Optional)</Label>
-                <Textarea
-                  id="contact-notes"
-                  placeholder="Add any relevant notes about this contact (e.g., where you found it, why it's correct)"
-                  value={manualNotes}
-                  onChange={(e) => setManualNotes(e.target.value)}
-                  rows={3}
-                  maxLength={500}
-                />
-                <p className="text-xs text-muted-foreground">
-                  {manualNotes.length}/500 characters
-                </p>
+                <Label htmlFor="contact-notes">
+                  Where did you find this? <span className="text-muted-foreground font-normal">(Helps others find it faster)</span>
+                </Label>
+                <div className="space-y-2">
+                  <div className="flex flex-wrap gap-1">
+                    {["Privacy Policy page", "Contact Us page", "Footer", "Account Settings", "Help Center"].map((suggestion) => (
+                      <Button
+                        key={suggestion}
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-7 text-xs"
+                        onClick={() => setManualNotes(suggestion)}
+                        disabled={submitting}
+                      >
+                        {suggestion}
+                      </Button>
+                    ))}
+                  </div>
+                  <Textarea
+                    id="contact-notes"
+                    placeholder="E.g., 'Found in footer under Legal section' or 'In privacy policy, section 8'"
+                    value={manualNotes}
+                    onChange={(e) => setManualNotes(e.target.value)}
+                    rows={3}
+                    maxLength={500}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {manualNotes.length}/500 characters
+                  </p>
+                </div>
               </div>
             </div>
           </div>
