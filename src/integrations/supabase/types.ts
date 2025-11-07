@@ -258,6 +258,8 @@ export type Database = {
           contact_type: string
           created_at: string
           id: string
+          last_validated_at: string | null
+          mx_validated: boolean | null
           reasoning: string | null
           service_id: string | null
           source_url: string | null
@@ -271,6 +273,8 @@ export type Database = {
           contact_type: string
           created_at?: string
           id?: string
+          last_validated_at?: string | null
+          mx_validated?: boolean | null
           reasoning?: string | null
           service_id?: string | null
           source_url?: string | null
@@ -284,6 +288,8 @@ export type Database = {
           contact_type?: string
           created_at?: string
           id?: string
+          last_validated_at?: string | null
+          mx_validated?: boolean | null
           reasoning?: string | null
           service_id?: string | null
           source_url?: string | null
@@ -371,6 +377,8 @@ export type Database = {
         Row: {
           category: string | null
           ccpa_compliant: boolean | null
+          contact_quality_score: number | null
+          contact_verified: boolean | null
           created_at: string
           deletion_difficulty: string | null
           deletion_instructions: Json | null
@@ -391,6 +399,8 @@ export type Database = {
         Insert: {
           category?: string | null
           ccpa_compliant?: boolean | null
+          contact_quality_score?: number | null
+          contact_verified?: boolean | null
           created_at?: string
           deletion_difficulty?: string | null
           deletion_instructions?: Json | null
@@ -411,6 +421,8 @@ export type Database = {
         Update: {
           category?: string | null
           ccpa_compliant?: boolean | null
+          contact_quality_score?: number | null
+          contact_verified?: boolean | null
           created_at?: string
           deletion_difficulty?: string | null
           deletion_instructions?: Json | null

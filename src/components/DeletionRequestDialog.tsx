@@ -48,6 +48,11 @@ export const DeletionRequestDialog = ({
     body: string;
     recipientEmail: string;
   } | null>(null);
+  const [contactStatus, setContactStatus] = useState<{
+    hasVerifiedContact: boolean;
+    contactMethod: string;
+    needsVerification: boolean;
+  }>({ hasVerifiedContact: false, contactMethod: "none", needsVerification: false });
   const { toast } = useToast();
 
   // Fetch user identifiers and jurisdiction when dialog opens
@@ -55,6 +60,7 @@ export const DeletionRequestDialog = ({
     if (open && service) {
       fetchIdentifiers();
       fetchJurisdiction();
+      checkContactStatus();
     }
   }, [open, service]);
 
@@ -88,6 +94,70 @@ export const DeletionRequestDialog = ({
 
     if (data?.jurisdiction) {
       setJurisdiction(data.jurisdiction);
+    }
+  };
+
+  const checkContactStatus = async () => {
+    if (!service) return;
+
+    try {
+      // Check for verified contacts in privacy_contacts table
+      const { data: verifiedContact } = await supabase
+        .from("privacy_contacts")
+        .select("*")
+        .eq("service_id", service.id)
+        .eq("contact_type", "email")
+        .eq("verified", true)
+        .limit(1)
+        .maybeSingle();
+
+      if (verifiedContact) {
+        setContactStatus({
+          hasVerifiedContact: true,
+          contactMethod: "email",
+          needsVerification: false,
+        });
+        return;
+      }
+
+      // Check service catalog for verified email
+      const { data: serviceData } = await supabase
+        .from("service_catalog")
+        .select("privacy_email, contact_verified, privacy_form_url")
+        .eq("id", service.id)
+        .single();
+
+      if (serviceData?.privacy_email && serviceData.contact_verified) {
+        setContactStatus({
+          hasVerifiedContact: true,
+          contactMethod: "email",
+          needsVerification: false,
+        });
+        return;
+      }
+
+      if (serviceData?.privacy_form_url) {
+        setContactStatus({
+          hasVerifiedContact: false,
+          contactMethod: "form",
+          needsVerification: false,
+        });
+        return;
+      }
+
+      // No verified contact found
+      setContactStatus({
+        hasVerifiedContact: false,
+        contactMethod: "none",
+        needsVerification: true,
+      });
+    } catch (error) {
+      console.error("Error checking contact status:", error);
+      setContactStatus({
+        hasVerifiedContact: false,
+        contactMethod: "none",
+        needsVerification: true,
+      });
     }
   };
 
@@ -304,13 +374,31 @@ export const DeletionRequestDialog = ({
               </DialogDescription>
             </DialogHeader>
 
-            <Alert className="border-amber-500/50 bg-amber-500/10">
-              <AlertTriangle className="h-4 w-4 text-amber-600" />
-              <AlertDescription className="text-sm">
-                This will send a formal deletion request email to {service.name} on your behalf. 
-                The service is required to respond within 30-45 days depending on jurisdiction.
-              </AlertDescription>
-            </Alert>
+            {contactStatus.needsVerification ? (
+              <Alert className="border-red-500/50 bg-red-500/10">
+                <AlertTriangle className="h-4 w-4 text-red-600" />
+                <AlertDescription className="text-sm">
+                  <strong>Contact Not Verified:</strong> {service.name} does not have a verified contact email in our system. 
+                  We're working to verify contacts for all services. Please check back soon or contact the service manually.
+                </AlertDescription>
+              </Alert>
+            ) : contactStatus.contactMethod === "form" ? (
+              <Alert className="border-blue-500/50 bg-blue-500/10">
+                <AlertTriangle className="h-4 w-4 text-blue-600" />
+                <AlertDescription className="text-sm">
+                  <strong>Form Required:</strong> This service requires manual form submission for deletion requests. 
+                  Automated form submissions are coming soon.
+                </AlertDescription>
+              </Alert>
+            ) : (
+              <Alert className="border-amber-500/50 bg-amber-500/10">
+                <AlertTriangle className="h-4 w-4 text-amber-600" />
+                <AlertDescription className="text-sm">
+                  This will send a formal deletion request email to {service.name} on your behalf. 
+                  The service is required to respond within 30-45 days depending on jurisdiction.
+                </AlertDescription>
+              </Alert>
+            )}
 
             <div className="space-y-4">
               {identifiers.length > 0 ? (
@@ -375,13 +463,22 @@ export const DeletionRequestDialog = ({
               </Button>
               <Button
                 onClick={handlePreview}
-                disabled={loading || (!selectedIdentifierId && !accountIdentifier)}
+                disabled={
+                  loading || 
+                  (!selectedIdentifierId && !accountIdentifier) || 
+                  contactStatus.needsVerification ||
+                  contactStatus.contactMethod === "form"
+                }
               >
                 {loading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Loading...
                   </>
+                ) : contactStatus.needsVerification ? (
+                  "Contact Unverified"
+                ) : contactStatus.contactMethod === "form" ? (
+                  "Form Required"
                 ) : (
                   "Review & Send"
                 )}

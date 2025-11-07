@@ -230,30 +230,63 @@ const handler = async (req: Request): Promise<Response> => {
 
     const subject = template.subject_template || `Data Deletion Request - ${service.name}`;
 
-    // Determine recipient email
-    let recipientEmail = service.privacy_email;
+    // PHASE 1: Strict contact validation - Block unverified sends
+    console.log(`Selecting best contact for service: ${service.name}`);
     
-    // If no privacy_email, construct one from domain
-    if (!recipientEmail && service.domain) {
-      // Try common privacy email patterns
-      recipientEmail = `privacy@${service.domain}`;
-      console.log(`No privacy_email found, using constructed address: ${recipientEmail}`);
+    // Priority 1: Verified email from privacy_contacts table
+    const { data: verifiedContact } = await supabase
+      .from("privacy_contacts")
+      .select("*")
+      .eq("service_id", service_id)
+      .eq("contact_type", "email")
+      .eq("verified", true)
+      .order("confidence", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    let recipientEmail: string | null = null;
+    let contactSource = "none";
+
+    if (verifiedContact) {
+      recipientEmail = verifiedContact.value;
+      contactSource = "verified_privacy_contacts";
+      console.log(`Using verified contact from privacy_contacts: ${recipientEmail}`);
+    } 
+    // Priority 2: Service catalog privacy_email (only if contact_verified=true)
+    else if (service.privacy_email && service.contact_verified) {
+      recipientEmail = service.privacy_email;
+      contactSource = "verified_catalog";
+      console.log(`Using verified catalog email: ${recipientEmail}`);
     }
-    
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!recipientEmail || !emailRegex.test(recipientEmail)) {
-      console.error("No valid contact email found for service");
+    // Priority 3: Privacy form URL (different flow - not implemented in Phase 1)
+    else if (service.privacy_form_url) {
+      console.log("Service has form URL but form submission not implemented yet");
       return new Response(
         JSON.stringify({ 
-          error: "Service does not have a valid contact email configured. Please check the service details or contact them manually.",
-          serviceDomain: service.domain 
+          error: "This service requires manual form submission for deletion requests. Form-based deletion is coming soon.",
+          contactMethod: "form",
+          formUrl: service.privacy_form_url,
+          serviceName: service.name
+        }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    
+    // BLOCK: No verified contact available
+    if (!recipientEmail) {
+      console.error(`No verified contact found for service: ${service.name}`);
+      return new Response(
+        JSON.stringify({ 
+          error: "This service does not have a verified contact email. We're working to verify contact information for all services.",
+          needsVerification: true,
+          serviceName: service.name,
+          serviceId: service_id
         }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    console.log(`Sending email to: ${recipientEmail}`);
+    console.log(`Sending email to: ${recipientEmail} (source: ${contactSource})`);
 
     // Send email via Gmail if connected, otherwise use Resend
     let emailSent = false;
