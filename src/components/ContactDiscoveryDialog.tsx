@@ -125,6 +125,7 @@ export const ContactDiscoveryDialog = ({
   };
 
   const validateAndApprove = async (contact: DiscoveredContact) => {
+    console.log('[ContactDiscovery] Starting validation for:', contact.value);
     if (!service || contact.contact_type !== "email") return;
 
     setValidating(true);
@@ -166,14 +167,17 @@ export const ContactDiscoveryDialog = ({
           console.error("Error updating service catalog:", catalogError);
         }
 
+        console.log('[ContactDiscovery] Showing Contact Verified toast');
         toast({
           title: "Contact Verified!",
           description: `${contact.value} has been verified and approved`,
         });
 
+        console.log('[ContactDiscovery] Calling onContactVerified callback');
         // Notify parent and close
         onContactVerified();
         onOpenChange(false);
+        console.log('[ContactDiscovery] Dialog closed');
       } else {
         toast({
           title: "Validation Failed",

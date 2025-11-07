@@ -173,14 +173,14 @@ export const DeletionRequestDialog = ({
   };
 
   const handleContactDiscovered = () => {
+    console.log('[DeletionRequest] handleContactDiscovered called');
     // Refresh contact status after discovery
     checkContactStatus();
-    toast({
-      title: "Contact Verified",
-      description: "You can now proceed with the deletion request",
-    });
+    console.log('[DeletionRequest] NOT showing duplicate toast - ContactDiscovery already showed one');
+    // Don't show toast here - ContactDiscoveryDialog already shows "Contact Verified!" toast
     // Notify parent component to refresh services
     if (onSuccess) {
+      console.log('[DeletionRequest] Calling onSuccess callback');
       onSuccess();
     }
   };
@@ -284,6 +284,7 @@ export const DeletionRequestDialog = ({
   };
 
   const handleConfirmSend = async () => {
+    console.log('[DeletionRequest] Starting send deletion request');
     setLoading(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -322,6 +323,7 @@ export const DeletionRequestDialog = ({
       setShowPreview(false);
       setSuccess(true);
       
+      console.log('[DeletionRequest] Showing Deletion Request Sent toast');
       toast({
         title: "Deletion Request Sent!",
         description: `Request sent to ${service.name}. You'll receive a confirmation email.`,

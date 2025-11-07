@@ -257,22 +257,45 @@ serve(async (req) => {
       throw new Error('OpenAI API key not configured');
     }
 
-    const systemPrompt = `You are an expert at analyzing privacy policies and terms of service to extract contact methods for data deletion requests (GDPR, CCPA rights).
+    const systemPrompt = `You are an AI assistant specializing in analyzing privacy policies to extract contact information for data deletion requests (GDPR, CCPA, etc.).
 
-Your task is to identify the correct contact method(s) a user should use to request deletion of their personal data.
+Analyze the following privacy policy and extract ALL contact methods that could be used for data deletion requests.
 
-Look for:
-- Email addresses (especially: privacy@, dpo@, gdpr@, ccpa@, legal@, or addresses explicitly mentioned for data rights)
-- Web forms or URLs for submitting deletion requests
-- Phone numbers for privacy inquiries
-- Other contact methods
+CRITICAL RULES - NEVER VIOLATE:
+1. Do NOT return the company homepage (e.g., "www.domain.com", "domain.com", "https://domain.com/")
+2. Do NOT return the privacy policy URL itself - you're analyzing it, not returning it as a contact
+3. Do NOT return generic "Contact Us" pages unless they explicitly have a privacy/deletion form
+4. Only return email addresses that:
+   - Match the service domain (${service.domain}) OR
+   - Are explicitly privacy-related (privacy@, dpo@, gdpr@, ccpa@, data-protection@)
+5. Only return forms that have specific paths for privacy/deletion (not just /contact or /contact-us)
+6. If confidence is "low", do not return the contact at all
 
-Evaluate confidence:
-- HIGH: Explicitly states "for data deletion" or "GDPR/CCPA requests" or similar
-- MEDIUM: Common privacy contact pattern (privacy@domain.com) or mentioned in privacy section
-- LOW: Generic contact that might handle privacy requests
+EXAMPLES OF WHAT NOT TO RETURN:
+❌ www.example.com (homepage)
+❌ https://example.com/privacy-policy (the policy itself)
+❌ https://example.com/contact (generic contact page)
+❌ info@example.com (unless explicitly mentioned for privacy requests)
 
-IMPORTANT: Validate that email addresses match the company domain (${service.domain})`;
+EXAMPLES OF WHAT TO RETURN:
+✅ privacy@example.com
+✅ dpo@example.com
+✅ https://example.com/privacy/delete-data
+✅ https://example.com/dsar-request
+
+For each contact method found, provide:
+1. contact_type: 'email', 'form', or 'phone' (NO 'other' type)
+2. value: The actual contact (email address, form URL, phone number)
+3. confidence: 'high' or 'medium' (do NOT return 'low' confidence contacts)
+4. reasoning: Specific explanation citing where in the policy this was found
+
+Guidelines:
+- Email addresses with 'privacy', 'dpo', 'data-protection', 'gdpr' terms are HIGH confidence
+- Forms with specific privacy/deletion paths are HIGH confidence
+- Generic support emails that are explicitly mentioned for privacy are MEDIUM confidence
+- Phone numbers should be international format if possible
+
+Extract ONLY actionable contact methods for data deletion requests.`;
 
     const userPrompt = `Company: ${service.name}
 Domain: ${service.domain}
@@ -324,9 +347,9 @@ Extract all relevant contact methods for data deletion requests.`;
                     items: {
                       type: 'object',
                       properties: {
-                        contact_type: {
+                         contact_type: {
                           type: 'string',
-                          enum: ['email', 'form', 'phone', 'other'],
+                          enum: ['email', 'form', 'phone'],
                           description: 'Type of contact method'
                         },
                         value: {
@@ -372,10 +395,71 @@ Extract all relevant contact methods for data deletion requests.`;
 
     const findings: { contacts: ContactFinding[] } = JSON.parse(toolCall.function.arguments);
 
-    console.log(`Found ${findings.contacts.length} contact methods`);
+    console.log(`Found ${findings.contacts.length} contact methods from AI`);
+
+    // Filter out invalid contacts BEFORE storing
+    const validContacts = findings.contacts.filter(contact => {
+      // Rule 1: Reject low confidence
+      if (contact.confidence === 'low') {
+        console.log(`[Filter] Rejected low confidence: ${contact.value}`);
+        return false;
+      }
+      
+      // Rule 2: Reject homepage URLs (domain only, no path or just "/")
+      if (contact.contact_type === 'form') {
+        try {
+          const url = new URL(contact.value.startsWith('http') ? contact.value : `https://${contact.value}`);
+          const isHomepage = url.pathname === '/' || url.pathname === '';
+          if (isHomepage) {
+            console.log(`[Filter] Rejected homepage URL: ${contact.value}`);
+            return false;
+          }
+          
+          // Reject privacy policy URLs themselves
+          if (url.pathname.match(/privacy[-_]?(policy|notice)/i) && !url.pathname.match(/delete|deletion|request|dsar/i)) {
+            console.log(`[Filter] Rejected privacy policy URL: ${contact.value}`);
+            return false;
+          }
+          
+          // Reject generic contact pages without specific privacy paths
+          if (url.pathname.match(/^\/contact[-_]?us?\/?$/i) && !url.pathname.match(/privacy|deletion|gdpr|ccpa|dsar/i)) {
+            console.log(`[Filter] Rejected generic contact page: ${contact.value}`);
+            return false;
+          }
+        } catch (e) {
+          console.log(`[Filter] Invalid URL format: ${contact.value}`);
+          return false;
+        }
+      }
+      
+      // Rule 3: Validate email format and domain
+      if (contact.contact_type === 'email') {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(contact.value)) {
+          console.log(`[Filter] Invalid email format: ${contact.value}`);
+          return false;
+        }
+        
+        // Check if email domain matches service domain
+        const emailDomain = contact.value.split('@')[1].toLowerCase();
+        const serviceDomain = service.domain.toLowerCase().replace('www.', '');
+        const isPrivacyEmail = ['privacy', 'dpo', 'gdpr', 'ccpa', 'data-protection'].some(prefix => 
+          contact.value.toLowerCase().startsWith(prefix + '@')
+        );
+        
+        if (!emailDomain.includes(serviceDomain) && !isPrivacyEmail) {
+          console.log(`[Filter] Email domain mismatch: ${contact.value} vs ${serviceDomain}`);
+          return false;
+        }
+      }
+      
+      return true;
+    });
+
+    console.log(`[Filter] ${findings.contacts.length} → ${validContacts.length} after filtering`);
 
     // Validate URLs for form contacts
-    for (const contact of findings.contacts) {
+    for (const contact of validContacts) {
       if (contact.contact_type === 'form' && contact.value) {
         console.log(`[URL Validation] Checking form URL: ${contact.value}`);
         const isValid = await validateContactUrl(contact.value);
@@ -393,18 +477,39 @@ Extract all relevant contact methods for data deletion requests.`;
       }
     }
 
-    // Store findings in database
-    const contactsToInsert = findings.contacts.map(contact => ({
-      service_id: service_id,
-      source_url: successUrl,
-      contact_type: contact.contact_type,
-      value: contact.value,
-      confidence: contact.confidence,
-      reasoning: contact.reasoning,
-      verified: false,
-      added_by: 'ai'
-    }));
+    // Check for existing contacts to avoid duplicates
+    const { data: existingContacts } = await supabase
+      .from('privacy_contacts')
+      .select('contact_type, value')
+      .eq('service_id', service_id);
 
+    const existingSet = new Set(
+      (existingContacts || []).map((c: any) => `${c.contact_type}:${c.value.toLowerCase()}`)
+    );
+
+    const contactsToInsert = validContacts
+      .filter(contact => {
+        const key = `${contact.contact_type}:${contact.value.toLowerCase()}`;
+        if (existingSet.has(key)) {
+          console.log(`[Dedup] Skipping duplicate: ${contact.value}`);
+          return false;
+        }
+        return true;
+      })
+      .map(contact => ({
+        service_id: service_id,
+        contact_type: contact.contact_type,
+        value: contact.value,
+        confidence: contact.confidence,
+        reasoning: contact.reasoning,
+        verified: false,
+        added_by: 'ai',
+        source_url: successUrl,
+      }));
+
+    console.log(`[Dedup] ${validContacts.length} → ${contactsToInsert.length} after deduplication`);
+
+    // Store findings in database
     const { data: insertedContacts, error: insertError } = await supabase
       .from('privacy_contacts')
       .insert(contactsToInsert)
