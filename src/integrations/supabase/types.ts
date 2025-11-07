@@ -241,6 +241,54 @@ export type Database = {
           },
         ]
       }
+      discovery_metrics: {
+        Row: {
+          confidence: string | null
+          created_at: string
+          domain: string
+          error_code: string | null
+          id: string
+          lang: string | null
+          method_used: string
+          policy_type: string | null
+          score: number | null
+          status_map: Json | null
+          success: boolean
+          time_ms: number
+          urls_considered: number | null
+        }
+        Insert: {
+          confidence?: string | null
+          created_at?: string
+          domain: string
+          error_code?: string | null
+          id?: string
+          lang?: string | null
+          method_used?: string
+          policy_type?: string | null
+          score?: number | null
+          status_map?: Json | null
+          success: boolean
+          time_ms: number
+          urls_considered?: number | null
+        }
+        Update: {
+          confidence?: string | null
+          created_at?: string
+          domain?: string
+          error_code?: string | null
+          id?: string
+          lang?: string | null
+          method_used?: string
+          policy_type?: string | null
+          score?: number | null
+          status_map?: Json | null
+          success?: boolean
+          time_ms?: number
+          urls_considered?: number | null
+        }
+        Relationships: []
+      }
       email_analytics: {
         Row: {
           created_at: string
@@ -831,6 +879,20 @@ export type Database = {
       }
     }
     Views: {
+      discovery_metrics_summary: {
+        Row: {
+          avg_ms: number | null
+          day: string | null
+          html_count: number | null
+          p50_ms: number | null
+          p95_ms: number | null
+          pass_rate: number | null
+          pdf_count: number | null
+          total_requests: number | null
+          unique_domains: number | null
+        }
+        Relationships: []
+      }
       email_analytics_summary: {
         Row: {
           click_rate: number | null

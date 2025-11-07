@@ -715,6 +715,7 @@ serve(async (req) => {
   let user: any = null;
   let urlsToTry: string[] = [];
   let supabase: any = null;
+  const startTime = Date.now();
 
   try {
     const authHeader = req.headers.get('authorization');
@@ -1170,6 +1171,22 @@ Extract all relevant contact methods for data deletion requests.`;
     const highCount = insertedContacts.filter((c: any) => c.confidence === 'high').length;
     const overallConfidence = highCount > 0 ? 'high' : 'medium';
     
+    // Emit metrics for success
+    try {
+      await supabase.from('discovery_metrics').insert({
+        domain: service.domain,
+        success: true,
+        method_used: 't1',
+        time_ms: Date.now() - startTime,
+        urls_considered: urlsToTry.length,
+        policy_type: 'html',
+        confidence: overallConfidence,
+        lang: 'en',
+      });
+    } catch (metricsError) {
+      console.error('[Metrics] Failed to log:', metricsError);
+    }
+    
     return new Response(
       JSON.stringify({
         success: true,
@@ -1259,6 +1276,22 @@ Extract all relevant contact methods for data deletion requests.`;
       }
     } catch (logError) {
       console.error('[Failure Log] Failed to log error:', logError);
+    }
+    
+    // Emit metrics for failure
+    if (supabase) {
+      try {
+        await supabase.from('discovery_metrics').insert({
+          domain: service_id,
+          success: false,
+          method_used: 't1',
+          time_ms: Date.now() - startTime,
+          urls_considered: urlsToTry.length,
+          error_code: structuredError.error_code,
+        });
+      } catch (metricsError) {
+        console.error('[Metrics] Failed to log:', metricsError);
+      }
     }
     
     // Return appropriate status code

@@ -1,0 +1,85 @@
+name: Golden-10 Privacy Discovery Tests
+
+on:
+  pull_request:
+    paths:
+      - 'supabase/functions/discover-privacy-contacts/**'
+  push:
+    branches:
+      - main
+  schedule:
+    - cron: '0 2 * * *' # Daily at 2 AM UTC
+  workflow_dispatch:
+
+jobs:
+  golden10:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      
+      - name: Run Golden-10 Test Suite
+        run: node golden10.ts
+        
+      - name: Check Acceptance Gates
+        run: |
+          PASS=$(jq '.pass' golden10.summary.json)
+          MEDIAN=$(jq '.median_ms' golden10.summary.json)
+          
+          echo "Pass rate: $PASS/10"
+          echo "Median time: ${MEDIAN}ms"
+          
+          if [ "$PASS" -lt 8 ]; then
+            echo "❌ FAIL: Pass rate $PASS/10 is below gate (≥8/10)"
+            jq -r '.results[] | select(.ok == false) | "  ❌ \(.domain): \(.error // .url)"' golden10.summary.json
+            exit 1
+          fi
+          
+          if [ "$MEDIAN" -gt 2500 ]; then
+            echo "❌ FAIL: Median time ${MEDIAN}ms exceeds gate (≤2500ms)"
+            jq -r '.results | sort_by(.time_ms) | reverse | .[:3] | .[] | "  🐌 \(.domain): \(.time_ms)ms"' golden10.summary.json
+            exit 1
+          fi
+          
+          echo "✅ All gates passed!"
+      
+      - name: Upload Test Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: golden10-summary
+          path: golden10.summary.json
+          retention-days: 30
+      
+      - name: Comment PR
+        if: github.event_name == 'pull_request' && always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const summary = JSON.parse(fs.readFileSync('golden10.summary.json', 'utf8'));
+            
+            const passed = summary.results.filter(r => r.ok);
+            const failed = summary.results.filter(r => !r.ok);
+            
+            let body = `## Golden-10 Test Results\n\n`;
+            body += `- **Pass Rate:** ${summary.pass}/10 ${summary.pass >= 8 ? '✅' : '❌'}\n`;
+            body += `- **Median Time:** ${summary.median_ms}ms ${summary.median_ms <= 2500 ? '✅' : '❌'}\n\n`;
+            
+            if (failed.length > 0) {
+              body += `### Failed Domains\n`;
+              failed.forEach(r => {
+                body += `- ❌ **${r.domain}** (${r.time_ms}ms): ${r.error || r.url}\n`;
+              });
+            }
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body
+            });
