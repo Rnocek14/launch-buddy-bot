@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.79.0";
+import { decrypt, encrypt } from "../_shared/encryption.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -60,11 +61,19 @@ serve(async (req: Request): Promise<Response> => {
 
     console.log("Found Gmail connection for:", connection.email);
 
+    // Decrypt tokens
+    let accessToken = connection.tokens_encrypted 
+      ? await decrypt(connection.access_token)
+      : connection.access_token;
+    
+    let refreshToken = connection.tokens_encrypted
+      ? await decrypt(connection.refresh_token)
+      : connection.refresh_token;
+
     // Check if token needs refresh
-    let accessToken = connection.access_token;
     if (new Date(connection.token_expires_at) <= new Date()) {
       console.log("Token expired, refreshing...");
-      accessToken = await refreshAccessToken(connection.refresh_token, connection.user_id);
+      accessToken = await refreshAccessToken(refreshToken, connection.user_id, connection.tokens_encrypted);
     }
 
     // Parse request body
@@ -121,7 +130,7 @@ serve(async (req: Request): Promise<Response> => {
   }
 });
 
-async function refreshAccessToken(refreshToken: string, userId: string): Promise<string> {
+async function refreshAccessToken(refreshToken: string, userId: string, isEncrypted: boolean): Promise<string> {
   const clientId = Deno.env.get("GOOGLE_OAUTH_CLIENT_ID");
   const clientSecret = Deno.env.get("GOOGLE_OAUTH_CLIENT_SECRET");
 
@@ -143,6 +152,9 @@ async function refreshAccessToken(refreshToken: string, userId: string): Promise
   const tokens = await response.json();
   const expiresAt = new Date(Date.now() + tokens.expires_in * 1000);
 
+  // Encrypt new access token before storing
+  const tokenToStore = isEncrypted ? await encrypt(tokens.access_token) : tokens.access_token;
+
   // Update stored token
   const supabase = createClient(
     Deno.env.get("SUPABASE_URL")!,
@@ -152,7 +164,7 @@ async function refreshAccessToken(refreshToken: string, userId: string): Promise
   await supabase
     .from("gmail_connections")
     .update({
-      access_token: tokens.access_token,
+      access_token: tokenToStore,
       token_expires_at: expiresAt.toISOString(),
     })
     .eq("user_id", userId);

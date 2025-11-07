@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.79.0";
+import { encrypt } from "../_shared/encryption.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -90,14 +91,19 @@ serve(async (req: Request): Promise<Response> => {
 
     const expiresAt = new Date(Date.now() + tokens.expires_in * 1000);
 
+    // Encrypt tokens before storing
+    const encryptedAccessToken = await encrypt(tokens.access_token);
+    const encryptedRefreshToken = tokens.refresh_token ? await encrypt(tokens.refresh_token) : null;
+
     const { error: dbError } = await supabase
       .from("gmail_connections")
       .upsert({
         user_id: state,
         email: profile.email,
-        access_token: tokens.access_token,
-        refresh_token: tokens.refresh_token,
+        access_token: encryptedAccessToken,
+        refresh_token: encryptedRefreshToken,
         token_expires_at: expiresAt.toISOString(),
+        tokens_encrypted: true,
       });
 
     if (dbError) {
