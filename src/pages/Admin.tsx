@@ -4,6 +4,7 @@ import PrivacyContactDiscovery from "@/components/PrivacyContactDiscovery";
 import { ContactVerification } from "@/components/ContactVerification";
 import { BulkDiscoveryTool } from "@/components/BulkDiscoveryTool";
 import { FailedDiscoveriesLog } from "@/components/FailedDiscoveriesLog";
+import { ManualContactReview } from "@/components/ManualContactReview";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -1263,6 +1264,9 @@ export default function Admin() {
 
         {/* Failed Discoveries Log */}
         <FailedDiscoveriesLog />
+
+        {/* Manual Contact Review */}
+        <ManualContactReview />
 
         {/* Contact Verification Tool */}
         <ContactVerification />

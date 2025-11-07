@@ -346,6 +346,59 @@ export type Database = {
         }
         Relationships: []
       }
+      manual_contact_submissions: {
+        Row: {
+          contact_type: string
+          created_at: string
+          id: string
+          notes: string | null
+          rejection_reason: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          service_id: string
+          status: string
+          submitted_by: string
+          updated_at: string
+          value: string
+        }
+        Insert: {
+          contact_type: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          service_id: string
+          status?: string
+          submitted_by: string
+          updated_at?: string
+          value: string
+        }
+        Update: {
+          contact_type?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          service_id?: string
+          status?: string
+          submitted_by?: string
+          updated_at?: string
+          value?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "manual_contact_submissions_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "service_catalog"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       privacy_contacts: {
         Row: {
           added_by: string
