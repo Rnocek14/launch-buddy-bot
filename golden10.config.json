@@ -1,6 +1,6 @@
 {
   "functionUrl": "https://gqxkeezkajkiyjpnjgkx.supabase.co/functions/v1/discover-privacy-contacts",
-  "timeoutMs": 30000,
+  "timeoutMs": 25000,
   "domains": [
     {
       "domain": "grubhub.com",

@@ -73,6 +73,30 @@ const PRIVACY_KEYWORDS = {
   }
 };
 
+// Phase 1.2: Vendor platform detection
+const VENDORS = [
+  { key: 'onetrust', re: /onetrust\.com|privacy.*one(trust|trust)\b|otprivacy/i, prefill: false },
+  { key: 'securiti', re: /securiti\.ai|privacy-central\.securiti|securiti\.app/i, prefill: true },
+  { key: 'trustarc', re: /trustarc\.com|consent\.trustarc|privacycentral\.trustarc/i, prefill: false },
+];
+
+function detectVendor(url: string): { platform_detected: string; pre_fill_supported: boolean } | null {
+  const match = VENDORS.find(v => v.re.test(url));
+  return match ? { platform_detected: match.key, pre_fill_supported: match.prefill } : null;
+}
+
+// Phase 1.2: Improved confidence calculation
+function toConfidence(score: number, url: string, vendor?: string): 'high' | 'medium' | 'low' {
+  if (vendor) return 'high';
+  
+  try {
+    const pathname = new URL(url).pathname;
+    if (/\/privacy(-policy)?$/.test(pathname)) return 'high';
+  } catch {}
+  
+  return score >= 40 ? 'high' : (score >= 25 ? 'medium' : 'low');
+}
+
 // Phase 1.1 Refinement #2: <base> tag support
 function resolveAgainstBase(href: string, docUrl: string, doc?: any): string {
   try {
@@ -509,6 +533,57 @@ async function quickValidateUrl(url: string): Promise<{ valid: boolean; status?:
   return { valid: result.valid, status: result.status };
 }
 
+// Phase 1.2: Probe for security.txt
+async function probeSecurityTxt(domain: string): Promise<{ type: string; contact: string; url: string } | null> {
+  const url = `https://${domain}/.well-known/security.txt`;
+  try {
+    const r = await fetch(url, { redirect: 'follow', signal: AbortSignal.timeout(4000) });
+    if (r.ok) {
+      const text = await r.text();
+      const match = text.match(/^\s*Contact:\s*(.+)$/im);
+      if (match) {
+        console.log(`[Probe] Found security.txt contact: ${match[1].trim()}`);
+        return { type: 'security.txt', contact: match[1].trim(), url };
+      }
+    }
+  } catch (e) {
+    console.warn(`[Probe] security.txt failed for ${domain}:`, e);
+  }
+  return null;
+}
+
+// Phase 1.2: Probe for sitemap.xml (gzip-aware)
+async function probeSitemap(domain: string): Promise<string[]> {
+  for (const path of ['/sitemap.xml', '/sitemap.xml.gz']) {
+    try {
+      const r = await fetch(`https://${domain}${path}`, { signal: AbortSignal.timeout(4000) });
+      if (!r.ok) continue;
+      
+      let txt: string;
+      if (path.endsWith('.gz')) {
+        const ab = await r.arrayBuffer();
+        const ds = new DecompressionStream('gzip');
+        const stream = new Blob([ab]).stream().pipeThrough(ds);
+        const s = new Response(stream);
+        txt = await s.text();
+      } else {
+        txt = await r.text();
+      }
+      
+      const urls = [...txt.matchAll(/<loc>\s*([^<]+)\s*<\/loc>/g)].map(m => m[1]);
+      const privacyUrls = urls.filter(u => /privacy|legal|dsar/i.test(u));
+      
+      if (privacyUrls.length > 0) {
+        console.log(`[Probe] Found ${privacyUrls.length} privacy URLs in sitemap`);
+        return privacyUrls;
+      }
+    } catch (e) {
+      console.warn(`[Probe] sitemap probe failed for ${domain}${path}:`, e);
+    }
+  }
+  return [];
+}
+
 // Phase 1: Enhanced fetch with smart link discovery and scoring
 async function trySimpleFetch(urlsToTry: string[], domain: string): Promise<{ content: string; url: string; discoveredUrls?: string[]; policy_type?: string } | null> {
   const attemptedUrls: string[] = [];
@@ -756,10 +831,17 @@ serve(async (req) => {
 
     console.log(`=== Discovering privacy contacts for: ${service.name} (${service.domain}) ===`);
 
+    // Phase 1.2: Try probes first (security.txt, sitemap)
+    const securityTxtContact = await probeSecurityTxt(service.domain);
+    const sitemapUrls = await probeSitemap(service.domain);
+
     // Build comprehensive URL list with Phase 1 enhancements
     urlsToTry = privacy_url 
       ? [privacy_url]
       : [
+          // Phase 1.2: Sitemap-discovered URLs
+          ...sitemapUrls.slice(0, 3),
+          
           // Explicit privacy form URL from catalog
           service.privacy_form_url,
           
@@ -834,6 +916,11 @@ serve(async (req) => {
 
     const { content: privacyContent, url: successUrl, policy_type } = result;
 
+    // Phase 1.2: Detect vendor and calculate confidence
+    const vendorInfo = detectVendor(successUrl);
+    const policyScore = policy_type === 'pdf' ? 30 : 50; // PDFs get medium score by default
+    const confidence = toConfidence(policyScore, successUrl, vendorInfo?.platform_detected);
+
 // Phase 1.1 Refinement #5: Handle PDF policies differently
     if (policy_type === 'pdf') {
       console.log(`[PDF Policy] Found PDF policy at ${sanitizeForLog(successUrl)}`);
@@ -859,16 +946,36 @@ serve(async (req) => {
         throw insertError;
       }
 
+      // Emit metrics for PDF success
+      await supabase.from('discovery_metrics').insert({
+        domain: service.domain,
+        success: true,
+        method_used: 't1',
+        time_ms: Date.now() - startTime,
+        urls_considered: urlsToTry.length,
+        policy_type: 'pdf',
+        score: policyScore,
+        confidence,
+        ...(vendorInfo && { platform_detected: vendorInfo.platform_detected })
+      });
+
       return new Response(
         JSON.stringify({
           success: true,
           service: service.name,
           contacts_found: 1,
           contacts: insertedContacts,
-          method_used: methodUsed,
+          method_used: 't1',
           policy_type: 'pdf',
-          confidence: 'medium',
+          confidence,
+          score: policyScore,
           url: successUrl,
+          lang_detected: 'en',
+          reasons: ['PDF policy found'],
+          ...(vendorInfo && { 
+            platform_detected: vendorInfo.platform_detected,
+            pre_fill_supported: vendorInfo.pre_fill_supported
+          }),
           message: 'Privacy policy is a PDF. Please review manually for contact information.'
         }),
         { 
@@ -1169,7 +1276,7 @@ Extract all relevant contact methods for data deletion requests.`;
 
     // Calculate aggregate confidence and score
     const highCount = insertedContacts.filter((c: any) => c.confidence === 'high').length;
-    const overallConfidence = highCount > 0 ? 'high' : 'medium';
+    const overallConfidence = toConfidence(policyScore, successUrl, vendorInfo?.platform_detected);
     
     // Emit metrics for success
     try {
@@ -1180,8 +1287,10 @@ Extract all relevant contact methods for data deletion requests.`;
         time_ms: Date.now() - startTime,
         urls_considered: urlsToTry.length,
         policy_type: 'html',
+        score: policyScore,
         confidence: overallConfidence,
         lang: 'en',
+        ...(vendorInfo && { platform_detected: vendorInfo.platform_detected })
       });
     } catch (metricsError) {
       console.error('[Metrics] Failed to log:', metricsError);
@@ -1193,12 +1302,17 @@ Extract all relevant contact methods for data deletion requests.`;
         service: service.name,
         contacts_found: insertedContacts.length,
         contacts: insertedContacts,
-        method_used: methodUsed,
+        method_used: 't1',
         policy_type: 'html',
         confidence: overallConfidence,
+        score: policyScore,
         url: successUrl,
-        lang_detected: 'en', // TODO: Add language detection in Phase 1.2
-        reasons: insertedContacts.map((c: any) => c.reasoning)
+        lang_detected: 'en', // TODO: Add language detection in Phase 1.3
+        reasons: insertedContacts.map((c: any) => c.reasoning),
+        ...(vendorInfo && { 
+          platform_detected: vendorInfo.platform_detected,
+          pre_fill_supported: vendorInfo.pre_fill_supported
+        })
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
