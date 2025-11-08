@@ -1284,18 +1284,25 @@ Extract all relevant contact methods for data deletion requests.`;
     const overallConfidence = toConfidence(policyScore, successUrl, vendorInfo?.platform_detected);
     
     // Emit metrics for success
+    const vendorDetected = vendorInfo?.platform_detected ?? null;
+    const buildInfo = {
+      build_sha: Deno.env.get('GITHUB_SHA') ?? null,
+      build_ver: Deno.env.get('APP_VERSION') ?? 'dev'
+    };
+    
     try {
       await supabase.from('discovery_metrics').insert({
         domain: service.domain,
         success: true,
         method_used: 't1',
         time_ms: Date.now() - startTime,
-        urls_considered: urlsToTry.length,
+        urls_considered: Math.min(5, urlsToTry.length), // Cap at 5 for precision@5
         policy_type: 'html',
         score: policyScore,
         confidence: overallConfidence,
         lang: 'en',
-        ...(vendorInfo && { platform_detected: vendorInfo.platform_detected })
+        vendor: vendorDetected,
+        ...buildInfo
       });
     } catch (metricsError) {
       console.error('[Metrics] Failed to log:', metricsError);
@@ -1400,13 +1407,19 @@ Extract all relevant contact methods for data deletion requests.`;
     // Emit metrics for failure
     if (supabase) {
       try {
+        const buildInfo = {
+          build_sha: Deno.env.get('GITHUB_SHA') ?? null,
+          build_ver: Deno.env.get('APP_VERSION') ?? 'dev'
+        };
+        
         await supabase.from('discovery_metrics').insert({
           domain: service_id,
           success: false,
           method_used: 't1',
           time_ms: Date.now() - startTime,
-          urls_considered: urlsToTry.length,
+          urls_considered: Math.min(5, urlsToTry.length), // Cap at 5 for precision@5
           error_code: structuredError.error_code,
+          ...buildInfo
         });
       } catch (metricsError) {
         console.error('[Metrics] Failed to log:', metricsError);

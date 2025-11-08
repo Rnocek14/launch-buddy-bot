@@ -243,6 +243,8 @@ export type Database = {
       }
       discovery_metrics: {
         Row: {
+          build_sha: string | null
+          build_ver: string | null
           confidence: string | null
           created_at: string
           domain: string
@@ -256,8 +258,11 @@ export type Database = {
           success: boolean
           time_ms: number
           urls_considered: number | null
+          vendor: string | null
         }
         Insert: {
+          build_sha?: string | null
+          build_ver?: string | null
           confidence?: string | null
           created_at?: string
           domain: string
@@ -271,8 +276,11 @@ export type Database = {
           success: boolean
           time_ms: number
           urls_considered?: number | null
+          vendor?: string | null
         }
         Update: {
+          build_sha?: string | null
+          build_ver?: string | null
           confidence?: string | null
           created_at?: string
           domain?: string
@@ -286,6 +294,7 @@ export type Database = {
           success?: boolean
           time_ms?: number
           urls_considered?: number | null
+          vendor?: string | null
         }
         Relationships: []
       }

@@ -37,6 +37,41 @@ group by error_code
 order by occurrences desc;
 ```
 
+## Regression by Commit
+
+Track performance changes across deployments:
+
+```sql
+select 
+  build_sha, 
+  build_ver,
+  count(*) n,
+  round(avg(case when success then 1 else 0 end)::numeric,3) pass_rate,
+  percentile_cont(0.95) within group (order by time_ms) p95_ms
+from discovery_metrics
+where created_at >= now() - interval '7 days'
+  and build_sha is not null
+group by 1, 2
+order by max(created_at) desc
+limit 10;
+```
+
+## Vendor Coverage
+
+Analyze success rates by platform vendor:
+
+```sql
+select 
+  coalesce(vendor, 'unknown') vendor, 
+  count(*) n,
+  round(avg(case when success then 1 else 0 end)::numeric,3) pass_rate,
+  percentile_cont(0.5) within group (order by time_ms) p50_ms
+from discovery_metrics
+where created_at >= now() - interval '14 days'
+group by 1
+order by n desc;
+```
+
 ## Top 3 Slowest Domains (Last 7d)
 
 ```sql

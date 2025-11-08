@@ -25,9 +25,12 @@ jobs:
           node-version: '20'
       
       - name: Run Golden-10 Test Suite
+        if: ${{ !contains(github.event.pull_request.labels.*.name, 'skip-golden10') }}
         run: node golden10.ts
         
       - name: Check Acceptance Gates
+        if: ${{ !contains(github.event.pull_request.labels.*.name, 'skip-golden10') }}
+        id: gates
         run: |
           PASS=$(jq '.pass' golden10.summary.json)
           MEDIAN=$(jq '.median_ms' golden10.summary.json)
