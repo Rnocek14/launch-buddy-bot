@@ -33,7 +33,7 @@ interface StructuredError {
 // Phase 1.1: Constants
 const USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 const STRIP_PARAMS = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'gclid', 'fbclid', 'ref', 'ref_src', 'referrer'];
-const REDACT_PARAMS = ['email', 'e', 'token', 'auth', 'code', 'sid', 'session', 'user', 'uid'];
+const REDACT_PARAMS = ['email', 'e', 'user', 'token', 'auth', 'code', 'sid', 'session', 'uid'];
 const MAX_REDIRECT_DEPTH = 1;
 const VALIDATION_TIMEOUT_MS = 5000;
 const FETCH_TIMEOUT_MS = 7000;
@@ -126,11 +126,11 @@ function urlKey(urlString: string): string {
   }
 }
 
-// Phase 1.1 Refinement #6: Logging hygiene
-function sanitizeForLog(urlString: string): string {
+// Phase 1.2: PII-safe URL redaction for metrics
+function redactUrl(urlString: string): string {
   try {
     const url = new URL(urlString);
-    url.hash = ''; // strip fragments
+    url.hash = '';
     
     // Redact sensitive params
     for (const key of [...url.searchParams.keys()]) {
@@ -140,8 +140,13 @@ function sanitizeForLog(urlString: string): string {
     }
     return url.toString();
   } catch {
-    return '';
+    return urlString;
   }
+}
+
+// Phase 1.1 Refinement #6: Logging hygiene
+function sanitizeForLog(urlString: string): string {
+  return redactUrl(urlString);
 }
 
 // Phase 1.1: URL canonicalization (enhanced with base tag support)

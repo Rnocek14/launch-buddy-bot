@@ -57,6 +57,53 @@ jobs:
           path: golden10.summary.json
           retention-days: 30
       
+      - name: Post to Slack (always)
+        if: always()
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          if [ -n "$SLACK_WEBHOOK_URL" ]; then
+            node tools/slack-notify.js golden10.summary.json "Golden-10 CI"
+          else
+            echo "SLACK_WEBHOOK_URL not set, skipping Slack notification"
+          fi
+      
+      - name: Check gates & pre-alert
+        id: gates
+        run: |
+          PASS=$(jq '.pass' golden10.summary.json)
+          MEDIAN=$(jq '.median_ms' golden10.summary.json)
+          echo "pass=$PASS" >> $GITHUB_OUTPUT
+          echo "median=$MEDIAN" >> $GITHUB_OUTPUT
+          if [ "$PASS" -lt 8 ] || [ "$MEDIAN" -gt 2500 ]; then
+            echo "GATES_FAIL=1" >> $GITHUB_OUTPUT
+          else
+            echo "GATES_FAIL=0" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Slack alert on gate fail
+        if: steps.gates.outputs.GATES_FAIL == '1'
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          if [ -n "$SLACK_WEBHOOK_URL" ]; then
+            PASS=$(jq '.pass' golden10.summary.json)
+            MEDIAN=$(jq '.median_ms' golden10.summary.json)
+            TOTAL=$(jq '.total' golden10.summary.json)
+            curl -X POST -H 'Content-Type: application/json' \
+              -d "{\"text\":\"*Golden-10 CI – Gate FAILED*\n• Pass: ${PASS}/${TOTAL}\n• Median: ${MEDIAN}ms\"}" \
+              "$SLACK_WEBHOOK_URL"
+          fi
+      
+      - name: Enforce gates (fail job if needed)
+        run: |
+          PASS=$(jq '.pass' golden10.summary.json)
+          MEDIAN=$(jq '.median_ms' golden10.summary.json)
+          if [ "$PASS" -lt 8 ] || [ "$MEDIAN" -gt 2500 ]; then
+            echo "❌ Gate failed: pass=$PASS median=$MEDIAN"; exit 1
+          fi
+          echo "✅ All gates passed!"
+      
       - name: Comment PR
         if: github.event_name == 'pull_request' && always()
         uses: actions/github-script@v7
