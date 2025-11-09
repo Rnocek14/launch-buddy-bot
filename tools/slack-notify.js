@@ -14,10 +14,22 @@ const s = JSON.parse(fs.readFileSync(summaryPath, 'utf8'));
 const ok = s.results.filter(r => r.ok);
 const bad = s.results.filter(r => !r.ok);
 
-// Build a compact message
+// Build a compact message with context
 const lines = [];
 lines.push(`*${title}*`);
 lines.push(`• Pass: *${s.pass}/${s.total}*  • Median: *${s.median_ms}ms*`);
+
+// Add build context if available
+const sha = process.env.GITHUB_SHA;
+const runUrl = process.env.GITHUB_SERVER_URL && process.env.GITHUB_REPOSITORY && process.env.GITHUB_RUN_ID
+  ? `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`
+  : null;
+
+if (sha) {
+  const shortSha = sha.substring(0, 7);
+  lines.push(`• Build: \`${shortSha}\`${runUrl ? ` (<${runUrl}|workflow>)` : ''}`);
+}
+
 if (bad.length) {
   lines.push(`• Failures (${bad.length}):`);
   for (const r of bad.slice(0, 5)) {

@@ -131,9 +131,17 @@ All toggles can be set in Supabase Edge Functions settings without code changes:
   - Set to `true` to stop writing to `discovery_metrics` table
   - Use when: Database under heavy load or schema migration in progress
 
-- `DISCOVERY_DOMAIN_BUDGET_MS` (default: `25000`)
+- `DISCOVERY_DOMAIN_BUDGET_MS` (default: `25000`, min: `3000`, max: `60000`)
   - Maximum time (ms) to spend discovering contacts per domain
   - Increase for slow domains; decrease to improve throughput
+  - Automatically clamped between 3-60 seconds for safety
+
+### How to Toggle
+
+1. Open [Supabase Dashboard](https://supabase.com/dashboard/project/gqxkeezkajkiyjpnjgkx/settings/functions)
+2. Navigate to **Edge Functions → Environment Variables**
+3. Add or update the variable (e.g., `DISCOVERY_DISABLE_METRICS=true`)
+4. Click **Save & Deploy** (saving automatically redeploys the function)
 
 ### Rollback Procedure
 
@@ -206,7 +214,9 @@ LIMIT 10;
 ## Escalation & Ownership
 
 - **Primary Owner:** Platform On-Call
+- **On-Call Schedule:** [Link to PagerDuty/OpsGenie schedule]
 - **Response SLA:** 2 hours during business hours (9am-5pm PST)
+- **Handoff Process:** Current on-call updates runbook with any new patterns/fixes before rotation
 - **Severity Levels:**
   - **P0 (Critical):** Pass rate < 50% sustained > 4 hours
   - **P1 (High):** Gate failures blocking deployments

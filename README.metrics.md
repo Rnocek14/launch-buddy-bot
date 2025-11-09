@@ -1,149 +1,241 @@
-# Discovery Metrics & Monitoring
+# Privacy Discovery Metrics & Maintenance
 
 ## Overview
 
-The `discovery_metrics` table tracks performance and accuracy of privacy contact discovery across all domains. This enables data-driven improvements and regression detection.
+This document covers metrics collection, data hygiene, and routine maintenance for the privacy contact discovery system.
 
-## Metrics Table Schema
+## Metrics Collection
 
-```sql
-discovery_metrics (
-  id uuid,
-  domain text,                    -- Service domain (e.g., "grubhub.com")
-  success boolean,                -- Did we find contacts?
-  method_used text,               -- Discovery method: 't1' (Tier 1)
-  time_ms integer,                -- Latency in milliseconds
-  urls_considered integer,        -- How many URLs we tried
-  status_map jsonb,               -- HTTP status codes encountered
-  policy_type text,               -- 'html' | 'pdf'
-  score numeric,                  -- Final score of winning URL
-  confidence text,                -- 'high' | 'medium' | 'low'
-  lang text,                      -- Detected language (e.g., 'en')
-  error_code text,                -- Error code if failed
-  created_at timestamptz
-)
-```
+All discovery attempts are logged to the `discovery_metrics` table with:
+- **Success/failure status** and error codes
+- **Performance data** (response time, URLs tried)
+- **Build context** (commit SHA, version)
+- **Vendor detection** (OneTrust, Securiti, TrustArc)
+- **Policy metadata** (type, confidence, score)
 
-## Key Queries
+### Circuit Breakers
 
-### 7-Day Performance Summary
-
-```sql
-select * from discovery_metrics_summary;
-```
-
-Returns:
-- `day`: Date bucket
-- `total_requests`: Total discovery attempts
-- `avg_ms`, `p50_ms`, `p95_ms`: Latency percentiles
-- `pass_rate`: Success percentage
-- `unique_domains`: Distinct domains attempted
-- `pdf_count`, `html_count`: Policy type breakdown
-
-### Domain-Specific History
-
-```sql
-select
-  created_at,
-  success,
-  time_ms,
-  policy_type,
-  confidence,
-  error_code
-from discovery_metrics
-where domain = 'grubhub.com'
-order by created_at desc
-limit 10;
-```
-
-### Failure Analysis
-
-```sql
-select
-  error_code,
-  count(*) as occurrences,
-  avg(time_ms)::integer as avg_time,
-  array_agg(distinct domain) as affected_domains
-from discovery_metrics
-where success = false
-  and created_at > now() - interval '24 hours'
-group by error_code
-order by occurrences desc;
-```
-
-## Error Codes & Actions
-
-The edge function emits standardized error codes mapped to user-actionable hints:
-
-| Error Code | User Message | Hint | Retryable |
-|------------|--------------|------|-----------|
-| `no_policy_found` | Could not locate privacy policy | Try Phase 1.2 probes or manual entry | No |
-| `fetch_failed` | Failed to fetch page | Retry with exponential backoff | Yes |
-| `timeout` | Request timed out | Retry with backoff | Yes |
-| `bot_protection` | Bot protection detected | Escalate to Tier 2 (browserless) | No |
-| `invalid_content` | Content could not be parsed | Manual verification needed | No |
-| `dns_error` | Domain name resolution failed | Check domain validity | Yes |
-| `ssl_error` | SSL/TLS certificate error | Certificate issue | No |
-| `redirect_loop` | Too many redirects | Configuration issue | No |
-
-See `supabase/functions/_shared/error-codes.ts` for implementation.
-
-## CI Integration
-
-### GitHub Actions Golden-10 Test
-
-Located at `.github/workflows/golden10.yml`, this workflow:
-
-1. **Triggers on:**
-   - PRs touching `discover-privacy-contacts/`
-   - Pushes to `main`
-   - Daily cron at 2 AM UTC
-   - Manual workflow dispatch
-
-2. **Runs:**
-   - `node golden10.ts` against 10 major domains
-   - Validates acceptance gates:
-     - ≥8/10 pass rate
-     - Median time ≤2.5s
-
-3. **Outputs:**
-   - Console table with ✅/❌ per domain
-   - `golden10.summary.json` artifact (30-day retention)
-   - PR comment with results
-
-### Running Locally
+Metrics collection can be disabled via environment variables:
 
 ```bash
-# With Node.js 18+
-node golden10.ts
+# Disable metrics writes (emergency use only)
+DISCOVERY_DISABLE_METRICS=true
 
-# Output
-GOLDEN-10 REPORT
-================
-✅ grubhub.com      1234 ms  https://grubhub.com/privacy-policy
-✅ united.com       1567 ms  https://united.com/privacy-central
-...
-----------------
-Pass: 9/10
-Median time: 1456 ms
-
-Saved: golden10.summary.json
+# Adjust per-domain time budget (3-60 seconds, default 25)
+DISCOVERY_DOMAIN_BUDGET_MS=15000
 ```
 
-## Monitoring Recommendations
+See [ops/runbook.md](ops/runbook.md) for toggle instructions.
 
-1. **Daily Dashboard**: Query `discovery_metrics_summary` for pass rate and latency trends
-2. **Alerting**: Set up notifications if:
-   - Pass rate drops below 80% for 24h
-   - P95 latency exceeds 5s
-   - New error codes appear at high volume
-3. **Weekly Review**: Analyze top failing domains and error codes
-4. **Regression Detection**: Compare golden-10 results across commits
+## Data Retention Policy
 
-## Next Steps (Phase 1.2)
+### Automatic Cleanup (Recommended)
 
-- [ ] Add `platform_detected` field (OneTrust, Securiti, TrustArc)
-- [ ] Track `pre_fill_supported` boolean
-- [ ] Expand to Golden-25 test suite
-- [ ] Create Supabase dashboard view for metrics
-- [ ] Add Slack/Discord notifications for CI failures
+To prevent unbounded growth, add a weekly cleanup job to remove raw metrics older than 90 days while preserving summary views:
+
+```sql
+-- Run weekly via cron (e.g., Sundays at 2 AM UTC)
+DELETE FROM discovery_metrics
+WHERE created_at < NOW() - INTERVAL '90 days';
+```
+
+**Note:** The `discovery_metrics_summary` materialized view retains aggregated data indefinitely for long-term trend analysis.
+
+### Setting Up Automated Cleanup
+
+#### Option 1: Supabase pg_cron (Recommended)
+
+```sql
+-- Enable pg_cron extension if not already enabled
+CREATE EXTENSION IF NOT EXISTS pg_cron;
+
+-- Schedule weekly cleanup
+SELECT cron.schedule(
+  'cleanup-old-metrics',           -- Job name
+  '0 2 * * 0',                     -- Every Sunday at 2 AM UTC
+  $$
+  DELETE FROM discovery_metrics
+  WHERE created_at < NOW() - INTERVAL '90 days';
+  $$
+);
+
+-- Verify the job is scheduled
+SELECT * FROM cron.job WHERE jobname = 'cleanup-old-metrics';
+```
+
+#### Option 2: GitHub Actions (Alternative)
+
+Create `.github/workflows/cleanup-metrics.yml`:
+
+```yaml
+name: Cleanup Old Metrics
+
+on:
+  schedule:
+    - cron: '0 2 * * 0'  # Every Sunday at 2 AM UTC
+  workflow_dispatch:      # Allow manual trigger
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Cleanup metrics older than 90 days
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          curl -X POST "${SUPABASE_URL}/rest/v1/rpc/cleanup_old_metrics" \
+            -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
+            -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
+            -H "Content-Type: application/json"
+```
+
+Then create the database function:
+
+```sql
+CREATE OR REPLACE FUNCTION cleanup_old_metrics()
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+  DELETE FROM discovery_metrics
+  WHERE created_at < NOW() - INTERVAL '90 days';
+END;
+$$;
+```
+
+### Manual Cleanup
+
+For one-time cleanup:
+
+```sql
+-- Check current table size
+SELECT 
+  pg_size_pretty(pg_total_relation_size('discovery_metrics')) AS total_size,
+  COUNT(*) AS total_rows,
+  COUNT(*) FILTER (WHERE created_at < NOW() - INTERVAL '90 days') AS rows_to_delete
+FROM discovery_metrics;
+
+-- Delete old metrics
+DELETE FROM discovery_metrics
+WHERE created_at < NOW() - INTERVAL '90 days';
+
+-- Reclaim disk space (optional, heavy operation)
+VACUUM FULL discovery_metrics;
+```
+
+## Monitoring Best Practices
+
+### 1. Daily Health Check
+
+```sql
+SELECT 
+  DATE(created_at) AS day,
+  COUNT(*) AS requests,
+  ROUND(AVG((success)::int)::numeric, 3) AS pass_rate,
+  PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY time_ms) AS p95_ms
+FROM discovery_metrics
+WHERE created_at >= NOW() - INTERVAL '7 days'
+GROUP BY day
+ORDER BY day DESC;
+```
+
+### 2. Regression Detection
+
+```sql
+-- Compare performance across builds
+SELECT 
+  build_sha,
+  COUNT(*) AS requests,
+  ROUND(AVG((success)::int)::numeric, 3) AS pass_rate,
+  PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY time_ms) AS p95_ms
+FROM discovery_metrics
+WHERE created_at >= NOW() - INTERVAL '7 days'
+  AND build_sha IS NOT NULL
+GROUP BY build_sha
+ORDER BY MAX(created_at) DESC
+LIMIT 10;
+```
+
+### 3. Vendor Coverage
+
+```sql
+SELECT 
+  COALESCE(vendor, 'unknown') AS vendor,
+  COUNT(*) AS requests,
+  ROUND(AVG((success)::int)::numeric, 3) AS pass_rate
+FROM discovery_metrics
+WHERE created_at >= NOW() - INTERVAL '14 days'
+GROUP BY vendor
+ORDER BY requests DESC;
+```
+
+## Storage Estimates
+
+Approximate storage usage:
+
+| Timeframe | Requests/Day | Storage/Day | Storage/90 Days |
+|-----------|--------------|-------------|-----------------|
+| Low       | 100          | ~50 KB      | ~4.5 MB         |
+| Medium    | 1,000        | ~500 KB     | ~45 MB          |
+| High      | 10,000       | ~5 MB       | ~450 MB         |
+| Very High | 100,000      | ~50 MB      | ~4.5 GB         |
+
+**Recommendation:** Enable automatic cleanup when reaching 50 MB total table size or if growth rate exceeds storage budget.
+
+## Troubleshooting
+
+### Metrics Not Being Logged
+
+1. Check if metrics are disabled:
+   ```sql
+   -- Should return 'false' unless intentionally disabled
+   SELECT current_setting('app.settings.discovery_disable_metrics', true);
+   ```
+
+2. Verify edge function has database permissions:
+   ```sql
+   -- Check RLS policies on discovery_metrics table
+   SELECT * FROM pg_policies WHERE tablename = 'discovery_metrics';
+   ```
+
+3. Review edge function logs for errors:
+   - [Edge Function Logs](https://supabase.com/dashboard/project/gqxkeezkajkiyjpnjgkx/functions/discover-privacy-contacts/logs)
+
+### Metrics Table Growing Too Fast
+
+1. Check for unusual request volume:
+   ```sql
+   SELECT 
+     DATE(created_at) AS day,
+     COUNT(*) AS requests
+   FROM discovery_metrics
+   WHERE created_at >= NOW() - INTERVAL '30 days'
+   GROUP BY day
+   ORDER BY requests DESC
+   LIMIT 10;
+   ```
+
+2. Identify top domains:
+   ```sql
+   SELECT 
+     domain,
+     COUNT(*) AS requests
+   FROM discovery_metrics
+   WHERE created_at >= NOW() - INTERVAL '7 days'
+   GROUP BY domain
+   ORDER BY requests DESC
+   LIMIT 20;
+   ```
+
+3. Temporarily disable metrics if needed:
+   - Set `DISCOVERY_DISABLE_METRICS=true` in Supabase Edge Functions settings
+   - Investigate root cause
+   - Re-enable after resolving
+
+## Related Documentation
+
+- [Dashboard Queries](README.dashboards.md) - SQL queries for monitoring and analysis
+- [Operations Runbook](ops/runbook.md) - Incident response and troubleshooting
+- [Golden-10 Tests](README.golden10.md) - Quality gates and regression testing

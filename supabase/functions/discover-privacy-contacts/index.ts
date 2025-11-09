@@ -8,9 +8,15 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Circuit-breaker toggles
-const DISABLE_METRICS = (Deno.env.get('DISCOVERY_DISABLE_METRICS') ?? 'false') === 'true';
-const DOMAIN_BUDGET_MS = Number(Deno.env.get('DISCOVERY_DOMAIN_BUDGET_MS') ?? '25000');
+// Circuit-breaker toggles with safe parsing
+const bool = (v?: string) => (v ?? '').toLowerCase() === 'true';
+const int = (v?: string, d = 0) => Number.isFinite(Number(v)) ? Number(v) : d;
+
+const DISABLE_METRICS = bool(Deno.env.get('DISCOVERY_DISABLE_METRICS'));
+const DOMAIN_BUDGET_MS = Math.min(60000, Math.max(3000, int(Deno.env.get('DISCOVERY_DOMAIN_BUDGET_MS'), 25000)));
+
+// Constants
+const METHOD_USED = 't1' as const;
 
 interface ContactFinding {
   contact_type: 'email' | 'form' | 'phone' | 'other';
@@ -1299,7 +1305,7 @@ Extract all relevant contact methods for data deletion requests.`;
         await supabase.from('discovery_metrics').insert({
           domain: service.domain,
           success: true,
-          method_used: 't1',
+          method_used: METHOD_USED,
           time_ms: Date.now() - startTime,
           urls_considered: Math.min(5, urlsToTry.length), // Cap at 5 for precision@5
           policy_type: 'html',
@@ -1320,7 +1326,7 @@ Extract all relevant contact methods for data deletion requests.`;
         service: service.name,
         contacts_found: insertedContacts.length,
         contacts: insertedContacts,
-        method_used: 't1',
+        method_used: METHOD_USED,
         policy_type: 'html',
         confidence: overallConfidence,
         score: policyScore,
@@ -1421,7 +1427,7 @@ Extract all relevant contact methods for data deletion requests.`;
         await supabase.from('discovery_metrics').insert({
           domain: service_id,
           success: false,
-          method_used: 't1',
+          method_used: METHOD_USED,
           time_ms: Date.now() - startTime,
           urls_considered: Math.min(5, urlsToTry.length), // Cap at 5 for precision@5
           error_code: structuredError.error_code,

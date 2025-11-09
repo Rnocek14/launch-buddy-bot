@@ -64,6 +64,10 @@ jobs:
         if: always()
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          GITHUB_SHA: ${{ github.sha }}
+          GITHUB_SERVER_URL: ${{ github.server_url }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
         run: |
           if [ -n "$SLACK_WEBHOOK_URL" ]; then
             node tools/slack-notify.js golden10.summary.json "Golden-10 CI"
@@ -88,13 +92,19 @@ jobs:
         if: steps.gates.outputs.GATES_FAIL == '1'
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          GITHUB_SHA: ${{ github.sha }}
+          GITHUB_SERVER_URL: ${{ github.server_url }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
         run: |
           if [ -n "$SLACK_WEBHOOK_URL" ]; then
             PASS=$(jq '.pass' golden10.summary.json)
             MEDIAN=$(jq '.median_ms' golden10.summary.json)
             TOTAL=$(jq '.total' golden10.summary.json)
+            SHORT_SHA="${GITHUB_SHA:0:7}"
+            WORKFLOW_URL="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
             curl -X POST -H 'Content-Type: application/json' \
-              -d "{\"text\":\"*Golden-10 CI – Gate FAILED*\n• Pass: ${PASS}/${TOTAL}\n• Median: ${MEDIAN}ms\"}" \
+              -d "{\"text\":\"*Golden-10 CI – Gate FAILED*\n• Pass: ${PASS}/${TOTAL}\n• Median: ${MEDIAN}ms\n• Build: \\\`${SHORT_SHA}\\\` (<${WORKFLOW_URL}|workflow>)\"}" \
               "$SLACK_WEBHOOK_URL"
           fi
       
