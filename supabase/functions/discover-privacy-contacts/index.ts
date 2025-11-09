@@ -8,6 +8,10 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Circuit-breaker toggles
+const DISABLE_METRICS = (Deno.env.get('DISCOVERY_DISABLE_METRICS') ?? 'false') === 'true';
+const DOMAIN_BUDGET_MS = Number(Deno.env.get('DISCOVERY_DOMAIN_BUDGET_MS') ?? '25000');
+
 interface ContactFinding {
   contact_type: 'email' | 'form' | 'phone' | 'other';
   value: string;
@@ -37,7 +41,7 @@ const REDACT_PARAMS = ['email', 'e', 'user', 'token', 'auth', 'code', 'sid', 'se
 const MAX_REDIRECT_DEPTH = 1;
 const VALIDATION_TIMEOUT_MS = 5000;
 const FETCH_TIMEOUT_MS = 7000;
-const DOMAIN_BUDGET_MS = 25000;
+
 
 // Phase 1.1: i18n keyword expansion
 const PRIVACY_KEYWORDS = {
@@ -1290,22 +1294,24 @@ Extract all relevant contact methods for data deletion requests.`;
       build_ver: Deno.env.get('APP_VERSION') ?? 'dev'
     };
     
-    try {
-      await supabase.from('discovery_metrics').insert({
-        domain: service.domain,
-        success: true,
-        method_used: 't1',
-        time_ms: Date.now() - startTime,
-        urls_considered: Math.min(5, urlsToTry.length), // Cap at 5 for precision@5
-        policy_type: 'html',
-        score: policyScore,
-        confidence: overallConfidence,
-        lang: 'en',
-        vendor: vendorDetected,
-        ...buildInfo
-      });
-    } catch (metricsError) {
-      console.error('[Metrics] Failed to log:', metricsError);
+    if (!DISABLE_METRICS) {
+      try {
+        await supabase.from('discovery_metrics').insert({
+          domain: service.domain,
+          success: true,
+          method_used: 't1',
+          time_ms: Date.now() - startTime,
+          urls_considered: Math.min(5, urlsToTry.length), // Cap at 5 for precision@5
+          policy_type: 'html',
+          score: policyScore,
+          confidence: overallConfidence,
+          lang: 'en',
+          vendor: vendorDetected,
+          ...buildInfo
+        });
+      } catch (metricsError) {
+        console.error('[Metrics] Failed to log:', metricsError);
+      }
     }
     
     return new Response(
@@ -1405,7 +1411,7 @@ Extract all relevant contact methods for data deletion requests.`;
     }
     
     // Emit metrics for failure
-    if (supabase) {
+    if (supabase && !DISABLE_METRICS) {
       try {
         const buildInfo = {
           build_sha: Deno.env.get('GITHUB_SHA') ?? null,
