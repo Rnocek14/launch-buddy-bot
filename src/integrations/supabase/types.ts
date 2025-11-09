@@ -888,6 +888,14 @@ export type Database = {
       }
     }
     Views: {
+      discovery_alerts_24h: {
+        Row: {
+          p95_ms_24h: number | null
+          pass_rate_24h: number | null
+          top_errors_24h: Json | null
+        }
+        Relationships: []
+      }
       discovery_metrics_summary: {
         Row: {
           avg_ms: number | null
