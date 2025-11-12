@@ -12,6 +12,7 @@ import {
 } from '../_shared/probes.ts';
 import { detectLanguage, rankByLocale } from '../_shared/lang.ts';
 import { getSitemapCache, setSitemapCache } from '../_shared/cache.ts';
+import { getVendorHint } from '../_shared/vendor_hints.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -33,6 +34,11 @@ const ENABLE_VENDOR_DET = bool(Deno.env.get('DETECT_VENDOR'));
 // Phase 1.3: Feature flags for language and cache
 const DETECT_LANG = bool(Deno.env.get('DETECT_LANG'));
 const CACHE_SITEMAP = bool(Deno.env.get('CACHE_SITEMAP'));
+
+// Phase 1.3: Tail latency guardrails
+const TAIL_P95_GOAL_MS = Math.min(8000, Math.max(3000, int(Deno.env.get('TAIL_P95_GOAL_MS'), 5000)));
+const ATTEMPT_TIMEOUT_MS = Math.min(10000, Math.max(1500, int(Deno.env.get('ATTEMPT_TIMEOUT_MS'), 4000)));
+const EARLY_STOP_CONFIDENCE = Math.min(100, Math.max(30, int(Deno.env.get('EARLY_STOP_CONFIDENCE'), 70)));
 
 // Constants
 const METHOD_USED = 't1' as const;
@@ -572,11 +578,30 @@ async function probeSitemap(domain: string): Promise<string[]> {
   return await probeSitemapShared(domain);
 }
 
+// Phase 1.3: Attempt timeout wrapper
+const withAttemptTimeout = <T>(p: Promise<T>, ms: number) =>
+  Promise.race([p, new Promise<T>((_, rej) => setTimeout(() => rej(new Error('attempt_timeout')), ms))]);
+
 // Phase 1: Enhanced fetch with smart link discovery and scoring
-async function trySimpleFetch(urlsToTry: string[], domain: string): Promise<{ content: string; url: string; discoveredUrls?: string[]; policy_type?: string } | null> {
+async function trySimpleFetch(
+  urlsToTry: string[], 
+  domain: string,
+  attemptTimeoutMs: number,
+  earlyStopScore: number
+): Promise<{ 
+  content: string; 
+  url: string; 
+  discoveredUrls?: string[]; 
+  policy_type?: string;
+  attemptTimeouts: number;
+  bestScore: number;
+} | null> {
   const attemptedUrls: string[] = [];
   const failedUrls: Map<string, number> = new Map();
   const startTime = Date.now();
+  let attemptTimeouts = 0;
+  let bestScore = -Infinity;
+  let bestResult: { content: string; url: string; discoveredUrls?: string[]; policy_type?: string } | null = null;
   
   // Phase 1.1 Refinement: Budget timer to prevent runaway discovery
   const budgetOk = () => (Date.now() - startTime) < DOMAIN_BUDGET_MS;
@@ -591,7 +616,7 @@ async function trySimpleFetch(urlsToTry: string[], domain: string): Promise<{ co
     attemptedUrls.push(url);
     
     try {
-      const pageResponse = await fetch(url, {
+      const fetchPromise = fetch(url, {
         headers: {
           'User-Agent': USER_AGENT,
           'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
@@ -600,6 +625,8 @@ async function trySimpleFetch(urlsToTry: string[], domain: string): Promise<{ co
         redirect: 'follow',
         signal: AbortSignal.timeout(15000)
       });
+      
+      const pageResponse = await withAttemptTimeout(fetchPromise, attemptTimeoutMs);
 
       if (pageResponse.ok) {
         // Phase 1.1 Refinement #5: Check for PDF early
@@ -610,7 +637,9 @@ async function trySimpleFetch(urlsToTry: string[], domain: string): Promise<{ co
             content: '',
             url,
             discoveredUrls: attemptedUrls,
-            policy_type: 'pdf'
+            policy_type: 'pdf',
+            attemptTimeouts,
+            bestScore: 30 // PDFs get medium score
           };
         }
         
@@ -646,12 +675,14 @@ async function trySimpleFetch(urlsToTry: string[], domain: string): Promise<{ co
                   content: '',
                   url: validation.finalUrl || link.url,
                   discoveredUrls: scoredLinks.slice(0, 10).map(l => l.url),
-                  policy_type: 'pdf'
+                  policy_type: 'pdf',
+                  attemptTimeouts,
+                  bestScore: 30 // PDFs get medium score
                 };
               }
               
               console.log(`[Phase 1] Trying validated URL: ${sanitizeForLog(link.url)}`);
-              const result = await trySimpleFetch([link.url], domain);
+              const result = await trySimpleFetch([link.url], domain, attemptTimeoutMs, earlyStopScore);
               if (result) {
                 result.discoveredUrls = scoredLinks.slice(0, 10).map(l => l.url);
                 return result;
@@ -685,14 +716,26 @@ async function trySimpleFetch(urlsToTry: string[], domain: string): Promise<{ co
           
           if (policyCheck.isPolicy) {
             console.log(`[Phase 1] ✓ Successfully fetched privacy content from: ${sanitizeForLog(url)} (${content.length} chars, score: ${policyCheck.score})`);
-            return { content, url, discoveredUrls: attemptedUrls };
+            
+            // Track best result for early stopping
+            if (policyCheck.score > bestScore) {
+              bestScore = policyCheck.score;
+              bestResult = { content, url, discoveredUrls: attemptedUrls };
+              
+              // Early stop if score is high enough
+              if (policyCheck.score >= earlyStopScore) {
+                console.log(`[Guardrail] Early stop — score ${policyCheck.score} >= ${earlyStopScore}`);
+                return { ...bestResult, attemptTimeouts, bestScore };
+              }
+            }
           } else {
             console.warn(`[Phase 1] Content doesn't appear to be a privacy policy: ${sanitizeForLog(url)} (score: ${policyCheck.score})`);
             
-            // If score is borderline (20-29), still try it but log the concern
-            if (policyCheck.score >= 20) {
-              console.log(`[Phase 1] ⚠️  Borderline score, will try it anyway: ${sanitizeForLog(url)}`);
-              return { content, url, discoveredUrls: attemptedUrls };
+            // If score is borderline (20-29), still consider it but continue searching
+            if (policyCheck.score >= 20 && policyCheck.score > bestScore) {
+              console.log(`[Phase 1] ⚠️  Borderline score, will consider it: ${sanitizeForLog(url)}`);
+              bestScore = policyCheck.score;
+              bestResult = { content, url, discoveredUrls: attemptedUrls };
             }
           }
         } else {
@@ -704,7 +747,15 @@ async function trySimpleFetch(urlsToTry: string[], domain: string): Promise<{ co
       }
     } catch (fetchError) {
       const errorMsg = fetchError instanceof Error ? fetchError.message : String(fetchError);
-      console.warn(`[Phase 1] Error fetching ${sanitizeForLog(url)}: ${errorMsg}`);
+      
+      // Track attempt timeouts
+      if (errorMsg.includes('attempt_timeout')) {
+        attemptTimeouts++;
+        console.warn(`[Guardrail] Attempt timeout for ${sanitizeForLog(url)}`);
+      } else {
+        console.warn(`[Phase 1] Error fetching ${sanitizeForLog(url)}: ${errorMsg}`);
+      }
+      
       failedUrls.set(url, 0);
     }
   }
@@ -716,8 +767,16 @@ async function trySimpleFetch(urlsToTry: string[], domain: string): Promise<{ co
     ));
   }
   
+  // Return best result found, if any
+  if (bestResult) {
+    console.log(`[Phase 1] Returning best result with score ${bestScore}`);
+    return { ...bestResult, attemptTimeouts, bestScore };
+  }
+  
   return null;
 }
+
+// Remove duplicate withAttemptTimeout declaration
 
 // Phase 2: Browserless.io fallback for JavaScript-heavy sites
 async function tryBrowserlessFetch(urlsToTry: string[], browserlessApiKey: string): Promise<{ content: string; url: string } | null> {
@@ -949,17 +1008,27 @@ serve(async (req) => {
       console.log(`[Lang] Top 5 ranked by locale (${langDetected}):`, top5Candidates.slice(0, 3).map(sanitizeForLog));
     }
 
-    // Phase 1: Try simple fetch with enhanced URL discovery
-    let result = await trySimpleFetch(urlsToTry, service.domain);
+    // Phase 1: Try simple fetch with enhanced URL discovery and tail guardrails
+    let result = await trySimpleFetch(urlsToTry, service.domain, ATTEMPT_TIMEOUT_MS, EARLY_STOP_CONFIDENCE);
     let methodUsed = 'simple_fetch';
+    const attemptTimeouts = result?.attemptTimeouts ?? 0;
+    
+    console.log(`[Guardrails] Attempt timeouts: ${attemptTimeouts}, Best score: ${result?.bestScore ?? 'N/A'}`);
     
     // Phase 2: If Phase 1 failed, try Browserless.io
     if (!result) {
       const browserlessApiKey = Deno.env.get('BROWSERLESS_API_KEY');
       if (browserlessApiKey) {
         console.log('[Strategy] Phase 1 failed, attempting Phase 2 with Browserless...');
-        result = await tryBrowserlessFetch(urlsToTry.slice(0, 5), browserlessApiKey); // Try top 5 URLs only
-        if (result) methodUsed = 'browserless';
+        const browserlessResult = await tryBrowserlessFetch(urlsToTry.slice(0, 5), browserlessApiKey); // Try top 5 URLs only
+        if (browserlessResult) {
+          result = {
+            ...browserlessResult,
+            attemptTimeouts: 0,
+            bestScore: 50 // Browserless gets medium-high score
+          };
+          methodUsed = 'browserless';
+        }
       } else {
         console.warn('[Strategy] BROWSERLESS_API_KEY not configured, skipping Phase 2');
       }
@@ -980,6 +1049,11 @@ serve(async (req) => {
         console.log(`[Vendor] Detected: ${vendorInfo.platform_detected} (prefill: ${vendorInfo.pre_fill_supported})`);
       }
     }
+    
+    // Phase 1.3: Get vendor form hints
+    const vendorHint = vendorInfo && vendorInfo.platform_detected !== 'none'
+      ? getVendorHint(vendorInfo.platform_detected)
+      : getVendorHint('unknown');
     
     const policyScore = policy_type === 'pdf' ? 30 : 50; // PDFs get medium score by default
     const confidence = toConfidence(policyScore, successUrl, vendorInfo?.platform_detected);
@@ -1028,7 +1102,9 @@ serve(async (req) => {
         lang: langDetected,
         cache_hit: cacheHit,
         vendor: vendorInfo?.platform_detected,
-        vendor_evidence: vendorInfo?.evidence ? sanitizeForLog(vendorInfo.evidence) : undefined
+        vendor_evidence: vendorInfo?.evidence ? sanitizeForLog(vendorInfo.evidence) : undefined,
+        prefill_supported: vendorInfo?.pre_fill_supported ?? null,
+        attempt_timeouts: attemptTimeouts
       });
 
       return new Response(
@@ -1049,6 +1125,12 @@ serve(async (req) => {
             platform_detected: vendorInfo.platform_detected,
             pre_fill_supported: vendorInfo.pre_fill_supported
           }),
+          vendor_form_hints: {
+            platform: vendorHint.platform,
+            prefill_supported: vendorHint.prefill_supported,
+            selectors: vendorHint.selectors,
+            request_types: vendorHint.request_types ?? []
+          },
           message: 'Privacy policy is a PDF. Please review manually for contact information.'
         }),
         { 
@@ -1376,6 +1458,8 @@ Extract all relevant contact methods for data deletion requests.`;
           vendor: vendorDetected,
           vendor_evidence: vendorInfo?.evidence ? sanitizeForLog(vendorInfo.evidence) : undefined,
           security_contact: securityTxtContact?.contact,
+          prefill_supported: vendorInfo?.pre_fill_supported ?? null,
+          attempt_timeouts: attemptTimeouts,
           ...buildInfo
         });
       } catch (metricsError) {
@@ -1403,6 +1487,12 @@ Extract all relevant contact methods for data deletion requests.`;
           pre_fill_supported: vendorInfo.pre_fill_supported,
           vendor_evidence: vendorInfo.evidence
         }),
+        vendor_form_hints: {
+          platform: vendorHint.platform,
+          prefill_supported: vendorHint.prefill_supported,
+          selectors: vendorHint.selectors,
+          request_types: vendorHint.request_types ?? []
+        },
         ...(securityTxtContact && {
           security_contact: securityTxtContact.contact
         })

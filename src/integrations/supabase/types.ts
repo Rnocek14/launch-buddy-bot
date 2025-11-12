@@ -243,6 +243,7 @@ export type Database = {
       }
       discovery_metrics: {
         Row: {
+          attempt_timeouts: number | null
           build_sha: string | null
           build_ver: string | null
           cache_hit: boolean | null
@@ -255,6 +256,7 @@ export type Database = {
           lang: string | null
           method_used: string
           policy_type: string | null
+          prefill_supported: boolean | null
           score: number | null
           status_map: Json | null
           success: boolean
@@ -264,6 +266,7 @@ export type Database = {
           vendor: string | null
         }
         Insert: {
+          attempt_timeouts?: number | null
           build_sha?: string | null
           build_ver?: string | null
           cache_hit?: boolean | null
@@ -276,6 +279,7 @@ export type Database = {
           lang?: string | null
           method_used?: string
           policy_type?: string | null
+          prefill_supported?: boolean | null
           score?: number | null
           status_map?: Json | null
           success: boolean
@@ -285,6 +289,7 @@ export type Database = {
           vendor?: string | null
         }
         Update: {
+          attempt_timeouts?: number | null
           build_sha?: string | null
           build_ver?: string | null
           cache_hit?: boolean | null
@@ -297,6 +302,7 @@ export type Database = {
           lang?: string | null
           method_used?: string
           policy_type?: string | null
+          prefill_supported?: boolean | null
           score?: number | null
           status_map?: Json | null
           success?: boolean
