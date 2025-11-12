@@ -260,6 +260,9 @@ export type Database = {
           score: number | null
           status_map: Json | null
           success: boolean
+          t2_success: boolean | null
+          t2_time_ms: number | null
+          t2_used: boolean | null
           time_ms: number
           urls_considered: number | null
           urls_considered_top5: number | null
@@ -283,6 +286,9 @@ export type Database = {
           score?: number | null
           status_map?: Json | null
           success: boolean
+          t2_success?: boolean | null
+          t2_time_ms?: number | null
+          t2_used?: boolean | null
           time_ms: number
           urls_considered?: number | null
           urls_considered_top5?: number | null
@@ -306,6 +312,9 @@ export type Database = {
           score?: number | null
           status_map?: Json | null
           success?: boolean
+          t2_success?: boolean | null
+          t2_time_ms?: number | null
+          t2_used?: boolean | null
           time_ms?: number
           urls_considered?: number | null
           urls_considered_top5?: number | null
@@ -761,6 +770,57 @@ export type Database = {
         }
         Relationships: []
       }
+      t2_retries: {
+        Row: {
+          attempts: number
+          created_at: string
+          domain: string
+          id: number
+          last_error: string | null
+          next_run_at: string
+          policy_type: string | null
+          reason: Database["public"]["Enums"]["retry_reason"]
+          result_url: string | null
+          seed_url: string | null
+          status: string
+          t2_time_ms: number | null
+          updated_at: string
+          vendor: string | null
+        }
+        Insert: {
+          attempts?: number
+          created_at?: string
+          domain: string
+          id?: number
+          last_error?: string | null
+          next_run_at?: string
+          policy_type?: string | null
+          reason: Database["public"]["Enums"]["retry_reason"]
+          result_url?: string | null
+          seed_url?: string | null
+          status?: string
+          t2_time_ms?: number | null
+          updated_at?: string
+          vendor?: string | null
+        }
+        Update: {
+          attempts?: number
+          created_at?: string
+          domain?: string
+          id?: number
+          last_error?: string | null
+          next_run_at?: string
+          policy_type?: string | null
+          reason?: Database["public"]["Enums"]["retry_reason"]
+          result_url?: string | null
+          seed_url?: string | null
+          status?: string
+          t2_time_ms?: number | null
+          updated_at?: string
+          vendor?: string | null
+        }
+        Relationships: []
+      }
       unmatched_domains: {
         Row: {
           domain: string
@@ -1039,6 +1099,12 @@ export type Database = {
         | "clicked"
         | "unsubscribed"
       identifier_type: "email" | "phone" | "username" | "other"
+      retry_reason:
+        | "bot_protection"
+        | "no_policy_found"
+        | "pdf_only"
+        | "captcha"
+        | "other"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1179,6 +1245,13 @@ export const Constants = {
         "unsubscribed",
       ],
       identifier_type: ["email", "phone", "username", "other"],
+      retry_reason: [
+        "bot_protection",
+        "no_policy_found",
+        "pdf_only",
+        "captcha",
+        "other",
+      ],
     },
   },
 } as const

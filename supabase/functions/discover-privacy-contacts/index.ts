@@ -41,6 +41,10 @@ const TAIL_P95_GOAL_MS = Math.min(8000, Math.max(3000, int(Deno.env.get('TAIL_P9
 const ATTEMPT_TIMEOUT_MS = Math.min(10000, Math.max(1500, int(Deno.env.get('ATTEMPT_TIMEOUT_MS'), 4000)));
 const EARLY_STOP_CONFIDENCE = Math.min(100, Math.max(30, int(Deno.env.get('EARLY_STOP_CONFIDENCE'), 70)));
 
+// Phase 1.4: Tier-2 retries
+const ENABLE_T2 = bool(Deno.env.get('ENABLE_T2'));
+const T2_RETRY_ON = new Set(['bot_protection', 'captcha']);
+
 // Phase 1.3: Slow-domain overrides parser
 const parseOverrides = (raw?: string) => {
   if (!raw) return new Map<string, number>();
@@ -1650,6 +1654,23 @@ Extract all relevant contact methods for data deletion requests.`;
         });
       } catch (metricsError) {
         console.error('[Metrics] Failed to log:', metricsError);
+      }
+    }
+    
+    // Phase 1.4: Enqueue to T2 on eligible failures
+    if (ENABLE_T2 && structuredError.error_code && T2_RETRY_ON.has(structuredError.error_code) && service_id) {
+      try {
+        const seedUrl = urlsToTry.length > 0 ? urlsToTry[0] : `https://${service_id}`;
+        await supabase.from('t2_retries').insert({
+          domain: service_id.toLowerCase(),
+          seed_url: seedUrl,
+          reason: structuredError.error_code,
+          status: 'queued',
+          next_run_at: new Date(Date.now() + 60_000).toISOString(), // +1min backoff
+        });
+        console.log(`[T2] Queued → ${service_id} (${structuredError.error_code})`);
+      } catch (t2Error) {
+        console.warn('[T2] Failed to enqueue:', t2Error);
       }
     }
     

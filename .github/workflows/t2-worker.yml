@@ -1,0 +1,38 @@
+name: Tier2-Worker
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'   # every 10 minutes
+  workflow_dispatch:
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Install Playwright
+        run: |
+          npm i playwright
+          npx playwright install --with-deps chromium
+      
+      - name: Run T2 Worker
+        run: npx tsx tools/t2-worker.ts
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          T2_BATCH: 5
+          T2_MAX_ATTEMPTS: 3
+          T2_BACKOFF_MS: 15000
+          T2_TIMEOUT_MS: 60000
+      
+      - name: Report Status
+        if: always()
+        run: |
+          echo "T2 worker run completed"
+          echo "Check logs for details"

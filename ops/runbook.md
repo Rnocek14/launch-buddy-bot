@@ -110,6 +110,43 @@ SLOW_BUDGET_OVERRIDES="airbnb.com:40000,booking.com:35000"
 2. Monitor p95 latency over 24 hours using dashboard queries
 3. If p95 regresses globally, revert overrides and investigate alternative approaches (e.g., vendor-specific handling)
 
+## Phase 1.4: Tier-2 Headless Retries
+
+### When to Use T2
+
+Enable T2 (`ENABLE_T2=true`) when:
+- Encounter persistent `bot_protection` or `captcha` errors
+- T1 (simple fetch) fails for domains with heavy JS/SPAs
+- Need to handle complex vendor portals (OneTrust, Securiti, etc.)
+
+### Safety Rails
+
+* **PII**: Never send or store PII in T2 — only URLs, vendor names, and timings
+* **Quarantine**: Domains in `discovery_quarantine` are skipped automatically
+* **Global cap**: If Golden-25 median > 4s AND T2 backlog > 100, auto-disable `ENABLE_T2`
+* **Robots/ToS**: Keep fetch counts low (one page + one policy click), respect rate limits
+
+### Monitoring
+
+```sql
+-- T2 backlog alert: > 25 queued jobs
+select count(*) from t2_retries 
+where status='queued' and next_run_at <= now();
+
+-- T2 p95: > 15s in 24h
+select percentile_cont(0.95) within group(order by t2_time_ms)
+from discovery_metrics
+where created_at >= now()-interval '24h' and t2_used is true;
+```
+
+### Configuration
+
+* `ENABLE_T2=true` — enable Tier-2 headless retries
+* `T2_BATCH=5` — jobs processed per worker run
+* `T2_MAX_ATTEMPTS=3` — max retries before marking failed
+* `T2_BACKOFF_MS=15000` — backoff multiplier per attempt
+* `T2_TIMEOUT_MS=60000` — per-job timeout
+
 ### New Error Code Spike
 
 **Symptoms:**

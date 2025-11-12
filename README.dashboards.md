@@ -147,3 +147,42 @@ where created_at >= now() - interval '14 days'
   and cache_hit is not null
 group by cache_status;
 ```
+
+## T2 Tier-2 Queue & Performance
+
+Monitor T2 headless retry queue and effectiveness:
+
+```sql
+-- T2 backlog by status
+select status, count(*) as n
+from t2_retries
+group by status
+order by n desc;
+
+-- T2 success rate & p95 (24h)
+select
+  round(avg((t2_success)::int)::numeric,3) as t2_pass_rate,
+  percentile_cont(0.95) within group(order by t2_time_ms) as t2_p95_ms,
+  count(*) as n
+from discovery_metrics
+where created_at >= now() - interval '24 hours'
+  and t2_used is true;
+
+-- T2 retry reasons (7-day)
+select reason, count(*) as n
+from t2_retries
+where created_at >= now() - interval '7 days'
+group by reason
+order by n desc;
+
+-- T2 vs T1 pass rate comparison
+select
+  method_used,
+  round(avg((success)::int)::numeric,3) as pass_rate,
+  percentile_cont(0.95) within group(order by time_ms) as p95_ms,
+  count(*) as n
+from discovery_metrics
+where created_at >= now() - interval '24 hours'
+group by method_used
+order by method_used;
+```
