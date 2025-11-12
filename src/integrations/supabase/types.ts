@@ -313,6 +313,36 @@ export type Database = {
         }
         Relationships: []
       }
+      discovery_quarantine: {
+        Row: {
+          attempts: number
+          created_at: string
+          domain: string
+          last_error: string | null
+          reason: string
+          until_at: string
+          updated_at: string
+        }
+        Insert: {
+          attempts?: number
+          created_at?: string
+          domain: string
+          last_error?: string | null
+          reason: string
+          until_at: string
+          updated_at?: string
+        }
+        Update: {
+          attempts?: number
+          created_at?: string
+          domain?: string
+          last_error?: string | null
+          reason?: string
+          until_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       email_analytics: {
         Row: {
           created_at: string

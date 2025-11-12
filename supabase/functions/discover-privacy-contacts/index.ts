@@ -13,6 +13,7 @@ import {
 import { detectLanguage, rankByLocale } from '../_shared/lang.ts';
 import { getSitemapCache, setSitemapCache } from '../_shared/cache.ts';
 import { getVendorHint } from '../_shared/vendor_hints.ts';
+import { isQuarantined, addToQuarantine } from '../_shared/quarantine.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -889,6 +890,19 @@ serve(async (req) => {
       throw new Error('Service not found');
     }
 
+    // Check if domain is quarantined
+    const quarantined = await isQuarantined(supabase, service.domain);
+    if (quarantined) {
+      console.log(`[Quarantine] Domain ${service.domain} is quarantined, skipping`);
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Domain temporarily quarantined due to repeated issues',
+        error_code: 'QUARANTINED',
+        error_type: 'bot_protection',
+        suggested_action: 'try_again_later'
+      }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 429 });
+    }
+
     console.log(`=== Discovering privacy contacts for: ${service.name} (${service.domain}) ===`);
 
     // Phase 1.2/1.3: Try probes first (security.txt, sitemap with cache)
@@ -1553,6 +1567,33 @@ Extract all relevant contact methods for data deletion requests.`;
       structuredError.error_code = 'ACCESS_DENIED';
       structuredError.suggested_action = 'manual_entry';
       structuredError.message = 'Website is blocking automated access. Please manually find and enter the privacy contact information.';
+      
+      // Quarantine domain after repeated bot_protection failures
+      if (supabase && service_id) {
+        try {
+          const { data: service } = await supabase
+            .from('service_catalog')
+            .select('domain')
+            .eq('id', service_id)
+            .single();
+          
+          if (service?.domain) {
+            const { data: recentFailures } = await supabase
+              .from('discovery_metrics')
+              .select('id')
+              .eq('domain', service.domain)
+              .eq('error_code', 'ACCESS_DENIED')
+              .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
+            
+            if ((recentFailures?.length ?? 0) >= 2) {
+              await addToQuarantine(supabase, service.domain, 'bot_protection', 24 * 60 * 60 * 1000, error.message);
+              console.log(`[Quarantine] Added ${service.domain} to 24h quarantine after ${recentFailures?.length ?? 0} bot_protection failures`);
+            }
+          }
+        } catch (qError) {
+          console.error('[Quarantine] Failed to add to quarantine:', qError);
+        }
+      }
     } else if (error.message?.includes('404')) {
       structuredError.error_type = 'no_policy_found';
       structuredError.error_code = 'PAGE_NOT_FOUND';
