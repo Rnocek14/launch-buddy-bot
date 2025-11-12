@@ -2,6 +2,14 @@ import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { DOMParser } from "https://esm.sh/linkedom@0.16.7";
+import type { VendorDetection } from '../_shared/probes.ts';
+import {
+  probeSecurityTxt as probeSecurityTxtShared,
+  probeSitemap as probeSitemapShared,
+  detectVendor as detectVendorShared,
+  precisionAt5,
+  toConfidence as toConfidenceShared,
+} from '../_shared/probes.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -14,6 +22,11 @@ const int = (v?: string, d = 0) => Number.isFinite(Number(v)) ? Number(v) : d;
 
 const DISABLE_METRICS = bool(Deno.env.get('DISCOVERY_DISABLE_METRICS'));
 const DOMAIN_BUDGET_MS = Math.min(60000, Math.max(3000, int(Deno.env.get('DISCOVERY_DOMAIN_BUDGET_MS'), 25000)));
+
+// Phase 1.2: Feature flags for probes
+const ENABLE_SECURITY_TXT = bool(Deno.env.get('PROBE_SECURITY_TXT'));
+const ENABLE_SITEMAP = bool(Deno.env.get('PROBE_SITEMAP'));
+const ENABLE_VENDOR_DET = bool(Deno.env.get('DETECT_VENDOR'));
 
 // Constants
 const METHOD_USED = 't1' as const;
@@ -83,28 +96,17 @@ const PRIVACY_KEYWORDS = {
   }
 };
 
-// Phase 1.2: Vendor platform detection
-const VENDORS = [
-  { key: 'onetrust', re: /onetrust\.com|privacy.*one(trust|trust)\b|otprivacy/i, prefill: false },
-  { key: 'securiti', re: /securiti\.ai|privacy-central\.securiti|securiti\.app/i, prefill: true },
-  { key: 'trustarc', re: /trustarc\.com|consent\.trustarc|privacycentral\.trustarc/i, prefill: false },
-];
-
+// Phase 1.2: Legacy detectVendor (now redirects to shared probes)
 function detectVendor(url: string): { platform_detected: string; pre_fill_supported: boolean } | null {
-  const match = VENDORS.find(v => v.re.test(url));
-  return match ? { platform_detected: match.key, pre_fill_supported: match.prefill } : null;
+  if (!ENABLE_VENDOR_DET) return null;
+  const result = detectVendorShared({ url });
+  if (result.platform_detected === 'none') return null;
+  return { platform_detected: result.platform_detected, pre_fill_supported: result.pre_fill_supported };
 }
 
-// Phase 1.2: Improved confidence calculation
+// Phase 1.2: Legacy toConfidence (now redirects to shared probes)
 function toConfidence(score: number, url: string, vendor?: string): 'high' | 'medium' | 'low' {
-  if (vendor) return 'high';
-  
-  try {
-    const pathname = new URL(url).pathname;
-    if (/\/privacy(-policy)?$/.test(pathname)) return 'high';
-  } catch {}
-  
-  return score >= 40 ? 'high' : (score >= 25 ? 'medium' : 'low');
+  return toConfidenceShared(score, url, vendor);
 }
 
 // Phase 1.1 Refinement #2: <base> tag support
@@ -548,55 +550,20 @@ async function quickValidateUrl(url: string): Promise<{ valid: boolean; status?:
   return { valid: result.valid, status: result.status };
 }
 
-// Phase 1.2: Probe for security.txt
+// Phase 1.2: Legacy probes (now redirect to shared probes with feature flags)
 async function probeSecurityTxt(domain: string): Promise<{ type: string; contact: string; url: string } | null> {
-  const url = `https://${domain}/.well-known/security.txt`;
-  try {
-    const r = await fetch(url, { redirect: 'follow', signal: AbortSignal.timeout(4000) });
-    if (r.ok) {
-      const text = await r.text();
-      const match = text.match(/^\s*Contact:\s*(.+)$/im);
-      if (match) {
-        console.log(`[Probe] Found security.txt contact: ${match[1].trim()}`);
-        return { type: 'security.txt', contact: match[1].trim(), url };
-      }
-    }
-  } catch (e) {
-    console.warn(`[Probe] security.txt failed for ${domain}:`, e);
+  if (!ENABLE_SECURITY_TXT) return null;
+  const result = await probeSecurityTxtShared(domain);
+  // Filter to only return security.txt type
+  if (result && result.type === 'security.txt') {
+    return result;
   }
   return null;
 }
 
-// Phase 1.2: Probe for sitemap.xml (gzip-aware)
 async function probeSitemap(domain: string): Promise<string[]> {
-  for (const path of ['/sitemap.xml', '/sitemap.xml.gz']) {
-    try {
-      const r = await fetch(`https://${domain}${path}`, { signal: AbortSignal.timeout(4000) });
-      if (!r.ok) continue;
-      
-      let txt: string;
-      if (path.endsWith('.gz')) {
-        const ab = await r.arrayBuffer();
-        const ds = new DecompressionStream('gzip');
-        const stream = new Blob([ab]).stream().pipeThrough(ds);
-        const s = new Response(stream);
-        txt = await s.text();
-      } else {
-        txt = await r.text();
-      }
-      
-      const urls = [...txt.matchAll(/<loc>\s*([^<]+)\s*<\/loc>/g)].map(m => m[1]);
-      const privacyUrls = urls.filter(u => /privacy|legal|dsar/i.test(u));
-      
-      if (privacyUrls.length > 0) {
-        console.log(`[Probe] Found ${privacyUrls.length} privacy URLs in sitemap`);
-        return privacyUrls;
-      }
-    } catch (e) {
-      console.warn(`[Probe] sitemap probe failed for ${domain}${path}:`, e);
-    }
-  }
-  return [];
+  if (!ENABLE_SITEMAP) return [];
+  return await probeSitemapShared(domain);
 }
 
 // Phase 1: Enhanced fetch with smart link discovery and scoring
@@ -847,11 +814,27 @@ serve(async (req) => {
     console.log(`=== Discovering privacy contacts for: ${service.name} (${service.domain}) ===`);
 
     // Phase 1.2: Try probes first (security.txt, sitemap)
-    const securityTxtContact = await probeSecurityTxt(service.domain);
-    const sitemapUrls = await probeSitemap(service.domain);
+    let securityTxtContact: { type: string; contact: string; url: string } | null = null;
+    let sitemapUrls: string[] = [];
+    
+    if (ENABLE_SECURITY_TXT) {
+      console.log('[Probe] Security.txt enabled, checking...');
+      securityTxtContact = await probeSecurityTxt(service.domain);
+      if (securityTxtContact) {
+        console.log(`[Probe] ✓ Found security.txt contact: ${securityTxtContact.contact}`);
+      }
+    }
+    
+    if (ENABLE_SITEMAP) {
+      console.log('[Probe] Sitemap enabled, checking...');
+      sitemapUrls = await probeSitemap(service.domain);
+      if (sitemapUrls.length > 0) {
+        console.log(`[Probe] ✓ Found ${sitemapUrls.length} privacy URLs in sitemap`);
+      }
+    }
 
     // Build comprehensive URL list with Phase 1 enhancements
-    urlsToTry = privacy_url 
+    const candidateUrls = privacy_url 
       ? [privacy_url]
       : [
           // Phase 1.2: Sitemap-discovered URLs
@@ -905,8 +888,12 @@ serve(async (req) => {
           `https://${service.domain}/about/privacy`,
           `https://www.${service.domain}/about/privacy`,
         ].filter(Boolean);
+    
+    // Store top 5 for precision@5 metric
+    const top5Candidates = candidateUrls.slice(0, 5);
+    urlsToTry = candidateUrls;
 
-    console.log(`Prepared ${urlsToTry.length} URLs to try`);
+    console.log(`Prepared ${urlsToTry.length} URLs to try (top 5 for metrics: ${top5Candidates.length})`);
 
     // Phase 1: Try simple fetch with enhanced URL discovery
     let result = await trySimpleFetch(urlsToTry, service.domain);
@@ -931,10 +918,21 @@ serve(async (req) => {
 
     const { content: privacyContent, url: successUrl, policy_type } = result;
 
-    // Phase 1.2: Detect vendor and calculate confidence
-    const vendorInfo = detectVendor(successUrl);
+    // Phase 1.2: Detect vendor and calculate confidence (with feature flags)
+    let vendorInfo: VendorDetection | null = null;
+    if (ENABLE_VENDOR_DET) {
+      vendorInfo = detectVendorShared({ url: successUrl, html: privacyContent });
+      if (vendorInfo.platform_detected !== 'none') {
+        console.log(`[Vendor] Detected: ${vendorInfo.platform_detected} (prefill: ${vendorInfo.pre_fill_supported})`);
+      }
+    }
+    
     const policyScore = policy_type === 'pdf' ? 30 : 50; // PDFs get medium score by default
     const confidence = toConfidence(policyScore, successUrl, vendorInfo?.platform_detected);
+    
+    // Calculate precision@5
+    const p5 = precisionAt5(top5Candidates, successUrl);
+    console.log(`[Metrics] Precision@5: hit=${p5.hit_in_top5}, considered=${p5.urls_considered_top5}`);
 
 // Phase 1.1 Refinement #5: Handle PDF policies differently
     if (policy_type === 'pdf') {
@@ -1307,12 +1305,14 @@ Extract all relevant contact methods for data deletion requests.`;
           success: true,
           method_used: METHOD_USED,
           time_ms: Date.now() - startTime,
-          urls_considered: Math.min(5, urlsToTry.length), // Cap at 5 for precision@5
-          policy_type: 'html',
+          urls_considered: p5.urls_considered_top5,
+          hit_in_top5: p5.hit_in_top5,
+          policy_type: policy_type || 'html',
           score: policyScore,
           confidence: overallConfidence,
           lang: 'en',
           vendor: vendorDetected,
+          security_contact: securityTxtContact?.contact,
           ...buildInfo
         });
       } catch (metricsError) {
@@ -1327,15 +1327,20 @@ Extract all relevant contact methods for data deletion requests.`;
         contacts_found: insertedContacts.length,
         contacts: insertedContacts,
         method_used: METHOD_USED,
-        policy_type: 'html',
+        policy_type: policy_type || 'html',
         confidence: overallConfidence,
         score: policyScore,
         url: successUrl,
         lang_detected: 'en', // TODO: Add language detection in Phase 1.3
         reasons: insertedContacts.map((c: any) => c.reasoning),
-        ...(vendorInfo && { 
+        precision_at_5: p5.hit_in_top5,
+        ...(vendorInfo && vendorInfo.platform_detected !== 'none' && { 
           platform_detected: vendorInfo.platform_detected,
-          pre_fill_supported: vendorInfo.pre_fill_supported
+          pre_fill_supported: vendorInfo.pre_fill_supported,
+          vendor_evidence: vendorInfo.evidence
+        }),
+        ...(securityTxtContact && {
+          security_contact: securityTxtContact.contact
         })
       }),
       { 
@@ -1424,12 +1429,14 @@ Extract all relevant contact methods for data deletion requests.`;
           build_ver: Deno.env.get('APP_VERSION') ?? 'dev'
         };
         
+        const p5 = precisionAt5(urlsToTry.slice(0, 5), '');
         await supabase.from('discovery_metrics').insert({
           domain: service_id,
           success: false,
           method_used: METHOD_USED,
           time_ms: Date.now() - startTime,
-          urls_considered: Math.min(5, urlsToTry.length), // Cap at 5 for precision@5
+          urls_considered: p5.urls_considered_top5,
+          hit_in_top5: false,
           error_code: structuredError.error_code,
           ...buildInfo
         });
