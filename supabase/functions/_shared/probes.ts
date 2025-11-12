@@ -2,9 +2,10 @@
 // Phase 1.2: Probe utilities for privacy contact discovery
 
 // -------------------- Config --------------------
-const SITEMAP_MAX_LOCS = parseInt(Deno.env.get('SITEMAP_MAX_LOCS') || '200', 10);
-const SITEMAP_MAX_BYTES = parseInt(Deno.env.get('SITEMAP_MAX_BYTES') || '5242880', 10); // 5MB
-const PROBE_TIMEOUT_MS = parseInt(Deno.env.get('PROBE_TIMEOUT_MS') || '4000', 10);
+const int = (v?: string, d = 0) => Number.isFinite(Number(v)) ? Number(v) : d;
+export const PROBE_TIMEOUT_MS = Math.min(15000, Math.max(1500, int(Deno.env.get('PROBE_TIMEOUT_MS'), 4000)));
+export const SITEMAP_MAX_LOCS = Math.min(2000, Math.max(25, int(Deno.env.get('SITEMAP_MAX_LOCS'), 200))); // default 200
+export const SITEMAP_MAX_BYTES = Math.min(10_000_000, Math.max(200_000, int(Deno.env.get('SITEMAP_MAX_BYTES'), 5_000_000))); // default 5MB
 
 // -------------------- Types --------------------
 export type ProbeContact =
@@ -62,13 +63,7 @@ async function gunzipToText(ab: ArrayBuffer): Promise<string> {
 }
 
 function normalizeXml(xml: string): string {
-  return xml
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&apos;/g, "'")
-    .trim();
+  return xml.trim();
 }
 
 // Robust fetch with timeout + headers
@@ -165,7 +160,8 @@ const VENDORS = [
 export function detectVendorFromUrl(url: string): VendorDetection {
   for (const v of VENDORS) {
     if (v.re.test(url)) {
-      return { platform_detected: v.key, pre_fill_supported: v.prefill, evidence: url } as VendorDetection;
+      const evidence = sanitizeForLog(url).slice(0, 180);
+      return { platform_detected: v.key, pre_fill_supported: v.prefill, evidence } as VendorDetection;
     }
   }
   return { platform_detected: 'none', pre_fill_supported: false };

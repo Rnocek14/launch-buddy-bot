@@ -249,6 +249,7 @@ export type Database = {
           created_at: string
           domain: string
           error_code: string | null
+          hit_in_top5: boolean | null
           id: string
           lang: string | null
           method_used: string
@@ -267,6 +268,7 @@ export type Database = {
           created_at?: string
           domain: string
           error_code?: string | null
+          hit_in_top5?: boolean | null
           id?: string
           lang?: string | null
           method_used?: string
@@ -285,6 +287,7 @@ export type Database = {
           created_at?: string
           domain?: string
           error_code?: string | null
+          hit_in_top5?: boolean | null
           id?: string
           lang?: string | null
           method_used?: string
@@ -922,6 +925,18 @@ export type Database = {
           total_sent: number | null
           unique_clicks: number | null
           unique_opens: number | null
+        }
+        Relationships: []
+      }
+      probe_metrics_dashboard: {
+        Row: {
+          day: string | null
+          n: number | null
+          p50_ms: number | null
+          p95_ms: number | null
+          pass_rate: number | null
+          precision_at_5: number | null
+          vendors: Json | null
         }
         Relationships: []
       }
