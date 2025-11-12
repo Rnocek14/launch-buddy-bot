@@ -24,10 +24,49 @@ jobs:
         with:
           node-version: '20'
       
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Setup Deno
+        uses: denoland/setup-deno@v1
+        with:
+          deno-version: v1.x
+      
+      - name: Run probe unit tests
+        run: |
+          deno test supabase/functions/_shared/probes.test.ts --allow-env || echo "⚠️ Probe tests failed (non-blocking)"
+      
       - name: Run Golden-10 Test Suite
         if: ${{ !contains(github.event.pull_request.labels.*.name, 'skip-golden10') }}
-        run: node golden10.ts
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          GITHUB_SHA: ${{ github.sha }}
+          GITHUB_SERVER_URL: ${{ github.server_url }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          PROBE_SECURITY_TXT: true
+          PROBE_SITEMAP: true
+          DETECT_VENDOR: true
+        run: npx tsx golden10.ts
         
+      - name: Print precision@5 and vendor metrics
+        if: always()
+        run: |
+          if [ -f golden10.summary.json ]; then
+            node -e "
+              const s = require('./golden10.summary.json');
+              const p5 = s.results.filter(r => r.hit_in_top5 === true).length;
+              const vendors = s.results.reduce((acc, r) => {
+                const v = r.vendor || 'unknown';
+                acc[v] = (acc[v] || 0) + 1;
+                return acc;
+              }, {});
+              console.log('📊 Precision@5:', p5, '/', s.total, '(' + (p5/s.total*100).toFixed(1) + '%)');
+              console.log('🔍 Vendor Detection:', JSON.stringify(vendors, null, 2));
+            " || echo "⚠️ Could not parse metrics"
+          fi
+      
       - name: Check Acceptance Gates
         if: ${{ !contains(github.event.pull_request.labels.*.name, 'skip-golden10') }}
         id: gates

@@ -1,6 +1,11 @@
 // supabase/functions/_shared/probes.ts
 // Phase 1.2: Probe utilities for privacy contact discovery
 
+// -------------------- Config --------------------
+const SITEMAP_MAX_LOCS = parseInt(Deno.env.get('SITEMAP_MAX_LOCS') || '200', 10);
+const SITEMAP_MAX_BYTES = parseInt(Deno.env.get('SITEMAP_MAX_BYTES') || '5242880', 10); // 5MB
+const PROBE_TIMEOUT_MS = parseInt(Deno.env.get('PROBE_TIMEOUT_MS') || '4000', 10);
+
 // -------------------- Types --------------------
 export type ProbeContact =
   | { type: 'security.txt'; contact: string; url: string }
@@ -35,6 +40,11 @@ export function sanitizeForLog(u: string): string {
 }
 
 async function gunzipToText(ab: ArrayBuffer): Promise<string> {
+  // Guard: size limit
+  if (ab.byteLength > SITEMAP_MAX_BYTES) {
+    throw new Error(`Sitemap exceeds ${SITEMAP_MAX_BYTES} bytes`);
+  }
+  
   // Prefer Web Streams DecompressionStream if available (Deno/Node 20+)
   try {
     // @ts-ignore
@@ -42,15 +52,27 @@ async function gunzipToText(ab: ArrayBuffer): Promise<string> {
       // @ts-ignore
       const ds = new DecompressionStream('gzip');
       const s = new Response(new Blob([ab]).stream().pipeThrough(ds));
-      return await s.text();
+      const text = await s.text();
+      return normalizeXml(text);
     }
   } catch {}
   // Ultimate fallback: try to decode as text (will be gibberish if gzipped)
-  return new TextDecoder('utf-8').decode(ab);
+  const text = new TextDecoder('utf-8').decode(ab);
+  return normalizeXml(text);
+}
+
+function normalizeXml(xml: string): string {
+  return xml
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .trim();
 }
 
 // Robust fetch with timeout + headers
-async function fetchText(url: string, timeoutMs = 4000): Promise<Response> {
+async function fetchText(url: string, timeoutMs = PROBE_TIMEOUT_MS): Promise<Response> {
   return await fetch(url, {
     method: 'GET',
     redirect: 'follow',
@@ -66,7 +88,7 @@ async function fetchText(url: string, timeoutMs = 4000): Promise<Response> {
 // -------------------- Probes --------------------
 
 // RFC 9116: /.well-known/security.txt
-export async function probeSecurityTxt(domain: string, timeoutMs = 4000): Promise<ProbeContact | null> {
+export async function probeSecurityTxt(domain: string, timeoutMs = PROBE_TIMEOUT_MS): Promise<ProbeContact | null> {
   const url = `https://${domain}/.well-known/security.txt`;
   try {
     const r = await fetchText(url, timeoutMs);
@@ -81,7 +103,7 @@ export async function probeSecurityTxt(domain: string, timeoutMs = 4000): Promis
 }
 
 // sitemap.xml (and gzip variant). Returns privacy-ish URLs (deduped, sanitized).
-export async function probeSitemap(domain: string, timeoutMs = 5000): Promise<string[]> {
+export async function probeSitemap(domain: string, timeoutMs = PROBE_TIMEOUT_MS): Promise<string[]> {
   const out = new Set<string>();
 
   async function tryPath(path: string) {
@@ -98,15 +120,23 @@ export async function probeSitemap(domain: string, timeoutMs = 5000): Promise<st
       let xml = '';
       if (path.endsWith('.gz')) {
         const ab = await r.arrayBuffer();
+        // Size guard applied in gunzipToText
         xml = await gunzipToText(ab);
       } else {
-        xml = await r.text();
+        const text = await r.text();
+        xml = normalizeXml(text);
       }
 
-      // Extract <loc>…</loc> quickly (no heavy XML deps)
-      const locs = [...xml.matchAll(/<loc>\s*([^<]+)\s*<\/loc>/gi)].map((m) => m[1]);
+      // Extract <loc>…</loc> quickly (no heavy XML deps) with cap
+      const locs = [...xml.matchAll(/<loc>\s*([^<]+)\s*<\/loc>/gi)]
+        .map((m) => m[1])
+        .slice(0, SITEMAP_MAX_LOCS);
+      
       for (const loc of locs) {
-        if (PRIVACY_RE.test(loc)) out.add(sanitizeForLog(loc));
+        if (PRIVACY_RE.test(loc)) {
+          out.add(sanitizeForLog(loc));
+          if (out.size >= SITEMAP_MAX_LOCS) break;
+        }
       }
     } catch {}
   }
@@ -145,7 +175,8 @@ export function detectVendorFromHtml(html: string): VendorDetection {
   for (const v of VENDORS) {
     const m = html.match(v.re);
     if (m) {
-      return { platform_detected: v.key, pre_fill_supported: v.prefill, evidence: m[0]?.slice(0, 180) } as VendorDetection;
+      const evidence = sanitizeForLog(m[0] || '').slice(0, 180);
+      return { platform_detected: v.key, pre_fill_supported: v.prefill, evidence } as VendorDetection;
     }
   }
   return { platform_detected: 'none', pre_fill_supported: false };
