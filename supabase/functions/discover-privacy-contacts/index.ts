@@ -40,6 +40,19 @@ const TAIL_P95_GOAL_MS = Math.min(8000, Math.max(3000, int(Deno.env.get('TAIL_P9
 const ATTEMPT_TIMEOUT_MS = Math.min(10000, Math.max(1500, int(Deno.env.get('ATTEMPT_TIMEOUT_MS'), 4000)));
 const EARLY_STOP_CONFIDENCE = Math.min(100, Math.max(30, int(Deno.env.get('EARLY_STOP_CONFIDENCE'), 70)));
 
+// Phase 1.3: Slow-domain overrides parser
+const parseOverrides = (raw?: string) => {
+  if (!raw) return new Map<string, number>();
+  return new Map(
+    raw.split(',').map(pair => {
+      const [d, ms] = pair.split(':').map(s => s.trim());
+      const v = Math.min(60000, Math.max(3000, Number(ms) || 0));
+      return [d.toLowerCase(), v];
+    })
+  );
+};
+const DOMAIN_BUDGET_OVERRIDES = parseOverrides(Deno.env.get('SLOW_BUDGET_OVERRIDES'));
+
 // Constants
 const METHOD_USED = 't1' as const;
 

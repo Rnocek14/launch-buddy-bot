@@ -27,6 +27,19 @@ jobs:
           name: golden25-summary
           path: golden25.summary.json
       
+      - name: Print metrics summary
+        if: always()
+        run: |
+          if [ -f golden25.summary.json ]; then
+            node -e "
+            const s=require('./golden25.summary.json');
+            const p5=s.results.filter(r=>r.hit_in_top5===true).length;
+            const vendors=s.results.reduce((a,r)=>{a[r.vendor||'unknown']=(a[r.vendor||'unknown']||0)+1;return a;},{});
+            console.log('📊 Precision@5:', p5,'/',s.total,'(', (p5/s.total*100).toFixed(1),'%)');
+            console.log('🔍 Vendor counts:', JSON.stringify(vendors));
+            " || true
+          fi
+      
       - name: Slack notification
         if: env.SLACK_WEBHOOK_URL && always()
         env:

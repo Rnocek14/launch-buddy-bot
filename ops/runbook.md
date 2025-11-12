@@ -95,6 +95,21 @@ This runbook covers incident response for the privacy contact discovery service,
    - Enable caching for frequently accessed domains
    - Consider regional Browserless deployment
 
+## Tuning
+
+### Heavy SPA Domains
+
+For domains with unusually heavy JavaScript/SPA behavior (e.g., Airbnb, Booking.com), set per-domain budget overrides without raising the global `DISCOVERY_DOMAIN_BUDGET_MS`:
+
+```
+SLOW_BUDGET_OVERRIDES="airbnb.com:40000,booking.com:35000"
+```
+
+**Review process:**
+1. Set overrides in Supabase Edge Functions environment variables
+2. Monitor p95 latency over 24 hours using dashboard queries
+3. If p95 regresses globally, revert overrides and investigate alternative approaches (e.g., vendor-specific handling)
+
 ### New Error Code Spike
 
 **Symptoms:**

@@ -2,120 +2,148 @@
 
 SQL queries for monitoring privacy contact discovery performance.
 
-## Daily Trend (Pass Rate, P50/P95)
+## Tail Latency & Cache Effectiveness
+
+Monitor p95 latency, pass rate, cache hit rate, and attempt timeouts:
 
 ```sql
-with d as (
-  select
-    date_trunc('day', created_at) day,
-    success,
-    time_ms
-  from discovery_metrics
-  where created_at >= now() - interval '14 days'
-)
+-- Tail latency vs cache hit (hourly, last 48 hours)
 select
-  day,
-  round(avg(case when success then 1 else 0 end)::numeric, 3) as pass_rate,
-  percentile_cont(0.5) within group (order by time_ms) as p50_ms,
+  date_trunc('hour', created_at) as hour,
+  round(avg((success)::int)::numeric, 3) as pass_rate,
   percentile_cont(0.95) within group (order by time_ms) as p95_ms,
-  count(*) as n
-from d
+  round(avg((cache_hit)::int)::numeric, 3) as cache_rate,
+  sum(coalesce(attempt_timeouts,0)) as attempt_timeouts
+from discovery_metrics
+where created_at >= now() - interval '48 hours'
 group by 1
-order by 1;
+order by 1 desc;
 ```
 
-## Hot Failures (Last 24h)
+## Locale Benefit Analysis
+
+Measure precision@5 lift when language detection is enabled:
 
 ```sql
-select 
-  error_code, 
-  count(*) as occurrences
-from discovery_metrics
-where created_at >= now() - interval '24 hours'
-  and success = false
-group by error_code
-order by occurrences desc;
-```
-
-## Regression by Commit
-
-Track performance changes across deployments:
-
-```sql
-select 
-  build_sha, 
-  build_ver,
-  count(*) n,
-  round(avg(case when success then 1 else 0 end)::numeric,3) pass_rate,
-  percentile_cont(0.95) within group (order by time_ms) p95_ms
-from discovery_metrics
-where created_at >= now() - interval '7 days'
-  and build_sha is not null
-group by 1, 2
-order by max(created_at) desc
-limit 10;
-```
-
-## Vendor Coverage
-
-Analyze success rates by platform vendor:
-
-```sql
-select 
-  coalesce(vendor, 'unknown') vendor, 
-  count(*) n,
-  round(avg(case when success then 1 else 0 end)::numeric,3) pass_rate,
-  percentile_cont(0.5) within group (order by time_ms) p50_ms
+-- Precision@5 by detected language (14-day rolling)
+select
+  coalesce(nullif(lang,''),'unknown') as lang,
+  round(avg((hit_in_top5)::int)::numeric, 3) as precision_at_5,
+  count(*) as n
 from discovery_metrics
 where created_at >= now() - interval '14 days'
 group by 1
 order by n desc;
 ```
 
-## Top 3 Slowest Domains (Last 7d)
+## Vendor Coverage
+
+Track success rates and performance by detected vendor:
 
 ```sql
-select
-  domain,
+-- Success rate and p95 by vendor (14-day rolling)
+select 
+  coalesce(vendor, 'unknown') as vendor,
+  count(*) as requests,
+  round(avg((success)::int)::numeric, 3) as pass_rate,
   percentile_cont(0.95) within group (order by time_ms) as p95_ms,
-  avg(time_ms) as avg_ms,
-  count(*) as attempts
+  round(avg((prefill_supported)::int)::numeric, 3) as prefill_rate
+from discovery_metrics
+where created_at >= now() - interval '14 days'
+group by vendor
+order by requests desc;
+```
+
+## Daily Health Summary
+
+Overall service health across key metrics:
+
+```sql
+-- Daily rollup: pass rate, p50, p95, precision@5, cache hit
+select 
+  date(created_at) as day,
+  count(*) as total_requests,
+  round(avg((success)::int)::numeric, 3) as pass_rate,
+  round(avg((hit_in_top5)::int)::numeric, 3) as precision_at_5,
+  round(avg((cache_hit)::int)::numeric, 3) as cache_rate,
+  percentile_cont(0.50) within group (order by time_ms)::int as p50_ms,
+  percentile_cont(0.95) within group (order by time_ms)::int as p95_ms,
+  sum(coalesce(attempt_timeouts, 0)) as total_attempt_timeouts
+from discovery_metrics
+where created_at >= now() - interval '14 days'
+group by day
+order by day desc;
+```
+
+## Error Distribution
+
+Track error patterns and affected domains:
+
+```sql
+-- Error frequency by type (7-day rolling)
+select 
+  error_code, 
+  count(*) as occurrences,
+  array_agg(distinct domain) as affected_domains
 from discovery_metrics
 where created_at >= now() - interval '7 days'
-group by domain
-order by p95_ms desc
-limit 3;
+  and error_code is not null
+group by error_code
+order by occurrences desc;
 ```
 
-## Success Rate by Domain (Last 30d)
+## Slow Domain Analysis
+
+Identify domains with consistently high latency:
 
 ```sql
-select
-  domain,
-  count(*) as total_attempts,
-  sum(case when success then 1 else 0 end) as successes,
-  round(avg(case when success then 1 else 0 end)::numeric, 3) as success_rate,
-  round(avg(time_ms)::numeric, 0) as avg_ms
-from discovery_metrics
-where created_at >= now() - interval '30 days'
-group by domain
-order by total_attempts desc;
-```
-
-## Alerting Rules
-
-Set up alerts for:
-
-- **Pass rate < 80% (24h)** → Slack/email alert
-- **P95 > 5s (24h)** → Performance degradation alert
-- **New error_code spikes** → Investigation needed
-
-Example alert query (pass rate):
-
-```sql
+-- Slowest domains by p95 (24-hour window, min 5 requests)
 select 
-  avg(case when success then 1 else 0 end) as pass_rate_24h
+  domain, 
+  percentile_cont(0.95) within group (order by time_ms)::int as p95_ms,
+  count(*) as requests,
+  round(avg((success)::int)::numeric, 3) as pass_rate
 from discovery_metrics
 where created_at >= now() - interval '24 hours'
-having avg(case when success then 1 else 0 end) < 0.80;
+group by domain
+having count(*) >= 5
+order by p95_ms desc
+limit 10;
+```
+
+## Build Regression Detection
+
+Compare metrics across recent builds:
+
+```sql
+-- Performance by build (last 10 builds)
+select 
+  build_sha,
+  count(*) as requests,
+  round(avg((success)::int)::numeric, 3) as pass_rate,
+  percentile_cont(0.95) within group (order by time_ms)::int as p95_ms,
+  round(avg((hit_in_top5)::int)::numeric, 3) as precision_at_5
+from discovery_metrics
+where created_at >= now() - interval '7 days'
+  and build_sha is not null
+group by build_sha
+order by max(created_at) desc
+limit 10;
+```
+
+## Probe Effectiveness
+
+Evaluate impact of sitemap and security.txt probes:
+
+```sql
+-- Success rate with/without sitemap cache
+select 
+  case when cache_hit then 'cached' else 'uncached' end as cache_status,
+  count(*) as requests,
+  round(avg((success)::int)::numeric, 3) as pass_rate,
+  percentile_cont(0.95) within group (order by time_ms)::int as p95_ms
+from discovery_metrics
+where created_at >= now() - interval '14 days'
+  and cache_hit is not null
+group by cache_status;
 ```
