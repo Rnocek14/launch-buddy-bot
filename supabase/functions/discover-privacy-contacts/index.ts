@@ -1657,18 +1657,24 @@ Extract all relevant contact methods for data deletion requests.`;
       }
     }
     
-    // Phase 1.4: Enqueue to T2 on eligible failures
-    if (ENABLE_T2 && structuredError.error_code && T2_RETRY_ON.has(structuredError.error_code) && service_id) {
+    // Phase 1.4: Enqueue to T2 on eligible failures (with quarantine check)
+    if (ENABLE_T2 && structuredError.error_code && T2_RETRY_ON.has(structuredError.error_code) && service_id && supabase) {
       try {
-        const seedUrl = urlsToTry.length > 0 ? urlsToTry[0] : `https://${service_id}`;
-        await supabase.from('t2_retries').insert({
-          domain: service_id.toLowerCase(),
-          seed_url: seedUrl,
-          reason: structuredError.error_code,
-          status: 'queued',
-          next_run_at: new Date(Date.now() + 60_000).toISOString(), // +1min backoff
-        });
-        console.log(`[T2] Queued → ${service_id} (${structuredError.error_code})`);
+        // Check if domain is quarantined before enqueuing
+        const quarantined = await isQuarantined(supabase, service_id.toLowerCase());
+        if (quarantined) {
+          console.log(`[T2] Skipped (quarantined) → ${service_id}`);
+        } else {
+          const seedUrl = urlsToTry.length > 0 ? urlsToTry[0] : `https://${service_id}`;
+          await supabase.from('t2_retries').insert({
+            domain: service_id.toLowerCase(),
+            seed_url: seedUrl,
+            reason: structuredError.error_code,
+            status: 'queued',
+            next_run_at: new Date(Date.now() + 60_000).toISOString(), // +1min backoff
+          });
+          console.log(`[T2] Queued → ${service_id} (${structuredError.error_code})`);
+        }
       } catch (t2Error) {
         console.warn('[T2] Failed to enqueue:', t2Error);
       }

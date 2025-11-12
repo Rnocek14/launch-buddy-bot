@@ -117,7 +117,25 @@ async function runJob(job: any) {
 
     const url = job.seed_url || `https://${job.domain}`;
     console.log(`[T2] Processing ${job.domain} → ${url}`);
-    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: T2_TIMEOUT_MS });
+    
+    // Bounded retries on initial page load
+    let loaded = false;
+    let lastError: any;
+    for (let attempt = 0; attempt < 2 && !loaded; attempt++) {
+      try {
+        const waitStrategy = attempt === 0 ? 'domcontentloaded' : 'load';
+        const timeout = attempt === 0 ? T2_TIMEOUT_MS : Math.min(T2_TIMEOUT_MS, 30_000);
+        await page.goto(url, { waitUntil: waitStrategy, timeout });
+        loaded = true;
+      } catch (e) {
+        lastError = e;
+        console.warn(`[T2] Navigation attempt ${attempt + 1} failed:`, e.message);
+      }
+    }
+    
+    if (!loaded) {
+      throw new Error(`Navigation failed after 2 attempts: ${lastError?.message || 'unknown'}`);
+    }
 
     // Wait for JS to settle
     await page.waitForTimeout(2000);
@@ -126,18 +144,20 @@ async function runJob(job: any) {
     const html = await page.content();
     const lower = html.toLowerCase();
 
-    const vendor =
-      /onetrust|otprivacy|optanon/.test(lower) ? 'onetrust' :
-      /securiti\.(ai|app)|privacy-central/.test(lower) ? 'securiti' :
-      /trustarc/.test(lower) ? 'trustarc' :
-      /transcend\./.test(lower) ? 'transcend' :
-      /cookiebot/.test(lower) ? 'cookiebot' :
-      /osano/.test(lower) ? 'osano' :
-      undefined;
+    // Persist vendor only if detected
+    let vendor: string | undefined;
+    if (/onetrust|otprivacy|optanon/.test(lower)) vendor = 'onetrust';
+    else if (/securiti\.(ai|app)|privacy-central/.test(lower)) vendor = 'securiti';
+    else if (/trustarc/.test(lower)) vendor = 'trustarc';
+    else if (/transcend\./.test(lower)) vendor = 'transcend';
+    else if (/cookiebot/.test(lower)) vendor = 'cookiebot';
+    else if (/osano/.test(lower)) vendor = 'osano';
 
-    // Check common anchors
+    // Check common anchors (skip data URLs)
     const hrefs = await page.$$eval('a[href]', (as: any) => 
-      as.slice(0, 400).map((a: any) => a.href)
+      as.slice(0, 400)
+        .map((a: any) => a.href)
+        .filter((h: string) => h && !h.startsWith('data:') && !h.startsWith('javascript:'))
     );
     
     const privacyPatterns = [

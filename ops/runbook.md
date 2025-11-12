@@ -122,9 +122,10 @@ Enable T2 (`ENABLE_T2=true`) when:
 ### Safety Rails
 
 * **PII**: Never send or store PII in T2 — only URLs, vendor names, and timings
-* **Quarantine**: Domains in `discovery_quarantine` are skipped automatically
+* **Quarantine**: Domains in `discovery_quarantine` are skipped automatically by T1 before enqueue
 * **Global cap**: If Golden-25 median > 4s AND T2 backlog > 100, auto-disable `ENABLE_T2`
 * **Robots/ToS**: Keep fetch counts low (one page + one policy click), respect rate limits
+* **Idempotency**: Unique index ensures only one queued/running job per domain
 
 ### Monitoring
 
@@ -137,6 +138,12 @@ where status='queued' and next_run_at <= now();
 select percentile_cont(0.95) within group(order by t2_time_ms)
 from discovery_metrics
 where created_at >= now()-interval '24h' and t2_used is true;
+
+-- T2 pass rate < 70% with n >= 20
+select round(avg((t2_success)::int)::numeric,3) as t2_pass_rate, count(*) as n
+from discovery_metrics
+where created_at >= now()-interval '24h' and t2_used is true
+having count(*) >= 20;
 ```
 
 ### Configuration
@@ -146,6 +153,24 @@ where created_at >= now()-interval '24h' and t2_used is true;
 * `T2_MAX_ATTEMPTS=3` — max retries before marking failed
 * `T2_BACKOFF_MS=15000` — backoff multiplier per attempt
 * `T2_TIMEOUT_MS=60000` — per-job timeout
+
+### Rollback Plan
+
+1. **Immediate disable:**
+   - Set `ENABLE_T2=false` in Supabase Edge Functions settings
+   - Takes effect on next T1 failure (no restart needed)
+
+2. **Stop worker:**
+   - Disable **Tier2-Worker** workflow schedule in GitHub Actions
+   - Or manually cancel running workflow instances
+
+3. **Drain queue (optional):**
+   - Mark lingering `running` jobs as `queued`:
+     ```sql
+     UPDATE t2_retries SET status='queued', updated_at=now() 
+     WHERE status='running' AND updated_at < now() - interval '10 minutes';
+     ```
+   - Review or delete queued jobs if necessary
 
 ### New Error Code Spike
 
