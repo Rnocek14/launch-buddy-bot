@@ -10,6 +10,8 @@ import {
   precisionAt5,
   toConfidence as toConfidenceShared,
 } from '../_shared/probes.ts';
+import { detectLanguage, rankByLocale } from '../_shared/lang.ts';
+import { getSitemapCache, setSitemapCache } from '../_shared/cache.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -27,6 +29,10 @@ const DOMAIN_BUDGET_MS = Math.min(60000, Math.max(3000, int(Deno.env.get('DISCOV
 const ENABLE_SECURITY_TXT = bool(Deno.env.get('PROBE_SECURITY_TXT'));
 const ENABLE_SITEMAP = bool(Deno.env.get('PROBE_SITEMAP'));
 const ENABLE_VENDOR_DET = bool(Deno.env.get('DETECT_VENDOR'));
+
+// Phase 1.3: Feature flags for language and cache
+const DETECT_LANG = bool(Deno.env.get('DETECT_LANG'));
+const CACHE_SITEMAP = bool(Deno.env.get('CACHE_SITEMAP'));
 
 // Constants
 const METHOD_USED = 't1' as const;
@@ -813,9 +819,10 @@ serve(async (req) => {
 
     console.log(`=== Discovering privacy contacts for: ${service.name} (${service.domain}) ===`);
 
-    // Phase 1.2: Try probes first (security.txt, sitemap)
+    // Phase 1.2/1.3: Try probes first (security.txt, sitemap with cache)
     let securityTxtContact: { type: string; contact: string; url: string } | null = null;
     let sitemapUrls: string[] = [];
+    let cacheHit = false;
     
     if (ENABLE_SECURITY_TXT) {
       console.log('[Probe] Security.txt enabled, checking...');
@@ -827,9 +834,29 @@ serve(async (req) => {
     
     if (ENABLE_SITEMAP) {
       console.log('[Probe] Sitemap enabled, checking...');
-      sitemapUrls = await probeSitemap(service.domain);
-      if (sitemapUrls.length > 0) {
-        console.log(`[Probe] ✓ Found ${sitemapUrls.length} privacy URLs in sitemap`);
+      
+      // Phase 1.3: Try cache first
+      if (CACHE_SITEMAP) {
+        const cached = await getSitemapCache(supabase, service.domain);
+        if (cached.cacheHit && cached.urls) {
+          sitemapUrls = cached.urls;
+          cacheHit = true;
+          console.log(`[Probe] ✓ Sitemap cache HIT: ${sitemapUrls.length} URLs`);
+        }
+      }
+      
+      // Fetch if not cached
+      if (!sitemapUrls.length) {
+        sitemapUrls = await probeSitemap(service.domain);
+        if (sitemapUrls.length > 0) {
+          console.log(`[Probe] ✓ Found ${sitemapUrls.length} privacy URLs in sitemap`);
+          
+          // Phase 1.3: Store in cache
+          if (CACHE_SITEMAP) {
+            await setSitemapCache(supabase, service.domain, sitemapUrls);
+            console.log(`[Probe] Cached sitemap results for ${service.domain}`);
+          }
+        }
       }
     }
 
@@ -889,11 +916,38 @@ serve(async (req) => {
           `https://www.${service.domain}/about/privacy`,
         ].filter(Boolean);
     
-    // Store top 5 for precision@5 metric
-    const top5Candidates = candidateUrls.slice(0, 5);
-    urlsToTry = candidateUrls;
+    // Phase 1.3: Language detection for locale preference
+    let langDetected = 'en';
+    if (DETECT_LANG && candidateUrls.length > 0) {
+      try {
+        // Quick fetch of homepage to detect language
+        const homeUrl = `https://${service.domain}`;
+        const homeResponse = await fetch(homeUrl, {
+          headers: { 'User-Agent': USER_AGENT },
+          signal: AbortSignal.timeout(5000)
+        });
+        if (homeResponse.ok) {
+          const html = await homeResponse.text();
+          const guess = detectLanguage(html, html.slice(0, 10000));
+          if (guess) {
+            langDetected = guess.lang;
+            console.log(`[Lang] Detected: ${langDetected} (confidence: ${guess.confidence.toFixed(2)})`);
+          }
+        }
+      } catch (e) {
+        console.warn('[Lang] Detection failed, using default (en):', e);
+      }
+    }
+    
+    // Store top 5 for precision@5 metric, ranked by locale
+    const rankedCandidates = DETECT_LANG ? rankByLocale(langDetected, candidateUrls.map(url => ({ url }))) : candidateUrls.map(url => ({ url }));
+    const top5Candidates = rankedCandidates.slice(0, 5).map(c => c.url);
+    urlsToTry = rankedCandidates.map(c => c.url);
 
     console.log(`Prepared ${urlsToTry.length} URLs to try (top 5 for metrics: ${top5Candidates.length})`);
+    if (DETECT_LANG) {
+      console.log(`[Lang] Top 5 ranked by locale (${langDetected}):`, top5Candidates.slice(0, 3).map(sanitizeForLog));
+    }
 
     // Phase 1: Try simple fetch with enhanced URL discovery
     let result = await trySimpleFetch(urlsToTry, service.domain);
@@ -959,17 +1013,22 @@ serve(async (req) => {
         throw insertError;
       }
 
-      // Emit metrics for PDF success
+      // Phase 1.3: Emit metrics for PDF success with new fields
       await supabase.from('discovery_metrics').insert({
         domain: service.domain,
         success: true,
-        method_used: 't1',
+        method_used: METHOD_USED,
         time_ms: Date.now() - startTime,
         urls_considered: urlsToTry.length,
+        urls_considered_top5: top5Candidates.length,
+        hit_in_top5: p5.hit_in_top5,
         policy_type: 'pdf',
         score: policyScore,
         confidence,
-        ...(vendorInfo && { platform_detected: vendorInfo.platform_detected })
+        lang: langDetected,
+        cache_hit: cacheHit,
+        vendor: vendorInfo?.platform_detected,
+        vendor_evidence: vendorInfo?.evidence ? sanitizeForLog(vendorInfo.evidence) : undefined
       });
 
       return new Response(
@@ -983,7 +1042,8 @@ serve(async (req) => {
           confidence,
           score: policyScore,
           url: successUrl,
-          lang_detected: 'en',
+          lang_detected: langDetected,
+          cache_hit: cacheHit,
           reasons: ['PDF policy found'],
           ...(vendorInfo && { 
             platform_detected: vendorInfo.platform_detected,
@@ -1305,13 +1365,16 @@ Extract all relevant contact methods for data deletion requests.`;
           success: true,
           method_used: METHOD_USED,
           time_ms: Date.now() - startTime,
-          urls_considered: p5.urls_considered_top5,
+          urls_considered: urlsToTry.length,
+          urls_considered_top5: top5Candidates.length,
           hit_in_top5: p5.hit_in_top5,
           policy_type: policy_type || 'html',
           score: policyScore,
           confidence: overallConfidence,
-          lang: 'en',
+          lang: langDetected,
+          cache_hit: cacheHit,
           vendor: vendorDetected,
+          vendor_evidence: vendorInfo?.evidence ? sanitizeForLog(vendorInfo.evidence) : undefined,
           security_contact: securityTxtContact?.contact,
           ...buildInfo
         });
@@ -1331,7 +1394,8 @@ Extract all relevant contact methods for data deletion requests.`;
         confidence: overallConfidence,
         score: policyScore,
         url: successUrl,
-        lang_detected: 'en', // TODO: Add language detection in Phase 1.3
+        lang_detected: langDetected,
+        cache_hit: cacheHit,
         reasons: insertedContacts.map((c: any) => c.reasoning),
         precision_at_5: p5.hit_in_top5,
         ...(vendorInfo && vendorInfo.platform_detected !== 'none' && { 

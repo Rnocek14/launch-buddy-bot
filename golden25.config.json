@@ -1,0 +1,31 @@
+{
+  "functionUrl": "https://gqxkeezkajkiyjpnjgkx.supabase.co/functions/v1/discover-privacy-contacts",
+  "timeoutMs": 12000,
+  "domains": [
+    { "domain": "grubhub.com", "expect": ["privacy"], "deny": ["terms"] },
+    { "domain": "united.com", "expect": ["privacy"] },
+    { "domain": "europa.eu", "expect": ["privacy", "policy"], "kind": "html" },
+    { "domain": "dropbox.com", "expect": ["privacy"], "kind": "html|pdf" },
+    { "domain": "airbnb.com", "expect": ["privacy"], "deny": ["help"] },
+    { "domain": "bbc.com", "expect": ["/privacy/"] },
+    { "domain": "spotify.com", "expect": ["privacy"] },
+    { "domain": "shopify.com", "expect": ["privacy"] },
+    { "domain": "zoom.us", "expect": ["privacy"] },
+    { "domain": "oracle.com", "expect": ["privacy"] },
+    { "domain": "salesforce.com", "expect": ["privacy"] },
+    { "domain": "intel.com", "expect": ["privacy"] },
+    { "domain": "x.com", "expect": ["privacy"] },
+    { "domain": "meta.com", "expect": ["privacy"] },
+    { "domain": "nike.com", "expect": ["privacy"] },
+    { "domain": "microsoft.com", "expect": ["privacy"] },
+    { "domain": "adobe.com", "expect": ["privacy"] },
+    { "domain": "samsung.com", "expect": ["privacy"] },
+    { "domain": "honda.com", "expect": ["privacy"] },
+    { "domain": "walmart.com", "expect": ["privacy"] },
+    { "domain": "target.com", "expect": ["privacy"] },
+    { "domain": "baidu.com", "expect": ["privacy"] },
+    { "domain": "alibaba.com", "expect": ["privacy"] },
+    { "domain": "booking.com", "expect": ["privacy"] },
+    { "domain": "stripe.com", "expect": ["privacy"] }
+  ]
+}

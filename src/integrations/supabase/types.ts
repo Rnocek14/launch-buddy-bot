@@ -245,6 +245,7 @@ export type Database = {
         Row: {
           build_sha: string | null
           build_ver: string | null
+          cache_hit: boolean | null
           confidence: string | null
           created_at: string
           domain: string
@@ -259,11 +260,13 @@ export type Database = {
           success: boolean
           time_ms: number
           urls_considered: number | null
+          urls_considered_top5: number | null
           vendor: string | null
         }
         Insert: {
           build_sha?: string | null
           build_ver?: string | null
+          cache_hit?: boolean | null
           confidence?: string | null
           created_at?: string
           domain: string
@@ -278,11 +281,13 @@ export type Database = {
           success: boolean
           time_ms: number
           urls_considered?: number | null
+          urls_considered_top5?: number | null
           vendor?: string | null
         }
         Update: {
           build_sha?: string | null
           build_ver?: string | null
+          cache_hit?: boolean | null
           confidence?: string | null
           created_at?: string
           domain?: string
@@ -297,6 +302,7 @@ export type Database = {
           success?: boolean
           time_ms?: number
           urls_considered?: number | null
+          urls_considered_top5?: number | null
           vendor?: string | null
         }
         Relationships: []
@@ -520,6 +526,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      probe_cache_sitemap: {
+        Row: {
+          domain: string
+          fetched_at: string
+          urls: Json
+        }
+        Insert: {
+          domain: string
+          fetched_at?: string
+          urls: Json
+        }
+        Update: {
+          domain?: string
+          fetched_at?: string
+          urls?: Json
+        }
+        Relationships: []
       }
       profiles: {
         Row: {

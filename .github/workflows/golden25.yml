@@ -1,0 +1,37 @@
+name: Golden-25 (nightly)
+
+on:
+  schedule:
+    - cron: '0 3 * * *'  # 3 AM UTC daily
+  workflow_dispatch:
+
+jobs:
+  golden25:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Run Golden-25 test suite
+        run: node golden25.ts
+        continue-on-error: true
+      
+      - name: Upload results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: golden25-summary
+          path: golden25.summary.json
+      
+      - name: Slack notification
+        if: env.SLACK_WEBHOOK_URL && always()
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          if [ -f golden25.summary.json ]; then
+            node tools/slack-notify.js golden25.summary.json "Golden-25 nightly"
+          fi
