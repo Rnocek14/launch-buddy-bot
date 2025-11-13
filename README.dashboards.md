@@ -224,4 +224,14 @@ from discovery_quarantine
 group by day
 order by day desc
 limit 14;
+
+-- Recent quarantine overrides (last 30 days)
+select
+  created_at,
+  domain,
+  actor,
+  reason
+from discovery_quarantine_overrides
+where created_at >= now() - interval '30 days'
+order by created_at desc;
 ```

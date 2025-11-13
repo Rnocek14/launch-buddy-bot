@@ -355,6 +355,30 @@ export type Database = {
         }
         Relationships: []
       }
+      discovery_quarantine_overrides: {
+        Row: {
+          actor: string
+          created_at: string
+          domain: string
+          id: string
+          reason: string
+        }
+        Insert: {
+          actor: string
+          created_at?: string
+          domain: string
+          id?: string
+          reason: string
+        }
+        Update: {
+          actor?: string
+          created_at?: string
+          domain?: string
+          id?: string
+          reason?: string
+        }
+        Relationships: []
+      }
       email_analytics: {
         Row: {
           created_at: string
@@ -1073,6 +1097,13 @@ export type Database = {
         Returns: {
           deleted_count: number
           remaining_active: number
+        }[]
+      }
+      discovery_quarantine_override: {
+        Args: { p_actor: string; p_domain: string; p_reason: string }
+        Returns: {
+          domain: string
+          removed: boolean
         }[]
       }
       get_email_analytics_summary: {
