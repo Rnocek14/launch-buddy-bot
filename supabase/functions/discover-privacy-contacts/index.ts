@@ -1666,14 +1666,16 @@ Extract all relevant contact methods for data deletion requests.`;
           console.log(`[T2] Skipped (quarantined) → ${service_id}`);
         } else {
           const seedUrl = urlsToTry.length > 0 ? urlsToTry[0] : `https://${service_id}`;
+          const requestId = crypto.randomUUID();
           await supabase.from('t2_retries').insert({
             domain: service_id.toLowerCase(),
             seed_url: seedUrl,
             reason: structuredError.error_code,
             status: 'queued',
             next_run_at: new Date(Date.now() + 60_000).toISOString(), // +1min backoff
+            request_id: requestId,
           });
-          console.log(`[T2] Queued → ${service_id} (${structuredError.error_code})`);
+          console.log(`[T2][${requestId}] Queued → ${service_id} (${structuredError.error_code})`);
         }
       } catch (t2Error) {
         console.warn('[T2] Failed to enqueue:', t2Error);

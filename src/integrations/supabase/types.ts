@@ -257,6 +257,7 @@ export type Database = {
           method_used: string
           policy_type: string | null
           prefill_supported: boolean | null
+          request_id: string | null
           score: number | null
           status_map: Json | null
           success: boolean
@@ -283,6 +284,7 @@ export type Database = {
           method_used?: string
           policy_type?: string | null
           prefill_supported?: boolean | null
+          request_id?: string | null
           score?: number | null
           status_map?: Json | null
           success: boolean
@@ -309,6 +311,7 @@ export type Database = {
           method_used?: string
           policy_type?: string | null
           prefill_supported?: boolean | null
+          request_id?: string | null
           score?: number | null
           status_map?: Json | null
           success?: boolean
@@ -780,6 +783,7 @@ export type Database = {
           next_run_at: string
           policy_type: string | null
           reason: Database["public"]["Enums"]["retry_reason"]
+          request_id: string | null
           result_url: string | null
           seed_url: string | null
           status: string
@@ -796,6 +800,7 @@ export type Database = {
           next_run_at?: string
           policy_type?: string | null
           reason: Database["public"]["Enums"]["retry_reason"]
+          request_id?: string | null
           result_url?: string | null
           seed_url?: string | null
           status?: string
@@ -812,6 +817,7 @@ export type Database = {
           next_run_at?: string
           policy_type?: string | null
           reason?: Database["public"]["Enums"]["retry_reason"]
+          request_id?: string | null
           result_url?: string | null
           seed_url?: string | null
           status?: string
@@ -1085,6 +1091,13 @@ export type Database = {
         Returns: boolean
       }
       is_authorized_agent: { Args: { user_uuid: string }; Returns: boolean }
+      t2_queue_summary: {
+        Args: never
+        Returns: {
+          n: number
+          status: string
+        }[]
+      }
     }
     Enums: {
       alpha_status: "pending" | "approved" | "rejected"

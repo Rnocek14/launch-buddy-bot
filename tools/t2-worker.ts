@@ -72,14 +72,15 @@ async function reschedule(job: any, error: string) {
 }
 
 async function complete(job: any, result: { url?: string; policy_type?: 'html' | 'pdf'; vendor?: string; t2_time_ms: number }) {
-  console.log(`[T2] Completed ${job.domain}: ${result.url || 'no policy found'} (${result.t2_time_ms}ms)`);
+  const requestId = job.request_id || 'unknown';
+  console.log(`[T2][${requestId}] Completed ${job.domain}: ${result.url || 'no policy found'} (${result.t2_time_ms}ms)`);
   await sb(`t2_retries?id=eq.${job.id}`, {
     method: 'PATCH',
     body: JSON.stringify({
       status: 'done',
       result_url: result.url,
       policy_type: result.policy_type,
-      vendor: result.vendor,
+      vendor: result.vendor || null,
       t2_time_ms: result.t2_time_ms,
       updated_at: new Date().toISOString()
     })
@@ -88,6 +89,7 @@ async function complete(job: any, result: { url?: string; policy_type?: 'html' |
   await sb('discovery_metrics', {
     method: 'POST',
     body: JSON.stringify({
+      request_id: requestId,
       domain: job.domain,
       success: Boolean(result.url),
       method_used: 't2',
@@ -97,12 +99,13 @@ async function complete(job: any, result: { url?: string; policy_type?: 'html' |
       t2_time_ms: result.t2_time_ms,
       urls_considered: 1,
       policy_type: result.policy_type,
-      vendor: result.vendor
+      vendor: result.vendor || null
     })
   });
 }
 
 async function runJob(job: any) {
+  const requestId = job.request_id || 'unknown';
   const t0 = Date.now();
   const browser = await chromium.launch({ headless: true });
   try {
@@ -116,7 +119,7 @@ async function runJob(job: any) {
     page.setDefaultTimeout(T2_TIMEOUT_MS);
 
     const url = job.seed_url || `https://${job.domain}`;
-    console.log(`[T2] Processing ${job.domain} → ${url}`);
+    console.log(`[T2][${requestId}] Processing ${job.domain} → ${url}`);
     
     // Bounded retries on initial page load
     let loaded = false;

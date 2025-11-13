@@ -7,10 +7,11 @@
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
+const SHOULD_RUN_WORKER = process.argv.includes('--run-worker');
 
 if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
   console.error('Missing SUPABASE_URL or SUPABASE_SERVICE_KEY');
-  process.exit(1);
+  process.exit(2);
 }
 
 const headers = {
@@ -18,6 +19,16 @@ const headers = {
   Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`,
   'Content-Type': 'application/json',
 };
+
+async function maybeSlack(ok: boolean, text: string) {
+  const hook = process.env.SLACK_WEBHOOK_URL;
+  if (!hook) return;
+  await fetch(hook, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text: `${ok ? '✅' : '❌'} T2 Smoke — ${text}` }),
+  });
+}
 
 async function main() {
   const domains = ['example-spa.com', 'airbnb.com', 'booking.com'].map(d => d.toLowerCase());
@@ -50,9 +61,44 @@ async function main() {
     }
   }
 
-  console.log('\n[T2 Smoke] Seeding complete. Now run: npx tsx tools/t2-worker.ts\n');
+  console.log('\n[T2 Smoke] Seeding complete.');
 
-  // 2) Read current queue state
+  // 2) Optionally run worker
+  if (SHOULD_RUN_WORKER) {
+    console.log('[T2 Smoke] Running worker once...');
+    try {
+      const { execa } = await import('execa');
+      await execa('npx', ['tsx', 'tools/t2-worker.ts'], { stdio: 'inherit' });
+      console.log('[T2 Smoke] Worker completed.');
+    } catch (e) {
+      console.error('[T2 Smoke] Worker failed:', e);
+      await maybeSlack(false, 'Worker execution failed');
+      process.exit(1);
+    }
+
+    // Wait a moment for DB writes to settle
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    // Re-fetch and assert
+    const afterQ = await fetch(
+      `${SUPABASE_URL}/rest/v1/t2_retries?select=domain,status,attempts&order=updated_at.desc&limit=50`,
+      { headers }
+    );
+    const afterQueue = await afterQ.json();
+    const moved = afterQueue.some((r: any) => r.status !== 'queued');
+    
+    if (!moved) {
+      console.warn('[T2 Smoke] ⚠️  No jobs moved status; check worker logs.');
+      await maybeSlack(false, 'No jobs progressed beyond queued');
+    } else {
+      console.log('[T2 Smoke] ✓ At least one job progressed beyond queued.');
+      await maybeSlack(true, 'Smoke test passed—jobs progressed successfully');
+    }
+  } else {
+    console.log('[T2 Smoke] Skipping worker. Run manually: npx tsx tools/t2-worker.ts\n');
+  }
+
+  // 3) Read current queue state
   console.log('[T2 Smoke] Current queue state:');
   const r1 = await fetch(
     `${SUPABASE_URL}/rest/v1/t2_retries?select=domain,status,attempts,result_url,t2_time_ms,last_error&order=updated_at.desc&limit=10`,
@@ -61,7 +107,7 @@ async function main() {
   const queue = await r1.json();
   console.table(queue);
 
-  // 3) Read recent metrics
+  // 4) Read recent metrics
   console.log('\n[T2 Smoke] Recent metrics (T2 runs):');
   const r2 = await fetch(
     `${SUPABASE_URL}/rest/v1/discovery_metrics?select=domain,t2_used,t2_success,t2_time_ms,method_used,success&t2_used=eq.true&order=created_at.desc&limit=10`,
@@ -70,7 +116,7 @@ async function main() {
   const metrics = await r2.json();
   console.table(metrics);
 
-  // 4) Summary stats
+  // 5) Summary stats
   console.log('\n[T2 Smoke] Queue summary:');
   const r3 = await fetch(`${SUPABASE_URL}/rest/v1/rpc/t2_queue_summary`, {
     method: 'POST',

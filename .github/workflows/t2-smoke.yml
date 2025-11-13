@@ -1,0 +1,44 @@
+name: T2-Smoke
+
+on:
+  workflow_dispatch:
+    inputs:
+      run-worker:
+        description: "Run worker after seeding?"
+        type: boolean
+        default: true
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Install dependencies
+        run: npm i -g tsx execa
+      
+      - name: Run T2 Smoke Test
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          if [ "${{ inputs.run-worker }}" = "true" ]; then
+            npx tsx tools/t2-smoke.ts --run-worker
+          else
+            npx tsx tools/t2-smoke.ts
+          fi
+      
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: t2-smoke-logs
+          path: |
+            *.log
+            *.json
