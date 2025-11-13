@@ -490,6 +490,39 @@ export type Database = {
         }
         Relationships: []
       }
+      golden_runs: {
+        Row: {
+          build_sha: string | null
+          build_ver: string | null
+          created_at: string
+          id: string
+          median_ms_g10: number | null
+          median_ms_g25: number | null
+          pass_rate_g10: number | null
+          pass_rate_g25: number | null
+        }
+        Insert: {
+          build_sha?: string | null
+          build_ver?: string | null
+          created_at?: string
+          id?: string
+          median_ms_g10?: number | null
+          median_ms_g25?: number | null
+          pass_rate_g10?: number | null
+          pass_rate_g25?: number | null
+        }
+        Update: {
+          build_sha?: string | null
+          build_ver?: string | null
+          created_at?: string
+          id?: string
+          median_ms_g10?: number | null
+          median_ms_g25?: number | null
+          pass_rate_g10?: number | null
+          pass_rate_g25?: number | null
+        }
+        Relationships: []
+      }
       manual_contact_submissions: {
         Row: {
           contact_type: string
@@ -1129,6 +1162,7 @@ export type Database = {
         Returns: boolean
       }
       is_authorized_agent: { Args: { user_uuid: string }; Returns: boolean }
+      public_status_snapshot: { Args: never; Returns: Json }
       t2_queue_summary: {
         Args: never
         Returns: {
