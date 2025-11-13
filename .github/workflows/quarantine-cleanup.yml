@@ -1,0 +1,32 @@
+name: Quarantine-Cleanup
+
+on:
+  schedule:
+    - cron: '15 3 * * *'  # 03:15 UTC daily
+  workflow_dispatch:
+    inputs:
+      max-age-days:
+        description: 'Max age (days) for quarantine rows to keep'
+        required: false
+        default: '7'
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install tsx
+        run: npm i -g tsx
+
+      - name: Run quarantine cleanup
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          QUARANTINE_MAX_AGE_DAYS: ${{ inputs.max-age-days || '7' }}
+        run: |
+          npx tsx tools/quarantine-cleanup.ts

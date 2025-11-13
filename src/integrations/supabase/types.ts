@@ -1068,6 +1068,13 @@ export type Database = {
       }
     }
     Functions: {
+      discovery_quarantine_cleanup: {
+        Args: { max_age_days?: number }
+        Returns: {
+          deleted_count: number
+          remaining_active: number
+        }[]
+      }
       get_email_analytics_summary: {
         Args: never
         Returns: {

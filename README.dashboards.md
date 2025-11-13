@@ -186,3 +186,42 @@ where created_at >= now() - interval '24 hours'
 group by method_used
 order by method_used;
 ```
+
+## Quarantine Health
+
+Monitor domains in quarantine and cleanup effectiveness:
+
+```sql
+-- Active quarantines (currently blocked)
+select
+  domain,
+  reason,
+  attempts,
+  until_at,
+  last_error
+from discovery_quarantine
+where until_at >= now()
+order by until_at desc;
+
+-- Stale quarantines (should be cleaned by function)
+select
+  domain,
+  reason,
+  attempts,
+  until_at,
+  now() - until_at as age
+from discovery_quarantine
+where until_at < now()
+order by until_at asc
+limit 50;
+
+-- Daily quarantine volume
+select
+  date(updated_at) as day,
+  count(*) filter (where until_at >= now()) as active_now,
+  count(*) as total_rows
+from discovery_quarantine
+group by day
+order by day desc
+limit 14;
+```
