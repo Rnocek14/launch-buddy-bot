@@ -74,16 +74,15 @@ export const Navbar = () => {
             >
               FAQ
             </Button>
-            
-            <Link to="/status">
-              <Button variant="ghost" className="gap-2">
-                <Activity className="w-4 h-4" />
-                <span className="hidden md:inline">Status</span>
-              </Button>
-            </Link>
 
             {user && (
               <>
+                <Link to="/status">
+                  <Button variant="ghost" className="gap-2">
+                    <Activity className="w-4 h-4" />
+                    <span className="hidden md:inline">Status</span>
+                  </Button>
+                </Link>
                 <Link to="/dashboard">
                   <Button variant="ghost" className="gap-2">
                     <ScanSearch className="w-4 h-4" />
