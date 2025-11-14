@@ -1,9 +1,10 @@
-import { Shield, ScanSearch, Settings, ShieldCheck, Activity } from "lucide-react";
+import { Shield, ScanSearch, Settings, ShieldCheck, Activity, Menu, X } from "lucide-react";
 import { ThemeToggle } from "./ThemeToggle";
 import { Button } from "./ui/button";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState } from "react";
+import { Sheet, SheetContent, SheetTrigger } from "./ui/sheet";
 
 const scrollToSection = (id: string) => {
   const element = document.getElementById(id);
@@ -21,6 +22,7 @@ const scrollToSection = (id: string) => {
 
 export const Navbar = () => {
   const [user, setUser] = useState<any>(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -37,6 +39,8 @@ export const Navbar = () => {
     return () => subscription.unsubscribe();
   }, []);
 
+  const closeMobileMenu = () => setMobileMenuOpen(false);
+
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 border-b border-border/40 bg-background/80 backdrop-blur-lg">
       <div className="container max-w-6xl">
@@ -49,27 +53,26 @@ export const Navbar = () => {
             className="flex items-center gap-2 hover:opacity-80 transition-opacity"
           >
             <Shield className="w-6 h-6 text-primary" />
-            <span className="font-bold text-xl">Footprint Finder</span>
+            <span className="font-bold text-xl hidden sm:inline">Footprint Finder</span>
+            <span className="font-bold text-lg sm:hidden">FF</span>
           </button>
           
-          <div className="flex items-center gap-4">
+          {/* Desktop Menu */}
+          <div className="hidden lg:flex items-center gap-4">
             <Button 
               variant="ghost" 
-              className="hidden sm:inline-flex"
               onClick={() => scrollToSection("features")}
             >
               Features
             </Button>
             <Button 
               variant="ghost" 
-              className="hidden sm:inline-flex"
               onClick={() => scrollToSection("pricing")}
             >
               Pricing
             </Button>
             <Button 
               variant="ghost" 
-              className="hidden sm:inline-flex"
               onClick={() => scrollToSection("faq")}
             >
               FAQ
@@ -80,25 +83,19 @@ export const Navbar = () => {
                 <Link to="/status">
                   <Button variant="ghost" className="gap-2">
                     <Activity className="w-4 h-4" />
-                    <span className="hidden md:inline">Status</span>
+                    <span>Status</span>
                   </Button>
                 </Link>
                 <Link to="/dashboard">
                   <Button variant="ghost" className="gap-2">
                     <ScanSearch className="w-4 h-4" />
-                    <span className="hidden md:inline">Dashboard</span>
-                  </Button>
-                </Link>
-                <Link to="/admin">
-                  <Button variant="ghost" className="gap-2">
-                    <ShieldCheck className="w-4 h-4" />
-                    <span className="hidden md:inline">Admin</span>
+                    <span>Dashboard</span>
                   </Button>
                 </Link>
                 <Link to="/settings">
                   <Button variant="ghost" className="gap-2">
                     <Settings className="w-4 h-4" />
-                    <span className="hidden md:inline">Settings</span>
+                    <span>Settings</span>
                   </Button>
                 </Link>
               </>
@@ -121,6 +118,103 @@ export const Navbar = () => {
                 Join Waitlist
               </Button>
             )}
+          </div>
+
+          {/* Mobile Menu */}
+          <div className="flex items-center gap-2 lg:hidden">
+            <ThemeToggle />
+            <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon">
+                  <Menu className="w-5 h-5" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="right" className="w-[300px]">
+                <div className="flex flex-col gap-4 mt-8">
+                  <Button 
+                    variant="ghost" 
+                    className="justify-start"
+                    onClick={() => {
+                      scrollToSection("features");
+                      closeMobileMenu();
+                    }}
+                  >
+                    Features
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    className="justify-start"
+                    onClick={() => {
+                      scrollToSection("pricing");
+                      closeMobileMenu();
+                    }}
+                  >
+                    Pricing
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    className="justify-start"
+                    onClick={() => {
+                      scrollToSection("faq");
+                      closeMobileMenu();
+                    }}
+                  >
+                    FAQ
+                  </Button>
+
+                  {user && (
+                    <>
+                      <div className="border-t border-border my-2" />
+                      <Link to="/status" onClick={closeMobileMenu}>
+                        <Button variant="ghost" className="w-full justify-start gap-2">
+                          <Activity className="w-4 h-4" />
+                          Status
+                        </Button>
+                      </Link>
+                      <Link to="/dashboard" onClick={closeMobileMenu}>
+                        <Button variant="ghost" className="w-full justify-start gap-2">
+                          <ScanSearch className="w-4 h-4" />
+                          Dashboard
+                        </Button>
+                      </Link>
+                      <Link to="/settings" onClick={closeMobileMenu}>
+                        <Button variant="ghost" className="w-full justify-start gap-2">
+                          <Settings className="w-4 h-4" />
+                          Settings
+                        </Button>
+                      </Link>
+                      <Link to="/admin" onClick={closeMobileMenu}>
+                        <Button variant="ghost" className="w-full justify-start gap-2">
+                          <ShieldCheck className="w-4 h-4" />
+                          Admin
+                        </Button>
+                      </Link>
+                    </>
+                  )}
+                  
+                  <div className="border-t border-border my-2" />
+                  
+                  {user ? (
+                    <Link to="/dashboard" onClick={closeMobileMenu}>
+                      <Button className="w-full bg-primary hover:bg-primary/90 gap-2">
+                        <ScanSearch className="w-4 h-4" />
+                        Go to Scanner
+                      </Button>
+                    </Link>
+                  ) : (
+                    <Button 
+                      className="w-full bg-primary hover:bg-primary/90"
+                      onClick={() => {
+                        window.scrollTo({ top: 0, behavior: "smooth" });
+                        closeMobileMenu();
+                      }}
+                    >
+                      Join Waitlist
+                    </Button>
+                  )}
+                </div>
+              </SheetContent>
+            </Sheet>
           </div>
         </div>
       </div>

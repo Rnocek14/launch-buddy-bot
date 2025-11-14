@@ -19,6 +19,9 @@ import { BatchDeletionDialog } from "@/components/BatchDeletionDialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ContactDiscoveryDialog } from "@/components/ContactDiscoveryDialog";
 import { DashboardEmptyState } from "@/components/DashboardEmptyState";
+import { ServiceGridSkeleton } from "@/components/ServiceCardSkeleton";
+import { SuccessAnimation } from "@/components/SuccessAnimation";
+import { getErrorMessage, successMessages } from "@/lib/errorMessages";
 
 interface Service {
   id: string;
@@ -89,6 +92,8 @@ export default function Dashboard() {
     confidence: string;
     reasoning: string;
   }> | null>(null);
+  const [showSuccessAnimation, setShowSuccessAnimation] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
 
   useEffect(() => {
     checkAuth();
@@ -332,8 +337,12 @@ export default function Dashboard() {
         ? ` Matched ${data.identifierMatches} emails via your identifiers.`
         : '';
       
+      // Success - show animation
+      setShowSuccessAnimation(true);
+      setSuccessMessage(successMessages.scanComplete.message);
+      
       toast({
-        title: "Scan complete!",
+        title: successMessages.scanComplete.title,
         description: `${data.message}. ${data.unmatchedCount > 0 ? `${data.unmatchedCount} unrecognized services found.` : ''}${matchMessage}`,
         duration: 5000
       });
@@ -342,9 +351,10 @@ export default function Dashboard() {
       await fetchUnmatchedDomains();
       await fetchRiskScore();
     } catch (error: any) {
+      const errorMsg = getErrorMessage(error);
       toast({
-        title: "Scan failed",
-        description: error.message || "Please try reconnecting your Google account",
+        title: errorMsg.title,
+        description: errorMsg.description,
         variant: "destructive"
       });
     } finally {
@@ -363,9 +373,10 @@ export default function Dashboard() {
       setRiskData(data);
     } catch (error: any) {
       console.error('Failed to fetch risk score:', error);
+      const errorMsg = getErrorMessage(error);
       toast({
-        title: "Could not calculate risk score",
-        description: error.message,
+        title: errorMsg.title,
+        description: errorMsg.description,
         variant: "destructive"
       });
     } finally {
@@ -458,9 +469,10 @@ export default function Dashboard() {
       });
     } catch (error: any) {
       console.error('AI analysis error:', error);
+      const errorMsg = getErrorMessage(error);
       toast({
-        title: "Analysis failed",
-        description: error.message || "Could not analyze domains. Please try again.",
+        title: errorMsg.title,
+        description: errorMsg.description,
         variant: "destructive"
       });
     } finally {
@@ -469,22 +481,32 @@ export default function Dashboard() {
   };
 
   const handleConnectGmail = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/dashboard`,
-        scopes: 'openid email profile https://www.googleapis.com/auth/gmail.readonly',
-        queryParams: {
-          access_type: 'offline',
-          prompt: 'consent'
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/dashboard`,
+          scopes: 'openid email profile https://www.googleapis.com/auth/gmail.readonly',
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent'
+          }
         }
-      }
-    });
+      });
 
-    if (error) {
+      if (error) {
+        const errorMsg = getErrorMessage(error);
+        toast({
+          title: errorMsg.title,
+          description: errorMsg.description,
+          variant: "destructive"
+        });
+      }
+    } catch (error: any) {
+      const errorMsg = getErrorMessage(error);
       toast({
-        title: "Connection failed",
-        description: error.message,
+        title: errorMsg.title,
+        description: errorMsg.description,
         variant: "destructive"
       });
     }
@@ -597,14 +619,33 @@ export default function Dashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      <div className="min-h-screen bg-background">
+        <div className="border-b border-border bg-card">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <div className="flex justify-between items-center">
+              <div className="space-y-2">
+                <div className="h-8 w-48 bg-muted animate-pulse rounded" />
+                <div className="h-4 w-64 bg-muted animate-pulse rounded" />
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <ServiceGridSkeleton count={8} />
+        </div>
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Success Animation */}
+      {showSuccessAnimation && (
+        <SuccessAnimation
+          message={successMessage}
+          onComplete={() => setShowSuccessAnimation(false)}
+        />
+      )}
       {/* Header */}
       <div className="border-b border-border bg-card">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
