@@ -133,7 +133,7 @@ export default function Status() {
               System Status
             </h1>
             <p className="text-sm text-muted-foreground">
-              Real-time health of the discovery and contact engine.
+              Live health of our privacy contact discovery engine. No personal data is ever shown here.
             </p>
           </div>
 
@@ -166,13 +166,13 @@ export default function Status() {
             <section className="grid gap-4 md:grid-cols-3">
               <Card className="md:col-span-2 p-4 bg-card">
                 <h2 className="text-sm font-medium text-foreground">
-                  Overall
+                  Overall Status
                 </h2>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  {snapshot.overall.message}
+                  {snapshot.overall.message || "Current health across all discovery tiers."}
                 </p>
                 <p className="mt-3 text-xs text-muted-foreground">
-                  Snapshot as of{" "}
+                  Snapshot taken at{" "}
                   {new Date(snapshot.as_of).toLocaleString(undefined, {
                     hour12: false,
                   })}
@@ -188,7 +188,7 @@ export default function Status() {
                 </div>
                 <div>
                   <span className="font-medium text-foreground">
-                    Build ver:
+                    Build version:
                   </span>{" "}
                   {snapshot.meta.build_ver || "—"}
                 </div>
@@ -210,33 +210,38 @@ export default function Status() {
             <section className="grid gap-4 md:grid-cols-2">
               {/* T1 */}
               <Card className="p-4 space-y-3 bg-card">
-                <h2 className="text-sm font-medium text-foreground">
-                  T1 – Fast Discovery
-                </h2>
+                <div>
+                  <h2 className="text-sm font-medium text-foreground">
+                    T1 — Fast Discovery
+                  </h2>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    HTML-first engine for finding privacy policies and contact endpoints quickly.
+                  </p>
+                </div>
                 <div className="grid grid-cols-2 gap-3 text-xs">
                   <div>
-                    <div className="text-muted-foreground">Pass rate (15m)</div>
+                    <div className="text-muted-foreground">Success rate (last 15 min)</div>
                     <div className="text-base text-foreground">
                       {pct(snapshot.t1.pass_15m)}
                     </div>
                   </div>
                   <div>
                     <div className="text-muted-foreground">
-                      p95 latency (15m)
+                      p95 latency (last 15 min)
                     </div>
                     <div className="text-base text-foreground">
                       {ms(snapshot.t1.p95_15m_ms)}
                     </div>
                   </div>
                   <div>
-                    <div className="text-muted-foreground">Pass rate (24h)</div>
+                    <div className="text-muted-foreground">Success rate (last 24 hours)</div>
                     <div className="text-base text-foreground">
                       {pct(snapshot.t1.pass_24h)}
                     </div>
                   </div>
                   <div>
                     <div className="text-muted-foreground">
-                      p95 latency (24h)
+                      p95 latency (last 24 hours)
                     </div>
                     <div className="text-base text-foreground">
                       {ms(snapshot.t1.p95_24h_ms)}
@@ -244,7 +249,7 @@ export default function Status() {
                   </div>
                   <div>
                     <div className="text-muted-foreground">
-                      Precision@5 (24h)
+                      Precision@5 (last 24 hours)
                     </div>
                     <div className="text-base text-foreground">
                       {pct(snapshot.t1.precision_24h)}
@@ -252,7 +257,7 @@ export default function Status() {
                   </div>
                   <div>
                     <div className="text-muted-foreground">
-                      Probe cache hit (24h)
+                      Probe cache hit rate
                     </div>
                     <div className="text-base text-foreground">
                       {pct(snapshot.t1.cache_rate_24h)}
@@ -263,44 +268,48 @@ export default function Status() {
 
               {/* T2 */}
               <Card className="p-4 space-y-3 bg-card">
-                <h2 className="text-sm font-medium text-foreground">
-                  T2 – Headless Retries
-                </h2>
+                <div>
+                  <h2 className="text-sm font-medium text-foreground">
+                    T2 — Headless Retries
+                  </h2>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Browser-based retries for JavaScript-heavy or bot-protected domains, bounded by strict timeouts and safety rails.
+                  </p>
+                </div>
                 <div className="grid grid-cols-2 gap-3 text-xs">
                   <div>
-                    <div className="text-muted-foreground">Pass rate (24h)</div>
+                    <div className="text-muted-foreground">Success rate (last 24 hours)</div>
                     <div className="text-base text-foreground">
                       {pct(snapshot.t2.pass_24h)}
                     </div>
                   </div>
                   <div>
-                    <div className="text-muted-foreground">T2 p95 (24h)</div>
+                    <div className="text-muted-foreground">p95 latency (last 24 hours)</div>
                     <div className="text-base text-foreground">
                       {ms(snapshot.t2.p95_24h_ms)}
                     </div>
                   </div>
                   <div>
-                    <div className="text-muted-foreground">Queued</div>
+                    <div className="text-muted-foreground">Queued jobs</div>
                     <div className="text-base text-foreground">
                       {snapshot.t2.backlog.queued}
                     </div>
                   </div>
                   <div>
-                    <div className="text-muted-foreground">Running</div>
+                    <div className="text-muted-foreground">Running jobs</div>
                     <div className="text-base text-foreground">
                       {snapshot.t2.backlog.running}
                     </div>
                   </div>
                   <div>
-                    <div className="text-muted-foreground">Failed</div>
+                    <div className="text-muted-foreground">Failed jobs</div>
                     <div className="text-base text-foreground">
                       {snapshot.t2.backlog.failed}
                     </div>
                   </div>
                 </div>
                 <p className="mt-2 text-xs text-muted-foreground">
-                  T2 runs headless browser retries for JS-heavy or bot-protected
-                  domains. It's bounded by strict timeouts and safety rails.
+                  Tier-2 only runs when the fast path (T1) can't safely complete a lookup. It is tightly rate-limited, respects remote services, and never processes any personal user data.
                 </p>
               </Card>
             </section>
@@ -309,24 +318,32 @@ export default function Status() {
             <section className="grid gap-4 md:grid-cols-2">
               {/* Quarantine */}
               <Card className="p-4 space-y-2 bg-card">
-                <h2 className="text-sm font-medium text-foreground">
-                  Quarantine
-                </h2>
+                <div>
+                  <h2 className="text-sm font-medium text-foreground">
+                    Quarantine
+                  </h2>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Temporary pause for domains that repeatedly respond with bot protection or hard errors.
+                  </p>
+                </div>
                 <p className="text-2xl font-semibold text-foreground">
                   {snapshot.quarantine.active_domains}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  Domains may be temporarily paused after repeated bot
-                  protection responses or failures. This protects both your
-                  requests and the remote services.
+                  Quarantined domains are automatically retried after a cooldown window to protect both your requests and the remote service.
                 </p>
               </Card>
 
               {/* Golden baselines */}
               <Card className="p-4 space-y-3 bg-card">
-                <h2 className="text-sm font-medium text-foreground">
-                  Golden Baselines
-                </h2>
+                <div>
+                  <h2 className="text-sm font-medium text-foreground">
+                    Golden Baselines
+                  </h2>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Fixed test suites run on every build against known tricky domains to catch regressions early.
+                  </p>
+                </div>
                 <div className="grid grid-cols-2 gap-3 text-xs">
                   <div>
                     <div className="text-muted-foreground">Golden-10 pass</div>
@@ -350,25 +367,19 @@ export default function Status() {
                   </div>
                   <div>
                     <div className="text-muted-foreground">
-                      Golden-25 median
+                      Golden-25 median latency
                     </div>
                     <div className="text-base text-foreground">
                       {ms(snapshot.golden.g25_median_ms)}
                     </div>
                   </div>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Golden test suites validate known tricky domains on every
-                  build to guard against regressions.
-                </p>
               </Card>
             </section>
 
             {/* Footer note */}
             <footer className="pt-4 border-t border-border mt-4 text-xs text-muted-foreground">
-              This status page reflects the health of the automated discovery
-              engine only and does not expose any personal data or deletion
-              request content.
+              This page reflects the health of our automated discovery engine only. It never includes personal data, email content, or individual deletion requests.
             </footer>
           </>
         )}
