@@ -18,6 +18,8 @@ import Cleanup from "./pages/Cleanup";
 import NotFound from "./pages/NotFound";
 import Settings from "./pages/Settings";
 import Status from "./pages/Status";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import TermsOfService from "./pages/TermsOfService";
 import { AuthorizationWizard } from "./components/AuthorizationWizard";
 
 const queryClient = new QueryClient();
@@ -42,6 +44,8 @@ const App = () => (
             <Route path="/preferences" element={<Preferences />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/status" element={<Status />} />
+            <Route path="/privacy" element={<PrivacyPolicy />} />
+            <Route path="/terms" element={<TermsOfService />} />
             <Route path="/authorize" element={<AuthorizationWizard />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />

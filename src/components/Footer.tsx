@@ -11,10 +11,10 @@ export const Footer = () => {
           </div>
           
           <div className="flex flex-wrap justify-center gap-6 text-sm text-muted-foreground">
-            <a href="#" className="hover:text-foreground transition-colors">Privacy Policy</a>
-            <a href="#" className="hover:text-foreground transition-colors">Terms of Service</a>
+            <a href="/privacy" className="hover:text-foreground transition-colors">Privacy Policy</a>
+            <a href="/terms" className="hover:text-foreground transition-colors">Terms of Service</a>
             <a href="/status" className="hover:text-foreground transition-colors">Status</a>
-            <a href="#" className="hover:text-foreground transition-colors">Contact</a>
+            <a href="mailto:support@footprintfinder.app" className="hover:text-foreground transition-colors">Contact</a>
             <a href="/admin" className="hover:text-foreground transition-colors">Admin</a>
           </div>
           

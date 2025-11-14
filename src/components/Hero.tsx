@@ -36,10 +36,10 @@ export const Hero = () => {
         <WaitlistForm />
 
         <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center items-center">
-          <Link to="/dashboard">
+          <Link to="/auth">
             <Button size="lg" className="gap-2 bg-primary hover:bg-primary/90">
               <Shield className="w-4 h-4" />
-              Try Scanner Now
+              Get Started Free
             </Button>
           </Link>
           <Link to="/alpha">
