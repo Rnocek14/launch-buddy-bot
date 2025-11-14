@@ -8,7 +8,8 @@ import { Navbar } from "@/components/Navbar";
 import { AddIdentifierDialog } from "@/components/AddIdentifierDialog";
 import { GmailConnectButton } from "@/components/GmailConnectButton";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Mail, Phone, User, Plus, Trash2, Star } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Loader2, Mail, Phone, User, Plus, Trash2, Star, HelpCircle } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -197,7 +198,19 @@ export default function Settings() {
       <div className="container max-w-4xl mx-auto pt-24 pb-12 px-4">
         <div className="space-y-6">
           <div>
-            <h1 className="text-3xl font-bold">Settings</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-3xl font-bold">Settings</h1>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <HelpCircle className="h-5 w-5 text-muted-foreground cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs">
+                    <p>Configure your identifiers for deletion requests and manage connected accounts</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
             <p className="text-muted-foreground mt-2">
               Manage your account identifiers and preferences
             </p>
@@ -207,7 +220,19 @@ export default function Settings() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle>Account Identifiers</CardTitle>
+                  <div className="flex items-center gap-2">
+                    <CardTitle>Account Identifiers</CardTitle>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <HelpCircle className="h-4 w-4 text-muted-foreground cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-sm">
+                          <p>Add all emails, phone numbers, and usernames you've used to register for services. Mark one of each type as primary for default use in deletion requests.</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
                   <CardDescription>
                     Manage emails, phone numbers, and usernames used for deletion requests
                   </CardDescription>
