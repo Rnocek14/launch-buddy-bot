@@ -18,6 +18,7 @@ import { BatchDeletionToolbar } from "@/components/BatchDeletionToolbar";
 import { BatchDeletionDialog } from "@/components/BatchDeletionDialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ContactDiscoveryDialog } from "@/components/ContactDiscoveryDialog";
+import { DashboardEmptyState } from "@/components/DashboardEmptyState";
 
 interface Service {
   id: string;
@@ -467,6 +468,28 @@ export default function Dashboard() {
     }
   };
 
+  const handleConnectGmail = async () => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/dashboard`,
+        scopes: 'openid email profile https://www.googleapis.com/auth/gmail.readonly',
+        queryParams: {
+          access_type: 'offline',
+          prompt: 'consent'
+        }
+      }
+    });
+
+    if (error) {
+      toast({
+        title: "Connection failed",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  };
+
   const selectedServicesArray = Array.from(selectedServices)
     .map(id => services.find(s => s.id === id))
     .filter((s): s is Service => s !== undefined);
@@ -635,17 +658,28 @@ export default function Dashboard() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Risk Score Card */}
-        {riskData && (
-          <div className="mb-8">
-            <RiskScoreCard
-              score={riskData.riskScore}
-              level={riskData.riskLevel}
-              factors={riskData.riskFactors}
-              insights={riskData.insights}
-            />
-          </div>
-        )}
+        {/* Show empty state when no services and not scanning */}
+        {services.length === 0 && !scanning ? (
+          <DashboardEmptyState
+            hasGmailAccess={hasGmailAccess}
+            onConnectGmail={handleConnectGmail}
+            onStartScan={handleScan}
+            isAuthorized={isAuthorized}
+            onAuthorize={() => navigate("/authorize")}
+          />
+        ) : (
+          <>
+            {/* Risk Score Card */}
+            {riskData && (
+              <div className="mb-8">
+                <RiskScoreCard
+                  score={riskData.riskScore}
+                  level={riskData.riskLevel}
+                  factors={riskData.riskFactors}
+                  insights={riskData.insights}
+                />
+              </div>
+            )}
 
         {/* Scan Hero Card */}
         <Card className="mb-8 overflow-hidden border-primary/20 bg-gradient-to-br from-card to-primary/5">
@@ -1222,6 +1256,8 @@ export default function Dashboard() {
             </span>
           </p>
         </div>
+          </>
+        )}
       </div>
 
       {/* Deletion Request Dialog */}
