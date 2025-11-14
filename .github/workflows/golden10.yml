@@ -49,6 +49,67 @@ jobs:
           PROBE_SITEMAP: true
           DETECT_VENDOR: true
         run: npx tsx golden10.ts
+      
+      - name: Log Golden-10 Results to Database
+        if: always() && hashFiles('golden10.summary.json') != ''
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          GITHUB_SHA: ${{ github.sha }}
+          GITHUB_REF_NAME: ${{ github.ref_name }}
+        run: |
+          node -e "
+          const fs = require('fs');
+          const https = require('https');
+          const url = require('url');
+          
+          try {
+            const summary = JSON.parse(fs.readFileSync('golden10.summary.json', 'utf8'));
+            
+            const body = JSON.stringify({
+              pass_rate_g10: summary.pass / summary.total,
+              median_ms_g10: summary.median_ms,
+              build_sha: process.env.GITHUB_SHA?.substring(0, 7) || null,
+              build_ver: process.env.GITHUB_REF_NAME || null
+            });
+            
+            const supabaseUrl = new url.URL('/rest/v1/golden_runs', process.env.SUPABASE_URL);
+            const options = {
+              method: 'POST',
+              headers: {
+                'apikey': process.env.SUPABASE_SERVICE_ROLE_KEY,
+                'Authorization': 'Bearer ' + process.env.SUPABASE_SERVICE_ROLE_KEY,
+                'Content-Type': 'application/json',
+                'Prefer': 'return=minimal'
+              }
+            };
+            
+            const req = https.request(supabaseUrl, options, (res) => {
+              if (res.statusCode >= 200 && res.statusCode < 300) {
+                console.log('✅ Golden-10 results logged to database');
+                process.exit(0);
+              } else {
+                let data = '';
+                res.on('data', chunk => data += chunk);
+                res.on('end', () => {
+                  console.error('❌ Failed to log results:', res.statusCode, data);
+                  process.exit(1);
+                });
+              }
+            });
+            
+            req.on('error', (err) => {
+              console.error('❌ Request error:', err);
+              process.exit(1);
+            });
+            
+            req.write(body);
+            req.end();
+          } catch (err) {
+            console.error('❌ Failed to log golden10 run:', err.message);
+            process.exit(1);
+          }
+          "
         
       - name: Print precision@5 and vendor metrics
         if: always()
