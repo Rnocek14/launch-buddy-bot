@@ -5,47 +5,52 @@ import { Badge } from "./ui/badge";
 
 const plans = [
   {
-    name: "Free",
+    name: "Free Beta",
     price: "$0",
-    description: "Perfect for getting started",
+    description: "Full access during our beta launch",
     features: [
-      "Scan up to 50 services",
-      "Basic deletion guides",
-      "Progress tracking",
-      "Community support",
+      "Unlimited service scanning",
+      "All deletion request features",
+      "Email support",
+      "Standard templates",
+      "Help shape the product",
     ],
-    cta: "Get Started",
-    popular: false,
+    cta: "Join Beta",
+    popular: true,
+    available: true,
   },
   {
     name: "Pro",
-    price: "$9",
+    price: "$12",
     period: "/month",
     description: "For serious privacy advocates",
     features: [
-      "Unlimited service scanning",
+      "Everything in Free Beta",
+      "Priority deletion requests",
       "AI-powered discovery",
-      "Priority deletion templates",
+      "Custom email templates",
+      "Priority support",
       "Advanced analytics",
-      "Email support",
-      "Export reports",
     ],
-    cta: "Join Waitlist",
-    popular: true,
+    cta: "Coming Soon",
+    popular: false,
+    available: false,
   },
   {
     name: "Lifetime",
-    price: "$99",
+    price: "$299",
     description: "One-time payment, forever access",
     features: [
       "Everything in Pro",
       "Lifetime updates",
-      "Priority support",
-      "Early access to features",
-      "Remove branding",
+      "Priority feature requests",
+      "Dedicated support channel",
+      "Early access to new features",
+      "No recurring fees ever",
     ],
-    cta: "Join Waitlist",
+    cta: "Coming Soon",
     popular: false,
+    available: false,
   },
 ];
 
@@ -70,11 +75,16 @@ export const Pricing = () => {
                 plan.popular 
                   ? "border-primary shadow-lg shadow-primary/10 scale-105" 
                   : "border-border/50"
-              }`}
+              } ${!plan.available ? "opacity-75" : ""}`}
             >
               {plan.popular && (
                 <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-primary to-accent">
                   Most Popular
+                </Badge>
+              )}
+              {!plan.available && (
+                <Badge variant="secondary" className="absolute -top-3 right-4">
+                  Coming Soon
                 </Badge>
               )}
               <CardHeader>
@@ -95,6 +105,7 @@ export const Pricing = () => {
                       : ""
                   }`}
                   variant={plan.popular ? "default" : "outline"}
+                  disabled={!plan.available}
                 >
                   {plan.cta}
                 </Button>
@@ -112,7 +123,7 @@ export const Pricing = () => {
         </div>
 
         <p className="text-center text-muted-foreground mt-12">
-          All plans include a 30-day money-back guarantee. Cancel anytime.
+          🎉 Free during beta! Paid plans coming soon. Join now to lock in early access.
         </p>
       </div>
     </section>
