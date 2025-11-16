@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -86,6 +87,7 @@ export default function Dashboard() {
   const [quickDiscoveryService, setQuickDiscoveryService] = useState<Service | null>(null);
   const { isAuthorized, loading: authLoading } = useAuthorization();
   const [scanType, setScanType] = useState<'quick' | 'deep'>('quick');
+  const [scanAccountOption, setScanAccountOption] = useState<'all' | 'primary'>('all');
   const [analyzingDomains, setAnalyzingDomains] = useState(false);
   const [aiSuggestions, setAiSuggestions] = useState<Array<{
     domain: string;
@@ -316,7 +318,7 @@ export default function Dashboard() {
       
       const { data, error } = await supabase.functions.invoke("scan-gmail", {
         body: { 
-          accessToken: session.provider_token,
+          scanAll: scanAccountOption === 'all',
           scanType: scanType
         }
       });
@@ -827,6 +829,28 @@ export default function Dashboard() {
                       Deep Scan
                     </Button>
                   </div>
+                  
+                  {/* Account Selection */}
+                  <div className="space-y-2">
+                    <Label className="text-xs text-muted-foreground">Gmail Accounts</Label>
+                    <div className="flex gap-2">
+                      <Button
+                        variant={scanAccountOption === 'all' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setScanAccountOption('all')}
+                      >
+                        All Accounts
+                      </Button>
+                      <Button
+                        variant={scanAccountOption === 'primary' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setScanAccountOption('primary')}
+                      >
+                        Primary Only
+                      </Button>
+                    </div>
+                  </div>
+                  
                   <div className="text-xs text-muted-foreground">
                     {scanType === 'quick' ? (
                       <span>500 emails per category • ~30-60 seconds</span>

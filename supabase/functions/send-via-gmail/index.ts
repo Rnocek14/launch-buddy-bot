@@ -11,6 +11,7 @@ interface SendEmailRequest {
   to: string;
   subject: string;
   body: string;
+  connectionId?: string; // Optional: Specify which Gmail account to send from
 }
 
 serve(async (req: Request): Promise<Response> => {
@@ -43,18 +44,29 @@ serve(async (req: Request): Promise<Response> => {
       );
     }
 
-    console.log("Sending email for user:", user.id);
+    // Parse request body
+    const { to, subject, body, connectionId }: SendEmailRequest = await req.json();
 
-    // Get Gmail connection
-    const { data: connection, error: connError } = await supabase
+    // Get Gmail connection (specific or primary)
+    let query = supabase
       .from("gmail_connections")
       .select("*")
-      .eq("user_id", user.id)
-      .single();
+      .eq("user_id", user.id);
+
+    if (connectionId) {
+      query = query.eq("id", connectionId);
+    } else {
+      query = query.eq("is_primary", true);
+    }
+
+    const { data: connection, error: connError } = await query.single();
 
     if (connError || !connection) {
       return new Response(
-        JSON.stringify({ error: "Gmail not connected", code: "GMAIL_NOT_CONNECTED" }),
+        JSON.stringify({ 
+          error: connectionId ? "Gmail account not found" : "No primary Gmail account found", 
+          code: "GMAIL_NOT_CONNECTED" 
+        }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -76,8 +88,6 @@ serve(async (req: Request): Promise<Response> => {
       accessToken = await refreshAccessToken(refreshToken, connection.user_id, connection.tokens_encrypted);
     }
 
-    // Parse request body
-    const { to, subject, body }: SendEmailRequest = await req.json();
 
     // Create email in RFC 2822 format
     const email = [
