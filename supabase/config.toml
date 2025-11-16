@@ -39,8 +39,14 @@ verify_jwt = true
 [functions.gmail-oauth-callback]
 verify_jwt = false
 
-[functions.get-gmail-oauth-url]
+[functions.get-email-oauth-url]
 verify_jwt = true
 
-[functions.send-via-gmail]
+[functions.outlook-oauth-callback]
+verify_jwt = false
+
+[functions.scan-email]
+verify_jwt = true
+
+[functions.send-via-email]
 verify_jwt = true

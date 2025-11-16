@@ -314,9 +314,9 @@ export default function Dashboard() {
       }
 
       // All validations passed, proceed with scan
-      setScanProgress({ currentEmail: 10, totalEmails: 100, status: "Fetching emails from Gmail..." });
+      setScanProgress({ currentEmail: 10, totalEmails: 100, status: "Fetching emails..." });
       
-      const { data, error } = await supabase.functions.invoke("scan-gmail", {
+      const { data, error } = await supabase.functions.invoke("scan-email", {
         body: { 
           scanAll: scanAccountOption === 'all',
           scanType: scanType

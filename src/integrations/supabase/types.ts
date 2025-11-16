@@ -418,6 +418,60 @@ export type Database = {
         }
         Relationships: []
       }
+      email_connections: {
+        Row: {
+          access_token: string
+          access_token_encrypted: string | null
+          account_label: string | null
+          created_at: string
+          email: string
+          id: string
+          is_primary: boolean | null
+          provider: Database["public"]["Enums"]["email_provider"]
+          provider_user_id: string | null
+          refresh_token: string
+          refresh_token_encrypted: string | null
+          token_expires_at: string
+          tokens_encrypted: boolean | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          access_token: string
+          access_token_encrypted?: string | null
+          account_label?: string | null
+          created_at?: string
+          email: string
+          id?: string
+          is_primary?: boolean | null
+          provider?: Database["public"]["Enums"]["email_provider"]
+          provider_user_id?: string | null
+          refresh_token: string
+          refresh_token_encrypted?: string | null
+          token_expires_at: string
+          tokens_encrypted?: boolean | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          access_token?: string
+          access_token_encrypted?: string | null
+          account_label?: string | null
+          created_at?: string
+          email?: string
+          id?: string
+          is_primary?: boolean | null
+          provider?: Database["public"]["Enums"]["email_provider"]
+          provider_user_id?: string | null
+          refresh_token?: string
+          refresh_token_encrypted?: string | null
+          token_expires_at?: string
+          tokens_encrypted?: boolean | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       email_preferences: {
         Row: {
           created_at: string
@@ -445,54 +499,6 @@ export type Database = {
           token?: string
           unsubscribed?: boolean
           updated_at?: string
-        }
-        Relationships: []
-      }
-      gmail_connections: {
-        Row: {
-          access_token: string
-          access_token_encrypted: string | null
-          account_label: string | null
-          created_at: string
-          email: string
-          id: string
-          is_primary: boolean | null
-          refresh_token: string
-          refresh_token_encrypted: string | null
-          token_expires_at: string
-          tokens_encrypted: boolean | null
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          access_token: string
-          access_token_encrypted?: string | null
-          account_label?: string | null
-          created_at?: string
-          email: string
-          id?: string
-          is_primary?: boolean | null
-          refresh_token: string
-          refresh_token_encrypted?: string | null
-          token_expires_at: string
-          tokens_encrypted?: boolean | null
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          access_token?: string
-          access_token_encrypted?: string | null
-          account_label?: string | null
-          created_at?: string
-          email?: string
-          id?: string
-          is_primary?: boolean | null
-          refresh_token?: string
-          refresh_token_encrypted?: string | null
-          token_expires_at?: string
-          tokens_encrypted?: boolean | null
-          updated_at?: string
-          user_id?: string
         }
         Relationships: []
       }
@@ -1058,7 +1064,7 @@ export type Database = {
             foreignKeyName: "user_services_discovered_from_connection_id_fkey"
             columns: ["discovered_from_connection_id"]
             isOneToOne: false
-            referencedRelation: "gmail_connections"
+            referencedRelation: "email_connections"
             referencedColumns: ["id"]
           },
           {
@@ -1199,6 +1205,7 @@ export type Database = {
         | "opened"
         | "clicked"
         | "unsubscribed"
+      email_provider: "gmail" | "outlook"
       identifier_type: "email" | "phone" | "username" | "other"
       retry_reason:
         | "bot_protection"
@@ -1345,6 +1352,7 @@ export const Constants = {
         "clicked",
         "unsubscribed",
       ],
+      email_provider: ["gmail", "outlook"],
       identifier_type: ["email", "phone", "username", "other"],
       retry_reason: [
         "bot_protection",
