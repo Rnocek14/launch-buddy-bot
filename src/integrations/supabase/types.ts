@@ -452,9 +452,11 @@ export type Database = {
         Row: {
           access_token: string
           access_token_encrypted: string | null
+          account_label: string | null
           created_at: string
           email: string
           id: string
+          is_primary: boolean | null
           refresh_token: string
           refresh_token_encrypted: string | null
           token_expires_at: string
@@ -465,9 +467,11 @@ export type Database = {
         Insert: {
           access_token: string
           access_token_encrypted?: string | null
+          account_label?: string | null
           created_at?: string
           email: string
           id?: string
+          is_primary?: boolean | null
           refresh_token: string
           refresh_token_encrypted?: string | null
           token_expires_at: string
@@ -478,9 +482,11 @@ export type Database = {
         Update: {
           access_token?: string
           access_token_encrypted?: string | null
+          account_label?: string | null
           created_at?: string
           email?: string
           id?: string
+          is_primary?: boolean | null
           refresh_token?: string
           refresh_token_encrypted?: string | null
           token_expires_at?: string
@@ -1016,6 +1022,7 @@ export type Database = {
           deletion_requested_at: string | null
           deletion_status: string | null
           discovered_at: string
+          discovered_from_connection_id: string | null
           first_seen_date: string | null
           last_scanned_at: string
           marked_for_deletion: boolean | null
@@ -1027,6 +1034,7 @@ export type Database = {
           deletion_requested_at?: string | null
           deletion_status?: string | null
           discovered_at?: string
+          discovered_from_connection_id?: string | null
           first_seen_date?: string | null
           last_scanned_at?: string
           marked_for_deletion?: boolean | null
@@ -1038,6 +1046,7 @@ export type Database = {
           deletion_requested_at?: string | null
           deletion_status?: string | null
           discovered_at?: string
+          discovered_from_connection_id?: string | null
           first_seen_date?: string | null
           last_scanned_at?: string
           marked_for_deletion?: boolean | null
@@ -1045,6 +1054,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "user_services_discovered_from_connection_id_fkey"
+            columns: ["discovered_from_connection_id"]
+            isOneToOne: false
+            referencedRelation: "gmail_connections"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "user_services_service_id_fkey"
             columns: ["service_id"]

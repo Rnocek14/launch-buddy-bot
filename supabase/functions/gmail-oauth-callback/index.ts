@@ -95,16 +95,68 @@ serve(async (req: Request): Promise<Response> => {
     const encryptedAccessToken = await encrypt(tokens.access_token);
     const encryptedRefreshToken = tokens.refresh_token ? await encrypt(tokens.refresh_token) : null;
 
-    const { error: dbError } = await supabase
+    // Check if this email is already connected for this user
+    const { data: existingConnection } = await supabase
       .from("gmail_connections")
-      .upsert({
-        user_id: state,
-        email: profile.email,
-        access_token: encryptedAccessToken,
-        refresh_token: encryptedRefreshToken,
-        token_expires_at: expiresAt.toISOString(),
-        tokens_encrypted: true,
-      });
+      .select("id")
+      .eq("user_id", state)
+      .eq("email", profile.email)
+      .single();
+
+    if (existingConnection) {
+      console.log("Account already connected, updating tokens");
+      const { error: updateError } = await supabase
+        .from("gmail_connections")
+        .update({
+          access_token: encryptedAccessToken,
+          refresh_token: encryptedRefreshToken,
+          token_expires_at: expiresAt.toISOString(),
+          tokens_encrypted: true,
+        })
+        .eq("id", existingConnection.id);
+
+      if (updateError) {
+        console.error("Database update error:", updateError);
+        return new Response(
+          JSON.stringify({ error: "Failed to update Gmail connection" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    } else {
+      // Check if this is the first connection for this user
+      const { count } = await supabase
+        .from("gmail_connections")
+        .select("*", { count: 'exact', head: true })
+        .eq("user_id", state);
+
+      const isFirstConnection = !count || count === 0;
+
+      // Insert new connection
+      const { error: insertError } = await supabase
+        .from("gmail_connections")
+        .insert({
+          user_id: state,
+          email: profile.email,
+          access_token: encryptedAccessToken,
+          refresh_token: encryptedRefreshToken,
+          token_expires_at: expiresAt.toISOString(),
+          tokens_encrypted: true,
+          is_primary: isFirstConnection, // First account is automatically primary
+          account_label: profile.email,
+        });
+
+      if (insertError) {
+        console.error("Database insert error:", insertError);
+        return new Response(
+          JSON.stringify({ error: "Failed to save Gmail connection" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      console.log(`New Gmail account connected${isFirstConnection ? ' (set as primary)' : ''}`);
+    }
+
+    const dbError = null; // For compatibility with existing code
 
     if (dbError) {
       console.error("Database error:", dbError);
