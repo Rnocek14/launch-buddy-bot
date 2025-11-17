@@ -2,10 +2,11 @@ import { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Shield, Crown, AlertCircle, Sparkles } from "lucide-react";
+import { Shield, Crown, AlertCircle, Sparkles, RefreshCw, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useToast } from "@/hooks/use-toast";
 
 interface SubscriptionData {
   tier: string;
@@ -15,7 +16,9 @@ interface SubscriptionData {
 
 export function SubscriptionStatusCard() {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [subscriptionData, setSubscriptionData] = useState<SubscriptionData>({
     tier: 'free',
     status: 'active',
@@ -24,48 +27,77 @@ export function SubscriptionStatusCard() {
 
   useEffect(() => {
     fetchSubscriptionStatus();
+    
+    // Auto-refresh every minute
+    const interval = setInterval(() => {
+      fetchSubscriptionStatus(true);
+    }, 60000);
+
+    return () => clearInterval(interval);
   }, []);
 
-  const fetchSubscriptionStatus = async () => {
+  const fetchSubscriptionStatus = async (silent = false) => {
+    if (!silent) setLoading(true);
+    else setRefreshing(true);
+    
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Fetch subscription tier and status
-      const { data: subscription } = await supabase
-        .from('subscriptions')
-        .select('tier, status')
-        .eq('user_id', user.id)
-        .maybeSingle();
+      // Call check-subscription edge function for real-time Stripe data
+      const { data, error } = await supabase.functions.invoke('check-subscription');
 
-      // If no subscription exists, user is on free tier
-      if (!subscription) {
+      if (error) {
+        console.error('Error checking subscription:', error);
+        if (!silent) {
+          toast({
+            title: "Connection Error",
+            description: "Unable to check subscription status",
+            variant: "destructive"
+          });
+        }
+        // Fallback to local database
+        const { data: subscription } = await supabase
+          .from('subscriptions')
+          .select('tier, status')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        if (!subscription) {
+          setSubscriptionData({
+            tier: 'free',
+            status: 'active',
+            remainingDeletions: 3
+          });
+        } else {
+          const { data: remaining } = await supabase
+            .rpc('get_remaining_deletions', { p_user_id: user.id });
+          
+          setSubscriptionData({
+            tier: subscription.tier,
+            status: subscription.status,
+            remainingDeletions: remaining
+          });
+        }
+      } else {
         setSubscriptionData({
-          tier: 'free',
+          tier: data.tier,
           status: 'active',
-          remainingDeletions: 3
+          remainingDeletions: data.remaining_deletions
         });
-        setLoading(false);
-        return;
+        
+        if (refreshing && !silent) {
+          toast({
+            title: "Status Updated",
+            description: data.tier === 'pro' ? "Pro subscription active" : "Free tier active",
+          });
+        }
       }
-
-      // Get remaining deletions using RPC
-      const { data: remaining, error: rpcError } = await supabase
-        .rpc('get_remaining_deletions', { p_user_id: user.id });
-
-      if (rpcError) {
-        console.error('Error fetching remaining deletions:', rpcError);
-      }
-
-      setSubscriptionData({
-        tier: subscription.tier,
-        status: subscription.status,
-        remainingDeletions: remaining
-      });
     } catch (error) {
       console.error('Error fetching subscription:', error);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -137,13 +169,27 @@ export function SubscriptionStatusCard() {
           </div>
           <div>
             {isPro ? (
-              <Button
-                onClick={() => navigate('/billing')}
-                variant="outline"
-                size="sm"
-              >
-                Manage Subscription
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  onClick={() => fetchSubscriptionStatus()}
+                  variant="ghost"
+                  size="sm"
+                  disabled={refreshing}
+                >
+                  {refreshing ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <RefreshCw className="w-4 h-4" />
+                  )}
+                </Button>
+                <Button
+                  onClick={() => navigate('/billing')}
+                  variant="outline"
+                  size="sm"
+                >
+                  Manage Subscription
+                </Button>
+              </div>
             ) : (
               <Button
                 onClick={() => navigate('/subscribe')}
