@@ -27,6 +27,7 @@ import { getErrorMessage, successMessages } from "@/lib/errorMessages";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { SubscriptionStatusCard } from "@/components/SubscriptionStatusCard";
 import { OnboardingBanner } from "@/components/OnboardingBanner";
+import { ScanResultsBanner } from "@/components/ScanResultsBanner";
 
 interface Service {
   id: string;
@@ -102,6 +103,13 @@ export default function Dashboard() {
   const [showSuccessAnimation, setShowSuccessAnimation] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
   const [subscriptionTier, setSubscriptionTier] = useState<string>('free');
+  const [scanResultsBanner, setScanResultsBanner] = useState<{
+    scannedEmails: string[];
+    totalServices: number;
+    newServices: number;
+    messagesScanned: number;
+    scanTimestamp: Date;
+  } | null>(null);
 
   // Monthly stats state
   const [monthlyStats, setMonthlyStats] = useState<{
@@ -220,6 +228,7 @@ export default function Dashboard() {
     }));
 
     setServices(mapped);
+    return mapped;
   }
 
   async function fetchUnmatchedDomains() {
@@ -336,7 +345,30 @@ export default function Dashboard() {
         duration: 5000
       });
 
-      await fetchServices();
+      // Store scan results for banner
+      const scanTimestamp = new Date();
+      const scannedEmailsList = shouldScanAll && data.scannedEmails 
+        ? data.scannedEmails 
+        : connections.map(c => c.email).slice(0, 1);
+      
+      setScanResultsBanner({
+        scannedEmails: scannedEmailsList,
+        totalServices: shouldScanAll ? (data.totalDiscovered || 0) : (data.servicesFound || 0),
+        newServices: 0, // Will be calculated after fetchServices
+        messagesScanned: shouldScanAll ? (data.totalMessagesScanned || 0) : (data.emailsScanned || 0),
+        scanTimestamp,
+      });
+
+      const freshServices = await fetchServices();
+      
+      // Calculate new services (discovered within last 2 minutes)
+      const twoMinutesAgo = new Date(scanTimestamp.getTime() - 2 * 60 * 1000);
+      const newServicesCount = freshServices?.filter(s => 
+        new Date(s.discovered_at) > twoMinutesAgo
+      ).length || 0;
+      
+      setScanResultsBanner(prev => prev ? { ...prev, newServices: newServicesCount } : null);
+      
       await fetchUnmatchedDomains();
       await fetchRiskScore();
     } catch (error: any) {
@@ -772,6 +804,32 @@ export default function Dashboard() {
           <>
             {/* Onboarding Banner */}
             <OnboardingBanner />
+
+            {/* Scan Results Banner */}
+            {scanResultsBanner && (
+              <ScanResultsBanner
+                scannedEmails={scanResultsBanner.scannedEmails}
+                totalServices={scanResultsBanner.totalServices}
+                newServices={scanResultsBanner.newServices}
+                messagesScanned={scanResultsBanner.messagesScanned}
+                onViewNew={() => {
+                  // Filter to show only new services
+                  const twoMinutesAgo = new Date(scanResultsBanner.scanTimestamp.getTime() - 2 * 60 * 1000);
+                  setSearchQuery("");
+                  setSelectedCategory("all");
+                  setSelectedContactStatus("all");
+                  // Scroll to services grid
+                  document.getElementById("services-grid")?.scrollIntoView({ behavior: "smooth" });
+                }}
+                onViewAll={() => {
+                  setSearchQuery("");
+                  setSelectedCategory("all");
+                  setSelectedContactStatus("all");
+                  // Scroll to services grid
+                  document.getElementById("services-grid")?.scrollIntoView({ behavior: "smooth" });
+                }}
+              />
+            )}
 
             {/* Subscription Status Card */}
             <SubscriptionStatusCard />
@@ -1311,7 +1369,7 @@ export default function Dashboard() {
                 </CardContent>
               </Card>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              <div id="services-grid" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 {filteredServices.map(service => (
                   <Card 
                     key={service.id}
