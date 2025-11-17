@@ -21,6 +21,8 @@ import Status from "./pages/Status";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfService from "./pages/TermsOfService";
 import Help from "./pages/Help";
+import Subscribe from "./pages/Subscribe";
+import Billing from "./pages/Billing";
 import { AuthorizationWizard } from "./components/AuthorizationWizard";
 
 const queryClient = new QueryClient();
@@ -48,6 +50,8 @@ const App = () => (
             <Route path="/privacy" element={<PrivacyPolicy />} />
             <Route path="/terms" element={<TermsOfService />} />
             <Route path="/help" element={<Help />} />
+            <Route path="/subscribe" element={<Subscribe />} />
+            <Route path="/billing" element={<Billing />} />
             <Route path="/authorize" element={<AuthorizationWizard />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />

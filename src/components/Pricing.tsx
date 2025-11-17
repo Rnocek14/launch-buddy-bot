@@ -6,52 +6,42 @@ import { Link } from "react-router-dom";
 
 const plans = [
   {
-    name: "Free Beta",
+    name: "Free",
     price: "$0",
-    description: "Full access during our beta launch",
+    description: "Perfect for getting started",
     features: [
-      "Unlimited service scanning",
-      "All deletion request features",
-      "Email support",
-      "Standard templates",
-      "Help shape the product",
+      "Full scan of 1 email account",
+      "See all discovered services",
+      "Complete privacy contact details",
+      "Risk score & analytics",
+      "3 free deletion requests/month",
+      "Shareable privacy report",
     ],
-    cta: "Join Beta",
-    popular: true,
+    cta: "Get Started Free",
+    ctaLink: "/auth",
+    popular: false,
     available: true,
   },
   {
     name: "Pro",
-    price: "$12",
+    price: "$9.99",
     period: "/month",
     description: "For serious privacy advocates",
     features: [
-      "Everything in Free Beta",
-      "Priority deletion requests",
-      "AI-powered discovery",
-      "Custom email templates",
-      "Priority support",
-      "Advanced analytics",
+      "Everything in Free, plus:",
+      "Unlimited deletion requests",
+      "AI-powered contact discovery",
+      "Priority deletion processing",
+      "Monthly automatic rescans",
+      "Export detailed reports",
+      "Priority email support",
     ],
-    cta: "Coming Soon",
-    popular: false,
-    available: false,
-  },
-  {
-    name: "Lifetime",
-    price: "$299",
-    description: "One-time payment, forever access",
-    features: [
-      "Everything in Pro",
-      "Lifetime updates",
-      "Priority feature requests",
-      "Dedicated support channel",
-      "Early access to new features",
-      "No recurring fees ever",
-    ],
-    cta: "Coming Soon",
-    popular: false,
-    available: false,
+    cta: "Upgrade to Pro",
+    ctaLink: "/subscribe?plan=monthly",
+    popular: true,
+    available: true,
+    annualPrice: "$99/year",
+    annualSavings: "Save $20",
   },
 ];
 
@@ -80,12 +70,7 @@ export const Pricing = () => {
             >
               {plan.popular && (
                 <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-primary to-accent">
-                  Most Popular
-                </Badge>
-              )}
-              {!plan.available && (
-                <Badge variant="secondary" className="absolute -top-3 right-4">
-                  Coming Soon
+                  Best Value
                 </Badge>
               )}
               <CardHeader>
@@ -96,31 +81,26 @@ export const Pricing = () => {
                   {plan.period && (
                     <span className="text-muted-foreground">{plan.period}</span>
                   )}
+                  {plan.annualPrice && (
+                    <div className="text-sm text-muted-foreground mt-1">
+                      or {plan.annualPrice} • {plan.annualSavings}
+                    </div>
+                  )}
                 </div>
               </CardHeader>
               <CardContent>
-                {plan.available ? (
-                  <Link to="/auth" className="w-full">
-                    <Button 
-                      className={`w-full mb-6 ${
-                        plan.popular 
-                          ? "bg-primary hover:bg-primary/90" 
-                          : ""
-                      }`}
-                      variant={plan.popular ? "default" : "outline"}
-                    >
-                      Get Started Free
-                    </Button>
-                  </Link>
-                ) : (
+                <Link to={plan.ctaLink || "/auth"} className="w-full">
                   <Button 
-                    className="w-full mb-6"
-                    variant="outline"
-                    disabled
+                    className={`w-full mb-6 ${
+                      plan.popular 
+                        ? "bg-primary hover:bg-primary/90" 
+                        : ""
+                    }`}
+                    variant={plan.popular ? "default" : "outline"}
                   >
                     {plan.cta}
                   </Button>
-                )}
+                </Link>
                 <ul className="space-y-3">
                   {plan.features.map((feature, i) => (
                     <li key={i} className="flex items-start gap-2">
