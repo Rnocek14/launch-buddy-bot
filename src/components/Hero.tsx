@@ -1,6 +1,4 @@
-import { Shield, Rocket } from "lucide-react";
-import { WaitlistForm } from "./WaitlistForm";
-import { LiveCounter } from "./LiveCounter";
+import { Shield, Zap, Target } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "./ui/button";
 
@@ -33,24 +31,29 @@ export const Hero = () => {
           Discover where your data lives across the internet. Get guided deletion tools and track your cleanup progress—all in one privacy-focused dashboard.
         </p>
 
-        <WaitlistForm />
-
-        <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center items-center">
+        <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
           <Link to="/auth">
-            <Button size="lg" className="gap-2 bg-primary hover:bg-primary/90">
-              <Shield className="w-4 h-4" />
+            <Button size="lg" className="gap-2 bg-primary hover:bg-primary/90 text-lg px-8 py-6">
+              <Shield className="w-5 h-5" />
               Get Started Free
-            </Button>
-          </Link>
-          <Link to="/alpha">
-            <Button variant="outline" size="lg" className="gap-2">
-              <Rocket className="w-4 h-4" />
-              Apply for Alpha Access
             </Button>
           </Link>
         </div>
 
-        <LiveCounter />
+        <div className="flex flex-wrap justify-center gap-8 text-sm">
+          <div className="flex items-center gap-2">
+            <Shield className="w-5 h-5 text-primary" />
+            <span className="text-muted-foreground">Fully Encrypted</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Zap className="w-5 h-5 text-primary" />
+            <span className="text-muted-foreground">Instant Scan</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Target className="w-5 h-5 text-primary" />
+            <span className="text-muted-foreground">GDPR Ready</span>
+          </div>
+        </div>
       </div>
     </section>
   );
