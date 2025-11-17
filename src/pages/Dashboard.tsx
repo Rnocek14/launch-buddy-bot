@@ -1083,6 +1083,20 @@ export default function Dashboard() {
                           </h3>
                           
                           <div className="flex flex-wrap gap-2 justify-center">
+                            {/* NEW Badge */}
+                            {isServiceNew(service.discovered_at) && (
+                              <Badge className="bg-green-500 text-white text-xs">
+                                NEW
+                              </Badge>
+                            )}
+                            
+                            {/* Reappeared Badge */}
+                            {(service as any).reappeared_at && (
+                              <Badge variant="destructive" className="text-xs">
+                                ⚠️ REAPPEARED
+                              </Badge>
+                            )}
+                            
                             {/* Category Badge */}
                             <Badge 
                               variant="outline" 
