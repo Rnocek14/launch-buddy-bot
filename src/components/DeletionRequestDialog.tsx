@@ -16,6 +16,7 @@ import { Loader2, AlertTriangle, CheckCircle2, Sparkles } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { EmailPreviewModal } from "@/components/EmailPreviewModal";
 import { ContactDiscoveryDialog } from "@/components/ContactDiscoveryDialog";
+import { UpgradeModal } from "@/components/UpgradeModal";
 
 interface Service {
   id: string;
@@ -56,6 +57,8 @@ export const DeletionRequestDialog = ({
     needsVerification: boolean;
   }>({ hasVerifiedContact: false, contactMethod: "none", needsVerification: false });
   const [showDiscovery, setShowDiscovery] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [remainingServices, setRemainingServices] = useState<number>(0);
   const { toast } = useToast();
 
   // Fetch user identifiers and jurisdiction when dialog opens
@@ -306,6 +309,19 @@ export const DeletionRequestDialog = ({
       );
 
       if (error) {
+        // Check if user hit deletion limit
+        if (error.message?.includes("limitReached") || error.message?.includes("free deletion requests")) {
+          // Fetch remaining services count
+          const { data: servicesData } = await supabase
+            .from("user_services")
+            .select("service_id", { count: "exact" });
+          
+          setRemainingServices(servicesData?.length || 0);
+          onOpenChange(false);
+          setShowUpgradeModal(true);
+          return;
+        }
+        
         // Check if user needs authorization
         if (error.message?.includes("requiresAuthorization")) {
           toast({
@@ -534,8 +550,14 @@ export const DeletionRequestDialog = ({
             </DialogFooter>
           </>
         )}
-      </DialogContent>
-    </Dialog>
+        </DialogContent>
+      </Dialog>
+
+      <UpgradeModal 
+        open={showUpgradeModal} 
+        onOpenChange={setShowUpgradeModal}
+        remainingServices={remainingServices}
+      />
     </>
   );
 };

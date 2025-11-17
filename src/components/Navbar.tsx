@@ -1,4 +1,4 @@
-import { Shield, ScanSearch, Settings, ShieldCheck, Activity, Menu, X } from "lucide-react";
+import { Shield, ScanSearch, Settings, ShieldCheck, Activity, Menu, X, CreditCard } from "lucide-react";
 import { ThemeToggle } from "./ThemeToggle";
 import { Button } from "./ui/button";
 import { Link, useNavigate } from "react-router-dom";
@@ -92,6 +92,12 @@ export const Navbar = () => {
                     <span>Dashboard</span>
                   </Button>
                 </Link>
+                <Link to="/billing">
+                  <Button variant="ghost" className="gap-2">
+                    <CreditCard className="w-4 h-4" />
+                    <span>Billing</span>
+                  </Button>
+                </Link>
                 <Link to="/settings">
                   <Button variant="ghost" className="gap-2">
                     <Settings className="w-4 h-4" />
@@ -174,6 +180,12 @@ export const Navbar = () => {
                         <Button variant="ghost" className="w-full justify-start gap-2">
                           <ScanSearch className="w-4 h-4" />
                           Dashboard
+                        </Button>
+                      </Link>
+                      <Link to="/billing" onClick={closeMobileMenu}>
+                        <Button variant="ghost" className="w-full justify-start gap-2">
+                          <CreditCard className="w-4 h-4" />
+                          Billing
                         </Button>
                       </Link>
                       <Link to="/settings" onClick={closeMobileMenu}>
