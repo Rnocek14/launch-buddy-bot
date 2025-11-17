@@ -111,12 +111,11 @@ export const Navbar = () => {
                 </Button>
               </Link>
             ) : (
-              <Button 
-                className="bg-primary hover:bg-primary/90"
-                onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-              >
-                Join Waitlist
-              </Button>
+              <Link to="/auth">
+                <Button className="bg-primary hover:bg-primary/90">
+                  Get Started
+                </Button>
+              </Link>
             )}
           </div>
 
@@ -202,15 +201,11 @@ export const Navbar = () => {
                       </Button>
                     </Link>
                   ) : (
-                    <Button 
-                      className="w-full bg-primary hover:bg-primary/90"
-                      onClick={() => {
-                        window.scrollTo({ top: 0, behavior: "smooth" });
-                        closeMobileMenu();
-                      }}
-                    >
-                      Join Waitlist
-                    </Button>
+                    <Link to="/auth" onClick={closeMobileMenu}>
+                      <Button className="w-full bg-primary hover:bg-primary/90">
+                        Get Started
+                      </Button>
+                    </Link>
                   )}
                 </div>
               </SheetContent>
