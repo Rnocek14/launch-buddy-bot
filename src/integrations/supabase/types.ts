@@ -842,6 +842,48 @@ export type Database = {
         }
         Relationships: []
       }
+      subscriptions: {
+        Row: {
+          created_at: string
+          current_period_end: string | null
+          current_period_start: string | null
+          deletion_count_this_period: number
+          id: string
+          status: string
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
+          tier: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          current_period_end?: string | null
+          current_period_start?: string | null
+          deletion_count_this_period?: number
+          id?: string
+          status?: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          tier?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          current_period_end?: string | null
+          current_period_start?: string | null
+          deletion_count_this_period?: number
+          id?: string
+          status?: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          tier?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       t2_retries: {
         Row: {
           attempts: number
@@ -1176,6 +1218,11 @@ export type Database = {
           unique_opens: number
         }[]
       }
+      get_remaining_deletions: { Args: { p_user_id: string }; Returns: number }
+      get_user_subscription_tier: {
+        Args: { p_user_id: string }
+        Returns: string
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -1183,8 +1230,13 @@ export type Database = {
         }
         Returns: boolean
       }
+      increment_deletion_count: {
+        Args: { p_user_id: string }
+        Returns: boolean
+      }
       is_authorized_agent: { Args: { user_uuid: string }; Returns: boolean }
       public_status_snapshot: { Args: never; Returns: Json }
+      reset_monthly_deletion_counts: { Args: never; Returns: undefined }
       t2_queue_summary: {
         Args: never
         Returns: {
