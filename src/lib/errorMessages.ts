@@ -15,18 +15,37 @@ export const getErrorMessage = (error: any): ErrorMessageConfig => {
   // Try to extract the actual error message from various possible locations
   let errorMessage = "";
   
-  if (typeof error === "string") {
-    errorMessage = error.toLowerCase();
-  } else if (error?.error && typeof error.error === "string") {
-    // Supabase Functions often returns { error: "message" }
-    errorMessage = error.error.toLowerCase();
-  } else if (error?.message) {
-    errorMessage = error.message.toLowerCase();
-  } else if (error?.error?.message) {
-    errorMessage = error.error.message.toLowerCase();
+  // Handle Supabase FunctionsHttpError structure first
+  if (error?.context) {
+    try {
+      // error.context might already be parsed or need parsing
+      const contextError = typeof error.context === 'string' 
+        ? JSON.parse(error.context)
+        : error.context;
+      
+      if (contextError?.error) {
+        errorMessage = contextError.error.toLowerCase();
+      } else if (typeof contextError === 'string') {
+        errorMessage = contextError.toLowerCase();
+      }
+    } catch (e) {
+      console.error('Failed to parse error.context:', e);
+    }
   }
   
-  console.log("getErrorMessage - extracted:", errorMessage);
+  // Fallback to other error structures if context didn't work
+  if (!errorMessage) {
+    if (typeof error === "string") {
+      errorMessage = error.toLowerCase();
+    } else if (error?.error && typeof error.error === "string") {
+      // Supabase Functions often returns { error: "message" }
+      errorMessage = error.error.toLowerCase();
+    } else if (error?.message) {
+      errorMessage = error.message.toLowerCase();
+    } else if (error?.error?.message) {
+      errorMessage = error.error.message.toLowerCase();
+    }
+  }
 
   // Authentication errors
   if (errorCode === "auth/invalid-email" || errorMessage.includes("invalid email")) {
@@ -95,14 +114,21 @@ export const getErrorMessage = (error: any): ErrorMessageConfig => {
     };
   }
 
-  // Token errors - OAuth refresh token issues
-  // Check both the extracted message and common patterns
-  if (errorMessage.includes("failed to refresh") ||
-      errorMessage.includes("invalid_grant") || 
-      errorMessage.includes("token has been expired or revoked") ||
-      errorMessage.includes("token expired") ||
-      errorMessage.includes("token revoked") ||
-      errorMessage.includes("refresh access token")) {
+  // Token errors - OAuth refresh token issues (be very liberal with matching)
+  const tokenErrorPatterns = [
+    'failed to refresh',
+    'invalid_grant',
+    'token has been expired',
+    'token expired',
+    'token revoked',
+    'refresh access token',
+    'token has been revoked',
+    'expired or revoked',
+    'oauth',
+    'refresh token'
+  ];
+  
+  if (tokenErrorPatterns.some(pattern => errorMessage.includes(pattern))) {
     return {
       title: "Email Connection Expired",
       description: "Your email connection has expired or been revoked. Please go to Settings → Email Connections and reconnect your account to continue scanning.",

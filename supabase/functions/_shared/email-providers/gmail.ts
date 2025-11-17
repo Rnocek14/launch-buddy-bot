@@ -111,9 +111,18 @@ export class GmailProvider implements EmailProvider {
     });
 
     if (!response.ok) {
-      const error = await response.text();
-      console.error('Gmail token refresh error:', error);
-      throw new Error('Failed to refresh access token');
+      const errorText = await response.text();
+      console.error('Gmail token refresh error:', errorText);
+      
+      // Try to parse the error to get detailed message
+      try {
+        const errorData = JSON.parse(errorText);
+        const errorDetail = errorData.error_description || errorData.error || 'Unknown error';
+        throw new Error(`Failed to refresh access token: ${errorDetail}`);
+      } catch (e) {
+        // If parsing fails, throw with the raw error text
+        throw new Error(`Failed to refresh access token: ${errorText}`);
+      }
     }
 
     const tokens = await response.json();
