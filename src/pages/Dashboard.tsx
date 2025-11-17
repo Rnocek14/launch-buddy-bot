@@ -101,6 +101,7 @@ export default function Dashboard() {
   }> | null>(null);
   const [showSuccessAnimation, setShowSuccessAnimation] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
+  const [subscriptionTier, setSubscriptionTier] = useState<string>('free');
 
   // Monthly stats state
   const [monthlyStats, setMonthlyStats] = useState<{
@@ -112,6 +113,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     checkAuth();
+    checkSubscription();
   }, []);
 
   useEffect(() => {
@@ -139,6 +141,16 @@ export default function Dashboard() {
     await fetchServices();
     await fetchUnmatchedDomains();
     setLoading(false);
+  }
+
+  async function checkSubscription() {
+    try {
+      const { data, error } = await supabase.functions.invoke('check-subscription');
+      if (error) throw error;
+      setSubscriptionTier(data?.tier || 'free');
+    } catch (error) {
+      console.error('Error checking subscription:', error);
+    }
   }
 
   async function fetchServices() {
@@ -254,26 +266,59 @@ export default function Dashboard() {
 
       setScanProgress({ currentEmail: 10, totalEmails: 100, status: "Fetching emails..." });
       
-      // Use primary connection or first available
-      const primaryConnection = connections.find(c => c.is_primary) || connections[0];
+      // Determine whether to scan all emails or just one
+      const shouldScanAll = connections.length > 1 && subscriptionTier === 'pro';
       
-      const { data, error } = await supabase.functions.invoke("scan-email", {
-        body: { 
-          connectionId: primaryConnection.id,
-          maxResults: scanType === 'quick' ? 500 : 2000,
+      let data, error;
+      
+      if (shouldScanAll) {
+        // Scan all connected emails (up to 3 for Pro)
+        const response = await supabase.functions.invoke("scan-all-emails", {
+          body: { 
+            maxResults: scanType === 'quick' ? 500 : 2000,
+          }
+        });
+        
+        data = response.data;
+        error = response.error;
+        
+        if (!error && data) {
+          setScanProgress({ currentEmail: 90, totalEmails: 100, status: "Analyzing services..." });
+          
+          setScanStats({
+            servicesFound: data.totalDiscovered || 0,
+            emailsScanned: data.totalMessagesScanned || 0,
+            unmatchedCount: 0,
+            identifierMatches: 0,
+          });
         }
-      });
+      } else {
+        // Scan single email (free tier or only 1 connection)
+        const primaryConnection = connections.find(c => c.is_primary) || connections[0];
+        
+        const response = await supabase.functions.invoke("scan-email", {
+          body: { 
+            connectionId: primaryConnection.id,
+            maxResults: scanType === 'quick' ? 500 : 2000,
+          }
+        });
+        
+        data = response.data;
+        error = response.error;
+        
+        if (!error && data) {
+          setScanProgress({ currentEmail: 90, totalEmails: 100, status: "Analyzing services..." });
+          
+          setScanStats({
+            servicesFound: data.servicesFound || 0,
+            emailsScanned: data.emailsScanned || 0,
+            unmatchedCount: data.unmatchedCount || 0,
+            identifierMatches: 0,
+          });
+        }
+      }
 
       if (error) throw error;
-
-      setScanProgress({ currentEmail: 90, totalEmails: 100, status: "Analyzing services..." });
-
-      setScanStats({
-        servicesFound: data.servicesFound || 0,
-        emailsScanned: data.emailsScanned || 0,
-        unmatchedCount: data.unmatchedCount || 0,
-        identifierMatches: 0,
-      });
 
       setScanProgress({ currentEmail: 100, totalEmails: 100, status: "Complete!" });
       
@@ -281,9 +326,13 @@ export default function Dashboard() {
       setShowSuccessAnimation(true);
       setSuccessMessage(successMessages.scanComplete.message);
       
+      const successDesc = shouldScanAll && data.scannedEmails
+        ? `Scanned ${data.scannedEmails.length} email account${data.scannedEmails.length > 1 ? 's' : ''} and found ${data.totalDiscovered || 0} services.`
+        : `${data.message || 'Scan complete'}. ${data.unmatchedCount > 0 ? `${data.unmatchedCount} unrecognized services found.` : ''}`;
+      
       toast({
         title: successMessages.scanComplete.title,
-        description: `${data.message}. ${data.unmatchedCount > 0 ? `${data.unmatchedCount} unrecognized services found.` : ''}`,
+        description: successDesc,
         duration: 5000
       });
 
