@@ -50,3 +50,6 @@ verify_jwt = true
 
 [functions.send-via-email]
 verify_jwt = true
+
+[functions.debug-oauth-config]
+verify_jwt = false
