@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, CheckCircle2, XCircle, AlertTriangle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { UpgradeModal } from "@/components/UpgradeModal";
 
 interface Service {
   id: string;
@@ -45,6 +46,8 @@ export const BatchDeletionDialog = ({
   const [progress, setProgress] = useState(0);
   const [results, setResults] = useState<RequestResult[]>([]);
   const [currentService, setCurrentService] = useState<string>("");
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [remainingServices, setRemainingServices] = useState<number>(0);
   const { toast } = useToast();
 
   const handleStartBatch = async () => {
@@ -81,6 +84,21 @@ export const BatchDeletionDialog = ({
             },
           }
         );
+
+        // Check if user hit deletion limit
+        if (data?.limitReached || error?.message?.includes("free deletion requests")) {
+          // Fetch remaining services count
+          const { data: servicesData } = await supabase
+            .from("user_services")
+            .select("service_id", { count: "exact" });
+          
+          setRemainingServices(servicesData?.length || 0);
+          setProcessing(false);
+          setCurrentService("");
+          onOpenChange(false);
+          setShowUpgradeModal(true);
+          return;
+        }
 
         if (error) {
           throw error;
@@ -147,6 +165,7 @@ export const BatchDeletionDialog = ({
   const pendingCount = results.filter((r) => r.status === "pending").length;
 
   return (
+    <>
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
@@ -283,5 +302,12 @@ export const BatchDeletionDialog = ({
         )}
       </DialogContent>
     </Dialog>
+
+    <UpgradeModal 
+      open={showUpgradeModal} 
+      onOpenChange={setShowUpgradeModal}
+      remainingServices={remainingServices}
+    />
+    </>
   );
 };

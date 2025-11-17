@@ -308,22 +308,23 @@ export const DeletionRequestDialog = ({
         }
       );
 
-      if (error) {
-        // Check if user hit deletion limit
-        if (error.message?.includes("limitReached") || error.message?.includes("free deletion requests")) {
-          // Fetch remaining services count
-          const { data: servicesData } = await supabase
-            .from("user_services")
-            .select("service_id", { count: "exact" });
-          
-          setRemainingServices(servicesData?.length || 0);
-          onOpenChange(false);
-          setShowUpgradeModal(true);
-          return;
-        }
+      // Check for limitReached in the response data
+      if (data?.limitReached || error?.message?.includes("free deletion requests")) {
+        // Fetch remaining services count
+        const { data: servicesData } = await supabase
+          .from("user_services")
+          .select("service_id", { count: "exact" });
         
+        setRemainingServices(servicesData?.length || 0);
+        setLoading(false);
+        onOpenChange(false);
+        setShowUpgradeModal(true);
+        return;
+      }
+
+      if (error) {
         // Check if user needs authorization
-        if (error.message?.includes("requiresAuthorization")) {
+        if (data?.requiresAuthorization || error.message?.includes("requiresAuthorization")) {
           toast({
             title: "Authorization Required",
             description: "You need to complete the authorization wizard first.",
