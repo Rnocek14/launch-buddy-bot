@@ -205,9 +205,27 @@ async function processConnection(connection: any, user: any, maxResults: number,
 
   console.log(`Matched ${matchedServices.length} services, ${unmatchedDomains.length} unmatched`);
 
+  // Check for reappearances - services that were deleted but are still sending emails
+  const { data: existingServices } = await supabase
+    .from('user_services')
+    .select('service_id, deletion_requested_at')
+    .eq('user_id', user.id)
+    .in('service_id', matchedServices.map(m => m.service_id));
+
+  const reappearedServiceIds = new Set<string>();
+  existingServices?.forEach((existing: any) => {
+    if (existing.deletion_requested_at) {
+      reappearedServiceIds.add(existing.service_id);
+    }
+  });
+
   // Insert matched services into user_services (upsert to avoid duplicates)
   let servicesAdded = 0;
+  let servicesReappeared = 0;
+  
   for (const match of matchedServices) {
+    const isReappeared = reappearedServiceIds.has(match.service_id);
+    
     const { error: insertError } = await supabase
       .from('user_services')
       .upsert({
@@ -216,6 +234,7 @@ async function processConnection(connection: any, user: any, maxResults: number,
         discovered_from_connection_id: connection.id,
         discovered_at: new Date().toISOString(),
         last_scanned_at: new Date().toISOString(),
+        ...(isReappeared && { reappeared_at: new Date().toISOString() }),
       }, {
         onConflict: 'user_id,service_id',
         ignoreDuplicates: false,
@@ -223,10 +242,20 @@ async function processConnection(connection: any, user: any, maxResults: number,
 
     if (!insertError) {
       servicesAdded++;
+      if (isReappeared) {
+        servicesReappeared++;
+        console.log(`Service ${match.name} reappeared after deletion request`);
+      }
     } else {
       console.error('Error inserting service:', insertError);
     }
   }
+
+  // Update last_email_scan_date in profiles
+  await supabase
+    .from('profiles')
+    .update({ last_email_scan_date: new Date().toISOString() })
+    .eq('id', user.id);
 
   // Insert unmatched domains
   for (const unmatched of unmatchedDomains) {
@@ -247,9 +276,10 @@ async function processConnection(connection: any, user: any, maxResults: number,
     JSON.stringify({ 
       success: true,
       servicesFound: servicesAdded,
+      servicesReappeared,
       emailsScanned: messages.length,
       unmatchedCount: unmatchedDomains.length,
-      message: `Scanned ${messages.length} emails and discovered ${servicesAdded} services`,
+      message: `Scanned ${messages.length} emails and discovered ${servicesAdded} services${servicesReappeared > 0 ? ` (${servicesReappeared} reappeared after deletion)` : ''}`,
       provider: connection.provider,
       email: connection.email,
     }),

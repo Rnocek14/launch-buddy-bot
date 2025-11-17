@@ -77,6 +77,7 @@ export default function Dashboard() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [selectedContactStatus, setSelectedContactStatus] = useState<string>("all");
+  const [hideDeletedServices, setHideDeletedServices] = useState(true);
   const [scanProgress, setScanProgress] = useState<ScanProgress | null>(null);
   const [riskData, setRiskData] = useState<any>(null);
   const [loadingRisk, setLoadingRisk] = useState(false);
@@ -525,13 +526,28 @@ export default function Dashboard() {
   };
 
   const filteredServices = useMemo(() => {
-    return services.filter(service => {
+    return services.filter((service: any) => {
       const matchesSearch = service.name.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesCategory = selectedCategory === "all" || service.category === selectedCategory;
       const matchesContactStatus = selectedContactStatus === "all" || service.contact_status === selectedContactStatus;
-      return matchesSearch && matchesCategory && matchesContactStatus;
+      const matchesDeletedFilter = !hideDeletedServices || !service.deletion_requested_at;
+      return matchesSearch && matchesCategory && matchesContactStatus && matchesDeletedFilter;
     });
-  }, [services, searchQuery, selectedCategory, selectedContactStatus]);
+  }, [services, searchQuery, selectedCategory, selectedContactStatus, hideDeletedServices]);
+
+  const newServicesCount = useMemo(() => {
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    return services.filter((s: any) => 
+      new Date(s.discovered_at) >= thirtyDaysAgo && !s.deletion_requested_at
+    ).length;
+  }, [services]);
+
+  const isServiceNew = (discoveredAt: string) => {
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    return new Date(discoveredAt) >= thirtyDaysAgo;
+  };
 
 
   const categories = useMemo(() => {
@@ -872,8 +888,20 @@ export default function Dashboard() {
                 <span>of</span>
                 <span className="font-medium text-foreground">{services.length}</span>
                 <span>services</span>
+                {newServicesCount > 0 && (
+                  <Badge variant="default" className="ml-2 bg-green-500">
+                    {newServicesCount} NEW
+                  </Badge>
+                )}
               </div>
               <div className="flex items-center gap-3 w-full sm:w-auto">
+                <Button 
+                  variant={hideDeletedServices ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setHideDeletedServices(!hideDeletedServices)}
+                >
+                  {hideDeletedServices ? "Show Deleted" : "Hide Deleted"}
+                </Button>
                 <Button 
                   variant="default" 
                   size="sm"

@@ -52,10 +52,7 @@ export default function Help() {
             <TabsTrigger value="faq">FAQs</TabsTrigger>
           </TabsList>
 
-          {/* Getting Started Tab */}
           <TabsContent value="getting-started" className="space-y-12">
-
-            {/* Quick Start */}
             <section>
               <h2 className="text-3xl font-bold mb-6">Quick Start Guide</h2>
               <div className="grid md:grid-cols-3 gap-6">
@@ -97,444 +94,296 @@ export default function Help() {
               </div>
             </section>
 
-            {/* Detailed Feature Guides */}
-            <section>
-              <h2 className="text-3xl font-bold mb-6">Feature Guides</h2>
-              <div className="space-y-4">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Mail className="h-5 w-5" />
-                      Gmail Scanning
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div>
-                      <h4 className="font-semibold mb-2">How it works</h4>
-                      <p className="text-muted-foreground">
-                        Our Gmail scanner analyzes email headers and sender domains to identify service registrations. 
-                        We use pattern matching and AI to detect confirmation emails, welcome messages, and account creation notifications.
-                      </p>
-                    </div>
-                    <div>
-                      <h4 className="font-semibold mb-2">Privacy & Security</h4>
-                      <p className="text-muted-foreground">
-                        We use OAuth 2.0 for authentication and only request read-only access to email metadata. 
-                        Your actual email content is never accessed or stored on our servers.
-                      </p>
-                    </div>
-                    <div>
-                      <h4 className="font-semibold mb-2">Best Practices</h4>
-                      <ul className="list-disc list-inside text-muted-foreground space-y-1">
-                        <li>Run scans during off-peak hours for faster processing</li>
-                        <li>Review the discovered services list before submitting deletion requests</li>
-                        <li>You can disconnect Gmail access anytime from Settings</li>
-                      </ul>
-                    </div>
-                  </CardContent>
-                </Card>
+            <section className="space-y-6">
+              <h2 className="text-3xl font-bold">Core Features</h2>
+              
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center gap-3">
+                    <Mail className="h-6 w-6 text-primary" />
+                    <CardTitle>Gmail Scanning</CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-3 text-muted-foreground">
+                  <p>Our Gmail scanner analyzes your email history to identify services you've registered with.</p>
+                  <ul className="list-disc pl-6 space-y-2">
+                    <li>Scans registration emails and newsletters</li>
+                    <li>Identifies 200+ popular services automatically</li>
+                    <li>Detects new services from recent emails</li>
+                    <li>All scanning happens securely via OAuth 2.0</li>
+                  </ul>
+                </CardContent>
+              </Card>
 
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Database className="h-5 w-5" />
-                      Managing Identifiers
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div>
-                      <h4 className="font-semibold mb-2">What are identifiers?</h4>
-                      <p className="text-muted-foreground">
-                        Identifiers are the email addresses, usernames, and phone numbers you've used to register for services. 
-                        We help you track all variants to ensure comprehensive cleanup.
-                      </p>
-                    </div>
-                    <div>
-                      <h4 className="font-semibold mb-2">Adding identifiers</h4>
-                      <p className="text-muted-foreground mb-2">
-                        Go to Settings → Identifiers to add or manage your identifiers. Include:
-                      </p>
-                      <ul className="list-disc list-inside text-muted-foreground space-y-1">
-                        <li>Old email addresses you no longer use</li>
-                        <li>Common username variations</li>
-                        <li>Phone numbers used for 2FA</li>
-                      </ul>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Trash2 className="h-5 w-5" />
-                      Deletion Requests
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div>
-                      <h4 className="font-semibold mb-2">How deletion works</h4>
-                      <p className="text-muted-foreground">
-                        We automatically discover privacy contact information and generate GDPR/CCPA-compliant deletion requests. 
-                        Requests are sent via email or web form depending on the service.
-                      </p>
-                    </div>
-                    <div>
-                      <h4 className="font-semibold mb-2">Tracking status</h4>
-                      <p className="text-muted-foreground">
-                        Monitor all deletion requests in the Deletion Requests page. Services must respond within 30 days under most privacy laws.
-                      </p>
-                    </div>
-                    <div>
-                      <h4 className="font-semibold mb-2">What if a service doesn't respond?</h4>
-                      <p className="text-muted-foreground">
-                        We provide escalation templates and guidance on filing complaints with regulatory authorities.
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <CreditCard className="h-5 w-5" />
-                      Subscription & Billing
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div>
-                      <h4 className="font-semibold mb-2">Free vs Pro Plan</h4>
-                      <p className="text-muted-foreground mb-2">
-                        Free plan includes 5 deletion requests per month. Pro plan offers:
-                      </p>
-                      <ul className="list-disc list-inside text-muted-foreground space-y-1">
-                        <li>Unlimited deletion requests</li>
-                        <li>Priority support</li>
-                        <li>Bulk discovery tools</li>
-                        <li>Advanced analytics</li>
-                      </ul>
-                    </div>
-                    <div>
-                      <h4 className="font-semibold mb-2">Managing your subscription</h4>
-                      <p className="text-muted-foreground">
-                        Visit the Billing page to upgrade, downgrade, or cancel your subscription. 
-                        All changes take effect at the end of your current billing period.
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center gap-3">
+                    <Trash2 className="h-6 w-6 text-primary" />
+                    <CardTitle>Deletion Requests</CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-3 text-muted-foreground">
+                  <p>Submit GDPR/CCPA compliant deletion requests with pre-filled templates.</p>
+                  <ul className="list-disc pl-6 space-y-2">
+                    <li>Legal templates for each jurisdiction</li>
+                    <li>Tracks request status and follow-ups</li>
+                    <li>Automated email delivery</li>
+                    <li>Batch deletion for multiple services</li>
+                  </ul>
+                </CardContent>
+              </Card>
             </section>
           </TabsContent>
 
-          {/* Video Tutorials Tab */}
-          <TabsContent value="videos" className="space-y-8">
+          <TabsContent value="videos" className="space-y-6">
             <section>
               <h2 className="text-3xl font-bold mb-6">Video Tutorials</h2>
-              <p className="text-muted-foreground mb-8">
-                Watch step-by-step video guides to get the most out of Footprint Finder
-              </p>
-
               <div className="grid md:grid-cols-2 gap-6">
-                {/* Video 1 */}
-                <Card className="group hover:shadow-lg transition-shadow">
-                  <CardHeader>
-                    <div className="aspect-video bg-muted rounded-lg flex items-center justify-center mb-4 relative overflow-hidden">
-                      <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-accent/20" />
-                      <PlayCircle className="h-16 w-16 text-primary relative z-10 group-hover:scale-110 transition-transform" />
-                      <Badge className="absolute top-3 right-3">5:24</Badge>
-                    </div>
-                    <CardTitle>Getting Started with Footprint Finder</CardTitle>
-                    <CardDescription>
-                      A complete walkthrough of setting up your account, connecting Gmail, and running your first scan
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <Button variant="outline" className="w-full">
-                      <PlayCircle className="h-4 w-4 mr-2" />
-                      Watch Tutorial
-                    </Button>
-                  </CardContent>
-                </Card>
-
-                {/* Video 2 */}
-                <Card className="group hover:shadow-lg transition-shadow">
-                  <CardHeader>
-                    <div className="aspect-video bg-muted rounded-lg flex items-center justify-center mb-4 relative overflow-hidden">
-                      <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-accent/20" />
-                      <PlayCircle className="h-16 w-16 text-primary relative z-10 group-hover:scale-110 transition-transform" />
-                      <Badge className="absolute top-3 right-3">3:45</Badge>
-                    </div>
-                    <CardTitle>How to Submit Deletion Requests</CardTitle>
-                    <CardDescription>
-                      Learn how to review discovered services and submit GDPR/CCPA deletion requests efficiently
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <Button variant="outline" className="w-full">
-                      <PlayCircle className="h-4 w-4 mr-2" />
-                      Watch Tutorial
-                    </Button>
-                  </CardContent>
-                </Card>
-
-                {/* Video 3 */}
-                <Card className="group hover:shadow-lg transition-shadow">
-                  <CardHeader>
-                    <div className="aspect-video bg-muted rounded-lg flex items-center justify-center mb-4 relative overflow-hidden">
-                      <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-accent/20" />
-                      <PlayCircle className="h-16 w-16 text-primary relative z-10 group-hover:scale-110 transition-transform" />
-                      <Badge className="absolute top-3 right-3">4:12</Badge>
-                    </div>
-                    <CardTitle>Understanding Your Privacy Dashboard</CardTitle>
-                    <CardDescription>
-                      Explore your privacy dashboard and learn how to interpret risk scores and recommendations
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <Button variant="outline" className="w-full">
-                      <PlayCircle className="h-4 w-4 mr-2" />
-                      Watch Tutorial
-                    </Button>
-                  </CardContent>
-                </Card>
-
-                {/* Video 4 */}
-                <Card className="group hover:shadow-lg transition-shadow">
-                  <CardHeader>
-                    <div className="aspect-video bg-muted rounded-lg flex items-center justify-center mb-4 relative overflow-hidden">
-                      <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-accent/20" />
-                      <PlayCircle className="h-16 w-16 text-primary relative z-10 group-hover:scale-110 transition-transform" />
-                      <Badge className="absolute top-3 right-3">6:30</Badge>
-                    </div>
-                    <CardTitle>Advanced Features & Pro Tips</CardTitle>
-                    <CardDescription>
-                      Master bulk operations, custom identifiers, and pro features to maximize your privacy cleanup
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <Button variant="outline" className="w-full">
-                      <PlayCircle className="h-4 w-4 mr-2" />
-                      Watch Tutorial
-                    </Button>
-                  </CardContent>
-                </Card>
-
-                {/* Video 5 */}
-                <Card className="group hover:shadow-lg transition-shadow">
-                  <CardHeader>
-                    <div className="aspect-video bg-muted rounded-lg flex items-center justify-center mb-4 relative overflow-hidden">
-                      <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-accent/20" />
-                      <PlayCircle className="h-16 w-16 text-primary relative z-10 group-hover:scale-110 transition-transform" />
-                      <Badge className="absolute top-3 right-3">2:58</Badge>
-                    </div>
-                    <CardTitle>Privacy & Security Best Practices</CardTitle>
-                    <CardDescription>
-                      Learn how we protect your data and tips for maintaining digital privacy beyond account deletion
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <Button variant="outline" className="w-full">
-                      <PlayCircle className="h-4 w-4 mr-2" />
-                      Watch Tutorial
-                    </Button>
-                  </CardContent>
-                </Card>
-
-                {/* Video 6 */}
-                <Card className="group hover:shadow-lg transition-shadow">
-                  <CardHeader>
-                    <div className="aspect-video bg-muted rounded-lg flex items-center justify-center mb-4 relative overflow-hidden">
-                      <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-accent/20" />
-                      <PlayCircle className="h-16 w-16 text-primary relative z-10 group-hover:scale-110 transition-transform" />
-                      <Badge className="absolute top-3 right-3">4:45</Badge>
-                    </div>
-                    <CardTitle>Troubleshooting Common Issues</CardTitle>
-                    <CardDescription>
-                      Solutions for Gmail connection problems, missing services, and other common troubleshooting scenarios
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <Button variant="outline" className="w-full">
-                      <PlayCircle className="h-4 w-4 mr-2" />
-                      Watch Tutorial
-                    </Button>
-                  </CardContent>
-                </Card>
+                {[
+                  { title: "Getting Started", duration: "3:45", description: "Complete walkthrough of account setup and first scan" },
+                  { title: "Gmail Connection", duration: "2:20", description: "How to securely connect your Gmail account" },
+                  { title: "Sending Deletion Requests", duration: "4:10", description: "Step-by-step guide to requesting data deletion" },
+                  { title: "Understanding Your Risk Score", duration: "3:00", description: "What your privacy risk score means" }
+                ].map((video, i) => (
+                  <Card key={i} className="hover:border-primary/50 transition-colors">
+                    <CardHeader>
+                      <div className="aspect-video bg-muted rounded-md flex items-center justify-center mb-4">
+                        <PlayCircle className="h-12 w-12 text-muted-foreground" />
+                      </div>
+                      <CardTitle className="flex items-center justify-between">
+                        <span>{video.title}</span>
+                        <Badge variant="secondary">{video.duration}</Badge>
+                      </CardTitle>
+                      <CardDescription>{video.description}</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <Button className="w-full">
+                        <PlayCircle className="h-4 w-4 mr-2" />
+                        Watch Tutorial
+                      </Button>
+                    </CardContent>
+                  </Card>
+                ))}
               </div>
             </section>
           </TabsContent>
 
-          {/* Troubleshooting Tab */}
           <TabsContent value="troubleshooting" className="space-y-8">
+            <section>
+              <h2 className="text-3xl font-bold mb-6">Common Issues</h2>
+              <Accordion type="single" collapsible className="space-y-4">
+                <AccordionItem value="gmail-connection" className="border rounded-lg px-6">
+                  <AccordionTrigger className="hover:no-underline">
+                    <div className="flex items-center gap-3 text-left">
+                      <AlertCircle className="h-5 w-5 text-destructive shrink-0" />
+                      <span className="font-semibold">Gmail connection failed</span>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="text-muted-foreground space-y-3 pt-4">
+                    <p><strong>Solution:</strong></p>
+                    <ol className="list-decimal pl-6 space-y-2">
+                      <li>Ensure you're granting all requested Gmail permissions</li>
+                      <li>Check that third-party apps are enabled in your Google account</li>
+                      <li>Try disconnecting and reconnecting your account</li>
+                      <li>Clear browser cache and cookies</li>
+                    </ol>
+                  </AccordionContent>
+                </AccordionItem>
 
-        {/* Common Issues */}
-        <section className="mb-16">
-          <h2 className="text-3xl font-bold mb-6">Troubleshooting</h2>
-          <Accordion type="single" collapsible className="space-y-2">
-            <AccordionItem value="gmail-not-connecting" className="border rounded-lg px-6">
-              <AccordionTrigger className="hover:no-underline">
-                <div className="flex items-center gap-2">
-                  <AlertCircle className="h-4 w-4 text-yellow-500" />
-                  Gmail not connecting
-                </div>
-              </AccordionTrigger>
-              <AccordionContent className="text-muted-foreground space-y-2">
-                <p><strong>Common causes:</strong></p>
-                <ul className="list-disc list-inside space-y-1">
-                  <li>Pop-up blocker preventing OAuth window</li>
-                  <li>Already connected with a different account</li>
-                  <li>Browser privacy settings blocking third-party cookies</li>
-                </ul>
-                <p className="mt-2"><strong>Solutions:</strong></p>
-                <ul className="list-disc list-inside space-y-1">
-                  <li>Allow pop-ups for this site</li>
-                  <li>Try a different browser (Chrome recommended)</li>
-                  <li>Disconnect existing Gmail from Settings first</li>
-                  <li>Clear browser cache and try again</li>
-                </ul>
-              </AccordionContent>
-            </AccordionItem>
+                <AccordionItem value="no-services" className="border rounded-lg px-6">
+                  <AccordionTrigger className="hover:no-underline">
+                    <div className="flex items-center gap-3 text-left">
+                      <HelpCircle className="h-5 w-5 text-primary shrink-0" />
+                      <span className="font-semibold">No services found after scan</span>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="text-muted-foreground space-y-3 pt-4">
+                    <p><strong>Possible reasons:</strong></p>
+                    <ul className="list-disc pl-6 space-y-2">
+                      <li>Your Gmail account is new or has limited email history</li>
+                      <li>Services use domains not in our catalog yet</li>
+                      <li>Registration emails may have been deleted</li>
+                    </ul>
+                    <p><strong>Try:</strong> Run additional scans as you receive more emails</p>
+                  </AccordionContent>
+                </AccordionItem>
 
-            <AccordionItem value="no-services-found" className="border rounded-lg px-6">
-              <AccordionTrigger className="hover:no-underline">
-                <div className="flex items-center gap-2">
-                  <HelpCircle className="h-4 w-4 text-blue-500" />
-                  No services found after scanning
-                </div>
-              </AccordionTrigger>
-              <AccordionContent className="text-muted-foreground space-y-2">
-                <p>This can happen if:</p>
-                <ul className="list-disc list-inside space-y-1">
-                  <li>Your Gmail account is new with limited history</li>
-                  <li>You use a different email for most registrations</li>
-                  <li>Services aren't in our database yet</li>
-                </ul>
-                <p className="mt-2">Try:</p>
-                <ul className="list-disc list-inside space-y-1">
-                  <li>Adding more email addresses in Settings</li>
-                  <li>Using Manual Discovery to add services</li>
-                  <li>Checking your other email accounts</li>
-                </ul>
-              </AccordionContent>
-            </AccordionItem>
+                <AccordionItem value="deletion-no-response" className="border rounded-lg px-6">
+                  <AccordionTrigger className="hover:no-underline">
+                    <div className="flex items-center gap-3 text-left">
+                      <Clock className="h-5 w-5 text-primary shrink-0" />
+                      <span className="font-semibold">Service not responding to deletion request</span>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="text-muted-foreground space-y-3 pt-4">
+                    <p>Companies typically have 30 days to respond under GDPR/CCPA.</p>
+                    <p><strong>Next steps:</strong></p>
+                    <ol className="list-decimal pl-6 space-y-2">
+                      <li>Wait 30 days from initial request</li>
+                      <li>Send a follow-up email if no response</li>
+                      <li>File a complaint with regulatory authorities (FTC, ICO, etc.)</li>
+                      <li>We can provide escalation templates if needed</li>
+                    </ol>
+                  </AccordionContent>
+                </AccordionItem>
 
-            <AccordionItem value="service-not-responding" className="border rounded-lg px-6">
-              <AccordionTrigger className="hover:no-underline">
-                <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-orange-500" />
-                  Service not responding to deletion request
-                </div>
-              </AccordionTrigger>
-              <AccordionContent className="text-muted-foreground space-y-2">
-                <p>If a service hasn't responded within 30 days:</p>
-                <ol className="list-decimal list-inside space-y-1">
-                  <li>Send a follow-up request (we provide templates)</li>
-                  <li>Check your spam folder for responses</li>
-                  <li>File a complaint with your data protection authority</li>
-                  <li>Contact their customer support directly</li>
-                </ol>
-                <p className="mt-2">
-                  We track response times and can help you escalate if needed. 
-                  Companies face fines for ignoring valid privacy requests.
-                </p>
-              </AccordionContent>
-            </AccordionItem>
+                <AccordionItem value="slow-scan" className="border rounded-lg px-6">
+                  <AccordionTrigger className="hover:no-underline">
+                    <div className="flex items-center gap-3 text-left">
+                      <Zap className="h-5 w-5 text-primary shrink-0" />
+                      <span className="font-semibold">Scan taking too long</span>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="text-muted-foreground space-y-3 pt-4">
+                    <p>Large email accounts can take several minutes to scan.</p>
+                    <p><strong>Tips:</strong></p>
+                    <ul className="list-disc pl-6 space-y-2">
+                      <li>Scans process up to 500 emails at a time</li>
+                      <li>Each scan takes 2-5 minutes depending on volume</li>
+                      <li>You can close the page and come back later</li>
+                      <li>Results are saved automatically</li>
+                    </ul>
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
+            </section>
 
-            <AccordionItem value="authorization-revoked" className="border rounded-lg px-6">
-              <AccordionTrigger className="hover:no-underline">
-                <div className="flex items-center gap-2">
-                  <Shield className="h-4 w-4 text-red-500" />
-                  How to revoke authorization
-                </div>
-              </AccordionTrigger>
-              <AccordionContent className="text-muted-foreground space-y-2">
-                <p>You can revoke our agent authorization at any time:</p>
-                <ol className="list-decimal list-inside space-y-1">
-                  <li>Go to Settings → Authorization Status</li>
-                  <li>Click "Revoke Authorization"</li>
-                  <li>Confirm the action</li>
-                </ol>
-                <p className="mt-2">
-                  <strong>Note:</strong> Revoking authorization will prevent us from submitting new deletion requests, 
-                  but won't affect requests already submitted. You'll need to re-authorize to use the service again.
-                </p>
-              </AccordionContent>
-            </AccordionItem>
-          </Accordion>
-        </section>
+            <section className="space-y-6">
+              <h2 className="text-3xl font-bold">Legal & Privacy</h2>
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center gap-3">
+                    <Shield className="h-6 w-6 text-primary" />
+                    <CardTitle>Your Rights</CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4 text-muted-foreground">
+                  <p>Under GDPR (EU) and CCPA (California), you have the right to:</p>
+                  <ul className="list-disc pl-6 space-y-2">
+                    <li><strong>Right to erasure:</strong> Request deletion of your personal data</li>
+                    <li><strong>Right to access:</strong> Request copies of your data</li>
+                    <li><strong>Right to rectification:</strong> Request corrections to your data</li>
+                    <li><strong>Right to data portability:</strong> Request data in a machine-readable format</li>
+                  </ul>
+                  <div className="flex gap-3 pt-4">
+                    <Button variant="outline" size="sm">
+                      <FileText className="h-4 w-4 mr-2" />
+                      Privacy Policy
+                    </Button>
+                    <Button variant="outline" size="sm">
+                      <FileText className="h-4 w-4 mr-2" />
+                      Terms of Service
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </section>
 
-        {/* Legal & Privacy */}
-        <section className="mb-16">
-          <h2 className="text-3xl font-bold mb-6">Legal & Privacy</h2>
-          <div className="grid md:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Shield className="h-5 w-5" />
-                  Your Rights
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3 text-muted-foreground">
-                <div>
-                  <h4 className="font-semibold text-foreground mb-1">GDPR (Europe)</h4>
-                  <p className="text-sm">Right to erasure, data portability, access requests</p>
-                </div>
-                <div>
-                  <h4 className="font-semibold text-foreground mb-1">CCPA (California)</h4>
-                  <p className="text-sm">Right to deletion, know what data is collected, opt-out of sales</p>
-                </div>
-                <div>
-                  <h4 className="font-semibold text-foreground mb-1">Other Jurisdictions</h4>
-                  <p className="text-sm">Many states and countries have similar privacy laws</p>
-                </div>
-              </CardContent>
-            </Card>
+            <section>
+              <h2 className="text-3xl font-bold mb-6">Contact</h2>
+              <Card>
+                <CardContent className="pt-6 space-y-4">
+                  <div className="flex items-start gap-4">
+                    <Mail className="h-6 w-6 text-primary mt-1" />
+                    <div>
+                      <h3 className="font-semibold mb-1">Email Support</h3>
+                      <p className="text-muted-foreground mb-2">We typically respond within 24 hours</p>
+                      <Button variant="outline" size="sm">Contact Support</Button>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-4">
+                    <HelpCircle className="h-6 w-6 text-primary mt-1" />
+                    <div>
+                      <h3 className="font-semibold mb-1">FAQ</h3>
+                      <p className="text-muted-foreground mb-2">Browse frequently asked questions</p>
+                      <Button variant="outline" size="sm">View FAQs</Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </section>
+          </TabsContent>
 
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <FileText className="h-5 w-5" />
-                  Our Policies
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <a href="/privacy" className="block p-3 rounded-lg border hover:bg-accent transition-colors">
-                  <h4 className="font-semibold">Privacy Policy</h4>
-                  <p className="text-sm text-muted-foreground">How we handle your data</p>
-                </a>
-                <a href="/terms" className="block p-3 rounded-lg border hover:bg-accent transition-colors">
-                  <h4 className="font-semibold">Terms of Service</h4>
-                  <p className="text-sm text-muted-foreground">Service agreement and usage terms</p>
-                </a>
-              </CardContent>
-            </Card>
-          </div>
-        </section>
+          <TabsContent value="faq" className="space-y-6">
+            <section>
+              <h2 className="text-3xl font-bold mb-6">Frequently Asked Questions</h2>
+              <Accordion type="single" collapsible className="space-y-4">
+                <AccordionItem value="privacy" className="border rounded-lg px-6">
+                  <AccordionTrigger className="hover:no-underline">
+                    <span className="font-semibold text-left">How does Footprint Finder protect my privacy?</span>
+                  </AccordionTrigger>
+                  <AccordionContent className="text-muted-foreground pt-4">
+                    All scanning happens locally on your device. We never see, store, or transmit your email data or browsing history. Our app simply helps you visualize patterns—you stay in full control of your information.
+                  </AccordionContent>
+                </AccordionItem>
 
-        {/* Contact */}
-        <section>
-          <Card className="bg-primary/5 border-primary/20">
-            <CardHeader className="text-center">
-              <CardTitle className="text-2xl">Still need help?</CardTitle>
-              <CardDescription className="text-base">
-                Our support team is here to help you reclaim your privacy
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="flex flex-col items-center gap-4">
-              <div className="flex flex-col sm:flex-row gap-4">
-                <a href="mailto:support@footprintfinder.com" className="text-primary hover:text-accent transition-colors font-medium">
-                  Email Support
-                </a>
-                <span className="hidden sm:inline text-muted-foreground">•</span>
-                <a href="/faq" className="text-primary hover:text-accent transition-colors font-medium">
-                  View FAQ
-                </a>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Response time: Usually within 24 hours
-              </p>
-            </CardContent>
-          </Card>
+                <AccordionItem value="gmail" className="border rounded-lg px-6">
+                  <AccordionTrigger className="hover:no-underline">
+                    <span className="font-semibold text-left">How does the Gmail scanning work?</span>
+                  </AccordionTrigger>
+                  <AccordionContent className="text-muted-foreground pt-4">
+                    When you connect your Gmail account, we analyze email headers and senders to identify account registrations. We use OAuth 2.0 for secure authentication and only read the information necessary to detect services. You can disconnect at any time.
+                  </AccordionContent>
+                </AccordionItem>
+
+                <AccordionItem value="deletion" className="border rounded-lg px-6">
+                  <AccordionTrigger className="hover:no-underline">
+                    <span className="font-semibold text-left">Do you actually delete my accounts?</span>
+                  </AccordionTrigger>
+                  <AccordionContent className="text-muted-foreground pt-4">
+                    No—but we make it dramatically easier. We provide service-specific deletion links, pre-filled GDPR/CCPA request templates, and step-by-step guides. You maintain full control and execute deletions yourself through official channels.
+                  </AccordionContent>
+                </AccordionItem>
+
+                <AccordionItem value="legal" className="border rounded-lg px-6">
+                  <AccordionTrigger className="hover:no-underline">
+                    <span className="font-semibold text-left">Is this legal? What about GDPR?</span>
+                  </AccordionTrigger>
+                  <AccordionContent className="text-muted-foreground pt-4">
+                    Absolutely legal. We're empowering you to exercise your existing rights under GDPR, CCPA, and similar privacy laws. We provide tools to request data deletion—which companies are legally required to honor in most jurisdictions.
+                  </AccordionContent>
+                </AccordionItem>
+
+                <AccordionItem value="sell-data" className="border rounded-lg px-6">
+                  <AccordionTrigger className="hover:no-underline">
+                    <span className="font-semibold text-left">Will you sell my email or data?</span>
+                  </AccordionTrigger>
+                  <AccordionContent className="text-muted-foreground pt-4">
+                    Never. We're privacy-first by design, not marketing. We don't run ads, don't sell data, and don't track you. Our business model is simple: you pay for the tool, we build a better tool. That's it.
+                  </AccordionContent>
+                </AccordionItem>
+
+                <AccordionItem value="timeline" className="border rounded-lg px-6">
+                  <AccordionTrigger className="hover:no-underline">
+                    <span className="font-semibold text-left">How long does a typical cleanup take?</span>
+                  </AccordionTrigger>
+                  <AccordionContent className="text-muted-foreground pt-4">
+                    It varies based on your digital footprint size. Most users complete 50-100 deletions in 2-4 weeks using our guided approach. We break it into manageable daily tasks rather than overwhelming you with everything at once.
+                  </AccordionContent>
+                </AccordionItem>
+
+                <AccordionItem value="no-response" className="border rounded-lg px-6">
+                  <AccordionTrigger className="hover:no-underline">
+                    <span className="font-semibold text-left">What if a service doesn't respond to my deletion request?</span>
+                  </AccordionTrigger>
+                  <AccordionContent className="text-muted-foreground pt-4">
+                    If a service doesn't respond within 30 days, we provide escalation templates and guidance on filing complaints with regulatory authorities like the FTC, ICO, or your local data protection agency. We'll help you enforce your rights.
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
+            </section>
+          </TabsContent>
+        </Tabs>
+
+        <section className="text-center bg-muted/50 rounded-lg p-8">
+          <h2 className="text-2xl font-bold mb-4">Need More Help?</h2>
+          <p className="text-muted-foreground mb-6">
+            Can't find what you're looking for? Our support team is here to help.
+          </p>
+          <Button size="lg">
+            <MessageCircle className="h-5 w-5 mr-2" />
+            Contact Support
+          </Button>
         </section>
       </div>
 

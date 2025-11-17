@@ -668,6 +668,7 @@ export type Database = {
           email: string | null
           full_name: string | null
           id: string
+          last_email_scan_date: string | null
           updated_at: string
         }
         Insert: {
@@ -675,6 +676,7 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id: string
+          last_email_scan_date?: string | null
           updated_at?: string
         }
         Update: {
@@ -682,6 +684,7 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id?: string
+          last_email_scan_date?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -1074,6 +1077,7 @@ export type Database = {
           first_seen_date: string | null
           last_scanned_at: string
           marked_for_deletion: boolean | null
+          reappeared_at: string | null
           service_id: string
           user_id: string
         }
@@ -1086,6 +1090,7 @@ export type Database = {
           first_seen_date?: string | null
           last_scanned_at?: string
           marked_for_deletion?: boolean | null
+          reappeared_at?: string | null
           service_id: string
           user_id: string
         }
@@ -1098,6 +1103,7 @@ export type Database = {
           first_seen_date?: string | null
           last_scanned_at?: string
           marked_for_deletion?: boolean | null
+          reappeared_at?: string | null
           service_id?: string
           user_id?: string
         }
