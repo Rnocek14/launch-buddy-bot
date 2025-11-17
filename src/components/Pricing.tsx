@@ -2,6 +2,7 @@ import { Check } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
+import { Link } from "react-router-dom";
 
 const plans = [
   {
@@ -98,17 +99,28 @@ export const Pricing = () => {
                 </div>
               </CardHeader>
               <CardContent>
-                <Button 
-                  className={`w-full mb-6 ${
-                    plan.popular 
-                      ? "bg-primary hover:bg-primary/90" 
-                      : ""
-                  }`}
-                  variant={plan.popular ? "default" : "outline"}
-                  disabled={!plan.available}
-                >
-                  {plan.cta}
-                </Button>
+                {plan.available ? (
+                  <Link to="/auth" className="w-full">
+                    <Button 
+                      className={`w-full mb-6 ${
+                        plan.popular 
+                          ? "bg-primary hover:bg-primary/90" 
+                          : ""
+                      }`}
+                      variant={plan.popular ? "default" : "outline"}
+                    >
+                      Get Started Free
+                    </Button>
+                  </Link>
+                ) : (
+                  <Button 
+                    className="w-full mb-6"
+                    variant="outline"
+                    disabled
+                  >
+                    {plan.cta}
+                  </Button>
+                )}
                 <ul className="space-y-3">
                   {plan.features.map((feature, i) => (
                     <li key={i} className="flex items-start gap-2">
@@ -123,7 +135,7 @@ export const Pricing = () => {
         </div>
 
         <p className="text-center text-muted-foreground mt-12">
-          🎉 Free during beta! Paid plans coming soon. Join now to lock in early access.
+          🎉 Free during beta! Start scanning your digital footprint today.
         </p>
       </div>
     </section>
