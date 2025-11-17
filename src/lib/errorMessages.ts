@@ -96,10 +96,13 @@ export const getErrorMessage = (error: any): ErrorMessageConfig => {
   }
 
   // Token errors - OAuth refresh token issues
-  if (errorMessage.includes("invalid_grant") || 
+  // Check both the extracted message and common patterns
+  if (errorMessage.includes("failed to refresh") ||
+      errorMessage.includes("invalid_grant") || 
       errorMessage.includes("token has been expired or revoked") ||
-      (errorMessage.includes("token") && (errorMessage.includes("expired") || errorMessage.includes("revoked"))) ||
-      errorMessage.includes("failed to refresh access token")) {
+      errorMessage.includes("token expired") ||
+      errorMessage.includes("token revoked") ||
+      errorMessage.includes("refresh access token")) {
     return {
       title: "Email Connection Expired",
       description: "Your email connection has expired or been revoked. Please go to Settings → Email Connections and reconnect your account to continue scanning.",
