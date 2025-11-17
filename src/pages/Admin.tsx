@@ -593,6 +593,12 @@ export default function Admin() {
             <Link to="/">
               <Button variant="outline">Back to Home</Button>
             </Link>
+            <Link to="/admin/analytics">
+              <Button variant="outline">
+                <BarChart3 className="w-4 h-4 mr-2" />
+                Analytics
+              </Button>
+            </Link>
             <Button variant="ghost" onClick={signOut}>
               <LogOut className="w-4 h-4 mr-2" />
               Sign Out
