@@ -378,6 +378,12 @@ export default function Dashboard() {
       await fetchUnmatchedDomains();
       await fetchRiskScore();
     } catch (error: any) {
+      console.error("Full scan error object:", error);
+      console.error("Error type:", typeof error);
+      console.error("Error keys:", error ? Object.keys(error) : "null");
+      console.error("Error.error:", error?.error);
+      console.error("Error.message:", error?.message);
+      
       const errorMsg = getErrorMessage(error);
       toast({
         title: errorMsg.title,

@@ -10,7 +10,23 @@ interface ErrorMessageConfig {
 
 export const getErrorMessage = (error: any): ErrorMessageConfig => {
   const errorCode = error?.code;
-  const errorMessage = error?.message?.toLowerCase() || "";
+  
+  // Supabase Functions returns errors in different structures
+  // Try to extract the actual error message from various possible locations
+  let errorMessage = "";
+  
+  if (typeof error === "string") {
+    errorMessage = error.toLowerCase();
+  } else if (error?.error && typeof error.error === "string") {
+    // Supabase Functions often returns { error: "message" }
+    errorMessage = error.error.toLowerCase();
+  } else if (error?.message) {
+    errorMessage = error.message.toLowerCase();
+  } else if (error?.error?.message) {
+    errorMessage = error.error.message.toLowerCase();
+  }
+  
+  console.log("getErrorMessage - extracted:", errorMessage);
 
   // Authentication errors
   if (errorCode === "auth/invalid-email" || errorMessage.includes("invalid email")) {
