@@ -26,6 +26,7 @@ import { SuccessAnimation } from "@/components/SuccessAnimation";
 import { getErrorMessage, successMessages } from "@/lib/errorMessages";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { SubscriptionStatusCard } from "@/components/SubscriptionStatusCard";
+import { OnboardingBanner } from "@/components/OnboardingBanner";
 
 interface Service {
   id: string;
@@ -720,6 +721,9 @@ export default function Dashboard() {
           />
         ) : (
           <>
+            {/* Onboarding Banner */}
+            <OnboardingBanner />
+
             {/* Subscription Status Card */}
             <SubscriptionStatusCard />
 
