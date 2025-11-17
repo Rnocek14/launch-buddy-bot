@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Shield, RefreshCw, LogOut, Loader2, ExternalLink, Search, Download, AlertCircle, Sparkles, Mail, Tag, TrendingUp, Trash2, CheckCircle, FileText, DollarSign, Package, Lock, Bell, Settings, HelpCircle } from "lucide-react";
+import { Shield, RefreshCw, LogOut, Loader2, ExternalLink, Search, Download, AlertCircle, Sparkles, Mail, Tag, TrendingUp, Trash2, CheckCircle, FileText, DollarSign, Package, Lock, Bell, Settings, HelpCircle, Calendar, Activity } from "lucide-react";
 import { RiskScoreCard } from "@/components/RiskScoreCard";
 import { useToast } from "@/hooks/use-toast";
 import { validateGmailScope, isTokenValid } from "@/lib/googleAuth";
@@ -101,6 +101,14 @@ export default function Dashboard() {
   const [showSuccessAnimation, setShowSuccessAnimation] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
 
+  // Monthly stats state
+  const [monthlyStats, setMonthlyStats] = useState<{
+    newServicesCount: number;
+    reappearedCount: number;
+    totalDeletions: number;
+    lastScanDate: string | null;
+  } | null>(null);
+
   useEffect(() => {
     checkAuth();
   }, []);
@@ -108,8 +116,15 @@ export default function Dashboard() {
   useEffect(() => {
     if (services.length > 0) {
       fetchRiskScore();
+      fetchMonthlyStats();
     }
   }, [services.length]);
+
+  useEffect(() => {
+    if (user && services.length > 0) {
+      fetchMonthlyStats();
+    }
+  }, [user, services]);
 
   async function checkAuth() {
     const { data: { session } } = await supabase.auth.getSession();
@@ -549,6 +564,50 @@ export default function Dashboard() {
     return new Date(discoveredAt) >= thirtyDaysAgo;
   };
 
+  // Fetch monthly statistics
+  async function fetchMonthlyStats() {
+    if (!user?.id) return;
+
+    try {
+      // Get profile for last scan date
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('last_email_scan_date')
+        .eq('id', user.id)
+        .single();
+
+      // Calculate services discovered in last 30 days
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      const newCount = services.filter((s: any) => 
+        new Date(s.discovered_at) >= thirtyDaysAgo && !s.deletion_requested_at
+      ).length;
+      
+      // Get reappeared services (services with reappeared_at set in last 30 days)
+      const { data: reappearedServices } = await supabase
+        .from('user_services')
+        .select('reappeared_at')
+        .eq('user_id', user.id)
+        .not('reappeared_at', 'is', null)
+        .gte('reappeared_at', thirtyDaysAgo.toISOString());
+
+      // Get total deletions count
+      const { count: deletionsCount } = await supabase
+        .from('deletion_requests')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.id);
+
+      setMonthlyStats({
+        newServicesCount: newCount,
+        reappearedCount: reappearedServices?.length || 0,
+        totalDeletions: deletionsCount || 0,
+        lastScanDate: profile?.last_email_scan_date || null
+      });
+    } catch (error) {
+      console.error('Error fetching monthly stats:', error);
+    }
+  }
+
 
   const categories = useMemo(() => {
     const cats = new Set(services.map(s => s.category || "Other"));
@@ -663,6 +722,164 @@ export default function Dashboard() {
           <>
             {/* Subscription Status Card */}
             <SubscriptionStatusCard />
+
+            {/* This Month Summary Block */}
+            {monthlyStats && (
+              <Card className="mb-8 overflow-hidden border-primary/20 bg-gradient-to-br from-card via-card to-primary/5">
+                <CardHeader className="pb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-primary/10">
+                      <Calendar className="w-5 h-5 text-primary" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-xl">This Month</CardTitle>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Your privacy activity summary
+                      </p>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {/* Stats Grid */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {/* New Services */}
+                    <div className="p-4 rounded-lg bg-background/50 border border-border/50 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">New Services</span>
+                        <Sparkles className="w-4 h-4 text-green-500" />
+                      </div>
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-3xl font-bold text-foreground">
+                          {monthlyStats.newServicesCount}
+                        </span>
+                        {monthlyStats.newServicesCount > 0 && (
+                          <Badge variant="secondary" className="text-xs">
+                            NEW
+                          </Badge>
+                        )}
+                      </div>
+                      <Progress 
+                        value={Math.min((monthlyStats.newServicesCount / services.length) * 100, 100)} 
+                        className="h-1.5"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Discovered in last 30 days
+                      </p>
+                    </div>
+
+                    {/* Reappeared Services */}
+                    <div className="p-4 rounded-lg bg-background/50 border border-border/50 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">Reappeared</span>
+                        <Activity className="w-4 h-4 text-orange-500" />
+                      </div>
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-3xl font-bold text-foreground">
+                          {monthlyStats.reappearedCount}
+                        </span>
+                        {monthlyStats.reappearedCount > 0 && (
+                          <Badge variant="destructive" className="text-xs">
+                            ⚠️
+                          </Badge>
+                        )}
+                      </div>
+                      <Progress 
+                        value={monthlyStats.reappearedCount > 0 ? Math.min((monthlyStats.reappearedCount / services.length) * 100, 100) : 0} 
+                        className="h-1.5"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Services still emailing after deletion
+                      </p>
+                    </div>
+
+                    {/* Total Deletions */}
+                    <div className="p-4 rounded-lg bg-background/50 border border-border/50 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">Total Deletions</span>
+                        <Trash2 className="w-4 h-4 text-primary" />
+                      </div>
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-3xl font-bold text-foreground">
+                          {monthlyStats.totalDeletions}
+                        </span>
+                      </div>
+                      <Progress 
+                        value={Math.min((monthlyStats.totalDeletions / Math.max(services.length, 1)) * 100, 100)} 
+                        className="h-1.5"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Deletion requests sent
+                      </p>
+                    </div>
+
+                    {/* Last Scan */}
+                    <div className="p-4 rounded-lg bg-background/50 border border-border/50 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">Last Scan</span>
+                        <RefreshCw className="w-4 h-4 text-muted-foreground" />
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <span className="text-lg font-semibold text-foreground">
+                          {monthlyStats.lastScanDate
+                            ? new Date(monthlyStats.lastScanDate).toLocaleDateString('en-US', {
+                                month: 'short',
+                                day: 'numeric'
+                              })
+                            : 'Never'}
+                        </span>
+                        {monthlyStats.lastScanDate && (
+                          <span className="text-xs text-muted-foreground">
+                            {(() => {
+                              const daysSince = Math.floor(
+                                (Date.now() - new Date(monthlyStats.lastScanDate).getTime()) / (1000 * 60 * 60 * 24)
+                              );
+                              return daysSince === 0
+                                ? 'Today'
+                                : daysSince === 1
+                                ? 'Yesterday'
+                                : `${daysSince} days ago`;
+                            })()}
+                          </span>
+                        )}
+                      </div>
+                      <div className="pt-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleScan}
+                          disabled={scanning}
+                          className="w-full text-xs"
+                        >
+                          <RefreshCw className="w-3 h-3 mr-1" />
+                          Scan Now
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Quick Insights */}
+                  {(monthlyStats.newServicesCount > 0 || monthlyStats.reappearedCount > 0) && (
+                    <div className="pt-4 border-t border-border/50">
+                      <div className="flex items-start gap-3 p-3 rounded-lg bg-primary/5">
+                        <AlertCircle className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+                        <div className="space-y-1">
+                          <p className="text-sm font-medium text-foreground">
+                            {monthlyStats.reappearedCount > 0
+                              ? `${monthlyStats.reappearedCount} service${monthlyStats.reappearedCount > 1 ? 's' : ''} reappeared after deletion`
+                              : `${monthlyStats.newServicesCount} new service${monthlyStats.newServicesCount > 1 ? 's' : ''} discovered`}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {monthlyStats.reappearedCount > 0
+                              ? 'These services are still emailing you. Consider following up on your deletion requests.'
+                              : 'Your digital footprint is growing. Review and manage these new accounts.'}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
 
             {/* Risk Score Card */}
             {riskData && (
