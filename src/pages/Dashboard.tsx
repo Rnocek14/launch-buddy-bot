@@ -25,6 +25,7 @@ import { ServiceGridSkeleton } from "@/components/ServiceCardSkeleton";
 import { SuccessAnimation } from "@/components/SuccessAnimation";
 import { getErrorMessage, successMessages } from "@/lib/errorMessages";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { SubscriptionStatusCard } from "@/components/SubscriptionStatusCard";
 
 interface Service {
   id: string;
@@ -644,6 +645,9 @@ export default function Dashboard() {
           />
         ) : (
           <>
+            {/* Subscription Status Card */}
+            <SubscriptionStatusCard />
+
             {/* Risk Score Card */}
             {riskData && (
               <div className="mb-8">
