@@ -79,12 +79,15 @@ export const getErrorMessage = (error: any): ErrorMessageConfig => {
     };
   }
 
-  // Token errors
-  if (errorMessage.includes("token") && errorMessage.includes("expired")) {
+  // Token errors - OAuth refresh token issues
+  if (errorMessage.includes("invalid_grant") || 
+      errorMessage.includes("token has been expired or revoked") ||
+      (errorMessage.includes("token") && (errorMessage.includes("expired") || errorMessage.includes("revoked"))) ||
+      errorMessage.includes("failed to refresh access token")) {
     return {
-      title: "Session Expired",
-      description: "Your session has expired. Please sign in again to continue.",
-      action: "Sign in again"
+      title: "Email Connection Expired",
+      description: "Your email connection has expired or been revoked. Please go to Settings → Email Connections and reconnect your account to continue scanning.",
+      action: "Reconnect account"
     };
   }
 
