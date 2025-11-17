@@ -49,12 +49,18 @@ export const BulkDiscoveryTool = () => {
   const [scanType, setScanType] = useState<'quick' | 'deep'>('quick');
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [subscriptionTier, setSubscriptionTier] = useState<string>('free');
+  const [connectedEmails, setConnectedEmails] = useState<Array<{email: string, is_primary: boolean}>>([]);
   const { toast } = useToast();
 
   // Check subscription on mount
   useEffect(() => {
     checkSubscription();
   }, []);
+
+  // Fetch connected emails when subscription tier changes
+  useEffect(() => {
+    fetchConnectedEmails();
+  }, [subscriptionTier]);
 
   const checkSubscription = async () => {
     try {
@@ -63,6 +69,31 @@ export const BulkDiscoveryTool = () => {
       setSubscriptionTier(data.tier || 'free');
     } catch (error: any) {
       console.error('Error checking subscription:', error);
+    }
+  };
+
+  const fetchConnectedEmails = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from('email_connections')
+        .select('email, is_primary')
+        .eq('user_id', user.id)
+        .order('is_primary', { ascending: false });
+
+      if (error) throw error;
+
+      if (data) {
+        // Filter based on tier: Free = 1 primary email, Pro = up to 3 emails
+        const emails = subscriptionTier === 'free' 
+          ? data.filter(e => e.is_primary).slice(0, 1)
+          : data.slice(0, 3);
+        setConnectedEmails(emails);
+      }
+    } catch (error: any) {
+      console.error('Error fetching connected emails:', error);
     }
   };
 
@@ -267,6 +298,39 @@ export const BulkDiscoveryTool = () => {
       </CardHeader>
 
       <CardContent className="space-y-6">
+        {/* Connected Emails Display */}
+        {connectedEmails.length > 0 && (
+          <Alert>
+            <AlertDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="font-medium">Will scan: </span>
+                  <span className="text-sm">
+                    {connectedEmails.map(e => e.email).join(', ')}
+                  </span>
+                </div>
+                {subscriptionTier === 'free' && connectedEmails.length === 1 && (
+                  <Badge variant="outline">Free: 1 email</Badge>
+                )}
+                {subscriptionTier === 'pro' && (
+                  <Badge variant="secondary">
+                    Pro: {connectedEmails.length} email{connectedEmails.length > 1 ? 's' : ''}
+                  </Badge>
+                )}
+              </div>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {connectedEmails.length === 0 && (
+          <Alert className="border-yellow-500/50">
+            <AlertTriangle className="h-4 w-4 text-yellow-500" />
+            <AlertDescription>
+              No email accounts connected. Please connect an email account first to start scanning.
+            </AlertDescription>
+          </Alert>
+        )}
+
         {/* Cost Estimate */}
         {estimate && !currentJob && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

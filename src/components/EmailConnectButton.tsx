@@ -80,6 +80,33 @@ export function EmailConnectButton() {
         return;
       }
 
+      // Check subscription tier and enforce connection limits
+      const { data: subData, error: subError } = await supabase.functions.invoke('check-subscription');
+      if (subError) {
+        console.error('Error checking subscription:', subError);
+      }
+      const tier = subData?.tier || 'free';
+      const currentCount = connections.length;
+
+      // Enforce connection limits: Free = 1, Pro = 3
+      if (tier === 'free' && currentCount >= 1) {
+        toast({
+          title: "Upgrade to Pro",
+          description: "Free users can connect 1 email account. Upgrade to Pro to connect up to 3 email addresses and scan them all at once.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      if (currentCount >= 3) {
+        toast({
+          title: "Connection Limit Reached",
+          description: "You can connect up to 3 email accounts with Pro.",
+          variant: "destructive"
+        });
+        return;
+      }
+
       const { data, error } = await supabase.functions.invoke("get-email-oauth-url", {
         body: { provider },
       });
