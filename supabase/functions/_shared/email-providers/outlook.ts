@@ -28,6 +28,7 @@ export class OutlookProvider implements EmailProvider {
       response_mode: 'query',
       scope: scopes.join(' '),
       state: userId,
+      prompt: 'select_account',
     });
 
     return `https://login.microsoftonline.com/consumers/oauth2/v2.0/authorize?${params.toString()}`;
