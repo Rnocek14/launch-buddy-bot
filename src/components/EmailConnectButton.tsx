@@ -7,6 +7,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { UpgradeModal } from "@/components/UpgradeModal";
 
 interface EmailConnection {
   id: string;
@@ -19,6 +20,7 @@ interface EmailConnection {
 export function EmailConnectButton() {
   const [connections, setConnections] = useState<EmailConnection[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -90,11 +92,7 @@ export function EmailConnectButton() {
 
       // Enforce connection limits: Free = 1, Pro = 3
       if (tier === 'free' && currentCount >= 1) {
-        toast({
-          title: "Upgrade to Pro",
-          description: "Free users can connect 1 email account. Upgrade to Pro to connect up to 3 email addresses and scan them all at once.",
-          variant: "destructive"
-        });
+        setShowUpgradeModal(true);
         return;
       }
 
@@ -399,6 +397,12 @@ export function EmailConnectButton() {
           </div>
         </>
       )}
+
+      <UpgradeModal 
+        open={showUpgradeModal} 
+        onOpenChange={setShowUpgradeModal}
+        context="email-connections"
+      />
     </div>
   );
 }
