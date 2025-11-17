@@ -84,6 +84,19 @@ serve(async (req) => {
 async function processConnection(connection: any, user: any, maxResults: number, after: any, query: any, supabase: any) {
   console.log(`Using ${connection.provider} connection: ${connection.email}`);
 
+  // Fetch user's last email scan date for incremental scanning
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('last_email_scan_date')
+    .eq('id', user.id)
+    .single();
+  
+  const lastScanDate = profile?.last_email_scan_date 
+    ? new Date(profile.last_email_scan_date) 
+    : null;
+
+  console.log(`Last scan date: ${lastScanDate ? lastScanDate.toISOString() : 'never (full scan)'}`);
+
   // Get access token (decrypt if encrypted)
   let accessToken = connection.access_token;
   if (connection.tokens_encrypted && connection.access_token_encrypted) {
@@ -132,13 +145,18 @@ async function processConnection(connection: any, user: any, maxResults: number,
 
   // Get the provider and scan messages
   const provider = getEmailProvider(connection.provider as ProviderType);
+  
+  // Use incremental scanning if we have a last scan date
+  // The 'after' parameter is a timestamp that the provider will use to filter messages
+  const scanAfter = lastScanDate || after;
+  
   const messages = await provider.getMessages(accessToken, {
     maxResults,
-    after,
+    after: scanAfter,
     query,
   });
 
-  console.log(`Fetched ${messages.length} messages`);
+  console.log(`Fetched ${messages.length} messages ${scanAfter ? `since ${new Date(scanAfter).toISOString()}` : '(full scan)'}`);
 
   // Process messages to discover services
   const emailDomains = new Map<string, { from: string; count: number }>();
@@ -219,35 +237,45 @@ async function processConnection(connection: any, user: any, maxResults: number,
     }
   });
 
-  // Insert matched services into user_services (upsert to avoid duplicates)
+  // Insert matched services into user_services
+  // Use two-step approach to preserve discovered_at on existing services
   let servicesAdded = 0;
   let servicesReappeared = 0;
   
   for (const match of matchedServices) {
     const isReappeared = reappearedServiceIds.has(match.service_id);
     
-    const { error: insertError } = await supabase
+    // Step 1: Insert with ignoreDuplicates to preserve discovered_at
+    await supabase
       .from('user_services')
       .upsert({
         user_id: user.id,
         service_id: match.service_id,
         discovered_from_connection_id: connection.id,
         discovered_at: new Date().toISOString(),
-        last_scanned_at: new Date().toISOString(),
-        ...(isReappeared && { reappeared_at: new Date().toISOString() }),
       }, {
         onConflict: 'user_id,service_id',
-        ignoreDuplicates: false,
+        ignoreDuplicates: true, // Don't overwrite existing records
       });
 
-    if (!insertError) {
+    // Step 2: Update last_scanned_at and reappeared_at on all (new and existing)
+    const { error: updateError } = await supabase
+      .from('user_services')
+      .update({
+        last_scanned_at: new Date().toISOString(),
+        ...(isReappeared && { reappeared_at: new Date().toISOString() }),
+      })
+      .eq('user_id', user.id)
+      .eq('service_id', match.service_id);
+
+    if (!updateError) {
       servicesAdded++;
       if (isReappeared) {
         servicesReappeared++;
         console.log(`Service ${match.name} reappeared after deletion request`);
       }
     } else {
-      console.error('Error inserting service:', insertError);
+      console.error('Error updating service:', updateError);
     }
   }
 
