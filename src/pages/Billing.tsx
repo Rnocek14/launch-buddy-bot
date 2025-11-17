@@ -20,6 +20,13 @@ export default function Billing() {
     fetchSubscription();
   }, []);
 
+  async function checkAuth() {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      navigate("/auth");
+    }
+  }
+
   async function fetchSubscription() {
     try {
       const { data, error } = await supabase.functions.invoke('check-subscription');
@@ -191,87 +198,6 @@ export default function Billing() {
                   </Button>
                 </div>
               </>
-            )}
-          </CardContent>
-        </Card>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-              {subscription?.current_period_end && isPro && (
-                <div className="flex items-center gap-2">
-                  <Calendar className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-sm text-muted-foreground">
-                    Next billing date: {new Date(subscription.current_period_end).toLocaleDateString()}
-                  </span>
-                </div>
-              )}
-
-              <div className="pt-4 border-t">
-                {isPro ? (
-                  <Button
-                    variant="outline"
-                    onClick={handleManageSubscription}
-                    disabled={portalLoading}
-                  >
-                    {portalLoading ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Loading...
-                      </>
-                    ) : (
-                      "Manage Subscription"
-                    )}
-                  </Button>
-                ) : (
-                  <Button onClick={() => navigate("/subscribe")}>
-                    Upgrade to Pro
-                  </Button>
-                )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Usage Stats */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Usage This Period</CardTitle>
-            <CardDescription>
-              {isFree 
-                ? "Track your free deletion requests" 
-                : "Unlimited deletion requests"}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {isFree ? (
-              <div>
-                <div className="text-3xl font-bold mb-2">
-                  {subscription?.deletion_count_this_period || 0} / 3
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  Free deletions used this month
-                </p>
-                {(subscription?.deletion_count_this_period || 0) >= 3 && (
-                  <Alert className="mt-4">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription>
-                      You've reached your free limit. Upgrade to Pro for unlimited deletions.
-                    </AlertDescription>
-                  </Alert>
-                )}
-              </div>
-            ) : (
-              <div>
-                <div className="text-3xl font-bold mb-2">
-                  {subscription?.deletion_count_this_period || 0}
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  Deletions processed this month
-                </p>
-              </div>
             )}
           </CardContent>
         </Card>
