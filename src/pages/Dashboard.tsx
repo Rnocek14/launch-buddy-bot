@@ -378,13 +378,17 @@ export default function Dashboard() {
       await fetchUnmatchedDomains();
       await fetchRiskScore();
     } catch (error: any) {
-      console.error("Full scan error object:", error);
-      console.error("Error type:", typeof error);
-      console.error("Error keys:", error ? Object.keys(error) : "null");
-      console.error("Error.error:", error?.error);
-      console.error("Error.message:", error?.message);
+      // Handle Supabase FunctionsHttpError - extract actual error from context
+      let actualError = error;
+      if (error?.context && typeof error.context.json === 'function') {
+        try {
+          actualError = await error.context.json();
+        } catch (e) {
+          console.error('Failed to parse error context:', e);
+        }
+      }
       
-      const errorMsg = getErrorMessage(error);
+      const errorMsg = getErrorMessage(actualError);
       toast({
         title: errorMsg.title,
         description: errorMsg.description,
