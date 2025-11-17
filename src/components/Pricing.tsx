@@ -10,7 +10,7 @@ const plans = [
     price: "$0",
     description: "Perfect for getting started",
     features: [
-      "Full scan of 1 email account",
+      "Connect and scan 1 email account",
       "See all discovered services",
       "Complete privacy contact details",
       "Risk score & analytics",
@@ -31,7 +31,7 @@ const plans = [
       "Everything in Free, plus:",
       "Unlimited deletion requests",
       "Deep AI Scan (finds 2-3× more accounts)",
-      "Multi-email scanning (up to 3 addresses)",
+      "Connect and scan up to 3 email addresses",
       "Complete inbox history analysis",
       "Priority deletion processing",
       "Monthly automatic rescans",

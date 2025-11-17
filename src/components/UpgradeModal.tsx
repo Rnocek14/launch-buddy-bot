@@ -20,7 +20,7 @@ export function UpgradeModal({ open, onOpenChange, remainingServices }: UpgradeM
   const proFeatures = [
     "Unlimited deletion requests (no more limits)",
     "Deep AI Scan that finds 2-3× more accounts",
-    "Multi-email scanning (up to 3 addresses)",
+    "Connect and scan up to 3 email addresses simultaneously",
     "Complete inbox history analysis",
     "Priority deletion processing",
     "Monthly automatic rescans",
