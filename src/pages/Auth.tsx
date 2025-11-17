@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { Shield, Loader2, Chrome } from "lucide-react";
+import { Shield, Loader2, Chrome, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -119,6 +119,28 @@ export default function Auth() {
     }
   };
 
+  const handleOutlookSignIn = async () => {
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'azure',
+        options: {
+          scopes: 'openid email profile offline_access https://graph.microsoft.com/Mail.Read',
+          redirectTo: `${window.location.origin}/dashboard`,
+        },
+      });
+
+      if (error) throw error;
+    } catch (error: any) {
+      toast({
+        title: "Outlook Sign-In Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+      setLoading(false);
+    }
+  };
+
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -193,24 +215,45 @@ export default function Auth() {
           <CardDescription>Sign in to access your account</CardDescription>
         </CardHeader>
         <CardContent>
-          <Button 
-            onClick={handleGoogleSignIn} 
-            variant="outline" 
-            className="w-full mb-6"
-            disabled={loading}
-          >
-            {loading ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Signing in...
-              </>
-            ) : (
-              <>
-                <Chrome className="w-4 h-4 mr-2" />
-                Sign in with Google
-              </>
-            )}
-          </Button>
+          <div className="space-y-3 mb-6">
+            <Button 
+              onClick={handleGoogleSignIn} 
+              variant="outline" 
+              className="w-full"
+              disabled={loading}
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Signing in...
+                </>
+              ) : (
+                <>
+                  <Chrome className="w-4 h-4 mr-2" />
+                  Sign in with Google
+                </>
+              )}
+            </Button>
+            
+            <Button 
+              onClick={handleOutlookSignIn} 
+              variant="outline" 
+              className="w-full"
+              disabled={loading}
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Signing in...
+                </>
+              ) : (
+                <>
+                  <Mail className="w-4 h-4 mr-2" />
+                  Sign in with Outlook
+                </>
+              )}
+            </Button>
+          </div>
           
           <div className="relative mb-6">
             <div className="absolute inset-0 flex items-center">
