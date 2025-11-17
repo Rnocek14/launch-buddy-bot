@@ -101,6 +101,33 @@ const handler = async (req: Request): Promise<Response> => {
             console.error("Error upserting subscription:", upsertError);
           } else {
             console.log(`Subscription created/updated for user: ${userId}`);
+            
+            // Send upgrade email
+            const { data: profile } = await supabase
+              .from("profiles")
+              .select("email")
+              .eq("id", userId)
+              .single();
+              
+            if (profile?.email) {
+              console.log(`Sending upgrade email to: ${profile.email}`);
+              const { error: emailError } = await supabase.functions.invoke(
+                "send-subscription-upgrade-email",
+                {
+                  body: { 
+                    email: profile.email, 
+                    tier: "Pro",
+                    billingDate: new Date(subscription.current_period_end * 1000).toISOString()
+                  }
+                }
+              );
+              
+              if (emailError) {
+                console.error("Error sending upgrade email:", emailError);
+              } else {
+                console.log("Upgrade email sent successfully");
+              }
+            }
           }
         }
         break;
@@ -144,6 +171,13 @@ const handler = async (req: Request): Promise<Response> => {
         const subscription = event.data.object as Stripe.Subscription;
         console.log(`Subscription deleted: ${subscription.id}`);
 
+        // Get user info before downgrading
+        const { data: existingSub } = await supabase
+          .from("subscriptions")
+          .select("user_id")
+          .eq("stripe_subscription_id", subscription.id)
+          .single();
+
         // Downgrade to free tier
         const { error: downgradeError } = await supabase
           .from("subscriptions")
@@ -158,6 +192,31 @@ const handler = async (req: Request): Promise<Response> => {
           console.error("Error downgrading subscription:", downgradeError);
         } else {
           console.log(`User downgraded to free tier for subscription: ${subscription.id}`);
+          
+          // Send cancellation email
+          if (existingSub?.user_id) {
+            const { data: profile } = await supabase
+              .from("profiles")
+              .select("email")
+              .eq("id", existingSub.user_id)
+              .single();
+              
+            if (profile?.email) {
+              console.log(`Sending cancellation email to: ${profile.email}`);
+              const { error: emailError } = await supabase.functions.invoke(
+                "send-subscription-cancelled-email",
+                {
+                  body: { email: profile.email }
+                }
+              );
+              
+              if (emailError) {
+                console.error("Error sending cancellation email:", emailError);
+              } else {
+                console.log("Cancellation email sent successfully");
+              }
+            }
+          }
         }
         break;
       }
@@ -167,6 +226,13 @@ const handler = async (req: Request): Promise<Response> => {
         console.log(`Payment failed for invoice: ${invoice.id}`);
 
         if (invoice.subscription) {
+          // Get user info
+          const { data: existingSub } = await supabase
+            .from("subscriptions")
+            .select("user_id")
+            .eq("stripe_subscription_id", invoice.subscription as string)
+            .single();
+
           // Mark subscription as past_due
           const { error: updateError } = await supabase
             .from("subscriptions")
@@ -179,6 +245,35 @@ const handler = async (req: Request): Promise<Response> => {
             console.error("Error updating subscription to past_due:", updateError);
           } else {
             console.log(`Subscription marked as past_due: ${invoice.subscription}`);
+            
+            // Send payment failed email
+            if (existingSub?.user_id) {
+              const { data: profile } = await supabase
+                .from("profiles")
+                .select("email")
+                .eq("id", existingSub.user_id)
+                .single();
+                
+              if (profile?.email) {
+                console.log(`Sending payment failed email to: ${profile.email}`);
+                const { error: emailError } = await supabase.functions.invoke(
+                  "send-payment-failed-email",
+                  {
+                    body: { 
+                      email: profile.email,
+                      attemptCount: invoice.attempt_count,
+                      nextRetry: invoice.next_payment_attempt ? new Date(invoice.next_payment_attempt * 1000).toISOString() : null
+                    }
+                  }
+                );
+                
+                if (emailError) {
+                  console.error("Error sending payment failed email:", emailError);
+                } else {
+                  console.log("Payment failed email sent successfully");
+                }
+              }
+            }
           }
         }
         break;
