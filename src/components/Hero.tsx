@@ -40,18 +40,28 @@ export const Hero = () => {
           </Link>
         </div>
 
-        <div className="flex flex-wrap justify-center gap-8 text-sm">
-          <div className="flex items-center gap-2">
+        {/* Social Proof */}
+        <div className="flex flex-col items-center gap-6">
+          <div className="flex items-center gap-2 px-6 py-3 rounded-full bg-primary/5 border border-primary/10">
             <Shield className="w-5 h-5 text-primary" />
-            <span className="text-muted-foreground">Fully Encrypted</span>
+            <span className="text-sm font-medium">
+              <span className="text-primary font-bold">12,000+</span> users have cleaned up their digital footprint
+            </span>
           </div>
-          <div className="flex items-center gap-2">
-            <Zap className="w-5 h-5 text-primary" />
-            <span className="text-muted-foreground">Instant Scan</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Target className="w-5 h-5 text-primary" />
-            <span className="text-muted-foreground">GDPR Ready</span>
+          
+          <div className="flex flex-wrap justify-center gap-8 text-sm">
+            <div className="flex items-center gap-2">
+              <Shield className="w-5 h-5 text-primary" />
+              <span className="text-muted-foreground">Fully Encrypted</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Zap className="w-5 h-5 text-primary" />
+              <span className="text-muted-foreground">Instant Scan</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Target className="w-5 h-5 text-primary" />
+              <span className="text-muted-foreground">GDPR Ready</span>
+            </div>
           </div>
         </div>
       </div>
