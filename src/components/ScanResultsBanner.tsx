@@ -1,7 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle, Mail, Database, Sparkles, ArrowRight } from "lucide-react";
+import { CheckCircle, Mail, Database, Sparkles, ArrowRight, X } from "lucide-react";
 
 interface ScanResultsBannerProps {
   scannedEmails: string[];
@@ -10,6 +10,7 @@ interface ScanResultsBannerProps {
   messagesScanned: number;
   onViewNew: () => void;
   onViewAll: () => void;
+  onDismiss: () => void;
 }
 
 export const ScanResultsBanner = ({
@@ -19,12 +20,22 @@ export const ScanResultsBanner = ({
   messagesScanned,
   onViewNew,
   onViewAll,
+  onDismiss,
 }: ScanResultsBannerProps) => {
   const isMultiEmail = scannedEmails.length > 1;
 
   return (
-    <Card className="mb-6 border-2 border-primary/20 bg-gradient-to-br from-primary/5 via-background to-background overflow-hidden">
-      <CardContent className="p-6">
+    <Card className="mb-6 border-2 border-primary/20 bg-gradient-to-br from-primary/5 via-background to-background overflow-hidden animate-in fade-in slide-in-from-top-2 duration-300">
+      <CardContent className="p-6 relative">
+        {/* Dismiss button */}
+        <button
+          onClick={onDismiss}
+          className="absolute top-4 right-4 p-1 rounded-md hover:bg-muted transition-colors"
+          aria-label="Dismiss"
+        >
+          <X className="w-4 h-4 text-muted-foreground" />
+        </button>
+
         <div className="flex items-start gap-4">
           <div className="p-3 rounded-xl bg-primary/10 shrink-0">
             <CheckCircle className="w-6 h-6 text-primary" />
