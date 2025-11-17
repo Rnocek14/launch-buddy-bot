@@ -18,11 +18,12 @@ export function UpgradeModal({ open, onOpenChange, remainingServices }: UpgradeM
   };
 
   const proFeatures = [
-    "Unlimited deletion requests",
-    "AI-powered contact discovery",
+    "Unlimited deletion requests (no more limits)",
+    "Deep AI Scan that finds 2-3× more accounts",
+    "Multi-email scanning (up to 3 addresses)",
+    "Complete inbox history analysis",
     "Priority deletion processing",
     "Monthly automatic rescans",
-    "Priority email support",
   ];
 
   return (
@@ -36,7 +37,7 @@ export function UpgradeModal({ open, onOpenChange, remainingServices }: UpgradeM
             <DialogTitle className="text-2xl">Great Progress!</DialogTitle>
           </div>
           <DialogDescription className="text-base">
-            You've successfully deleted 3 accounts!
+            You've successfully deleted 3 accounts! Want to delete more?
           </DialogDescription>
         </DialogHeader>
 
@@ -47,13 +48,13 @@ export function UpgradeModal({ open, onOpenChange, remainingServices }: UpgradeM
                 You have {remainingServices} accounts remaining
               </p>
               <p className="text-sm text-muted-foreground">
-                Estimated manual cleanup time: ~{Math.ceil(remainingServices * 0.25)} hours
+                Pro users can delete them all with unlimited deletion requests
               </p>
             </div>
           )}
 
           <div className="space-y-2">
-            <p className="font-semibold">Upgrade to Pro to:</p>
+            <p className="font-semibold">Upgrade to Pro for:</p>
             <ul className="space-y-2">
               {proFeatures.map((feature, i) => (
                 <li key={i} className="flex items-start gap-2 text-sm">

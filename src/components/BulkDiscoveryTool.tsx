@@ -46,7 +46,25 @@ export const BulkDiscoveryTool = () => {
   const [currentJob, setCurrentJob] = useState<BulkJob | null>(null);
   const [loading, setLoading] = useState(false);
   const [estimating, setEstimating] = useState(false);
+  const [scanType, setScanType] = useState<'quick' | 'deep'>('quick');
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [subscriptionTier, setSubscriptionTier] = useState<string>('free');
   const { toast } = useToast();
+
+  // Check subscription on mount
+  useEffect(() => {
+    checkSubscription();
+  }, []);
+
+  const checkSubscription = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke('check-subscription');
+      if (error) throw error;
+      setSubscriptionTier(data.tier || 'free');
+    } catch (error: any) {
+      console.error('Error checking subscription:', error);
+    }
+  };
 
   useEffect(() => {
     fetchEstimate();
@@ -107,17 +125,23 @@ export const BulkDiscoveryTool = () => {
   };
 
   const startBulkDiscovery = async () => {
+    // Check if user is trying deep scan without Pro
+    if (scanType === 'deep' && subscriptionTier === 'free') {
+      setShowUpgradeModal(true);
+      return;
+    }
+
     setLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke('bulk-discover-contacts', {
-        body: { action: 'start', batchSize: 5 }
+        body: { action: 'start', batchSize: 5, scanType }
       });
 
       if (error) throw error;
 
       setCurrentJob(data.job);
       toast({
-        title: "Bulk discovery started",
+        title: scanType === 'deep' ? "Deep discovery started" : "Quick discovery started",
         description: `Processing ${estimate?.totalServices} services in the background.`,
       });
     } catch (error: any) {
@@ -215,6 +239,7 @@ export const BulkDiscoveryTool = () => {
     : 0;
 
   return (
+    <>
     <Card className="border-primary/20">
       <CardHeader>
         <div className="flex items-start justify-between">
@@ -431,5 +456,49 @@ export const BulkDiscoveryTool = () => {
         )}
       </CardContent>
     </Card>
+
+    {/* Upgrade Modal for Deep Scan */}
+    {showUpgradeModal && (
+      <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <Card className="max-w-md w-full">
+          <CardHeader>
+            <div className="flex items-center gap-2 mb-2">
+              <Sparkles className="w-6 h-6 text-primary" />
+              <CardTitle>Deep Scan is a Pro Feature</CardTitle>
+            </div>
+            <CardDescription>
+              Deep scanning finds 2-3× more accounts by analyzing your complete inbox history and using advanced AI parsing.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <h4 className="font-semibold">Deep Scan includes:</h4>
+              <ul className="space-y-1 text-sm text-muted-foreground">
+                <li>• Complete inbox history analysis (not just recent emails)</li>
+                <li>• Advanced AI pattern recognition</li>
+                <li>• Hidden and dormant account detection</li>
+                <li>• Receipt and confirmation email parsing</li>
+                <li>• 2-3× more accounts discovered</li>
+              </ul>
+            </div>
+            <div className="p-4 bg-primary/5 border border-primary/20 rounded-lg">
+              <div className="text-center">
+                <div className="text-2xl font-bold">$9.99/month</div>
+                <div className="text-sm text-muted-foreground">Includes unlimited deletions + deep scanning</div>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Button onClick={() => window.location.href = '/subscribe'} className="flex-1">
+                Upgrade to Pro
+              </Button>
+              <Button variant="outline" onClick={() => setShowUpgradeModal(false)} className="flex-1">
+                Use Quick Scan
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )}
+  </>
   );
 };
