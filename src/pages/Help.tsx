@@ -3,6 +3,8 @@ import { Footer } from "@/components/Footer";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Shield, 
   Mail, 
@@ -13,7 +15,16 @@ import {
   AlertCircle,
   Clock,
   UserCheck,
-  Database
+  Database,
+  PlayCircle,
+  BookOpen,
+  MessageCircle,
+  Search,
+  Zap,
+  Lock,
+  CreditCard,
+  Settings,
+  Globe
 } from "lucide-react";
 
 export default function Help() {
@@ -21,172 +32,340 @@ export default function Help() {
     <div className="min-h-screen bg-background">
       <Navbar />
       
-      <div className="container max-w-6xl mx-auto pt-24 pb-16 px-4">
+      <div className="container max-w-7xl mx-auto pt-24 pb-16 px-4">
         <div className="text-center mb-12">
+          <Badge className="mb-4" variant="secondary">
+            <BookOpen className="h-3 w-3 mr-1" />
+            Documentation
+          </Badge>
           <h1 className="text-4xl md:text-5xl font-bold mb-4">Help Center</h1>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
             Everything you need to know about managing your digital footprint and privacy
           </p>
         </div>
 
-        {/* Quick Start Guide */}
-        <section className="mb-16">
-          <h2 className="text-3xl font-bold mb-6">Getting Started</h2>
-          <div className="grid md:grid-cols-3 gap-6">
-            <Card>
-              <CardHeader>
-                <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
-                  <UserCheck className="h-6 w-6 text-primary" />
-                </div>
-                <CardTitle className="text-xl">1. Authorize</CardTitle>
-                <CardDescription>
-                  Complete the authorization wizard to allow us to act as your agent for privacy requests
-                </CardDescription>
-              </CardHeader>
-            </Card>
+        <Tabs defaultValue="getting-started" className="mb-16">
+          <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4 mb-8">
+            <TabsTrigger value="getting-started">Getting Started</TabsTrigger>
+            <TabsTrigger value="videos">Video Tutorials</TabsTrigger>
+            <TabsTrigger value="troubleshooting">Troubleshooting</TabsTrigger>
+            <TabsTrigger value="faq">FAQs</TabsTrigger>
+          </TabsList>
 
-            <Card>
-              <CardHeader>
-                <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
-                  <Mail className="h-6 w-6 text-primary" />
-                </div>
-                <CardTitle className="text-xl">2. Connect Gmail</CardTitle>
-                <CardDescription>
-                  Securely connect your Gmail account to scan for service registrations
-                </CardDescription>
-              </CardHeader>
-            </Card>
+          {/* Getting Started Tab */}
+          <TabsContent value="getting-started" className="space-y-12">
 
-            <Card>
-              <CardHeader>
-                <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
-                  <Trash2 className="h-6 w-6 text-primary" />
-                </div>
-                <CardTitle className="text-xl">3. Start Cleanup</CardTitle>
-                <CardDescription>
-                  Review discovered services and submit deletion requests with one click
-                </CardDescription>
-              </CardHeader>
-            </Card>
-          </div>
-        </section>
-
-        {/* Feature Guides */}
-        <section className="mb-16">
-          <h2 className="text-3xl font-bold mb-6">Feature Guides</h2>
-          <div className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Mail className="h-5 w-5" />
-                  Gmail Scanning
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <h4 className="font-semibold mb-2">How it works</h4>
-                  <p className="text-muted-foreground">
-                    Our Gmail scanner analyzes email headers and sender domains to identify service registrations. 
-                    We use pattern matching and AI to detect confirmation emails, welcome messages, and account creation notifications.
-                  </p>
-                </div>
-                <div>
-                  <h4 className="font-semibold mb-2">Privacy & Security</h4>
-                  <p className="text-muted-foreground">
-                    We use OAuth 2.0 for authentication and only request read-only access to email metadata. 
-                    We never store email content and you can disconnect at any time from Settings.
-                  </p>
-                </div>
-                <div>
-                  <h4 className="font-semibold mb-2">What gets scanned</h4>
-                  <ul className="list-disc list-inside text-muted-foreground space-y-1">
-                    <li>Email sender addresses and domains</li>
-                    <li>Subject lines for registration keywords</li>
-                    <li>Date of first contact from each service</li>
-                  </ul>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Database className="h-5 w-5" />
-                  Managing Identifiers
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <h4 className="font-semibold mb-2">Why identifiers matter</h4>
-                  <p className="text-muted-foreground">
-                    Services need to verify your identity before processing deletion requests. 
-                    Your identifiers (emails, phone numbers, usernames) help companies locate and delete your data correctly.
-                  </p>
-                </div>
-                <div>
-                  <h4 className="font-semibold mb-2">Types of identifiers</h4>
-                  <ul className="list-disc list-inside text-muted-foreground space-y-1">
-                    <li><strong>Email:</strong> Most common identifier for online accounts</li>
-                    <li><strong>Phone:</strong> Used by messaging and social apps</li>
-                    <li><strong>Username:</strong> Unique handles on platforms</li>
-                    <li><strong>Other:</strong> Custom identifiers like member IDs</li>
-                  </ul>
-                </div>
-                <div>
-                  <h4 className="font-semibold mb-2">Setting primary identifiers</h4>
-                  <p className="text-muted-foreground">
-                    Mark one identifier of each type as primary. These will be used by default in deletion requests. 
-                    You can always override this for specific services.
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Trash2 className="h-5 w-5" />
-                  Deletion Requests
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <h4 className="font-semibold mb-2">Request types</h4>
-                  <div className="space-y-2">
-                    <div className="flex items-start gap-2">
-                      <Badge variant="outline">GDPR</Badge>
-                      <p className="text-sm text-muted-foreground">European privacy law - Right to erasure</p>
+            {/* Quick Start */}
+            <section>
+              <h2 className="text-3xl font-bold mb-6">Quick Start Guide</h2>
+              <div className="grid md:grid-cols-3 gap-6">
+                <Card className="border-2 hover:border-primary/50 transition-colors">
+                  <CardHeader>
+                    <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
+                      <UserCheck className="h-6 w-6 text-primary" />
                     </div>
-                    <div className="flex items-start gap-2">
-                      <Badge variant="outline">CCPA</Badge>
-                      <p className="text-sm text-muted-foreground">California law - Right to deletion</p>
+                    <CardTitle className="text-xl">1. Authorize</CardTitle>
+                    <CardDescription>
+                      Complete the authorization wizard to allow us to act as your agent for privacy requests
+                    </CardDescription>
+                  </CardHeader>
+                </Card>
+
+                <Card className="border-2 hover:border-primary/50 transition-colors">
+                  <CardHeader>
+                    <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
+                      <Mail className="h-6 w-6 text-primary" />
                     </div>
-                    <div className="flex items-start gap-2">
-                      <Badge variant="outline">Custom</Badge>
-                      <p className="text-sm text-muted-foreground">Manual requests to services</p>
+                    <CardTitle className="text-xl">2. Connect Gmail</CardTitle>
+                    <CardDescription>
+                      Securely connect your Gmail account to scan for service registrations
+                    </CardDescription>
+                  </CardHeader>
+                </Card>
+
+                <Card className="border-2 hover:border-primary/50 transition-colors">
+                  <CardHeader>
+                    <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
+                      <Trash2 className="h-6 w-6 text-primary" />
                     </div>
-                  </div>
-                </div>
-                <div>
-                  <h4 className="font-semibold mb-2">Timeline</h4>
-                  <ul className="list-disc list-inside text-muted-foreground space-y-1">
-                    <li>Request submitted immediately</li>
-                    <li>Companies must respond within 30 days (legal requirement)</li>
-                    <li>Some services process deletions instantly</li>
-                    <li>Others may require email verification or additional steps</li>
-                  </ul>
-                </div>
-                <div>
-                  <h4 className="font-semibold mb-2">Tracking status</h4>
-                  <p className="text-muted-foreground">
-                    View all your deletion requests in the Deletion Requests page. 
-                    We'll track status changes and notify you when action is required.
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </section>
+                    <CardTitle className="text-xl">3. Start Cleanup</CardTitle>
+                    <CardDescription>
+                      Review discovered services and submit deletion requests with one click
+                    </CardDescription>
+                  </CardHeader>
+                </Card>
+              </div>
+            </section>
+
+            {/* Detailed Feature Guides */}
+            <section>
+              <h2 className="text-3xl font-bold mb-6">Feature Guides</h2>
+              <div className="space-y-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Mail className="h-5 w-5" />
+                      Gmail Scanning
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div>
+                      <h4 className="font-semibold mb-2">How it works</h4>
+                      <p className="text-muted-foreground">
+                        Our Gmail scanner analyzes email headers and sender domains to identify service registrations. 
+                        We use pattern matching and AI to detect confirmation emails, welcome messages, and account creation notifications.
+                      </p>
+                    </div>
+                    <div>
+                      <h4 className="font-semibold mb-2">Privacy & Security</h4>
+                      <p className="text-muted-foreground">
+                        We use OAuth 2.0 for authentication and only request read-only access to email metadata. 
+                        Your actual email content is never accessed or stored on our servers.
+                      </p>
+                    </div>
+                    <div>
+                      <h4 className="font-semibold mb-2">Best Practices</h4>
+                      <ul className="list-disc list-inside text-muted-foreground space-y-1">
+                        <li>Run scans during off-peak hours for faster processing</li>
+                        <li>Review the discovered services list before submitting deletion requests</li>
+                        <li>You can disconnect Gmail access anytime from Settings</li>
+                      </ul>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Database className="h-5 w-5" />
+                      Managing Identifiers
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div>
+                      <h4 className="font-semibold mb-2">What are identifiers?</h4>
+                      <p className="text-muted-foreground">
+                        Identifiers are the email addresses, usernames, and phone numbers you've used to register for services. 
+                        We help you track all variants to ensure comprehensive cleanup.
+                      </p>
+                    </div>
+                    <div>
+                      <h4 className="font-semibold mb-2">Adding identifiers</h4>
+                      <p className="text-muted-foreground mb-2">
+                        Go to Settings → Identifiers to add or manage your identifiers. Include:
+                      </p>
+                      <ul className="list-disc list-inside text-muted-foreground space-y-1">
+                        <li>Old email addresses you no longer use</li>
+                        <li>Common username variations</li>
+                        <li>Phone numbers used for 2FA</li>
+                      </ul>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Trash2 className="h-5 w-5" />
+                      Deletion Requests
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div>
+                      <h4 className="font-semibold mb-2">How deletion works</h4>
+                      <p className="text-muted-foreground">
+                        We automatically discover privacy contact information and generate GDPR/CCPA-compliant deletion requests. 
+                        Requests are sent via email or web form depending on the service.
+                      </p>
+                    </div>
+                    <div>
+                      <h4 className="font-semibold mb-2">Tracking status</h4>
+                      <p className="text-muted-foreground">
+                        Monitor all deletion requests in the Deletion Requests page. Services must respond within 30 days under most privacy laws.
+                      </p>
+                    </div>
+                    <div>
+                      <h4 className="font-semibold mb-2">What if a service doesn't respond?</h4>
+                      <p className="text-muted-foreground">
+                        We provide escalation templates and guidance on filing complaints with regulatory authorities.
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <CreditCard className="h-5 w-5" />
+                      Subscription & Billing
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div>
+                      <h4 className="font-semibold mb-2">Free vs Pro Plan</h4>
+                      <p className="text-muted-foreground mb-2">
+                        Free plan includes 5 deletion requests per month. Pro plan offers:
+                      </p>
+                      <ul className="list-disc list-inside text-muted-foreground space-y-1">
+                        <li>Unlimited deletion requests</li>
+                        <li>Priority support</li>
+                        <li>Bulk discovery tools</li>
+                        <li>Advanced analytics</li>
+                      </ul>
+                    </div>
+                    <div>
+                      <h4 className="font-semibold mb-2">Managing your subscription</h4>
+                      <p className="text-muted-foreground">
+                        Visit the Billing page to upgrade, downgrade, or cancel your subscription. 
+                        All changes take effect at the end of your current billing period.
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </section>
+          </TabsContent>
+
+          {/* Video Tutorials Tab */}
+          <TabsContent value="videos" className="space-y-8">
+            <section>
+              <h2 className="text-3xl font-bold mb-6">Video Tutorials</h2>
+              <p className="text-muted-foreground mb-8">
+                Watch step-by-step video guides to get the most out of Footprint Finder
+              </p>
+
+              <div className="grid md:grid-cols-2 gap-6">
+                {/* Video 1 */}
+                <Card className="group hover:shadow-lg transition-shadow">
+                  <CardHeader>
+                    <div className="aspect-video bg-muted rounded-lg flex items-center justify-center mb-4 relative overflow-hidden">
+                      <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-accent/20" />
+                      <PlayCircle className="h-16 w-16 text-primary relative z-10 group-hover:scale-110 transition-transform" />
+                      <Badge className="absolute top-3 right-3">5:24</Badge>
+                    </div>
+                    <CardTitle>Getting Started with Footprint Finder</CardTitle>
+                    <CardDescription>
+                      A complete walkthrough of setting up your account, connecting Gmail, and running your first scan
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Button variant="outline" className="w-full">
+                      <PlayCircle className="h-4 w-4 mr-2" />
+                      Watch Tutorial
+                    </Button>
+                  </CardContent>
+                </Card>
+
+                {/* Video 2 */}
+                <Card className="group hover:shadow-lg transition-shadow">
+                  <CardHeader>
+                    <div className="aspect-video bg-muted rounded-lg flex items-center justify-center mb-4 relative overflow-hidden">
+                      <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-accent/20" />
+                      <PlayCircle className="h-16 w-16 text-primary relative z-10 group-hover:scale-110 transition-transform" />
+                      <Badge className="absolute top-3 right-3">3:45</Badge>
+                    </div>
+                    <CardTitle>How to Submit Deletion Requests</CardTitle>
+                    <CardDescription>
+                      Learn how to review discovered services and submit GDPR/CCPA deletion requests efficiently
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Button variant="outline" className="w-full">
+                      <PlayCircle className="h-4 w-4 mr-2" />
+                      Watch Tutorial
+                    </Button>
+                  </CardContent>
+                </Card>
+
+                {/* Video 3 */}
+                <Card className="group hover:shadow-lg transition-shadow">
+                  <CardHeader>
+                    <div className="aspect-video bg-muted rounded-lg flex items-center justify-center mb-4 relative overflow-hidden">
+                      <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-accent/20" />
+                      <PlayCircle className="h-16 w-16 text-primary relative z-10 group-hover:scale-110 transition-transform" />
+                      <Badge className="absolute top-3 right-3">4:12</Badge>
+                    </div>
+                    <CardTitle>Understanding Your Privacy Dashboard</CardTitle>
+                    <CardDescription>
+                      Explore your privacy dashboard and learn how to interpret risk scores and recommendations
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Button variant="outline" className="w-full">
+                      <PlayCircle className="h-4 w-4 mr-2" />
+                      Watch Tutorial
+                    </Button>
+                  </CardContent>
+                </Card>
+
+                {/* Video 4 */}
+                <Card className="group hover:shadow-lg transition-shadow">
+                  <CardHeader>
+                    <div className="aspect-video bg-muted rounded-lg flex items-center justify-center mb-4 relative overflow-hidden">
+                      <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-accent/20" />
+                      <PlayCircle className="h-16 w-16 text-primary relative z-10 group-hover:scale-110 transition-transform" />
+                      <Badge className="absolute top-3 right-3">6:30</Badge>
+                    </div>
+                    <CardTitle>Advanced Features & Pro Tips</CardTitle>
+                    <CardDescription>
+                      Master bulk operations, custom identifiers, and pro features to maximize your privacy cleanup
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Button variant="outline" className="w-full">
+                      <PlayCircle className="h-4 w-4 mr-2" />
+                      Watch Tutorial
+                    </Button>
+                  </CardContent>
+                </Card>
+
+                {/* Video 5 */}
+                <Card className="group hover:shadow-lg transition-shadow">
+                  <CardHeader>
+                    <div className="aspect-video bg-muted rounded-lg flex items-center justify-center mb-4 relative overflow-hidden">
+                      <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-accent/20" />
+                      <PlayCircle className="h-16 w-16 text-primary relative z-10 group-hover:scale-110 transition-transform" />
+                      <Badge className="absolute top-3 right-3">2:58</Badge>
+                    </div>
+                    <CardTitle>Privacy & Security Best Practices</CardTitle>
+                    <CardDescription>
+                      Learn how we protect your data and tips for maintaining digital privacy beyond account deletion
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Button variant="outline" className="w-full">
+                      <PlayCircle className="h-4 w-4 mr-2" />
+                      Watch Tutorial
+                    </Button>
+                  </CardContent>
+                </Card>
+
+                {/* Video 6 */}
+                <Card className="group hover:shadow-lg transition-shadow">
+                  <CardHeader>
+                    <div className="aspect-video bg-muted rounded-lg flex items-center justify-center mb-4 relative overflow-hidden">
+                      <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-accent/20" />
+                      <PlayCircle className="h-16 w-16 text-primary relative z-10 group-hover:scale-110 transition-transform" />
+                      <Badge className="absolute top-3 right-3">4:45</Badge>
+                    </div>
+                    <CardTitle>Troubleshooting Common Issues</CardTitle>
+                    <CardDescription>
+                      Solutions for Gmail connection problems, missing services, and other common troubleshooting scenarios
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Button variant="outline" className="w-full">
+                      <PlayCircle className="h-4 w-4 mr-2" />
+                      Watch Tutorial
+                    </Button>
+                  </CardContent>
+                </Card>
+              </div>
+            </section>
+          </TabsContent>
+
+          {/* Troubleshooting Tab */}
+          <TabsContent value="troubleshooting" className="space-y-8">
 
         {/* Common Issues */}
         <section className="mb-16">
