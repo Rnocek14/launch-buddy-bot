@@ -30,14 +30,14 @@ export class OutlookProvider implements EmailProvider {
       state: userId,
     });
 
-    return `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?${params.toString()}`;
+    return `https://login.microsoftonline.com/consumers/oauth2/v2.0/authorize?${params.toString()}`;
   }
 
   async handleCallback(code: string, userId: string): Promise<ConnectionData> {
     console.log('Outlook: Exchanging code for tokens');
     
     const tokenResponse = await fetch(
-      'https://login.microsoftonline.com/common/oauth2/v2.0/token',
+      'https://login.microsoftonline.com/consumers/oauth2/v2.0/token',
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -105,7 +105,7 @@ export class OutlookProvider implements EmailProvider {
     }
 
     const response = await fetch(
-      'https://login.microsoftonline.com/common/oauth2/v2.0/token',
+      'https://login.microsoftonline.com/consumers/oauth2/v2.0/token',
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
