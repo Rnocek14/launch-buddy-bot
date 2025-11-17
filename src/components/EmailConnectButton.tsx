@@ -23,6 +23,28 @@ export function EmailConnectButton() {
 
   useEffect(() => {
     checkEmailConnections();
+    
+    // Check URL parameters for connection status
+    const params = new URLSearchParams(window.location.search);
+    const connected = params.get('connected');
+    const error = params.get('error');
+    
+    if (connected) {
+      toast({
+        title: "Account Connected",
+        description: `Successfully connected your ${connected === 'outlook' ? 'Outlook' : 'Gmail'} account`,
+      });
+      // Clean up URL
+      window.history.replaceState({}, '', window.location.pathname);
+    } else if (error) {
+      toast({
+        variant: "destructive",
+        title: "Connection Failed", 
+        description: error,
+      });
+      // Clean up URL
+      window.history.replaceState({}, '', window.location.pathname);
+    }
   }, []);
 
   const checkEmailConnections = async () => {
@@ -120,12 +142,19 @@ export function EmailConnectButton() {
       const connection = connections.find(c => c.id === connectionId);
       const wasPrimary = connection?.is_primary;
 
+      console.log('Deleting connection:', connectionId);
       const { error } = await supabase
         .from("email_connections")
         .delete()
-        .eq("id", connectionId);
+        .eq("id", connectionId)
+        .eq("user_id", user.id); // Add user_id check for RLS
 
-      if (error) throw error;
+      if (error) {
+        console.error('Deletion error:', error);
+        throw error;
+      }
+
+      console.log('Connection deleted successfully');
 
       // If we deleted the primary account, set another as primary
       if (wasPrimary && connections.length > 1) {
@@ -206,6 +235,7 @@ export function EmailConnectButton() {
             <TabsContent value="outlook" className="space-y-4">
               <p className="text-sm text-muted-foreground">
                 Connect your Microsoft/Outlook account to scan your inbox and send emails.
+                Note: Gmail addresses can also be used as Microsoft accounts.
               </p>
               <Button
                 onClick={() => handleConnect('outlook')}

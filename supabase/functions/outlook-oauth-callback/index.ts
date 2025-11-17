@@ -19,12 +19,16 @@ serve(async (req) => {
     const state = url.searchParams.get('state'); // This is the user_id
     const error = url.searchParams.get('error');
 
+    // Get the origin from the request
+    const origin = req.headers.get('referer') || 'https://launch-buddy-bot.lovable.app';
+    const baseUrl = new URL(origin).origin;
+
     if (error) {
       console.error('OAuth error:', error);
       return new Response(null, {
         status: 302,
         headers: {
-          'Location': `https://launch-buddy-bot.lovable.app/settings?error=${encodeURIComponent('OAuth authorization failed')}`,
+          'Location': `${baseUrl}/settings?error=${encodeURIComponent('OAuth authorization failed')}`,
         },
       });
     }
@@ -111,15 +115,17 @@ serve(async (req) => {
     return new Response(null, {
       status: 302,
       headers: {
-        'Location': 'https://launch-buddy-bot.lovable.app/settings?connected=outlook',
+        'Location': `${baseUrl}/settings?connected=outlook`,
       },
     });
   } catch (error) {
     console.error('Error in Outlook OAuth callback:', error);
+    const origin = req.headers.get('referer') || 'https://launch-buddy-bot.lovable.app';
+    const baseUrl = new URL(origin).origin;
     return new Response(null, {
       status: 302,
       headers: {
-        'Location': `https://launch-buddy-bot.lovable.app/settings?error=${encodeURIComponent('Failed to connect Outlook account')}`,
+        'Location': `${baseUrl}/settings?error=${encodeURIComponent('Failed to connect Outlook account')}`,
       },
     });
   }
