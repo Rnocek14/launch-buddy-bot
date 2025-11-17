@@ -110,6 +110,9 @@ export default function Dashboard() {
     messagesScanned: number;
     scanTimestamp: Date;
   } | null>(null);
+  const [newServiceIds, setNewServiceIds] = useState<Set<string>>(new Set());
+  const [filterMode, setFilterMode] = useState<'all' | 'new'>('all');
+  const [bannerDismissed, setBannerDismissed] = useState(false);
 
   // Monthly stats state
   const [monthlyStats, setMonthlyStats] = useState<{
@@ -361,13 +364,16 @@ export default function Dashboard() {
 
       const freshServices = await fetchServices();
       
-      // Calculate new services (discovered within last 2 minutes)
+      // Calculate new services (discovered within last 2 minutes of scan)
       const twoMinutesAgo = new Date(scanTimestamp.getTime() - 2 * 60 * 1000);
-      const newServicesCount = freshServices?.filter(s => 
+      const newServicesList = freshServices?.filter(s => 
         new Date(s.discovered_at) > twoMinutesAgo
-      ).length || 0;
+      ) || [];
       
-      setScanResultsBanner(prev => prev ? { ...prev, newServices: newServicesCount } : null);
+      const newIds = new Set(newServicesList.map(s => s.id));
+      setNewServiceIds(newIds);
+      setScanResultsBanner(prev => prev ? { ...prev, newServices: newIds.size } : null);
+      setBannerDismissed(false);
       
       await fetchUnmatchedDomains();
       await fetchRiskScore();
@@ -623,14 +629,21 @@ export default function Dashboard() {
   };
 
   const filteredServices = useMemo(() => {
-    return services.filter((service: any) => {
+    let filtered = services.filter((service: any) => {
       const matchesSearch = service.name.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesCategory = selectedCategory === "all" || service.category === selectedCategory;
       const matchesContactStatus = selectedContactStatus === "all" || service.contact_status === selectedContactStatus;
       const matchesDeletedFilter = !hideDeletedServices || !service.deletion_requested_at;
       return matchesSearch && matchesCategory && matchesContactStatus && matchesDeletedFilter;
     });
-  }, [services, searchQuery, selectedCategory, selectedContactStatus, hideDeletedServices]);
+
+    // Apply "new this scan" filter if active
+    if (filterMode === 'new' && newServiceIds.size > 0) {
+      filtered = filtered.filter(s => newServiceIds.has(s.id));
+    }
+
+    return filtered;
+  }, [services, searchQuery, selectedCategory, selectedContactStatus, hideDeletedServices, filterMode, newServiceIds]);
 
   const newServicesCount = useMemo(() => {
     const thirtyDaysAgo = new Date();
@@ -806,28 +819,27 @@ export default function Dashboard() {
             <OnboardingBanner />
 
             {/* Scan Results Banner */}
-            {scanResultsBanner && (
+            {scanResultsBanner && !bannerDismissed && (
               <ScanResultsBanner
                 scannedEmails={scanResultsBanner.scannedEmails}
                 totalServices={scanResultsBanner.totalServices}
                 newServices={scanResultsBanner.newServices}
                 messagesScanned={scanResultsBanner.messagesScanned}
                 onViewNew={() => {
-                  // Filter to show only new services
-                  const twoMinutesAgo = new Date(scanResultsBanner.scanTimestamp.getTime() - 2 * 60 * 1000);
+                  setFilterMode('new');
                   setSearchQuery("");
                   setSelectedCategory("all");
                   setSelectedContactStatus("all");
-                  // Scroll to services grid
                   document.getElementById("services-grid")?.scrollIntoView({ behavior: "smooth" });
                 }}
                 onViewAll={() => {
+                  setFilterMode('all');
                   setSearchQuery("");
                   setSelectedCategory("all");
                   setSelectedContactStatus("all");
-                  // Scroll to services grid
                   document.getElementById("services-grid")?.scrollIntoView({ behavior: "smooth" });
                 }}
+                onDismiss={() => setBannerDismissed(true)}
               />
             )}
 
