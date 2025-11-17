@@ -48,8 +48,18 @@ serve(async (req) => {
     if (connectionId) {
       connectionQuery = connectionQuery.eq('id', connectionId);
     } else {
-      // Get primary connection
-      connectionQuery = connectionQuery.eq('is_primary', true);
+      // Get primary connection or first available
+      const { data: connections } = await supabase
+        .from('email_connections')
+        .select('*')
+        .eq('user_id', user.id);
+      
+      const connection = connections?.find(c => c.is_primary) || connections?.[0];
+      if (!connection) {
+        throw new Error('No email connections found');
+      }
+      
+      return await processConnection(connection, user, maxResults, after, query, supabase);
     }
 
     const { data: connection, error: connectionError } = await connectionQuery.maybeSingle();
@@ -58,75 +68,7 @@ serve(async (req) => {
       throw new Error('Email connection not found');
     }
 
-    console.log(`Using ${connection.provider} connection: ${connection.email}`);
-
-    // Get access token (decrypt if encrypted)
-    let accessToken = connection.access_token;
-    if (connection.tokens_encrypted && connection.access_token_encrypted) {
-      const encryptedBase64 = btoa(String.fromCharCode(...connection.access_token_encrypted));
-      accessToken = await decrypt(encryptedBase64);
-    }
-
-    // Check if token is expired
-    const now = new Date();
-    const expiresAt = new Date(connection.token_expires_at);
-    
-    if (now >= expiresAt) {
-      console.log('Access token expired, refreshing...');
-      
-      // Get the provider
-      const provider = getEmailProvider(connection.provider as ProviderType);
-      
-      // Refresh token
-      let refreshToken = connection.refresh_token;
-      if (connection.tokens_encrypted && connection.refresh_token_encrypted) {
-        const encryptedBase64 = btoa(String.fromCharCode(...connection.refresh_token_encrypted));
-        refreshToken = encryptedBase64;
-      }
-
-      const tokenData = await provider.refreshToken(
-        refreshToken,
-        user.id,
-        connection.tokens_encrypted || false
-      );
-
-      // Update connection with new token
-      const { error: updateError } = await supabase
-        .from('email_connections')
-        .update({
-          access_token: tokenData.access_token,
-          token_expires_at: tokenData.expires_at,
-        })
-        .eq('id', connection.id);
-
-      if (updateError) {
-        console.error('Error updating token:', updateError);
-      }
-
-      accessToken = tokenData.access_token;
-    }
-
-    // Get the provider and scan messages
-    const provider = getEmailProvider(connection.provider as ProviderType);
-    const messages = await provider.getMessages(accessToken, {
-      maxResults,
-      after,
-      query,
-    });
-
-    console.log(`Scanned ${messages.length} messages from ${connection.provider}`);
-
-    return new Response(
-      JSON.stringify({ 
-        messages,
-        provider: connection.provider,
-        email: connection.email,
-      }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200,
-      }
-    );
+    return await processConnection(connection, user, maxResults, after, query, supabase);
   } catch (error) {
     console.error('Error scanning email:', error);
     return new Response(
@@ -138,3 +80,182 @@ serve(async (req) => {
     );
   }
 });
+
+async function processConnection(connection: any, user: any, maxResults: number, after: any, query: any, supabase: any) {
+  console.log(`Using ${connection.provider} connection: ${connection.email}`);
+
+  // Get access token (decrypt if encrypted)
+  let accessToken = connection.access_token;
+  if (connection.tokens_encrypted && connection.access_token_encrypted) {
+    const encryptedBase64 = btoa(String.fromCharCode(...connection.access_token_encrypted));
+    accessToken = await decrypt(encryptedBase64);
+  }
+
+  // Check if token is expired
+  const now = new Date();
+  const expiresAt = new Date(connection.token_expires_at);
+  
+  if (now >= expiresAt) {
+    console.log('Access token expired, refreshing...');
+    
+    // Get the provider
+    const provider = getEmailProvider(connection.provider as ProviderType);
+    
+    // Refresh token
+    let refreshToken = connection.refresh_token;
+    if (connection.tokens_encrypted && connection.refresh_token_encrypted) {
+      const encryptedBase64 = btoa(String.fromCharCode(...connection.refresh_token_encrypted));
+      refreshToken = encryptedBase64;
+    }
+
+    const tokenData = await provider.refreshToken(
+      refreshToken,
+      user.id,
+      connection.tokens_encrypted || false
+    );
+
+    // Update connection with new token
+    const { error: updateError } = await supabase
+      .from('email_connections')
+      .update({
+        access_token: tokenData.access_token,
+        token_expires_at: tokenData.expires_at,
+      })
+      .eq('id', connection.id);
+
+    if (updateError) {
+      console.error('Error updating token:', updateError);
+    }
+
+    accessToken = tokenData.access_token;
+  }
+
+  // Get the provider and scan messages
+  const provider = getEmailProvider(connection.provider as ProviderType);
+  const messages = await provider.getMessages(accessToken, {
+    maxResults,
+    after,
+    query,
+  });
+
+  console.log(`Fetched ${messages.length} messages`);
+
+  // Process messages to discover services
+  const emailDomains = new Map<string, { from: string; count: number }>();
+  
+  for (const message of messages) {
+    if (!message.from) continue;
+    
+    // Extract domain from email
+    const emailMatch = message.from.match(/@([a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/);
+    if (!emailMatch) continue;
+    
+    const domain = emailMatch[1].toLowerCase();
+    
+    if (emailDomains.has(domain)) {
+      const existing = emailDomains.get(domain)!;
+      existing.count++;
+    } else {
+      emailDomains.set(domain, { from: message.from, count: 1 });
+    }
+  }
+
+  console.log(`Discovered ${emailDomains.size} unique domains`);
+
+  // Use service role client for catalog queries
+  const supabaseAdmin = createClient(
+    Deno.env.get('SUPABASE_URL') ?? '',
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+  );
+
+  // Match domains against service catalog
+  const { data: catalogServices, error: catalogError } = await supabaseAdmin
+    .from('service_catalog')
+    .select('id, name, domain, category, logo_url, homepage_url');
+
+  if (catalogError) {
+    console.error('Error fetching service catalog:', catalogError);
+    throw catalogError;
+  }
+
+  const matchedServices: any[] = [];
+  const unmatchedDomains: any[] = [];
+  
+  for (const [domain, info] of emailDomains.entries()) {
+    const service = catalogServices?.find(s => 
+      s.domain.toLowerCase() === domain ||
+      domain.includes(s.domain.toLowerCase()) ||
+      s.domain.toLowerCase().includes(domain)
+    );
+
+    if (service) {
+      matchedServices.push({
+        service_id: service.id,
+        domain: service.domain,
+        name: service.name,
+      });
+    } else {
+      unmatchedDomains.push({
+        domain,
+        email_from: info.from,
+        occurrence_count: info.count,
+      });
+    }
+  }
+
+  console.log(`Matched ${matchedServices.length} services, ${unmatchedDomains.length} unmatched`);
+
+  // Insert matched services into user_services (upsert to avoid duplicates)
+  let servicesAdded = 0;
+  for (const match of matchedServices) {
+    const { error: insertError } = await supabase
+      .from('user_services')
+      .upsert({
+        user_id: user.id,
+        service_id: match.service_id,
+        discovered_from_connection_id: connection.id,
+        discovered_at: new Date().toISOString(),
+        last_scanned_at: new Date().toISOString(),
+      }, {
+        onConflict: 'user_id,service_id',
+        ignoreDuplicates: false,
+      });
+
+    if (!insertError) {
+      servicesAdded++;
+    } else {
+      console.error('Error inserting service:', insertError);
+    }
+  }
+
+  // Insert unmatched domains
+  for (const unmatched of unmatchedDomains) {
+    await supabase
+      .from('unmatched_domains')
+      .upsert({
+        user_id: user.id,
+        domain: unmatched.domain,
+        email_from: unmatched.email_from,
+        occurrence_count: unmatched.occurrence_count,
+      }, {
+        onConflict: 'user_id,domain',
+        ignoreDuplicates: false,
+      });
+  }
+
+  return new Response(
+    JSON.stringify({ 
+      success: true,
+      servicesFound: servicesAdded,
+      emailsScanned: messages.length,
+      unmatchedCount: unmatchedDomains.length,
+      message: `Scanned ${messages.length} emails and discovered ${servicesAdded} services`,
+      provider: connection.provider,
+      email: connection.email,
+    }),
+    { 
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 200,
+    }
+  );
+}

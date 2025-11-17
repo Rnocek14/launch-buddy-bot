@@ -209,117 +209,40 @@ export default function Dashboard() {
 
   async function handleScan() {
     setScanning(true);
-    const estimatedTime = scanType === 'quick' ? '30-60 seconds' : '2-5 minutes';
-    const estimatedEmails = scanType === 'quick' ? '~2,500' : '~25,000';
     setScanProgress({ 
       currentEmail: 0, 
       totalEmails: 100, 
-      status: `${scanType === 'quick' ? 'Quick' : 'Deep'} scan: checking 5 categories (${estimatedEmails} emails)... this may take ${estimatedTime}` 
+      status: 'Checking email connections...' 
     });
 
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      // Check if we have a provider token
-      if (!session?.provider_token) {
-        // Need to authorize with Google
-        setScanning(false);
-        const { error } = await supabase.auth.signInWithOAuth({
-          provider: 'google',
-          options: {
-            redirectTo: `${window.location.origin}/dashboard`,
-            scopes: 'openid email profile https://www.googleapis.com/auth/gmail.readonly',
-            queryParams: {
-              access_type: 'offline',
-              prompt: 'consent'
-            }
-          }
-        });
+      // Check if user has any email connections
+      const { data: connections, error: connError } = await supabase
+        .from('email_connections')
+        .select('*')
+        .eq('user_id', user?.id);
 
-        if (error) {
-          toast({
-            title: "Authorization failed",
-            description: error.message,
-            variant: "destructive"
-          });
-        }
-        return;
-      }
+      if (connError) throw connError;
 
-      // Validate token has Gmail scope
-      console.log('Validating token scopes...');
-      const hasGmailScope = await validateGmailScope(session.provider_token);
-      if (!hasGmailScope) {
+      if (!connections || connections.length === 0) {
         setScanning(false);
         toast({
-          title: "Gmail Access Required",
-          description: "Your token doesn't have Gmail access. Please reconnect to grant permission.",
-          variant: "destructive"
+          title: "No Email Connected",
+          description: "Please connect an email account in Settings to scan your inbox.",
         });
-        
-        // Trigger re-authorization with consent prompt
-        const { error } = await supabase.auth.signInWithOAuth({
-          provider: 'google',
-          options: {
-            redirectTo: `${window.location.origin}/dashboard`,
-            scopes: 'openid email profile https://www.googleapis.com/auth/gmail.readonly',
-            queryParams: {
-              access_type: 'offline',
-              prompt: 'consent'
-            }
-          }
-        });
-
-        if (error) {
-          toast({
-            title: "Authorization failed",
-            description: error.message,
-            variant: "destructive"
-          });
-        }
+        navigate('/settings');
         return;
       }
 
-      // Check if token is still valid
-      const tokenIsValid = await isTokenValid(session.provider_token);
-      if (!tokenIsValid) {
-        setScanning(false);
-        toast({
-          title: "Token Expired",
-          description: "Your access token has expired. Please reconnect.",
-          variant: "destructive"
-        });
-        
-        // Trigger re-authorization
-        const { error } = await supabase.auth.signInWithOAuth({
-          provider: 'google',
-          options: {
-            redirectTo: `${window.location.origin}/dashboard`,
-            scopes: 'openid email profile https://www.googleapis.com/auth/gmail.readonly',
-            queryParams: {
-              access_type: 'offline',
-              prompt: 'consent'
-            }
-          }
-        });
-
-        if (error) {
-          toast({
-            title: "Authorization failed",
-            description: error.message,
-            variant: "destructive"
-          });
-        }
-        return;
-      }
-
-      // All validations passed, proceed with scan
       setScanProgress({ currentEmail: 10, totalEmails: 100, status: "Fetching emails..." });
+      
+      // Use primary connection or first available
+      const primaryConnection = connections.find(c => c.is_primary) || connections[0];
       
       const { data, error } = await supabase.functions.invoke("scan-email", {
         body: { 
-          scanAll: scanAccountOption === 'all',
-          scanType: scanType
+          connectionId: primaryConnection.id,
+          maxResults: scanType === 'quick' ? 500 : 2000,
         }
       });
 
@@ -328,18 +251,13 @@ export default function Dashboard() {
       setScanProgress({ currentEmail: 90, totalEmails: 100, status: "Analyzing services..." });
 
       setScanStats({
-        servicesFound: data.servicesFound,
-        emailsScanned: data.emailsScanned,
-        unmatchedCount: data.unmatchedCount,
-        identifierMatches: data.identifierMatches || 0,
-        breakdown: data.breakdown
+        servicesFound: data.servicesFound || 0,
+        emailsScanned: data.emailsScanned || 0,
+        unmatchedCount: data.unmatchedCount || 0,
+        identifierMatches: 0,
       });
 
       setScanProgress({ currentEmail: 100, totalEmails: 100, status: "Complete!" });
-
-      const matchMessage = data.identifierMatches > 0 
-        ? ` Matched ${data.identifierMatches} emails via your identifiers.`
-        : '';
       
       // Success - show animation
       setShowSuccessAnimation(true);
@@ -347,7 +265,7 @@ export default function Dashboard() {
       
       toast({
         title: successMessages.scanComplete.title,
-        description: `${data.message}. ${data.unmatchedCount > 0 ? `${data.unmatchedCount} unrecognized services found.` : ''}${matchMessage}`,
+        description: `${data.message}. ${data.unmatchedCount > 0 ? `${data.unmatchedCount} unrecognized services found.` : ''}`,
         duration: 5000
       });
 
