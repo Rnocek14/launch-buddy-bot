@@ -82,6 +82,35 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
+    // Check subscription tier and deletion limits
+    const { data: remainingDeletions, error: tierError } = await supabase.rpc(
+      "get_remaining_deletions",
+      { p_user_id: user.id }
+    );
+
+    if (tierError) {
+      console.error("Error checking subscription tier:", tierError);
+      return new Response(
+        JSON.stringify({ error: "Failed to verify subscription status" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // If remainingDeletions is not null and is 0, user has hit their limit
+    if (remainingDeletions !== null && remainingDeletions <= 0) {
+      console.log(`User ${user.id} has reached their free deletion limit`);
+      return new Response(
+        JSON.stringify({ 
+          error: "You've used all 3 free deletion requests this month. Upgrade to Pro for unlimited deletions.",
+          limitReached: true,
+          remainingDeletions: 0
+        }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log(`User ${user.id} has ${remainingDeletions === null ? 'unlimited' : remainingDeletions} deletions remaining`);
+
     // Check if user has Gmail connected
     const { data: gmailConnection } = await supabase
       .from("gmail_connections")
@@ -390,6 +419,19 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     console.log(`Deletion request logged. ID: ${deletionRequest?.id}`);
+
+    // Increment deletion count for usage tracking
+    const { error: incrementError } = await supabase.rpc(
+      "increment_deletion_count",
+      { p_user_id: user.id }
+    );
+
+    if (incrementError) {
+      console.error("Error incrementing deletion count:", incrementError);
+      // Non-critical, continue
+    } else {
+      console.log(`Deletion count incremented for user ${user.id}`);
+    }
 
     // Send confirmation email notification
     try {
