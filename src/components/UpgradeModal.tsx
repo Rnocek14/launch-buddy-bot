@@ -7,9 +7,19 @@ interface UpgradeModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   remainingServices?: number;
+  title?: string;
+  description?: string;
+  context?: 'deletions' | 'email-connections';
 }
 
-export function UpgradeModal({ open, onOpenChange, remainingServices }: UpgradeModalProps) {
+export function UpgradeModal({ 
+  open, 
+  onOpenChange, 
+  remainingServices,
+  title,
+  description,
+  context = 'deletions'
+}: UpgradeModalProps) {
   const navigate = useNavigate();
 
   const handleUpgrade = () => {
@@ -26,6 +36,14 @@ export function UpgradeModal({ open, onOpenChange, remainingServices }: UpgradeM
     "Monthly automatic rescans",
   ];
 
+  const defaultTitle = context === 'email-connections' 
+    ? "Connect Multiple Email Accounts" 
+    : "Great Progress!";
+  
+  const defaultDescription = context === 'email-connections'
+    ? "Upgrade to Pro to connect up to 3 email addresses and scan them all simultaneously for a complete view of your digital footprint."
+    : "You've successfully deleted 3 accounts! Want to delete more?";
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
@@ -34,10 +52,10 @@ export function UpgradeModal({ open, onOpenChange, remainingServices }: UpgradeM
             <div className="p-2 bg-accent/10 rounded-lg">
               <Sparkles className="w-6 h-6 text-accent" />
             </div>
-            <DialogTitle className="text-2xl">Great Progress!</DialogTitle>
+            <DialogTitle className="text-2xl">{title || defaultTitle}</DialogTitle>
           </div>
           <DialogDescription className="text-base">
-            You've successfully deleted 3 accounts! Want to delete more?
+            {description || defaultDescription}
           </DialogDescription>
         </DialogHeader>
 
