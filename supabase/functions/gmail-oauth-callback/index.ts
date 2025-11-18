@@ -97,7 +97,7 @@ serve(async (req: Request): Promise<Response> => {
 
     // Check if this email is already connected for this user
     const { data: existingConnection } = await supabase
-      .from("gmail_connections")
+      .from("email_connections")
       .select("id")
       .eq("user_id", state)
       .eq("email", profile.email)
@@ -106,7 +106,7 @@ serve(async (req: Request): Promise<Response> => {
     if (existingConnection) {
       console.log("Account already connected, updating tokens");
       const { error: updateError } = await supabase
-        .from("gmail_connections")
+        .from("email_connections")
         .update({
           access_token: encryptedAccessToken,
           refresh_token: encryptedRefreshToken,
@@ -125,7 +125,7 @@ serve(async (req: Request): Promise<Response> => {
     } else {
       // Check if this is the first connection for this user
       const { count } = await supabase
-        .from("gmail_connections")
+        .from("email_connections")
         .select("*", { count: 'exact', head: true })
         .eq("user_id", state);
 
@@ -133,10 +133,11 @@ serve(async (req: Request): Promise<Response> => {
 
       // Insert new connection
       const { error: insertError } = await supabase
-        .from("gmail_connections")
+        .from("email_connections")
         .insert({
           user_id: state,
           email: profile.email,
+          provider: 'gmail',
           access_token: encryptedAccessToken,
           refresh_token: encryptedRefreshToken,
           token_expires_at: expiresAt.toISOString(),
