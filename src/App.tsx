@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Admin from "./pages/Admin";
@@ -29,39 +30,41 @@ import { AuthorizationWizard } from "./components/AuthorizationWizard";
 const queryClient = new QueryClient();
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/admin" element={<Admin />} />
-            <Route path="/admin/analytics" element={<AdminAnalytics />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/unmatched-domains" element={<UnmatchedDomains />} />
-            <Route path="/deletion-requests" element={<DeletionRequests />} />
-            <Route path="/cleanup" element={<Cleanup />} />
-            <Route path="/alpha" element={<AlphaAccess />} />
-            <Route path="/unsubscribe" element={<Unsubscribe />} />
-            <Route path="/preferences" element={<Preferences />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="/status" element={<Status />} />
-            <Route path="/privacy" element={<PrivacyPolicy />} />
-            <Route path="/terms" element={<TermsOfService />} />
-            <Route path="/help" element={<Help />} />
-            <Route path="/subscribe" element={<Subscribe />} />
-            <Route path="/billing" element={<Billing />} />
-            <Route path="/authorize" element={<AuthorizationWizard />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
-    </ThemeProvider>
-  </QueryClientProvider>
+  <ErrorBoundary>
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/auth" element={<Auth />} />
+              <Route path="/admin" element={<Admin />} />
+              <Route path="/admin/analytics" element={<AdminAnalytics />} />
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/unmatched-domains" element={<UnmatchedDomains />} />
+              <Route path="/deletion-requests" element={<DeletionRequests />} />
+              <Route path="/cleanup" element={<Cleanup />} />
+              <Route path="/alpha" element={<AlphaAccess />} />
+              <Route path="/unsubscribe" element={<Unsubscribe />} />
+              <Route path="/preferences" element={<Preferences />} />
+              <Route path="/settings" element={<Settings />} />
+              <Route path="/status" element={<Status />} />
+              <Route path="/privacy" element={<PrivacyPolicy />} />
+              <Route path="/terms" element={<TermsOfService />} />
+              <Route path="/help" element={<Help />} />
+              <Route path="/subscribe" element={<Subscribe />} />
+              <Route path="/billing" element={<Billing />} />
+              <Route path="/authorize" element={<AuthorizationWizard />} />
+              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </TooltipProvider>
+      </ThemeProvider>
+    </QueryClientProvider>
+  </ErrorBoundary>
 );
 
 export default App;
