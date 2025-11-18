@@ -102,6 +102,20 @@ const handler = async (req: Request): Promise<Response> => {
           } else {
             console.log(`Subscription created/updated for user: ${userId}`);
             
+            // Track successful upgrade to Pro
+            console.log('[ANALYTICS]', {
+              event: 'upgrade_to_pro',
+              userId,
+              properties: {
+                subscriptionId: subscription.id,
+                customerId: session.customer,
+                priceId: subscription.items.data[0]?.price.id,
+                amount: session.amount_total ? session.amount_total / 100 : 0,
+                currency: session.currency,
+                timestamp: new Date().toISOString(),
+              }
+            });
+            
             // Send upgrade email
             const { data: profile } = await supabase
               .from("profiles")
