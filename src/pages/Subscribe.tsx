@@ -81,8 +81,8 @@ export default function Subscribe() {
         <p className="text-xl text-muted-foreground">
           Unlimited deletions + complete privacy protection
         </p>
-        <p className="text-sm text-accent mt-2 font-medium">
-          ✨ Limited launch pricing — lock in $49/year forever
+        <p className="text-sm text-emerald-700 dark:text-emerald-400 mt-2 font-medium">
+          ✨ Limited launch pricing — your rate won't increase as long as you stay subscribed
         </p>
       </div>
 
@@ -141,7 +141,7 @@ export default function Subscribe() {
               ✓ Cancel anytime • ✓ 100% secure checkout via Stripe
             </p>
             <p className="text-xs text-muted-foreground">
-              Lock in this price forever — early adopters never pay more
+              Your rate won't increase as long as you keep your subscription active
             </p>
           </div>
         </CardContent>
