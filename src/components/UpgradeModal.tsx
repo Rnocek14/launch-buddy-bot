@@ -30,10 +30,11 @@ export function UpgradeModal({
   const proFeatures = [
     "Unlimited deletion requests (no more limits)",
     "Deep AI Scan that finds 2-3× more accounts",
-    "Connect and scan up to 3 email addresses simultaneously",
+    "Connect and scan up to 3 email addresses",
     "Complete inbox history analysis",
     "Priority deletion processing",
     "Monthly automatic rescans",
+    "Priority email support",
   ];
 
   const defaultTitle = context === 'email-connections' 
@@ -85,8 +86,9 @@ export function UpgradeModal({
 
           <div className="p-4 bg-primary/5 border border-primary/20 rounded-lg">
             <div className="text-center">
-              <div className="text-2xl font-bold">$9.99/month</div>
-              <div className="text-sm text-muted-foreground">or $99/year (save $20)</div>
+              <div className="text-2xl font-bold">$49/year</div>
+              <div className="text-sm text-muted-foreground">Just $4/month • Limited launch price</div>
+              <div className="text-xs text-accent mt-1">Lock in this price forever</div>
             </div>
           </div>
         </div>

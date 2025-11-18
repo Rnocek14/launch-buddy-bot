@@ -5,19 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Check, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-const PRICE_IDS = {
-  monthly: "price_1SUW44Pwo7CiaABeCXvND0Qj",
-  annual: "price_1SUW5jPwo7CiaABen9tzsoqw",
-};
+const PRICE_ID = "price_1SUqvlPwo7CiaABewIGGxC79"; // $49/year
 
 export default function Subscribe() {
-  const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(false);
-  const [billingInterval, setBillingInterval] = useState<"monthly" | "annual">(
-    searchParams.get("plan") === "annual" ? "annual" : "monthly"
-  );
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -40,10 +32,8 @@ export default function Subscribe() {
   const handleSubscribe = async () => {
     setLoading(true);
     try {
-      const priceId = PRICE_IDS[billingInterval];
-      
       const { data, error } = await supabase.functions.invoke("create-checkout-session", {
-        body: { priceId },
+        body: { priceId: PRICE_ID },
       });
 
       if (error) throw error;
@@ -68,10 +58,11 @@ export default function Subscribe() {
 
   const proFeatures = [
     "Unlimited deletion requests",
-    "AI-powered contact discovery",
+    "Deep AI Scan (finds 2-3× more accounts)",
+    "Connect and scan up to 3 email addresses",
+    "Complete inbox history analysis",
     "Priority deletion processing",
     "Monthly automatic rescans",
-    "Export detailed reports",
     "Priority email support",
   ];
 
@@ -88,75 +79,71 @@ export default function Subscribe() {
       <div className="text-center mb-8">
         <h1 className="text-4xl font-bold mb-2">Upgrade to Pro</h1>
         <p className="text-xl text-muted-foreground">
-          Unlimited deletions and advanced privacy features
+          Unlimited deletions + complete privacy protection
+        </p>
+        <p className="text-sm text-accent mt-2 font-medium">
+          ✨ Limited launch pricing — lock in $49/year forever
         </p>
       </div>
 
-      <Card className="max-w-2xl mx-auto">
+      <Card className="max-w-2xl mx-auto border-primary/20 shadow-lg">
         <CardHeader>
-          <CardTitle>Pro Plan</CardTitle>
+          <CardTitle className="flex items-center justify-between">
+            <span>Pro Annual</span>
+            <span className="text-sm font-normal text-muted-foreground bg-accent/10 px-3 py-1 rounded-full">
+              Limited Launch Price
+            </span>
+          </CardTitle>
           <CardDescription>
             Take complete control of your digital footprint
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Tabs value={billingInterval} onValueChange={(v) => setBillingInterval(v as "monthly" | "annual")} className="mb-6">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="monthly">Monthly</TabsTrigger>
-              <TabsTrigger value="annual">
-                Annual
-                <span className="ml-2 text-xs bg-accent text-accent-foreground px-2 py-0.5 rounded">
-                  Save $20
-                </span>
-              </TabsTrigger>
-            </TabsList>
-            <TabsContent value="monthly" className="mt-6">
-              <div className="text-center mb-6">
-                <div className="text-5xl font-bold mb-2">$9.99</div>
-                <div className="text-muted-foreground">per month</div>
-              </div>
-            </TabsContent>
-            <TabsContent value="annual" className="mt-6">
-              <div className="text-center mb-6">
-                <div className="text-5xl font-bold mb-2">$99</div>
-                <div className="text-muted-foreground">
-                  per year <span className="text-accent font-semibold">(Save $20)</span>
-                </div>
-                <div className="text-sm text-muted-foreground mt-1">
-                  $8.25/month billed annually
-                </div>
-              </div>
-            </TabsContent>
-          </Tabs>
+          <div className="text-center mb-8 p-6 bg-muted/30 rounded-lg">
+            <div className="text-6xl font-bold mb-2">$49</div>
+            <div className="text-xl text-muted-foreground mb-3">per year</div>
+            <div className="text-sm text-accent font-medium">
+              Just $4/month, billed annually
+            </div>
+            <div className="text-xs text-muted-foreground mt-2">
+              60% cheaper than DeleteMe ($129/year)
+            </div>
+          </div>
 
-          <ul className="space-y-3 mb-6">
-            {proFeatures.map((feature, i) => (
-              <li key={i} className="flex items-start gap-2">
+          <div className="space-y-4 mb-8">
+            <h3 className="font-semibold text-lg">Everything you need:</h3>
+            {proFeatures.map((feature, index) => (
+              <div key={index} className="flex items-start gap-3">
                 <Check className="w-5 h-5 text-accent shrink-0 mt-0.5" />
                 <span>{feature}</span>
-              </li>
+              </div>
             ))}
-          </ul>
+          </div>
 
           <Button
-            className="w-full"
-            size="lg"
             onClick={handleSubscribe}
             disabled={loading}
+            size="lg"
+            className="w-full text-lg h-14"
           >
             {loading ? (
               <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Opening Checkout...
+                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                Processing...
               </>
             ) : (
-              <>Subscribe to Pro</>
+              "Subscribe to Pro - $49/year"
             )}
           </Button>
 
-          <p className="text-sm text-muted-foreground text-center mt-4">
-            Cancel anytime. No questions asked.
-          </p>
+          <div className="mt-6 text-center space-y-2">
+            <p className="text-sm text-muted-foreground">
+              ✓ Cancel anytime • ✓ 100% secure checkout via Stripe
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Lock in this price forever — early adopters never pay more
+            </p>
+          </div>
         </CardContent>
       </Card>
     </div>
