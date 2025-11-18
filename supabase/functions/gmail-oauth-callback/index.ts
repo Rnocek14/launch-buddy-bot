@@ -19,10 +19,14 @@ serve(async (req: Request): Promise<Response> => {
     const state = url.searchParams.get("state"); // Contains user_id
 
     if (!code || !state) {
-      return new Response(
-        JSON.stringify({ error: "Missing authorization code or state" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      const origin = req.headers.get('referer') || 'https://launch-buddy-bot.lovable.app';
+      const baseUrl = new URL(origin).origin;
+      return new Response(null, {
+        status: 302,
+        headers: {
+          Location: `${baseUrl}/settings?error=${encodeURIComponent('Missing authorization code')}`,
+        },
+      });
     }
 
     console.log("Processing OAuth callback for user:", state);
@@ -47,10 +51,14 @@ serve(async (req: Request): Promise<Response> => {
     if (!tokenResponse.ok) {
       const error = await tokenResponse.text();
       console.error("Token exchange failed:", error);
-      return new Response(
-        JSON.stringify({ error: "Unable to connect Gmail. Please try again.", error_code: "OAUTH_FAILED" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      const origin = req.headers.get('referer') || 'https://launch-buddy-bot.lovable.app';
+      const baseUrl = new URL(origin).origin;
+      return new Response(null, {
+        status: 302,
+        headers: {
+          Location: `${baseUrl}/settings?error=${encodeURIComponent('Unable to connect Gmail. Please try again.')}`,
+        },
+      });
     }
 
     const tokens = await tokenResponse.json();
@@ -64,10 +72,14 @@ serve(async (req: Request): Promise<Response> => {
     if (!profileResponse.ok) {
       const error = await profileResponse.text();
       console.error("Failed to fetch user profile:", error);
-      return new Response(
-        JSON.stringify({ error: "Unable to retrieve account information. Please try again.", error_code: "PROFILE_FETCH_FAILED" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      const origin = req.headers.get('referer') || 'https://launch-buddy-bot.lovable.app';
+      const baseUrl = new URL(origin).origin;
+      return new Response(null, {
+        status: 302,
+        headers: {
+          Location: `${baseUrl}/settings?error=${encodeURIComponent('Unable to retrieve account information')}`,
+        },
+      });
     }
 
     const profile = await profileResponse.json();
@@ -75,10 +87,14 @@ serve(async (req: Request): Promise<Response> => {
 
     if (!profile.email) {
       console.error("No email in profile response:", profile);
-      return new Response(
-        JSON.stringify({ error: "Email not available from Google. Please ensure email scope is granted." }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      const origin = req.headers.get('referer') || 'https://launch-buddy-bot.lovable.app';
+      const baseUrl = new URL(origin).origin;
+      return new Response(null, {
+        status: 302,
+        headers: {
+          Location: `${baseUrl}/settings?error=${encodeURIComponent('Email not available from Google')}`,
+        },
+      });
     }
 
     console.log("Retrieved user email:", profile.email);
@@ -117,10 +133,14 @@ serve(async (req: Request): Promise<Response> => {
 
       if (updateError) {
         console.error("Database update error:", updateError);
-        return new Response(
-          JSON.stringify({ error: "Failed to update Gmail connection" }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        const origin = req.headers.get('referer') || 'https://launch-buddy-bot.lovable.app';
+        const baseUrl = new URL(origin).origin;
+        return new Response(null, {
+          status: 302,
+          headers: {
+            Location: `${baseUrl}/settings?error=${encodeURIComponent('Failed to update Gmail connection')}`,
+          },
+        });
       }
     } else {
       // Check if this is the first connection for this user
@@ -148,10 +168,14 @@ serve(async (req: Request): Promise<Response> => {
 
       if (insertError) {
         console.error("Database insert error:", insertError);
-        return new Response(
-          JSON.stringify({ error: "Failed to save Gmail connection" }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        const origin = req.headers.get('referer') || 'https://launch-buddy-bot.lovable.app';
+        const baseUrl = new URL(origin).origin;
+        return new Response(null, {
+          status: 302,
+          headers: {
+            Location: `${baseUrl}/settings?error=${encodeURIComponent('Failed to save Gmail connection')}`,
+          },
+        });
       }
 
       console.log(`New Gmail account connected${isFirstConnection ? ' (set as primary)' : ''}`);
@@ -169,19 +193,26 @@ serve(async (req: Request): Promise<Response> => {
 
     console.log("Gmail connection stored successfully");
 
+    // Get the app's base URL from the referer header
+    const origin = req.headers.get('referer') || 'https://launch-buddy-bot.lovable.app';
+    const baseUrl = new URL(origin).origin;
+
     // Redirect back to the app
     return new Response(null, {
       status: 302,
       headers: {
-        ...corsHeaders,
-        Location: `${url.origin}/settings?gmail=connected`,
+        Location: `${baseUrl}/settings?gmail=connected`,
       },
     });
   } catch (error: any) {
     console.error("Error in gmail-oauth-callback:", error);
-    return new Response(
-      JSON.stringify({ error: "Unable to complete Gmail connection. Please try again.", error_code: "OAUTH_CALLBACK_FAILED" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    const origin = req.headers.get('referer') || 'https://launch-buddy-bot.lovable.app';
+    const baseUrl = new URL(origin).origin;
+    return new Response(null, {
+      status: 302,
+      headers: {
+        Location: `${baseUrl}/settings?error=${encodeURIComponent('Failed to connect Gmail account')}`,
+      },
+    });
   }
 });
