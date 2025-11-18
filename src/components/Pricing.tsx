@@ -41,15 +41,59 @@ const plans = [
     ctaLink: "/subscribe",
     popular: true,
     available: true,
-    badge: "Limited Launch Price",
+    badge: "Launch pricing for first 200 members",
     monthlyEquivalent: "Just $4/month",
   },
+];
+
+const pricingFaq = [
+  {
+    question: "Is there a free version?",
+    answer:
+      "Yes. You can use Footprint Finder for free with up to 3 deletion requests and basic scans. The Pro plan unlocks unlimited deletions, deep scans, and up to 3 connected email accounts."
+  },
+  {
+    question: "Is $49 billed monthly or yearly?",
+    answer:
+      "$49 is billed once per year. It works out to about $4 per month, but you're only charged once annually, not every month."
+  },
+  {
+    question: "Can I cancel anytime?",
+    answer:
+      "Yes. You can cancel your Pro subscription at any time from the Billing page. When you cancel, you'll keep Pro features until the end of your current billing period and won't be charged again."
+  },
+  {
+    question: "Will my price ever go up?",
+    answer:
+      "Early adopters lock in the $49/year launch pricing. If we raise prices in the future, existing Pro members keep their original rate as long as they stay subscribed."
+  },
+  {
+    question: "Do you offer refunds?",
+    answer:
+      "We don't offer automatic refunds, but if something goes wrong or the product doesn't work as promised for you, reach out to support and we'll make it right."
+  },
+  {
+    question: "Is my payment information secure?",
+    answer:
+      "Yes. All payments are processed by Stripe. We never see or store your full card details on our servers."
+  }
 ];
 
 export const Pricing = () => {
   return (
     <section id="pricing" className="py-24 px-4">
       <div className="container max-w-6xl">
+        <div className="mb-6 rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 text-xs md:text-sm flex items-center justify-between gap-3">
+          <div>
+            <span className="font-medium">Launch special:</span>{" "}
+            Lock in <span className="font-semibold">$49/year</span> Pro pricing.
+            Your rate never increases as long as you stay subscribed.
+          </div>
+          <div className="hidden sm:block text-primary font-medium">
+            No hidden fees • Cancel anytime
+          </div>
+        </div>
+
         <div className="text-center mb-16">
           <h2 className="text-4xl md:text-5xl font-bold mb-4">
             Simple, Transparent Pricing
@@ -118,6 +162,70 @@ export const Pricing = () => {
         <p className="text-center text-muted-foreground mt-12">
           ✨ Limited launch pricing — lock in $49/year forever. Cancel anytime.
         </p>
+
+        {/* Competitor Comparison */}
+        <section className="mt-16">
+          <h2 className="text-2xl font-semibold mb-4">
+            How Footprint Finder compares
+          </h2>
+          <p className="text-sm text-muted-foreground mb-6">
+            Most privacy cleanup services cost over $100/year and limit how much
+            you can do yourself. Footprint Finder is built to be affordable and
+            hands-on.
+          </p>
+
+          <div className="overflow-hidden rounded-2xl border">
+            <div className="grid grid-cols-3 bg-muted/40 text-xs font-medium uppercase tracking-wide py-3 px-4">
+              <div>Service</div>
+              <div>Typical Price</div>
+              <div>What you get</div>
+            </div>
+
+            <div className="grid grid-cols-3 border-t px-4 py-4 text-sm">
+              <div className="font-semibold">Traditional privacy services</div>
+              <div className="text-muted-foreground">$100–$150/year</div>
+              <div className="text-muted-foreground">
+                Concierge deletion, slower turnaround, limited transparency into what's happening.
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 border-t px-4 py-4 text-sm">
+              <div className="font-semibold">DIY one-off tools</div>
+              <div className="text-muted-foreground">Free–$30 one-time</div>
+              <div className="text-muted-foreground">
+                Manual forms, no inbox scan, no ongoing monitoring, easy to miss accounts.
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 border-t px-4 py-4 text-sm bg-accent/5">
+              <div className="font-semibold flex items-center gap-2">
+                Footprint Finder <Badge className="text-xs bg-accent/20 text-accent-foreground hover:bg-accent/20">You are here</Badge>
+              </div>
+              <div className="text-accent font-semibold">$49/year</div>
+              <div className="text-muted-foreground">
+                Unlimited deletion requests, deep AI-powered discovery, up to 3 email accounts, monthly automatic rescans.
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Pricing FAQ */}
+        <section className="mt-16 border-t pt-10">
+          <h2 className="text-2xl font-semibold mb-4">Pricing FAQ</h2>
+          <p className="text-sm text-muted-foreground mb-6">
+            Answers to the most common questions about Footprint Finder Pro.
+          </p>
+          <div className="grid gap-6 md:grid-cols-2">
+            {pricingFaq.map((item) => (
+              <div key={item.question}>
+                <h3 className="font-medium mb-1">{item.question}</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  {item.answer}
+                </p>
+              </div>
+            ))}
+          </div>
+        </section>
       </div>
     </section>
   );
