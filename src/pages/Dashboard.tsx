@@ -28,6 +28,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { SubscriptionStatusCard } from "@/components/SubscriptionStatusCard";
 import { OnboardingBanner } from "@/components/OnboardingBanner";
 import { ScanResultsBanner } from "@/components/ScanResultsBanner";
+import { TRACKING_EVENTS, trackConversion } from "@/lib/analytics";
 
 interface Service {
   id: string;
@@ -377,6 +378,16 @@ export default function Dashboard() {
       
       await fetchUnmatchedDomains();
       await fetchRiskScore();
+      
+      // Track successful scan completion
+      if (user?.id) {
+        trackConversion(TRACKING_EVENTS.SCAN_COMPLETED, user.id, {
+          servicesDiscovered: shouldScanAll ? (data.totalDiscovered || 0) : (data.servicesFound || 0),
+          emailsScanned: shouldScanAll ? (data.totalMessagesScanned || 0) : (data.emailsScanned || 0),
+          provider: shouldScanAll ? 'multiple' : connections[0]?.provider,
+          scanType: scanType,
+        });
+      }
     } catch (error: any) {
       // Handle Supabase FunctionsHttpError - extract actual error from context
       let actualError = error;

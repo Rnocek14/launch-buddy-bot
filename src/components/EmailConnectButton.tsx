@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UpgradeModal } from "@/components/UpgradeModal";
+import { TRACKING_EVENTS, trackConversion } from "@/lib/analytics";
 
 interface EmailConnection {
   id: string;
@@ -32,6 +33,17 @@ export function EmailConnectButton() {
     const error = params.get('error');
     
     if (connected) {
+      // Track successful connection
+      const trackConnection = async () => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          trackConversion(TRACKING_EVENTS.EMAIL_CONNECTED, user.id, {
+            provider: connected,
+          });
+        }
+      };
+      trackConnection();
+      
       toast({
         title: "Account Connected",
         description: `Successfully connected your ${connected === 'outlook' ? 'Outlook' : 'Gmail'} account`,
