@@ -24,8 +24,8 @@ const plans = [
   },
   {
     name: "Pro",
-    price: "$9.99",
-    period: "/month",
+    price: "$49",
+    period: "/year",
     description: "Unlimited deletions + deep discovery that finds 2-3× more",
     features: [
       "Everything in Free, plus:",
@@ -38,11 +38,11 @@ const plans = [
       "Priority email support",
     ],
     cta: "Upgrade to Pro",
-    ctaLink: "/subscribe?plan=monthly",
+    ctaLink: "/subscribe",
     popular: true,
     available: true,
-    annualPrice: "$99/year",
-    annualSavings: "Save $20",
+    badge: "Limited Launch Price",
+    monthlyEquivalent: "Just $4/month",
   },
 ];
 
@@ -69,9 +69,9 @@ export const Pricing = () => {
                   : "border-border/50"
               } ${!plan.available ? "opacity-75" : ""}`}
             >
-              {plan.popular && (
+              {plan.badge && (
                 <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-primary to-accent">
-                  Best Value
+                  {plan.badge}
                 </Badge>
               )}
               <CardHeader>
@@ -82,9 +82,9 @@ export const Pricing = () => {
                   {plan.period && (
                     <span className="text-muted-foreground">{plan.period}</span>
                   )}
-                  {plan.annualPrice && (
+                  {plan.monthlyEquivalent && (
                     <div className="text-sm text-muted-foreground mt-1">
-                      or {plan.annualPrice} • {plan.annualSavings}
+                      {plan.monthlyEquivalent}
                     </div>
                   )}
                 </div>
@@ -116,7 +116,7 @@ export const Pricing = () => {
         </div>
 
         <p className="text-center text-muted-foreground mt-12">
-          🎉 Free during beta! Start scanning your digital footprint today.
+          ✨ Limited launch pricing — lock in $49/year forever. Cancel anytime.
         </p>
       </div>
     </section>
