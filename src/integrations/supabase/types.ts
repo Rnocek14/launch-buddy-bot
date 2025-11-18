@@ -713,6 +713,45 @@ export type Database = {
         }
         Relationships: []
       }
+      public_results: {
+        Row: {
+          conversion_count: number | null
+          created_at: string | null
+          insights: Json
+          risk_level: string
+          risk_score: number
+          service_count: number
+          share_id: string
+          top_categories: Json
+          user_id: string
+          view_count: number | null
+        }
+        Insert: {
+          conversion_count?: number | null
+          created_at?: string | null
+          insights?: Json
+          risk_level: string
+          risk_score: number
+          service_count: number
+          share_id?: string
+          top_categories?: Json
+          user_id: string
+          view_count?: number | null
+        }
+        Update: {
+          conversion_count?: number | null
+          created_at?: string | null
+          insights?: Json
+          risk_level?: string
+          risk_score?: number
+          service_count?: number
+          share_id?: string
+          top_categories?: Json
+          user_id?: string
+          view_count?: number | null
+        }
+        Relationships: []
+      }
       request_templates: {
         Row: {
           body_template: string
