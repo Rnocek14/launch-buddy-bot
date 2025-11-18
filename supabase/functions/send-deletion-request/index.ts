@@ -113,9 +113,11 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Check if user has Gmail connected
     const { data: gmailConnection } = await supabase
-      .from("gmail_connections")
+      .from("email_connections")
       .select("*")
       .eq("user_id", user.id)
+      .eq("provider", "gmail")
+      .eq("is_primary", true)
       .single();
 
     const useGmail = !!gmailConnection;
