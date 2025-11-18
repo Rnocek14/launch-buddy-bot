@@ -1,8 +1,9 @@
 /**
  * Simple analytics/conversion tracking utility
- * Logs events to console for now, easy to extend to GA/Plausible later
+ * Logs events to console and persists to database
  */
 
+import { supabase } from "@/integrations/supabase/client";
 import { TRACKING_EVENTS } from "@/config/pricing";
 
 interface TrackingEvent {
@@ -13,7 +14,7 @@ interface TrackingEvent {
 
 export { TRACKING_EVENTS };
 
-export function trackEvent(event: string, properties?: Record<string, any>) {
+export async function trackEvent(event: string, properties?: Record<string, any>) {
   const trackingData: TrackingEvent = {
     event,
     properties: {
@@ -26,9 +27,16 @@ export function trackEvent(event: string, properties?: Record<string, any>) {
   // Log to console for debugging
   console.log('[ANALYTICS]', trackingData);
 
-  // TODO: Send to analytics service (GA, Plausible, etc.)
-  // Example: window.gtag?.('event', event, properties);
-  // Example: window.plausible?.(event, { props: properties });
+  // Persist to database via edge function (fire-and-forget)
+  try {
+    supabase.functions.invoke('log-analytics-event', {
+      body: trackingData,
+    }).catch((err) => {
+      console.warn('[ANALYTICS] Failed to log event to database:', err);
+    });
+  } catch (err) {
+    console.warn('[ANALYTICS] Error invoking log function:', err);
+  }
 
   return trackingData;
 }

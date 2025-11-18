@@ -75,8 +75,14 @@ export default function AdminAnalytics() {
     try {
       setLoading(true);
 
-      // Events are currently only console-logged, not stored in DB
-      setEventsStoredInDB(false);
+      // Check if analytics_events table exists and has data
+      const { data: eventsData, error: eventsError } = await supabase
+        .from("analytics_events")
+        .select("*")
+        .limit(1);
+
+      const hasEventsTable = !eventsError && eventsData !== null;
+      setEventsStoredInDB(hasEventsTable);
 
       // Fetch total users from profiles
       const { count: totalUsers } = await supabase
@@ -158,45 +164,105 @@ export default function AdminAnalytics() {
 
       setSubscriptionTrend(trend);
       
-      // Calculate mock conversion funnel based on real data (approximation until events are stored)
-      const signups = totalUsers || 0;
-      const emailConnects = totalEmailScans || 0;
-      const scans = Math.min(emailConnects, Math.floor(emailConnects * 0.85)); // ~85% who connect actually scan
-      const checkouts = Math.floor(proUsers * 1.2); // Pro users + failed/abandoned checkouts
-      const upgrades = proUsers;
-      
-      setConversionFunnel([
-        { 
-          stage: "Signups", 
-          count: signups, 
-          conversionRate: 100,
-          fill: "hsl(var(--primary))"
-        },
-        { 
-          stage: "Email Connected", 
-          count: emailConnects, 
-          conversionRate: signups ? (emailConnects / signups) * 100 : 0,
-          fill: "hsl(var(--chart-2))"
-        },
-        { 
-          stage: "Scan Completed", 
-          count: scans, 
-          conversionRate: emailConnects ? (scans / emailConnects) * 100 : 0,
-          fill: "hsl(var(--chart-3))"
-        },
-        { 
-          stage: "Checkout Initiated", 
-          count: checkouts, 
-          conversionRate: scans ? (checkouts / scans) * 100 : 0,
-          fill: "hsl(var(--chart-4))"
-        },
-        { 
-          stage: "Upgrade to Pro", 
-          count: upgrades, 
-          conversionRate: checkouts ? (upgrades / checkouts) * 100 : 0,
-          fill: "hsl(var(--chart-5))"
-        },
-      ]);
+      // Calculate conversion funnel from actual events or approximate from data
+      if (hasEventsTable) {
+        // Calculate funnel from actual events (last 7 days)
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+        const { data: allEvents } = await supabase
+          .from("analytics_events")
+          .select("event, user_id")
+          .gte("created_at", sevenDaysAgo.toISOString());
+
+        const events = allEvents || [];
+
+        // Count unique users per event type
+        const signupUsers = new Set(events.filter(e => e.event === "user_signup").map(e => e.user_id));
+        const emailConnectUsers = new Set(events.filter(e => e.event === "email_connected").map(e => e.user_id));
+        const scanCompleteUsers = new Set(events.filter(e => e.event === "scan_completed").map(e => e.user_id));
+        const checkoutUsers = new Set(events.filter(e => e.event === "checkout_initiated").map(e => e.user_id));
+        const upgradeUsers = new Set(events.filter(e => e.event === "upgrade_to_pro").map(e => e.user_id));
+
+        const signupCount = signupUsers.size;
+        const emailConnectCount = emailConnectUsers.size;
+        const scanCompleteCount = scanCompleteUsers.size;
+        const checkoutCount = checkoutUsers.size;
+        const upgradeCount = upgradeUsers.size;
+
+        setConversionFunnel([
+          { 
+            stage: "Signups", 
+            count: signupCount, 
+            conversionRate: 100,
+            fill: "hsl(var(--primary))"
+          },
+          { 
+            stage: "Email Connected", 
+            count: emailConnectCount, 
+            conversionRate: signupCount > 0 ? (emailConnectCount / signupCount) * 100 : 0,
+            fill: "hsl(var(--chart-2))"
+          },
+          { 
+            stage: "Scan Completed", 
+            count: scanCompleteCount, 
+            conversionRate: emailConnectCount > 0 ? (scanCompleteCount / emailConnectCount) * 100 : 0,
+            fill: "hsl(var(--chart-3))"
+          },
+          { 
+            stage: "Checkout Initiated", 
+            count: checkoutCount, 
+            conversionRate: scanCompleteCount > 0 ? (checkoutCount / scanCompleteCount) * 100 : 0,
+            fill: "hsl(var(--chart-4))"
+          },
+          { 
+            stage: "Upgrade to Pro", 
+            count: upgradeCount, 
+            conversionRate: checkoutCount > 0 ? (upgradeCount / checkoutCount) * 100 : 0,
+            fill: "hsl(var(--chart-5))"
+          },
+        ]);
+      } else {
+        // Fallback: approximate from existing data
+        const signups = totalUsers || 0;
+        const emailConnects = totalEmailScans || 0;
+        const scans = Math.min(emailConnects, Math.floor(emailConnects * 0.85));
+        const checkouts = Math.floor(proUsers * 1.2);
+        const upgrades = proUsers;
+        
+        setConversionFunnel([
+          { 
+            stage: "Signups", 
+            count: signups, 
+            conversionRate: 100,
+            fill: "hsl(var(--primary))"
+          },
+          { 
+            stage: "Email Connected", 
+            count: emailConnects, 
+            conversionRate: signups ? (emailConnects / signups) * 100 : 0,
+            fill: "hsl(var(--chart-2))"
+          },
+          { 
+            stage: "Scan Completed", 
+            count: scans, 
+            conversionRate: emailConnects ? (scans / emailConnects) * 100 : 0,
+            fill: "hsl(var(--chart-3))"
+          },
+          { 
+            stage: "Checkout Initiated", 
+            count: checkouts, 
+            conversionRate: scans ? (checkouts / scans) * 100 : 0,
+            fill: "hsl(var(--chart-4))"
+          },
+          { 
+            stage: "Upgrade to Pro", 
+            count: upgrades, 
+            conversionRate: checkouts ? (upgrades / checkouts) * 100 : 0,
+            fill: "hsl(var(--chart-5))"
+          },
+        ]);
+      }
     } catch (error) {
       console.error("Error fetching analytics:", error);
       toast({
@@ -305,9 +371,18 @@ export default function AdminAnalytics() {
               <Alert>
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>
-                  <strong>Note:</strong> Events are currently logged to console only. 
-                  These metrics are approximated from existing database tables (profiles, email_connections, subscriptions). 
-                  For precise funnel tracking, implement server-side event storage using the <code>trackEvent</code> function.
+                  <strong>Note:</strong> Analytics events table not found or empty. 
+                  These metrics are approximated from existing database tables. 
+                  Once events start flowing, you'll see real-time funnel data for the last 7 days.
+                </AlertDescription>
+              </Alert>
+            )}
+            
+            {eventsStoredInDB && (
+              <Alert className="border-green-500/50 bg-green-500/10">
+                <CheckCircle className="h-4 w-4 text-green-500" />
+                <AlertDescription>
+                  <strong>Live Data:</strong> Showing conversion funnel from actual events tracked over the last 7 days.
                 </AlertDescription>
               </Alert>
             )}

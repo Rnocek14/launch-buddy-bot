@@ -77,3 +77,6 @@ verify_jwt = true
 
 [functions.check-subscription]
 verify_jwt = true
+
+[functions.log-analytics-event]
+verify_jwt = false
