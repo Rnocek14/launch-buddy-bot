@@ -45,4 +45,8 @@ export const TRACKING_EVENTS = {
   CHECKOUT_INITIATED: "checkout_initiated",
   UPGRADE_TO_PRO: "upgrade_to_pro",
   SUBSCRIPTION_CANCELLED: "subscription_cancelled",
+  SHARE_RESULT_GENERATED: "share_result_generated",
+  SHARE_RESULT_DOWNLOADED: "share_result_downloaded",
+  SHARE_RESULT_COPIED: "share_result_copied",
+  SHARE_RESULT_SOCIAL: "share_result_social",
 } as const;

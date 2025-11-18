@@ -8,8 +8,9 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Shield, RefreshCw, LogOut, Loader2, ExternalLink, Search, Download, AlertCircle, Sparkles, Mail, Tag, TrendingUp, Trash2, CheckCircle, FileText, DollarSign, Package, Lock, Bell, Settings, HelpCircle, Calendar, Activity } from "lucide-react";
+import { Shield, RefreshCw, LogOut, Loader2, ExternalLink, Search, Download, AlertCircle, Sparkles, Mail, Tag, TrendingUp, Trash2, CheckCircle, FileText, DollarSign, Package, Lock, Bell, Settings, HelpCircle, Calendar, Activity, Share2 } from "lucide-react";
 import { RiskScoreCard } from "@/components/RiskScoreCard";
+import { ShareResultDialog } from "@/components/ShareResultDialog";
 import { useToast } from "@/hooks/use-toast";
 import { validateGmailScope, isTokenValid } from "@/lib/googleAuth";
 import { Progress } from "@/components/ui/progress";
@@ -114,6 +115,7 @@ export default function Dashboard() {
   const [newServiceIds, setNewServiceIds] = useState<Set<string>>(new Set());
   const [filterMode, setFilterMode] = useState<'all' | 'new'>('all');
   const [bannerDismissed, setBannerDismissed] = useState(false);
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
 
   // Monthly stats state
   const [monthlyStats, setMonthlyStats] = useState<{
@@ -1027,13 +1029,24 @@ export default function Dashboard() {
 
             {/* Risk Score Card */}
             {riskData && (
-              <div className="mb-8">
+              <div className="mb-8 space-y-4">
                 <RiskScoreCard
                   score={riskData.riskScore}
                   level={riskData.riskLevel}
                   factors={riskData.riskFactors}
                   insights={riskData.insights}
                 />
+                <div className="flex justify-center">
+                  <Button
+                    onClick={() => setShareDialogOpen(true)}
+                    size="lg"
+                    className="gap-2"
+                    variant="outline"
+                  >
+                    <Share2 className="w-4 h-4" />
+                    Share Your Score
+                  </Button>
+                </div>
               </div>
             )}
 
@@ -1700,6 +1713,24 @@ export default function Dashboard() {
         services={selectedServicesArray}
         onComplete={handleBatchComplete}
       />
+
+      {/* Share Result Dialog */}
+      {riskData && (
+        <ShareResultDialog
+          open={shareDialogOpen}
+          onOpenChange={setShareDialogOpen}
+          riskScore={riskData.riskScore}
+          riskLevel={riskData.riskLevel}
+          serviceCount={services.length}
+          topServices={services
+            .filter(s => s.name)
+            .slice(0, 6)
+            .map(s => s.name)
+          }
+          avgAccountAge={riskData.riskFactors?.avgAccountAge || 0}
+          unmatchedCount={unmatchedDomains.length}
+        />
+      )}
     </div>
   );
 }
