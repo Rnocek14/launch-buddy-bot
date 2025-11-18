@@ -12,6 +12,8 @@ import { Shield, RefreshCw, LogOut, Loader2, ExternalLink, Search, Download, Ale
 import { RiskScoreCard } from "@/components/RiskScoreCard";
 import { ShareResultDialog } from "@/components/ShareResultDialog";
 import { useToast } from "@/hooks/use-toast";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { trackEvent } from "@/lib/analytics";
 import { validateGmailScope, isTokenValid } from "@/lib/googleAuth";
 import { Progress } from "@/components/ui/progress";
 import { useAuthorization } from "@/hooks/useAuthorization";
@@ -116,6 +118,7 @@ export default function Dashboard() {
   const [filterMode, setFilterMode] = useState<'all' | 'new'>('all');
   const [bannerDismissed, setBannerDismissed] = useState(false);
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  const [showShareNudge, setShowShareNudge] = useState(false);
 
   // Monthly stats state
   const [monthlyStats, setMonthlyStats] = useState<{
@@ -136,6 +139,19 @@ export default function Dashboard() {
       fetchMonthlyStats();
     }
   }, [services.length]);
+
+  useEffect(() => {
+    if (!riskData) return;
+
+    const hasSeen = window.localStorage.getItem('ff_seen_share_nudge');
+    if (!hasSeen) {
+      setShowShareNudge(true);
+      trackEvent('share_nudge_shown', {
+        riskScore: riskData.riskScore,
+        riskLevel: riskData.riskLevel,
+      });
+    }
+  }, [riskData]);
 
   useEffect(() => {
     if (user && services.length > 0) {
@@ -1025,6 +1041,42 @@ export default function Dashboard() {
                   )}
                 </CardContent>
               </Card>
+            )}
+
+            {/* Viral Share Nudge */}
+            {showShareNudge && riskData && (
+              <Alert className="mb-4 border-primary/40 bg-primary/5">
+                <Sparkles className="h-4 w-4 text-primary" />
+                <AlertTitle>Your digital footprint report is ready 🎯</AlertTitle>
+                <AlertDescription>
+                  We found <strong>{services.length} accounts</strong> tied to your email.
+                  Your risk score is <strong>{riskData.riskScore}</strong> ({riskData.riskLevel} risk).
+                </AlertDescription>
+                <div className="mt-3 flex gap-2">
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      setShareDialogOpen(true);
+                      setShowShareNudge(false);
+                      window.localStorage.setItem('ff_seen_share_nudge', '1');
+                      trackEvent('share_nudge_clicked');
+                    }}
+                  >
+                    Share My Score
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setShowShareNudge(false);
+                      window.localStorage.setItem('ff_seen_share_nudge', '1');
+                      trackEvent('share_nudge_dismissed');
+                    }}
+                  >
+                    Not now
+                  </Button>
+                </div>
+              </Alert>
             )}
 
             {/* Risk Score Card */}

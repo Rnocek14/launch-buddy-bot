@@ -197,7 +197,7 @@ export const ShareResultDialog = ({
         shareUrlFinal = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`;
         break;
       case "facebook":
-        shareUrlFinal = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}&quote=${encodeURIComponent(text)}`;
+        shareUrlFinal = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`;
         break;
       default:
         toast.info("Download the image and share it on your preferred platform!");
