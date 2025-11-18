@@ -12,7 +12,7 @@ import {
 } from '../_shared/probes.ts';
 import { detectLanguage, rankByLocale } from '../_shared/lang.ts';
 import { getSitemapCache, setSitemapCache } from '../_shared/cache.ts';
-import { getVendorHint } from '../_shared/vendor_hints.ts';
+import { getVendorHint, getDomainHint } from '../_shared/vendor_hints.ts';
 import { isQuarantined, addToQuarantine } from '../_shared/quarantine.ts';
 
 const corsHeaders = {
@@ -382,6 +382,8 @@ function isPrivacyPolicy(html: string, url: string): { isPolicy: boolean; score:
 // Phase 1.1 Enhanced: Score and extract privacy policy URLs from HTML using DOM parser
 function extractAndScorePrivacyLinks(html: string, baseDomain: string, pageUrl: string): ScoredLink[] {
   const scoredLinks: ScoredLink[] = [];
+  const normalizedDomain = normalizeHost(baseDomain);
+  const domainHint = getDomainHint(normalizedDomain);
   
   try {
     const parser = new DOMParser();
@@ -430,6 +432,16 @@ function extractAndScorePrivacyLinks(html: string, baseDomain: string, pageUrl: 
       const lowerUrl = canonicalHref.toLowerCase();
       const lowerText = linkText.toLowerCase();
 
+      // Apply domain exclude_paths - skip this link entirely if it matches
+      if (domainHint?.exclude_paths) {
+        const urlPath = new URL(canonicalHref).pathname;
+        const shouldExclude = domainHint.exclude_paths.some(path => urlPath.includes(path));
+        if (shouldExclude) {
+          console.log(`[Domain Hint] Excluding ${urlPath} - matches exclude_paths`);
+          return; // Skip this link entirely
+        }
+      }
+      
       // Context-aware filtering: detect and penalize product/shopping pages
       const productPaths = ['/products/', '/shop/', '/c/', '/p/', '/cart', '/checkout', '/store/', '/category/', '/browse/'];
       const productKeywords = ['shop', 'buy', 'cart', 'checkout', 'sale', 'price', 'product', 'for sale', 'buy now'];
@@ -450,6 +462,9 @@ function extractAndScorePrivacyLinks(html: string, baseDomain: string, pageUrl: 
       if (/[\$€£¥]/.test(linkText)) {
         penalty += 10;
       }
+      
+      // Cap penalty to avoid extreme negatives
+      penalty = Math.min(penalty, 40);
 
       // Use language-specific keywords
       languageKeywords.high.forEach((keyword: string) => {
@@ -467,6 +482,36 @@ function extractAndScorePrivacyLinks(html: string, baseDomain: string, pageUrl: 
       // Boost for legal/privacy paths
       if (legalPaths.some(path => lowerUrl.includes(path))) {
         score += 15;
+      }
+      
+      // Apply domain boost_paths
+      if (domainHint?.boost_paths) {
+        const urlPath = new URL(canonicalHref).pathname;
+        if (domainHint.boost_paths.some(path => urlPath.includes(path))) {
+          score += 10;
+          console.log(`[Domain Hint] Boosting score for boost_paths match`);
+        }
+      }
+      
+      // Boost for privacy_url_pattern match (domain-specific known good URLs)
+      if (domainHint?.privacy_url_pattern && canonicalHref.includes(domainHint.privacy_url_pattern)) {
+        score += 20;
+        console.log(`[Domain Hint] Strong boost for privacy_url_pattern match`);
+      }
+      
+      // Apply domain boost_paths
+      if (domainHint?.boost_paths) {
+        const urlPath = new URL(canonicalHref).pathname;
+        if (domainHint.boost_paths.some(path => urlPath.includes(path))) {
+          score += 10;
+          console.log(`[Domain Hint] Boosting score for boost_paths match`);
+        }
+      }
+      
+      // Boost for privacy_url_pattern match (domain-specific known good URLs)
+      if (domainHint?.privacy_url_pattern && canonicalHref.includes(domainHint.privacy_url_pattern)) {
+        score += 20;
+        console.log(`[Domain Hint] Strong boost for privacy_url_pattern match`);
       }
 
       // Phase 1.1 Refinement #1: DOM ancestry footer check (more reliable)
@@ -496,15 +541,14 @@ function extractAndScorePrivacyLinks(html: string, baseDomain: string, pageUrl: 
 
       // Penalize if URL is too generic
       const urlPath = canonicalHref.split('?')[0];
-      const normalizedDomain = normalizeHost(baseDomain);
       if (urlPath.endsWith('/') || 
           urlPath === `https://${normalizedDomain}` || 
           urlPath === `https://www.${normalizedDomain}`) {
         score -= 10;
       }
       
-      // Apply penalties
-      score -= penalty;
+      // Apply penalties with floor to avoid extreme negatives
+      score = Math.max(score - penalty, -50);
 
       // Only include links with positive score
       if (score > 0) {
@@ -644,13 +688,17 @@ async function trySimpleFetch(
   policy_type?: string;
   attemptTimeouts: number;
   bestScore: number;
+  failedUrls: Map<string, number>;
+  html?: string;
+  vendor?: VendorDetection | null;
+  confidenceScore?: number;
 } | null> {
   const attemptedUrls: string[] = [];
   const failedUrls: Map<string, number> = new Map();
   const startTime = Date.now();
   let attemptTimeouts = 0;
   let bestScore = -Infinity;
-  let bestResult: { content: string; url: string; discoveredUrls?: string[]; policy_type?: string } | null = null;
+  let bestResult: { content: string; url: string; discoveredUrls?: string[]; policy_type?: string; html?: string; vendor?: VendorDetection | null; confidenceScore?: number } | null = null;
   
   // Phase 1.1 Refinement: Budget timer to prevent runaway discovery
   const budgetOk = () => (Date.now() - startTime) < DOMAIN_BUDGET_MS;
@@ -688,7 +736,8 @@ async function trySimpleFetch(
             discoveredUrls: attemptedUrls,
             policy_type: 'pdf',
             attemptTimeouts,
-            bestScore: 30 // PDFs get medium score
+            bestScore: 30,
+            failedUrls
           };
         }
         
@@ -726,7 +775,8 @@ async function trySimpleFetch(
                   discoveredUrls: scoredLinks.slice(0, 10).map(l => l.url),
                   policy_type: 'pdf',
                   attemptTimeouts,
-                  bestScore: 30 // PDFs get medium score
+                  bestScore: 30,
+                  failedUrls
                 };
               }
               
@@ -774,7 +824,7 @@ async function trySimpleFetch(
               // Early stop if score is high enough
               if (policyCheck.score >= earlyStopScore) {
                 console.log(`[Guardrail] Early stop — score ${policyCheck.score} >= ${earlyStopScore}`);
-                return { ...bestResult, attemptTimeouts, bestScore };
+                return { ...bestResult, attemptTimeouts, bestScore, failedUrls };
               }
             }
           } else {
@@ -835,7 +885,7 @@ async function trySimpleFetch(
   // Return best result found, if any
   if (bestResult) {
     console.log(`[Phase 1] Returning best result with score ${bestScore}`);
-    return { ...bestResult, attemptTimeouts, bestScore };
+    return { ...bestResult, attemptTimeouts, bestScore, failedUrls };
   }
   
   return null;
@@ -1093,27 +1143,42 @@ serve(async (req) => {
     
     console.log(`[Guardrails] Attempt timeouts: ${attemptTimeouts}, Best score: ${result?.bestScore ?? 'N/A'}`);
     
-    // Phase 2: If Phase 1 failed, try Browserless.io
-    if (!result) {
-      const browserlessApiKey = Deno.env.get('BROWSERLESS_API_KEY');
-      if (browserlessApiKey) {
-        console.log('[Strategy] Phase 1 failed, attempting Phase 2 with Browserless...');
-        const browserlessResult = await tryBrowserlessFetch(urlsToTry.slice(0, 5), browserlessApiKey); // Try top 5 URLs only
-        if (browserlessResult) {
-          result = {
-            ...browserlessResult,
-            attemptTimeouts: 0,
-            bestScore: 50 // Browserless gets medium-high score
-          };
-          methodUsed = 'browserless';
-        }
-      } else {
-        console.warn('[Strategy] BROWSERLESS_API_KEY not configured, skipping Phase 2');
+    // Phase 2: Smart Browserless fallback - only when needed
+    const browserlessApiKey = Deno.env.get('BROWSERLESS_API_KEY');
+    const domainHint = getDomainHint(service.domain);
+    
+    // Identify URLs that need JavaScript (marked with 999 code)
+    const jsNeededUrls = urlsToTry.filter(url => result?.failedUrls?.get(url) === 999);
+    
+    // Decide if we should use Browserless
+    const shouldUseBrowserless = (
+      (!result?.content || jsNeededUrls.length > 0 || domainHint?.requires_js) && 
+      browserlessApiKey
+    );
+    
+    if (shouldUseBrowserless) {
+      // Prioritize JS-needed URLs, limit to top 3 for cost control
+      const urlsForBrowserless = jsNeededUrls.length > 0 
+        ? jsNeededUrls.slice(0, 3)
+        : urlsToTry.slice(0, 3);
+      
+      console.log(`[Phase 2] Trying Browserless for ${urlsForBrowserless.length} URLs (JS needed: ${jsNeededUrls.length}, domain requires_js: ${domainHint?.requires_js || false})`);
+      
+      const browserlessResult = await tryBrowserlessFetch(urlsForBrowserless, browserlessApiKey);
+      
+      if (browserlessResult) {
+        result = {
+          ...browserlessResult,
+          attemptTimeouts: result?.attemptTimeouts || 0,
+          bestScore: 50,
+          failedUrls: result?.failedUrls || new Map()
+        };
+        methodUsed = 'browserless';
       }
     }
 
     // If both phases failed, return error
-    if (!result) {
+    if (!result || !result.content) {
       throw new Error(`Unable to find privacy policy. Tried ${urlsToTry.length} URL(s) with both simple and JavaScript rendering. Please provide a direct URL to the privacy policy.`);
     }
 
