@@ -17,6 +17,7 @@ interface PublicResultData {
   top_categories: string[];
   insights: string[];
   view_count: number;
+  conversion_count: number;
 }
 
 export default function PublicResult() {
@@ -86,7 +87,7 @@ export default function PublicResult() {
       if (result) {
         await supabase
           .from("public_results")
-          .update({ conversion_count: (result.view_count || 0) + 1 })
+          .update({ conversion_count: (result.conversion_count || 0) + 1 })
           .eq("share_id", shareId);
       }
     }
