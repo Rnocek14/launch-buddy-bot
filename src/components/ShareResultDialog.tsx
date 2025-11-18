@@ -14,11 +14,13 @@ interface ShareResultDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   riskScore: number;
-  riskLevel: "low" | "medium" | "high";
+  riskLevel: "low" | "medium" | "high" | "critical";
   serviceCount: number;
   topServices?: string[];
   avgAccountAge?: number;
   unmatchedCount?: number;
+  percentile?: number;
+  topCategories?: Array<{ category: string; count: number }>;
 }
 
 type TemplateType = "minimalist" | "detailed" | "challenge";
@@ -32,6 +34,8 @@ export const ShareResultDialog = ({
   topServices = [],
   avgAccountAge = 0,
   unmatchedCount = 0,
+  percentile,
+  topCategories = []
 }: ShareResultDialogProps) => {
   const [selectedTemplate, setSelectedTemplate] = useState<TemplateType>("minimalist");
   const [isGenerating, setIsGenerating] = useState(false);

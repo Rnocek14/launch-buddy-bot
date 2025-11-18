@@ -5,12 +5,14 @@ import { Shield, AlertTriangle, CheckCircle2, TrendingUp, Clock, Globe } from "l
 interface ShareCardProps {
   template: "minimalist" | "detailed" | "challenge";
   riskScore: number;
-  riskLevel: "low" | "medium" | "high";
+  riskLevel: "low" | "medium" | "high" | "critical";
   serviceCount: number;
   topServices?: string[];
   avgAccountAge?: number;
   unmatchedCount?: number;
-  comparisonScore?: number; // For challenge template
+  comparisonScore?: number;
+  percentile?: number;
+  topCategories?: Array<{ category: string; count: number }>;
 }
 
 export const ResultShareCard = ({ 
@@ -21,7 +23,9 @@ export const ResultShareCard = ({
   topServices = [],
   avgAccountAge = 0,
   unmatchedCount = 0,
-  comparisonScore = 65
+  comparisonScore = 65,
+  percentile,
+  topCategories = []
 }: ShareCardProps) => {
   const getRiskColor = () => {
     if (riskLevel === "low") return "text-green-600";
@@ -62,6 +66,11 @@ export const ResultShareCard = ({
             <div className="text-white/80 text-3xl font-medium mb-4">Digital Footprint Score</div>
             <div className="text-white text-9xl font-bold tracking-tight">{riskScore}</div>
             <div className="text-white/90 text-4xl font-medium mt-4 capitalize">{riskLevel} Risk</div>
+            {percentile !== undefined && (
+              <div className="text-white/70 text-2xl mt-2">
+                Top {100 - percentile}% • Better than {percentile}% of users
+              </div>
+            )}
           </div>
 
           {/* Services count */}
@@ -138,8 +147,13 @@ export const ResultShareCard = ({
           
           <Card className="p-8 text-center border-2">
             <Clock className="w-10 h-10 text-primary mx-auto mb-3" />
-            <div className="text-4xl font-bold text-foreground">{avgAccountAge}y</div>
+            <div className="text-4xl font-bold text-foreground">{avgAccountAge.toFixed(1)}y</div>
             <div className="text-lg text-muted-foreground mt-1">Avg Account Age</div>
+            {percentile !== undefined && (
+              <div className="text-sm text-muted-foreground mt-2">
+                <Badge variant="secondary" className="text-xs">Top {100 - percentile}%</Badge>
+              </div>
+            )}
           </Card>
           
           <Card className="p-8 text-center border-2">
