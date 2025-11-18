@@ -5,8 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Check, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-
-const PRICE_ID = "price_1SUqvlPwo7CiaABewIGGxC79"; // $49/year
+import { STRIPE_PRICES, PRO_FEATURES, TRACKING_EVENTS } from "@/config/pricing";
+import { trackConversion } from "@/lib/analytics";
 
 export default function Subscribe() {
   const [loading, setLoading] = useState(false);
@@ -32,8 +32,18 @@ export default function Subscribe() {
   const handleSubscribe = async () => {
     setLoading(true);
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      // Track checkout initiation
+      if (user) {
+        trackConversion(TRACKING_EVENTS.CHECKOUT_INITIATED, user.id, {
+          priceId: STRIPE_PRICES.PRO_ANNUAL.id,
+          amount: STRIPE_PRICES.PRO_ANNUAL.amount,
+        });
+      }
+
       const { data, error } = await supabase.functions.invoke("create-checkout-session", {
-        body: { priceId: PRICE_ID },
+        body: { priceId: STRIPE_PRICES.PRO_ANNUAL.id },
       });
 
       if (error) throw error;
@@ -56,15 +66,6 @@ export default function Subscribe() {
     }
   };
 
-  const proFeatures = [
-    "Unlimited deletion requests",
-    "Deep AI Scan (finds 2-3× more accounts)",
-    "Connect and scan up to 3 email addresses",
-    "Complete inbox history analysis",
-    "Priority deletion processing",
-    "Monthly automatic rescans",
-    "Priority email support",
-  ];
 
   return (
     <div className="container max-w-4xl py-8">
@@ -112,7 +113,7 @@ export default function Subscribe() {
 
           <div className="space-y-4 mb-8">
             <h3 className="font-semibold text-lg">Everything you need:</h3>
-            {proFeatures.map((feature, index) => (
+            {PRO_FEATURES.map((feature, index) => (
               <div key={index} className="flex items-start gap-3">
                 <Check className="w-5 h-5 text-accent shrink-0 mt-0.5" />
                 <span>{feature}</span>

@@ -9,6 +9,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
+import { TRACKING_EVENTS } from "@/config/pricing";
+import { trackConversion } from "@/lib/analytics";
 
 const emailSchema = z.string().email("Invalid email address");
 const passwordSchema = z.string().min(6, "Password must be at least 6 characters");
@@ -169,7 +171,7 @@ export default function Auth() {
     setLoading(true);
 
     try {
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email: signupEmail,
         password: signupPassword,
         options: {
@@ -185,6 +187,14 @@ export default function Auth() {
           throw new Error("An account with this email already exists");
         }
         throw error;
+      }
+
+      // Track successful signup
+      if (data.user) {
+        trackConversion(TRACKING_EVENTS.USER_SIGNUP, data.user.id, {
+          email: signupEmail,
+          fullName: signupFullName,
+        });
       }
 
       toast({
