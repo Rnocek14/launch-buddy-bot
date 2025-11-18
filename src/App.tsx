@@ -20,6 +20,7 @@ import Cleanup from "./pages/Cleanup";
 import NotFound from "./pages/NotFound";
 import Settings from "./pages/Settings";
 import Status from "./pages/Status";
+import DiscoveryDebug from "./pages/DiscoveryDebug";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfService from "./pages/TermsOfService";
 import Help from "./pages/Help";
@@ -51,6 +52,7 @@ const App = () => (
               <Route path="/preferences" element={<Preferences />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/status" element={<Status />} />
+              <Route path="/debug/discovery" element={<DiscoveryDebug />} />
               <Route path="/privacy" element={<PrivacyPolicy />} />
               <Route path="/terms" element={<TermsOfService />} />
               <Route path="/help" element={<Help />} />
