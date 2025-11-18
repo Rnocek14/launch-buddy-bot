@@ -26,6 +26,7 @@ import TermsOfService from "./pages/TermsOfService";
 import Help from "./pages/Help";
 import Subscribe from "./pages/Subscribe";
 import Billing from "./pages/Billing";
+import PublicResult from "./pages/PublicResult";
 import { AuthorizationWizard } from "./components/AuthorizationWizard";
 
 const queryClient = new QueryClient();
@@ -59,6 +60,7 @@ const App = () => (
               <Route path="/subscribe" element={<Subscribe />} />
               <Route path="/billing" element={<Billing />} />
               <Route path="/authorize" element={<AuthorizationWizard />} />
+              <Route path="/results/:shareId" element={<PublicResult />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>

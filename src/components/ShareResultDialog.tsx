@@ -1,12 +1,14 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ResultShareCard } from "./ResultShareCard";
 import { toPng } from "html-to-image";
 import { toast } from "sonner";
-import { Download, Copy, Share2, Twitter, Linkedin, Facebook, Instagram } from "lucide-react";
+import { Download, Copy, Share2, Twitter, Linkedin, Facebook, Instagram, Link2, CheckCircle } from "lucide-react";
 import { trackEvent, TRACKING_EVENTS } from "@/lib/analytics";
+import { supabase } from "@/integrations/supabase/client";
+import { Input } from "@/components/ui/input";
 
 interface ShareResultDialogProps {
   open: boolean;
@@ -33,6 +35,78 @@ export const ShareResultDialog = ({
 }: ShareResultDialogProps) => {
   const [selectedTemplate, setSelectedTemplate] = useState<TemplateType>("minimalist");
   const [isGenerating, setIsGenerating] = useState(false);
+  const [shareUrl, setShareUrl] = useState<string | null>(null);
+  const [creatingPublicResult, setCreatingPublicResult] = useState(false);
+  const [urlCopied, setUrlCopied] = useState(false);
+
+  useEffect(() => {
+    if (open && !shareUrl) {
+      createPublicResult();
+    }
+  }, [open]);
+
+  const createPublicResult = async () => {
+    try {
+      setCreatingPublicResult(true);
+
+      // Get top categories from topServices
+      const categories = Array.from(new Set(topServices.slice(0, 5)));
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      const { data, error } = await supabase
+        .from("public_results")
+        .insert({
+          user_id: user.id,
+          risk_score: riskScore,
+          risk_level: riskLevel,
+          service_count: serviceCount,
+          top_categories: categories,
+          insights: [],
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      if (data) {
+        const url = `${window.location.origin}/results/${data.share_id}`;
+        setShareUrl(url);
+
+        trackEvent(TRACKING_EVENTS.PUBLIC_RESULT_CREATED, {
+          share_id: data.share_id,
+          risk_score: riskScore,
+          risk_level: riskLevel,
+          service_count: serviceCount,
+        });
+      }
+    } catch (error) {
+      console.error("Error creating public result:", error);
+      toast.error("Failed to create shareable link. You can still download the image.");
+    } finally {
+      setCreatingPublicResult(false);
+    }
+  };
+
+  const handleCopyUrl = async () => {
+    if (!shareUrl) return;
+
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setUrlCopied(true);
+      toast.success("Link copied to clipboard!");
+      
+      setTimeout(() => setUrlCopied(false), 2000);
+
+      trackEvent(TRACKING_EVENTS.SHARE_RESULT_COPIED, {
+        type: "url",
+        template: selectedTemplate,
+      });
+    } catch (error) {
+      toast.error("Failed to copy link");
+    }
+  };
 
   const generateImage = async (template: TemplateType): Promise<string | null> => {
     const elementId = `share-card-${template}`;
@@ -110,31 +184,32 @@ export const ShareResultDialog = ({
   };
 
   const handleShareToSocial = (platform: string) => {
-    const text = `I found ${serviceCount} hidden accounts in my digital footprint with a risk score of ${riskScore}. Check yours at footprintfinder.com`;
-    const url = "https://footprintfinder.com";
+    const text = `I found ${serviceCount} hidden accounts in my digital footprint with a risk score of ${riskScore}. Check yours at ${shareUrl || 'footprintfinder.com'}`;
+    const url = shareUrl || "https://footprintfinder.com";
     
-    let shareUrl = "";
+    let shareUrlFinal = "";
     
     switch (platform) {
       case "twitter":
-        shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
+        shareUrlFinal = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
         break;
       case "linkedin":
-        shareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`;
+        shareUrlFinal = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`;
         break;
       case "facebook":
-        shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}&quote=${encodeURIComponent(text)}`;
+        shareUrlFinal = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}&quote=${encodeURIComponent(text)}`;
         break;
       default:
         toast.info("Download the image and share it on your preferred platform!");
         return;
     }
 
-    window.open(shareUrl, "_blank", "width=600,height=400");
+    window.open(shareUrlFinal, "_blank", "width=600,height=400");
     
     trackEvent(TRACKING_EVENTS.SHARE_RESULT_SOCIAL, {
       platform,
       template: selectedTemplate,
+      has_url: !!shareUrl,
     });
   };
 
@@ -203,6 +278,50 @@ export const ShareResultDialog = ({
             </div>
           </TabsContent>
         </Tabs>
+
+        {/* Shareable Link Section */}
+        {shareUrl && (
+          <div className="border rounded-lg p-4 bg-muted/50 space-y-3">
+            <div className="flex items-center gap-2 text-sm font-medium">
+              <Link2 className="w-4 h-4 text-primary" />
+              Your Shareable Link
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Share this link on social media - anyone who clicks it will see your anonymized results and be prompted to scan their own inbox.
+            </p>
+            <div className="flex gap-2">
+              <Input
+                value={shareUrl}
+                readOnly
+                className="flex-1 font-mono text-sm"
+              />
+              <Button
+                onClick={handleCopyUrl}
+                variant="outline"
+                size="sm"
+                className="shrink-0"
+              >
+                {urlCopied ? (
+                  <>
+                    <CheckCircle className="w-4 h-4 mr-1 text-green-600" />
+                    Copied!
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-4 h-4 mr-1" />
+                    Copy
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {creatingPublicResult && (
+          <div className="text-center text-sm text-muted-foreground">
+            Creating your shareable link...
+          </div>
+        )}
 
         {/* Action Buttons */}
         <div className="space-y-4">

@@ -49,4 +49,7 @@ export const TRACKING_EVENTS = {
   SHARE_RESULT_DOWNLOADED: "share_result_downloaded",
   SHARE_RESULT_COPIED: "share_result_copied",
   SHARE_RESULT_SOCIAL: "share_result_social",
+  RESULT_PAGE_VIEWED: "result_page_viewed",
+  RESULT_PAGE_CONVERSION: "result_page_conversion",
+  PUBLIC_RESULT_CREATED: "public_result_created",
 } as const;
