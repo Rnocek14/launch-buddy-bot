@@ -427,6 +427,29 @@ function extractAndScorePrivacyLinks(html: string, baseDomain: string, pageUrl: 
       // Calculate score
       let score = 0;
       const combined = (canonicalHref + ' ' + linkText).toLowerCase();
+      const lowerUrl = canonicalHref.toLowerCase();
+      const lowerText = linkText.toLowerCase();
+
+      // Context-aware filtering: detect and penalize product/shopping pages
+      const productPaths = ['/products/', '/shop/', '/c/', '/p/', '/cart', '/checkout', '/store/', '/category/', '/browse/'];
+      const productKeywords = ['shop', 'buy', 'cart', 'checkout', 'sale', 'price', 'product', 'for sale', 'buy now'];
+      const legalPaths = ['/legal/', '/privacy/', '/policies/', '/about/privacy', '/privacy-policy', '/privacidad', '/datenschutz'];
+      
+      let penalty = 0;
+      
+      // Strong penalty for product/shopping context
+      if (productPaths.some(path => lowerUrl.includes(path))) {
+        penalty += 20;
+      }
+      
+      if (productKeywords.some(kw => lowerText.includes(kw) || lowerUrl.includes(kw))) {
+        penalty += 15;
+      }
+      
+      // Check for price indicators ($, €, etc.)
+      if (/[\$€£¥]/.test(linkText)) {
+        penalty += 10;
+      }
 
       // Use language-specific keywords
       languageKeywords.high.forEach((keyword: string) => {
@@ -440,6 +463,11 @@ function extractAndScorePrivacyLinks(html: string, baseDomain: string, pageUrl: 
       languageKeywords.low.forEach((keyword: string) => {
         if (combined.includes(keyword.toLowerCase())) score += 5;
       });
+      
+      // Boost for legal/privacy paths
+      if (legalPaths.some(path => lowerUrl.includes(path))) {
+        score += 15;
+      }
 
       // Phase 1.1 Refinement #1: DOM ancestry footer check (more reliable)
       const isInFooter = !!(anchor.closest && anchor.closest('footer'));
@@ -474,6 +502,9 @@ function extractAndScorePrivacyLinks(html: string, baseDomain: string, pageUrl: 
           urlPath === `https://www.${normalizedDomain}`) {
         score -= 10;
       }
+      
+      // Apply penalties
+      score -= penalty;
 
       // Only include links with positive score
       if (score > 0) {
@@ -757,7 +788,23 @@ async function trySimpleFetch(
             }
           }
         } else {
-          console.warn(`[Phase 1] Content too short from ${sanitizeForLog(url)} (${content.length} chars)`);
+          // Check if this looks like a JS-rendered page that needs Browserless
+          const needsJS = html.includes('<div id="root">') || 
+                          html.includes('ng-app') || 
+                          html.includes('data-react-root') ||
+                          html.includes('__NEXT_DATA__') ||
+                          html.includes('window.Shopify') ||
+                          html.match(/<div[^>]+class="[^"]*react[^"]*"/i) ||
+                          html.match(/<div[^>]+class="[^"]*vue[^"]*"/i);
+          
+          if (needsJS && content.length < 500) {
+            console.log(`[Phase 1] Page appears to need JavaScript (${content.length} chars): ${sanitizeForLog(url)}`);
+            console.log(`[Phase 1] Will attempt Browserless fallback for this domain`);
+            // Mark this URL as needing JS - will trigger Phase 2 (Browserless)
+            failedUrls.set(url, 999); // Special code to indicate JS needed
+          } else {
+            console.warn(`[Phase 1] Content too short from ${sanitizeForLog(url)} (${content.length} chars)`);
+          }
         }
       } else {
         console.warn(`[Phase 1] HTTP ${pageResponse.status}: ${sanitizeForLog(url)}`);
