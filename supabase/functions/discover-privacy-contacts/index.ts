@@ -443,7 +443,8 @@ function extractAndScorePrivacyLinks(html: string, baseDomain: string, pageUrl: 
       }
       
       // Context-aware filtering: detect and penalize product/shopping pages
-      const productPaths = ['/products/', '/shop/', '/c/', '/p/', '/cart', '/checkout', '/store/', '/category/', '/browse/'];
+      // Note: /c/ removed from global penalties as some sites (Target) use it for help pages
+      const productPaths = ['/products/', '/shop/', '/p/', '/cart', '/checkout', '/store/', '/category/', '/browse/'];
       const productKeywords = ['shop', 'buy', 'cart', 'checkout', 'sale', 'price', 'product', 'for sale', 'buy now'];
       const legalPaths = ['/legal/', '/privacy/', '/policies/', '/about/privacy', '/privacy-policy', '/privacidad', '/datenschutz'];
       
@@ -1162,7 +1163,12 @@ serve(async (req) => {
         ? jsNeededUrls.slice(0, 3)
         : urlsToTry.slice(0, 3);
       
-      console.log(`[Phase 2] Trying Browserless for ${urlsForBrowserless.length} URLs (JS needed: ${jsNeededUrls.length}, domain requires_js: ${domainHint?.requires_js || false})`);
+      // Log what triggered Browserless for cost monitoring
+      const triggers = [];
+      if (jsNeededUrls.length > 0) triggers.push(`${jsNeededUrls.length} JS-needed URLs`);
+      if (domainHint?.requires_js) triggers.push('domain requires_js hint');
+      if (!result?.content) triggers.push('no Phase 1 result');
+      console.log(`[Phase 2] Invoking Browserless for ${urlsForBrowserless.length} URLs. Triggers: [${triggers.join(', ')}]`);
       
       const browserlessResult = await tryBrowserlessFetch(urlsForBrowserless, browserlessApiKey);
       
