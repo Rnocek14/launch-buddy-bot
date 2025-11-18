@@ -80,3 +80,6 @@ verify_jwt = true
 
 [functions.log-analytics-event]
 verify_jwt = false
+
+[functions.check-token-health]
+verify_jwt = true

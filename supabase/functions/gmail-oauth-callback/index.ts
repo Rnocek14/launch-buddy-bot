@@ -108,8 +108,26 @@ serve(async (req: Request): Promise<Response> => {
     const expiresAt = new Date(Date.now() + tokens.expires_in * 1000);
 
     // Encrypt tokens before storing
-    const encryptedAccessToken = await encrypt(tokens.access_token);
-    const encryptedRefreshToken = tokens.refresh_token ? await encrypt(tokens.refresh_token) : null;
+    console.log("Encrypting tokens before storage");
+    
+    let encryptedAccessToken: string;
+    let encryptedRefreshToken: string | null;
+    let tokensEncrypted = true;
+    
+    try {
+      encryptedAccessToken = await encrypt(tokens.access_token);
+      encryptedRefreshToken = tokens.refresh_token ? await encrypt(tokens.refresh_token) : null;
+      console.log("Tokens encrypted successfully", {
+        accessTokenLength: encryptedAccessToken.length,
+        refreshTokenLength: encryptedRefreshToken?.length
+      });
+    } catch (encryptError) {
+      console.error('Failed to encrypt tokens, storing as plain text:', encryptError);
+      // Store plain text as fallback
+      encryptedAccessToken = tokens.access_token;
+      encryptedRefreshToken = tokens.refresh_token || null;
+      tokensEncrypted = false;
+    }
 
     // Check if this email is already connected for this user
     const { data: existingConnection } = await supabase
@@ -127,7 +145,7 @@ serve(async (req: Request): Promise<Response> => {
           access_token: encryptedAccessToken,
           refresh_token: encryptedRefreshToken,
           token_expires_at: expiresAt.toISOString(),
-          tokens_encrypted: true,
+          tokens_encrypted: tokensEncrypted,
         })
         .eq("id", existingConnection.id);
 
@@ -161,7 +179,7 @@ serve(async (req: Request): Promise<Response> => {
           access_token: encryptedAccessToken,
           refresh_token: encryptedRefreshToken,
           token_expires_at: expiresAt.toISOString(),
-          tokens_encrypted: true,
+          tokens_encrypted: tokensEncrypted,
           is_primary: isFirstConnection, // First account is automatically primary
           account_label: profile.email,
         });

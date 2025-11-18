@@ -75,23 +75,42 @@ export class OutlookProvider implements EmailProvider {
     console.log('Outlook: Got user email:', profile.mail || profile.userPrincipalName);
 
     // Encrypt tokens
-    const encryptedAccessToken = await encrypt(tokens.access_token);
-    const encryptedRefreshToken = await encrypt(tokens.refresh_token);
+    let encryptedAccessToken: string;
+    let encryptedRefreshToken: string;
+    let tokensEncrypted = true;
+    let accessTokenBytes: Uint8Array | undefined;
+    let refreshTokenBytes: Uint8Array | undefined;
+    
+    try {
+      encryptedAccessToken = await encrypt(tokens.access_token);
+      encryptedRefreshToken = await encrypt(tokens.refresh_token);
+      
+      // Convert base64 encrypted strings to Uint8Array for database storage
+      accessTokenBytes = Uint8Array.from(atob(encryptedAccessToken), c => c.charCodeAt(0));
+      refreshTokenBytes = Uint8Array.from(atob(encryptedRefreshToken), c => c.charCodeAt(0));
+      
+      console.log('Outlook tokens encrypted successfully', {
+        accessTokenLength: encryptedAccessToken.length,
+        refreshTokenLength: encryptedRefreshToken.length
+      });
+    } catch (encryptError) {
+      console.error('Failed to encrypt Outlook tokens, storing as plain text:', encryptError);
+      // Store plain text as fallback
+      encryptedAccessToken = tokens.access_token;
+      encryptedRefreshToken = tokens.refresh_token;
+      tokensEncrypted = false;
+    }
 
     // Microsoft tokens typically expire in 1 hour (3600 seconds)
     const expiresAt = new Date(Date.now() + (tokens.expires_in * 1000)).toISOString();
 
-    // Convert base64 encrypted strings to Uint8Array for database storage
-    const accessTokenBytes = Uint8Array.from(atob(encryptedAccessToken), c => c.charCodeAt(0));
-    const refreshTokenBytes = Uint8Array.from(atob(encryptedRefreshToken), c => c.charCodeAt(0));
-
     return {
       email: profile.mail || profile.userPrincipalName,
-      access_token: tokens.access_token,
-      refresh_token: tokens.refresh_token,
+      access_token: encryptedAccessToken,
+      refresh_token: encryptedRefreshToken,
       token_expires_at: expiresAt,
       provider_user_id: profile.id,
-      tokens_encrypted: true,
+      tokens_encrypted: tokensEncrypted,
       access_token_encrypted: accessTokenBytes,
       refresh_token_encrypted: refreshTokenBytes,
     };

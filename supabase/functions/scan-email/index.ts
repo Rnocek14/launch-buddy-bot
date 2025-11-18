@@ -100,13 +100,25 @@ async function processConnection(connection: any, user: any, maxResults: number,
   // Get access token (decrypt if encrypted)
   let accessToken = connection.access_token;
   if (connection.tokens_encrypted) {
-    if (connection.access_token_encrypted) {
-      // Bytea column is populated (Outlook-style)
-      const encryptedBase64 = btoa(String.fromCharCode(...connection.access_token_encrypted));
-      accessToken = await decrypt(encryptedBase64);
-    } else {
-      // Only text column has encrypted data (Gmail-style)
-      accessToken = await decrypt(connection.access_token);
+    try {
+      if (connection.access_token_encrypted) {
+        // Bytea column is populated (Outlook-style)
+        const encryptedBase64 = btoa(String.fromCharCode(...connection.access_token_encrypted));
+        accessToken = await decrypt(encryptedBase64);
+      } else {
+        // Only text column has encrypted data (Gmail-style)
+        accessToken = await decrypt(connection.access_token);
+      }
+    } catch (decryptError) {
+      console.warn('Failed to decrypt access token, treating as plain text:', decryptError);
+      // If decryption fails, assume it's already plain text
+      accessToken = connection.access_token;
+      
+      // Mark for re-encryption on next token refresh
+      await supabase
+        .from('email_connections')
+        .update({ tokens_encrypted: false })
+        .eq('id', connection.id);
     }
   }
 
