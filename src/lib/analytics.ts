@@ -3,11 +3,15 @@
  * Logs events to console for now, easy to extend to GA/Plausible later
  */
 
+import { TRACKING_EVENTS } from "@/config/pricing";
+
 interface TrackingEvent {
   event: string;
   userId?: string;
   properties?: Record<string, any>;
 }
+
+export { TRACKING_EVENTS };
 
 export function trackEvent(event: string, properties?: Record<string, any>) {
   const trackingData: TrackingEvent = {
