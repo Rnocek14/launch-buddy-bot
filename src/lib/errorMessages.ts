@@ -6,6 +6,7 @@ interface ErrorMessageConfig {
   title: string;
   description: string;
   action?: string;
+  type?: "rate_limit" | "payment_required" | "network" | "auth" | "generic";
 }
 
 export const getErrorMessage = (error: any): ErrorMessageConfig => {
@@ -47,12 +48,50 @@ export const getErrorMessage = (error: any): ErrorMessageConfig => {
     }
   }
 
+  // HTTP Status Code errors
+  if (error?.status === 429 || errorMessage.includes("rate limit") || errorMessage.includes("too many requests")) {
+    return {
+      title: "Rate Limit Exceeded",
+      description: "You've made too many requests in a short time. Please wait a few minutes before trying again. Rate limits help ensure fair usage for all users.",
+      action: "Wait and retry",
+      type: "rate_limit"
+    };
+  }
+
+  if (error?.status === 402 || errorMessage.includes("payment required") || errorMessage.includes("upgrade required")) {
+    return {
+      title: "Upgrade Required",
+      description: "This feature requires a Pro subscription. Upgrade now to access unlimited deletions and premium features.",
+      action: "Upgrade to Pro",
+      type: "payment_required"
+    };
+  }
+
+  if (error?.status === 503 || errorMessage.includes("service unavailable")) {
+    return {
+      title: "Service Temporarily Unavailable",
+      description: "Our servers are experiencing high traffic. Please try again in a few minutes.",
+      action: "Try again",
+      type: "generic"
+    };
+  }
+
+  if (error?.status === 500 || errorMessage.includes("internal server error")) {
+    return {
+      title: "Server Error",
+      description: "Something went wrong on our end. Our team has been notified and is working on a fix. Please try again later.",
+      action: "Report issue",
+      type: "generic"
+    };
+  }
+
   // Authentication errors
   if (errorCode === "auth/invalid-email" || errorMessage.includes("invalid email")) {
     return {
       title: "Invalid Email",
       description: "Please enter a valid email address.",
-      action: "Check your email format"
+      action: "Check your email format",
+      type: "auth"
     };
   }
 
@@ -60,7 +99,8 @@ export const getErrorMessage = (error: any): ErrorMessageConfig => {
     return {
       title: "Account Not Found",
       description: "No account exists with this email. Would you like to sign up?",
-      action: "Create an account"
+      action: "Create an account",
+      type: "auth"
     };
   }
 
@@ -68,7 +108,8 @@ export const getErrorMessage = (error: any): ErrorMessageConfig => {
     return {
       title: "Incorrect Password",
       description: "The password you entered is incorrect. Please try again.",
-      action: "Reset password"
+      action: "Reset password",
+      type: "auth"
     };
   }
 
@@ -76,7 +117,8 @@ export const getErrorMessage = (error: any): ErrorMessageConfig => {
     return {
       title: "Too Many Attempts",
       description: "Your account has been temporarily locked due to too many failed login attempts. Please try again later or reset your password.",
-      action: "Try again in a few minutes"
+      action: "Try again in a few minutes",
+      type: "rate_limit"
     };
   }
 
@@ -84,16 +126,27 @@ export const getErrorMessage = (error: any): ErrorMessageConfig => {
     return {
       title: "Email Already Registered",
       description: "An account with this email already exists. Try logging in instead.",
-      action: "Go to login"
+      action: "Go to login",
+      type: "auth"
     };
   }
 
   // Network errors
-  if (errorMessage.includes("network") || errorMessage.includes("fetch failed")) {
+  if (errorMessage.includes("network") || errorMessage.includes("fetch failed") || errorMessage.includes("failed to fetch")) {
     return {
       title: "Connection Error",
       description: "We couldn't connect to our servers. Please check your internet connection and try again.",
-      action: "Check connection"
+      action: "Check connection",
+      type: "network"
+    };
+  }
+
+  if (errorMessage.includes("timeout") || errorMessage.includes("timed out")) {
+    return {
+      title: "Request Timeout",
+      description: "The request took too long to complete. This might be due to slow internet or server load. Please try again.",
+      action: "Retry request",
+      type: "network"
     };
   }
 
@@ -102,7 +155,8 @@ export const getErrorMessage = (error: any): ErrorMessageConfig => {
     return {
       title: "Gmail Connection Failed",
       description: "We couldn't connect to your Gmail account. Please try reconnecting and make sure to grant all permissions.",
-      action: "Reconnect Gmail"
+      action: "Reconnect Gmail",
+      type: "auth"
     };
   }
 
@@ -110,7 +164,8 @@ export const getErrorMessage = (error: any): ErrorMessageConfig => {
     return {
       title: "Missing Permissions",
       description: "Your Gmail connection is missing required permissions. Please reconnect and grant access to scan your emails.",
-      action: "Grant permissions"
+      action: "Grant permissions",
+      type: "auth"
     };
   }
 
@@ -132,7 +187,8 @@ export const getErrorMessage = (error: any): ErrorMessageConfig => {
     return {
       title: "Email Connection Expired",
       description: "Your email connection has expired or been revoked. Please go to Settings → Email Connections and reconnect your account to continue scanning.",
-      action: "Reconnect account"
+      action: "Reconnect account",
+      type: "auth"
     };
   }
 
@@ -141,7 +197,8 @@ export const getErrorMessage = (error: any): ErrorMessageConfig => {
     return {
       title: "Access Denied",
       description: "You don't have permission to perform this action. Please make sure you're logged in.",
-      action: "Sign in"
+      action: "Sign in",
+      type: "auth"
     };
   }
 
@@ -150,16 +207,8 @@ export const getErrorMessage = (error: any): ErrorMessageConfig => {
     return {
       title: "Deletion Request Failed",
       description: "We couldn't send your deletion request. The service may not have proper contact information yet.",
-      action: "Discover contact first"
-    };
-  }
-
-  // Rate limiting
-  if (errorMessage.includes("rate limit") || errorMessage.includes("too many requests")) {
-    return {
-      title: "Slow Down",
-      description: "You're making too many requests. Please wait a moment and try again.",
-      action: "Wait a minute"
+      action: "Discover contact first",
+      type: "generic"
     };
   }
 
@@ -168,16 +217,28 @@ export const getErrorMessage = (error: any): ErrorMessageConfig => {
     return {
       title: "Scan Failed",
       description: "We couldn't complete your email scan. This might be due to Gmail API limits or connection issues.",
-      action: "Try again later"
+      action: "Try again later",
+      type: "generic"
     };
   }
 
   // Authorization errors
-  if (errorMessage.includes("authorization") || errorMessage.includes("not authorized")) {
+  if (errorMessage.includes("authorization") || errorMessage.includes("not authorized") || errorMessage.includes("unauthorized")) {
     return {
       title: "Authorization Required",
       description: "You need to complete the authorization process before using this feature.",
-      action: "Complete authorization"
+      action: "Complete authorization",
+      type: "auth"
+    };
+  }
+
+  // Quota/limit errors
+  if (errorMessage.includes("quota") || errorMessage.includes("limit exceeded")) {
+    return {
+      title: "Quota Exceeded",
+      description: "You've reached your usage limit for this feature. Upgrade to Pro for higher limits or wait until your quota resets.",
+      action: "View limits",
+      type: "payment_required"
     };
   }
 
@@ -185,7 +246,8 @@ export const getErrorMessage = (error: any): ErrorMessageConfig => {
   return {
     title: "Something Went Wrong",
     description: errorMessage || "An unexpected error occurred. Please try again or contact support if the problem persists.",
-    action: "Try again"
+    action: "Try again",
+    type: "generic"
   };
 };
 
