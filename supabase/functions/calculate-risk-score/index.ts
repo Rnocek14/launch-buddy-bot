@@ -118,6 +118,57 @@ Deno.serve(async (req) => {
     else if (riskScore < 75) riskLevel = 'high';
     else riskLevel = 'critical';
 
+    // Calculate percentile (inverse - lower score = better percentile)
+    // Using a statistical distribution curve for more granular percentiles
+    const calculatePercentile = (score: number): number => {
+      if (score < 10) return Math.round(85 + (10 - score) * 1.5);
+      if (score < 25) return Math.round(70 + (25 - score) * 1);
+      if (score < 50) return Math.round(45 + (50 - score) * 1);
+      if (score < 75) return Math.round(20 + (75 - score) * 1);
+      return Math.round(Math.max(1, 20 - (score - 75) * 0.8));
+    };
+
+    const percentile = calculatePercentile(riskScore);
+
+    // Identify top exposure factors (sorted by contribution to score)
+    const exposureFactors = [
+      { 
+        factor: 'Total Digital Accounts', 
+        count: riskFactors.totalAccounts,
+        contribution: Math.min(30, riskFactors.totalAccounts * 0.6),
+        description: `${riskFactors.totalAccounts} active accounts found`
+      },
+      { 
+        factor: 'Outdated Accounts', 
+        count: riskFactors.oldAccountsCount,
+        contribution: Math.min(25, riskFactors.oldAccountsCount * 2.5),
+        description: `${riskFactors.oldAccountsCount} accounts over 3 years old`
+      },
+      { 
+        factor: 'Sensitive Services', 
+        count: riskFactors.sensitiveAccountsCount,
+        contribution: Math.min(25, riskFactors.sensitiveAccountsCount * 5),
+        description: `${riskFactors.sensitiveAccountsCount} finance/healthcare accounts`
+      },
+      { 
+        factor: 'Unmatched Domains', 
+        count: riskFactors.unmatchedDomainsCount,
+        contribution: Math.min(20, riskFactors.unmatchedDomainsCount * 2),
+        description: `${riskFactors.unmatchedDomainsCount} unknown senders`
+      },
+    ].filter(f => f.count > 0).sort((a, b) => b.contribution - a.contribution);
+
+    // Category breakdown
+    const categoryBreakdown = serviceData.reduce((acc: Record<string, number>, service) => {
+      acc[service.category] = (acc[service.category] || 0) + 1;
+      return acc;
+    }, {});
+
+    const topCategories = Object.entries(categoryBreakdown)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 5)
+      .map(([category, count]) => ({ category, count }));
+
     // Generate AI insights using GPT-5
     const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
     if (!OPENAI_API_KEY) throw new Error('OPENAI_API_KEY not configured');
@@ -174,6 +225,16 @@ Be conversational, empathetic, and avoid jargon. Each insight should be 2-3 sent
         riskLevel,
         riskFactors,
         insights,
+        percentile,
+        exposureFactors: exposureFactors.slice(0, 3),
+        topCategories,
+        comparison: {
+          message: percentile >= 50 
+            ? `Your digital footprint is more exposed than ${100 - percentile}% of users`
+            : `Your digital footprint is better managed than ${percentile}% of users`,
+          betterThan: percentile,
+          worseThan: 100 - percentile
+        }
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

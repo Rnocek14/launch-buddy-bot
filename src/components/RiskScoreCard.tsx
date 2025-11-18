@@ -14,9 +14,34 @@ interface RiskScoreProps {
     avgAccountAge: number;
   };
   insights: string;
+  percentile?: number;
+  exposureFactors?: Array<{
+    factor: string;
+    count: number;
+    contribution: number;
+    description: string;
+  }>;
+  topCategories?: Array<{
+    category: string;
+    count: number;
+  }>;
+  comparison?: {
+    message: string;
+    betterThan: number;
+    worseThan: number;
+  };
 }
 
-export function RiskScoreCard({ score, level, factors, insights }: RiskScoreProps) {
+export function RiskScoreCard({ 
+  score, 
+  level, 
+  factors, 
+  insights,
+  percentile,
+  exposureFactors = [],
+  topCategories = [],
+  comparison
+}: RiskScoreProps) {
   const levelConfig = {
     low: {
       icon: Shield,
@@ -78,15 +103,22 @@ export function RiskScoreCard({ score, level, factors, insights }: RiskScoreProp
         </div>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* Score Display */}
+        {/* Score Display with Percentile */}
         <div className="flex items-center gap-6">
           <div className="relative">
-            <div className="w-32 h-32 rounded-full border-8 border-muted flex items-center justify-center">
+            <div className={`w-32 h-32 rounded-full border-8 ${config.borderColor} ${config.bgColor} flex items-center justify-center`}>
               <div className="text-center">
                 <div className={`text-4xl font-bold ${config.color}`}>{score}</div>
                 <div className="text-xs text-muted-foreground">/ 100</div>
               </div>
             </div>
+            {percentile !== undefined && (
+              <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 whitespace-nowrap">
+                <Badge variant="secondary" className="text-xs">
+                  Top {100 - percentile}%
+                </Badge>
+              </div>
+            )}
           </div>
           
           <div className="flex-1 space-y-3">
@@ -122,21 +154,71 @@ export function RiskScoreCard({ score, level, factors, insights }: RiskScoreProp
           </div>
         </div>
 
+        {/* Comparison Message */}
+        {comparison && (
+          <div className={`p-4 rounded-lg ${config.bgColor} border ${config.borderColor}`}>
+            <div className="flex items-center gap-2">
+              <Sparkles className={`w-5 h-5 ${config.color}`} />
+              <p className="text-sm font-medium">{comparison.message}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Top Exposure Factors */}
+        {exposureFactors.length > 0 && (
+          <div>
+            <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4" />
+              Top Exposure Factors
+            </h4>
+            <div className="space-y-2">
+              {exposureFactors.map((factor, idx) => (
+                <div key={idx} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+                  <div>
+                    <div className="font-medium text-sm">{factor.factor}</div>
+                    <div className="text-xs text-muted-foreground">{factor.description}</div>
+                  </div>
+                  <Badge variant="outline" className="ml-2">
+                    +{Math.round(factor.contribution)} pts
+                  </Badge>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Category Breakdown */}
+        {topCategories.length > 0 && (
+          <div>
+            <h4 className="text-sm font-semibold mb-3">Account Categories</h4>
+            <div className="grid grid-cols-2 gap-2">
+              {topCategories.map((cat, idx) => (
+                <div key={idx} className="flex items-center justify-between p-2 rounded bg-muted/30">
+                  <span className="text-sm">{cat.category}</span>
+                  <Badge variant="secondary" className="text-xs">{cat.count}</Badge>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* AI Insights */}
-        <div className="rounded-lg border border-border bg-card p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <Sparkles className="w-4 h-4 text-primary" />
-            <h4 className="font-semibold text-sm">AI Insights</h4>
+        {insightsList.length > 0 && (
+          <div className="rounded-lg border border-border bg-card p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Sparkles className="w-4 h-4 text-primary" />
+              <h4 className="font-semibold text-sm">AI Insights</h4>
+            </div>
+            <div className="space-y-2 text-sm text-muted-foreground">
+              {insightsList.map((insight, idx) => (
+                <div key={idx} className="flex items-start gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 flex-shrink-0" />
+                  <p>{insight}</p>
+                </div>
+              ))}
+            </div>
           </div>
-          <div className="space-y-2 text-sm text-muted-foreground">
-            {insightsList.map((insight, idx) => (
-              <div key={idx} className="flex items-start gap-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 flex-shrink-0" />
-                <p>{insight}</p>
-              </div>
-            ))}
-          </div>
-        </div>
+        )}
 
         {/* Stats Summary */}
         <div className="grid grid-cols-2 gap-3 pt-2 border-t border-border">

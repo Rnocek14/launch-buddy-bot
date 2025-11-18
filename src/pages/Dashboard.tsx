@@ -1087,6 +1087,10 @@ export default function Dashboard() {
                   level={riskData.riskLevel}
                   factors={riskData.riskFactors}
                   insights={riskData.insights}
+                  percentile={riskData.percentile}
+                  exposureFactors={riskData.exposureFactors}
+                  topCategories={riskData.topCategories}
+                  comparison={riskData.comparison}
                 />
                 <div className="flex justify-center">
                   <Button
@@ -1781,6 +1785,8 @@ export default function Dashboard() {
           }
           avgAccountAge={riskData.riskFactors?.avgAccountAge || 0}
           unmatchedCount={unmatchedDomains.length}
+          percentile={riskData.percentile}
+          topCategories={riskData.topCategories}
         />
       )}
     </div>
