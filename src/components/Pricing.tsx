@@ -83,13 +83,14 @@ export const Pricing = () => {
   return (
     <section id="pricing" className="py-24 px-4">
       <div className="container max-w-6xl">
-        <div className="mb-6 rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 text-xs md:text-sm flex items-center justify-between gap-3">
+        {/* Launch Pricing Banner */}
+        <div className="mb-8 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs md:text-sm flex flex-col md:flex-row md:items-center md:justify-between gap-2">
           <div>
             <span className="font-medium">Launch special:</span>{" "}
             Lock in <span className="font-semibold">$49/year</span> Pro pricing.
-            Your rate never increases as long as you stay subscribed.
+            Your rate won't increase as long as you keep your subscription active.
           </div>
-          <div className="hidden sm:block text-primary font-medium">
+          <div className="text-emerald-700 font-medium">
             No hidden fees • Cancel anytime
           </div>
         </div>
