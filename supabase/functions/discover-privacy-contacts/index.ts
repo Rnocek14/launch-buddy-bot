@@ -1163,12 +1163,19 @@ serve(async (req) => {
         ? jsNeededUrls.slice(0, 3)
         : urlsToTry.slice(0, 3);
       
-      // Log what triggered Browserless for cost monitoring
+      // Log what triggered Browserless for cost monitoring (structured for easy parsing)
       const triggers = [];
       if (jsNeededUrls.length > 0) triggers.push(`${jsNeededUrls.length} JS-needed URLs`);
       if (domainHint?.requires_js) triggers.push('domain requires_js hint');
       if (!result?.content) triggers.push('no Phase 1 result');
-      console.log(`[Phase 2] Invoking Browserless for ${urlsForBrowserless.length} URLs. Triggers: [${triggers.join(', ')}]`);
+      
+      console.log(JSON.stringify({
+        type: "browserless_invocation",
+        urlsCount: urlsForBrowserless.length,
+        triggers,
+        domain: service.domain,
+        timestamp: new Date().toISOString(),
+      }));
       
       const browserlessResult = await tryBrowserlessFetch(urlsForBrowserless, browserlessApiKey);
       
