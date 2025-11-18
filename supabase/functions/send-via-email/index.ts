@@ -66,9 +66,15 @@ serve(async (req) => {
 
     // Get access token (decrypt if encrypted)
     let accessToken = connection.access_token;
-    if (connection.tokens_encrypted && connection.access_token_encrypted) {
-      const encryptedBase64 = btoa(String.fromCharCode(...connection.access_token_encrypted));
-      accessToken = await decrypt(encryptedBase64);
+    if (connection.tokens_encrypted) {
+      if (connection.access_token_encrypted) {
+        // Bytea column is populated (Outlook-style)
+        const encryptedBase64 = btoa(String.fromCharCode(...connection.access_token_encrypted));
+        accessToken = await decrypt(encryptedBase64);
+      } else {
+        // Only text column has encrypted data (Gmail-style)
+        accessToken = await decrypt(connection.access_token);
+      }
     }
 
     // Check if token is expired and refresh if needed
@@ -81,9 +87,15 @@ serve(async (req) => {
       const provider = getEmailProvider(connection.provider as ProviderType);
       
       let refreshToken = connection.refresh_token;
-      if (connection.tokens_encrypted && connection.refresh_token_encrypted) {
-        const encryptedBase64 = btoa(String.fromCharCode(...connection.refresh_token_encrypted));
-        refreshToken = encryptedBase64;
+      if (connection.tokens_encrypted) {
+        if (connection.refresh_token_encrypted) {
+          // Bytea column is populated (Outlook-style)
+          const encryptedBase64 = btoa(String.fromCharCode(...connection.refresh_token_encrypted));
+          refreshToken = encryptedBase64;
+        } else {
+          // Only text column has encrypted data (Gmail-style)
+          refreshToken = connection.refresh_token; // Already encrypted base64
+        }
       }
 
       const tokenData = await provider.refreshToken(
