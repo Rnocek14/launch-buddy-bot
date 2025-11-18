@@ -1,4 +1,4 @@
-import { Shield, ScanSearch, Settings, ShieldCheck, Activity, Menu, X, CreditCard } from "lucide-react";
+import { Shield, ScanSearch, Settings, ShieldCheck, Activity, Menu, X, CreditCard, BarChart3 } from "lucide-react";
 import { ThemeToggle } from "./ThemeToggle";
 import { Button } from "./ui/button";
 import { Link, useNavigate } from "react-router-dom";
@@ -104,6 +104,12 @@ export const Navbar = () => {
                     <span>Settings</span>
                   </Button>
                 </Link>
+                <Link to="/admin/analytics">
+                  <Button variant="ghost" className="gap-2">
+                    <BarChart3 className="w-4 h-4" />
+                    <span>Analytics</span>
+                  </Button>
+                </Link>
               </>
             )}
             
@@ -198,6 +204,12 @@ export const Navbar = () => {
                         <Button variant="ghost" className="w-full justify-start gap-2">
                           <ShieldCheck className="w-4 h-4" />
                           Admin
+                        </Button>
+                      </Link>
+                      <Link to="/admin/analytics" onClick={closeMobileMenu}>
+                        <Button variant="ghost" className="w-full justify-start gap-2">
+                          <BarChart3 className="w-4 h-4" />
+                          Analytics
                         </Button>
                       </Link>
                     </>
