@@ -100,6 +100,33 @@ export const VENDOR_HINTS: Record<string, VendorHint> = {
   unknown: { platform:'unknown', prefill_supported:false, selectors:{} }
 };
 
+// Domain-specific hints for known problematic domains
+export const DOMAIN_HINTS: Record<string, {
+  privacy_url_pattern?: string;
+  requires_js: boolean;
+  exclude_paths?: string[];
+  boost_paths?: string[];
+}> = {
+  'overstock.com': {
+    privacy_url_pattern: 'help.overstock.com/support/s/article/Privacy',
+    requires_js: true,
+    exclude_paths: ['/c/', '/products/', '/category/']
+  },
+  'walmart.com': {
+    requires_js: false,
+    boost_paths: ['/help/article/']
+  },
+  'target.com': {
+    requires_js: false,
+    boost_paths: ['/c/']
+  }
+};
+
 export function getVendorHint(vendorKey?: string): VendorHint {
   return VENDOR_HINTS[vendorKey ?? ''] ?? VENDOR_HINTS.unknown;
+}
+
+export function getDomainHint(domain: string) {
+  const normalized = domain.toLowerCase().replace(/^www\./, '');
+  return DOMAIN_HINTS[normalized] || null;
 }
