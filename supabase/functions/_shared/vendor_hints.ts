@@ -114,11 +114,11 @@ export const DOMAIN_HINTS: Record<string, {
   },
   'walmart.com': {
     requires_js: false,
-    boost_paths: ['/help/article/']
+    boost_paths: ['/help/article/', '/help/privacy']
   },
   'target.com': {
     requires_js: false,
-    boost_paths: ['/c/']
+    boost_paths: ['/help/', '/help/privacy', '/help/contact']
   }
 };
 
