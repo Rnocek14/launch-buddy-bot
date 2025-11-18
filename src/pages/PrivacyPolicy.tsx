@@ -92,19 +92,75 @@ const PrivacyPolicy = () => {
 
           <Card>
             <CardHeader>
-              <CardTitle>Gmail Integration</CardTitle>
+              <CardTitle>Gmail Integration & Data Handling</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <p>
-                When you connect your Gmail account, we request read-only access to scan your emails for online services. We:
-              </p>
-              <ul className="list-disc pl-6 space-y-2">
-                <li>Only read emails to identify services you've used</li>
-                <li>Do not store email content</li>
-                <li>Encrypt all access tokens</li>
-                <li>Allow you to disconnect at any time</li>
-                <li>Never share your Gmail data with third parties</li>
-              </ul>
+              <div>
+                <h3 className="font-semibold mb-2">What We Access</h3>
+                <p className="mb-2">
+                  When you connect your Gmail account, we request the following permissions:
+                </p>
+                <ul className="list-disc pl-6 space-y-2">
+                  <li><strong>gmail.readonly</strong> - Read-only access to scan emails for service identification</li>
+                  <li><strong>gmail.send</strong> - Send deletion request emails on your behalf</li>
+                  <li><strong>userinfo.email</strong> and <strong>userinfo.profile</strong> - Basic account information</li>
+                </ul>
+              </div>
+
+              <div>
+                <h3 className="font-semibold mb-2">How We Use Your Gmail Data</h3>
+                <ul className="list-disc pl-6 space-y-2">
+                  <li>Scan email metadata (sender addresses) to identify online services you use</li>
+                  <li>Extract domain names from email senders to match against our service catalog</li>
+                  <li>Send deletion requests to services on your behalf (when you authorize)</li>
+                  <li>Track which services have been discovered from which email account</li>
+                </ul>
+              </div>
+
+              <div>
+                <h3 className="font-semibold mb-2">What We Do NOT Do</h3>
+                <ul className="list-disc pl-6 space-y-2">
+                  <li>We do NOT read or store email content, subjects, or bodies</li>
+                  <li>We do NOT access your contacts</li>
+                  <li>We do NOT share your Gmail data with any third parties</li>
+                  <li>We do NOT use your data for advertising or marketing purposes</li>
+                  <li>We do NOT sell your data</li>
+                </ul>
+              </div>
+
+              <div>
+                <h3 className="font-semibold mb-2">Data Storage & Security</h3>
+                <ul className="list-disc pl-6 space-y-2">
+                  <li>Gmail access tokens are encrypted using AES-256-GCM encryption before storage</li>
+                  <li>Tokens are stored in a secure database with Row-Level Security (RLS)</li>
+                  <li>Only you can access your own Gmail connection data</li>
+                  <li>Tokens are automatically refreshed to maintain secure access</li>
+                  <li>We only store: your email address, token expiration times, and which email account discovered which services</li>
+                </ul>
+              </div>
+
+              <div>
+                <h3 className="font-semibold mb-2">Data Deletion</h3>
+                <p className="mb-2">
+                  You have full control over your Gmail integration:
+                </p>
+                <ul className="list-disc pl-6 space-y-2">
+                  <li>Disconnect your Gmail account at any time from Settings</li>
+                  <li>When disconnected, all access tokens are immediately deleted</li>
+                  <li>Delete your entire account to remove all associated data</li>
+                  <li>Revoke access through your Google Account settings</li>
+                  <li>Service discovery data remains for your records but can be deleted on request</li>
+                </ul>
+              </div>
+
+              <div>
+                <h3 className="font-semibold mb-2">Compliance</h3>
+                <p>
+                  Our Gmail integration complies with Google's API Services User Data Policy, including the Limited Use requirements. 
+                  We only use the minimum necessary permissions and do not request access to sensitive data beyond what is required 
+                  for core service discovery functionality.
+                </p>
+              </div>
             </CardContent>
           </Card>
 
