@@ -1,4 +1,4 @@
-import { Shield, Zap, Target } from "lucide-react";
+import { Shield, Zap, Target, Sparkles } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "./ui/button";
 
@@ -14,9 +14,9 @@ export const Hero = () => {
       
       <div className="container relative z-10 max-w-5xl text-center">
         {/* Icon badge */}
-        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 mb-8">
-          <Shield className="w-4 h-4 text-primary" />
-          <span className="text-sm font-medium text-primary">Privacy-First Digital Cleanup</span>
+        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-50 border border-emerald-200 mb-8">
+          <Sparkles className="w-4 h-4 text-emerald-700" />
+          <span className="text-sm font-medium text-emerald-700">Limited Launch Price: $49/year Pro</span>
         </div>
 
         <h1 className="text-5xl md:text-7xl font-bold mb-6 bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
@@ -27,11 +27,11 @@ export const Hero = () => {
           </span>
         </h1>
 
-        <p className="text-xl md:text-2xl text-muted-foreground mb-12 max-w-3xl mx-auto leading-relaxed">
-          Discover where your data lives across the internet. Get guided deletion tools and track your cleanup progress—all in one privacy-focused dashboard.
+        <p className="text-xl md:text-2xl text-muted-foreground mb-8 max-w-3xl mx-auto leading-relaxed">
+          AI-powered inbox scan finds hidden accounts. Guided deletion tools + monthly rescans keep you protected. Start free, upgrade to unlimited for just <span className="text-primary font-semibold">$4/month, billed annually</span>.
         </p>
 
-        <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
+        <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-6">
           <Link to="/auth">
             <Button size="lg" className="gap-2 bg-primary hover:bg-primary/90 text-lg px-8 py-6">
               <Shield className="w-5 h-5" />
@@ -39,13 +39,16 @@ export const Hero = () => {
             </Button>
           </Link>
         </div>
+        <p className="text-sm text-muted-foreground mb-12">
+          Free: 3 deletions/month • Pro: Unlimited deletions + rescans for $49/year
+        </p>
 
         {/* Social Proof */}
         <div className="flex flex-col items-center gap-6">
-          <div className="flex items-center gap-2 px-6 py-3 rounded-full bg-primary/5 border border-primary/10">
-            <Shield className="w-5 h-5 text-primary" />
+          <div className="flex items-center gap-2 px-6 py-3 rounded-full bg-emerald-50 border border-emerald-200">
+            <Sparkles className="w-5 h-5 text-emerald-700" />
             <span className="text-sm font-medium">
-              <span className="text-primary font-bold">12,000+</span> users have cleaned up their digital footprint
+              <span className="text-emerald-700 font-bold">Early adopters</span> lock in $49/year • Limited launch pricing
             </span>
           </div>
           

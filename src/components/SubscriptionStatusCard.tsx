@@ -152,12 +152,12 @@ export function SubscriptionStatusCard() {
               </div>
               <p className="text-sm text-muted-foreground mt-1">
                 {isPro ? (
-                  'Unlimited deletion requests'
+                  'Unlimited deletion requests + monthly rescans'
                 ) : subscriptionData.remainingDeletions === null ? (
                   'Unlimited deletions'
                 ) : isOutOfDeletions ? (
                   <span className="text-destructive font-medium">
-                    No deletions remaining this month
+                    No deletions remaining this month • <button onClick={() => navigate('/subscribe')} className="underline text-primary font-semibold">Upgrade to Pro for $49/year</button>
                   </span>
                 ) : (
                   <span className={isLowOnDeletions ? 'text-yellow-600 dark:text-yellow-500 font-medium' : ''}>
@@ -191,14 +191,19 @@ export function SubscriptionStatusCard() {
                 </Button>
               </div>
             ) : (
-              <Button
-                onClick={() => navigate('/subscribe')}
-                className="bg-gradient-to-r from-primary to-accent text-primary-foreground hover:opacity-90"
-                size="sm"
-              >
-                <Crown className="w-4 h-4 mr-2" />
-                Upgrade to Pro
-              </Button>
+              <div className="flex flex-col items-end gap-1">
+                <Button
+                  onClick={() => navigate('/subscribe')}
+                  className="bg-gradient-to-r from-primary to-accent text-primary-foreground hover:opacity-90"
+                  size="sm"
+                >
+                  <Crown className="w-4 h-4 mr-2" />
+                  Upgrade to Pro
+                </Button>
+                <p className="text-xs text-muted-foreground">
+                  $49/year • Lock in launch pricing
+                </p>
+              </div>
             )}
           </div>
         </div>
