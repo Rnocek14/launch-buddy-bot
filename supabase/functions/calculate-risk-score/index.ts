@@ -169,11 +169,14 @@ Deno.serve(async (req) => {
       .slice(0, 5)
       .map(([category, count]) => ({ category, count }));
 
-    // Generate AI insights using GPT-5
+    // Generate insights (AI or fallback)
+    let insights = '';
     const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
-    if (!OPENAI_API_KEY) throw new Error('OPENAI_API_KEY not configured');
 
-    const aiPrompt = `You are a world-class privacy and digital security expert. Analyze this user's digital footprint and provide detailed, nuanced insights.
+    if (OPENAI_API_KEY) {
+      // Try to generate AI insights with OpenAI
+      try {
+        const aiPrompt = `You are a world-class privacy and digital security expert. Analyze this user's digital footprint and provide detailed, nuanced insights.
 
 Risk Score: ${riskScore}/100 (${riskLevel})
 Total Accounts: ${riskFactors.totalAccounts}
@@ -190,34 +193,88 @@ Provide 3-4 specific, actionable insights:
 
 Be conversational, empathetic, and avoid jargon. Each insight should be 2-3 sentences with concrete advice.`;
 
-    const aiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${OPENAI_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o',
-        messages: [
-          { 
-            role: 'system', 
-            content: 'You are an expert privacy and cybersecurity consultant specializing in digital footprint analysis. You provide clear, actionable advice that helps people take control of their online presence.' 
+        const aiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${OPENAI_API_KEY}`,
+            'Content-Type': 'application/json',
           },
-          { role: 'user', content: aiPrompt }
-        ],
-        max_tokens: 800,
-        temperature: 0.7,
-      }),
-    });
+          body: JSON.stringify({
+            model: 'gpt-4o',
+            messages: [
+              { 
+                role: 'system', 
+                content: 'You are an expert privacy and cybersecurity consultant specializing in digital footprint analysis. You provide clear, actionable advice that helps people take control of their online presence.' 
+              },
+              { role: 'user', content: aiPrompt }
+            ],
+            max_tokens: 800,
+            temperature: 0.7,
+          }),
+        });
 
-    if (!aiResponse.ok) {
-      const errorText = await aiResponse.text();
-      console.error('OpenAI API error:', aiResponse.status, errorText);
-      throw new Error(`Failed to generate insights: ${errorText}`);
+        if (aiResponse.ok) {
+          const aiData = await aiResponse.json();
+          insights = aiData.choices[0].message.content;
+        } else {
+          console.warn('OpenAI API failed, using fallback insights');
+          insights = generateFallbackInsights(riskScore, riskLevel, riskFactors);
+        }
+      } catch (error) {
+        console.error('OpenAI call failed, using fallback insights:', error);
+        insights = generateFallbackInsights(riskScore, riskLevel, riskFactors);
+      }
+    } else {
+      // No API key configured - use rule-based insights
+      console.log('No OpenAI API key configured, using fallback insights');
+      insights = generateFallbackInsights(riskScore, riskLevel, riskFactors);
     }
 
-    const aiData = await aiResponse.json();
-    const insights = aiData.choices[0].message.content;
+    // Fallback insights function
+    function generateFallbackInsights(score: number, level: string, factors: RiskFactors): string {
+      const riskDescription = level === 'critical' 
+        ? 'very high' 
+        : level === 'high' 
+        ? 'elevated' 
+        : level === 'medium' 
+        ? 'moderate' 
+        : 'low';
+
+      let insights = `Your digital footprint has a ${riskDescription} risk level (${score}/100).\n\n`;
+
+      // Account overview
+      insights += `You have ${factors.totalAccounts} active accounts across various services. `;
+      if (factors.oldAccountsCount > 0) {
+        insights += `${factors.oldAccountsCount} of these are over 3 years old and may have outdated security settings or forgotten passwords. `;
+      } else {
+        insights += `Most of your accounts appear relatively recent. `;
+      }
+
+      // Sensitive accounts warning
+      if (factors.sensitiveAccountsCount > 0) {
+        insights += `\n\nYou have ${factors.sensitiveAccountsCount} accounts in sensitive categories (finance, healthcare, government). These should be prioritized for security audits and should have two-factor authentication enabled.`;
+      } else {
+        insights += `\n\nYou have few accounts in sensitive categories, which is good for minimizing risk exposure.`;
+      }
+
+      // Unmatched domains
+      if (factors.unmatchedDomainsCount > 0) {
+        insights += ` Additionally, ${factors.unmatchedDomainsCount} unrecognized services were found in your inbox. Review these to identify potential security risks or forgotten accounts.`;
+      }
+
+      // Actionable recommendations
+      insights += `\n\n**Recommended Actions:**\n`;
+      if (factors.oldAccountsCount > 3) {
+        insights += `• Review and delete unused old accounts, especially ones you no longer recognize.\n`;
+      }
+      if (factors.sensitiveAccountsCount > 0) {
+        insights += `• Enable two-factor authentication on all finance and healthcare accounts.\n`;
+      }
+      insights += `• Use a password manager to maintain strong, unique passwords for each service.\n`;
+      insights += `• Regularly audit your digital footprint to catch new accounts early.`;
+
+      return insights;
+    }
 
     return new Response(
       JSON.stringify({
