@@ -108,3 +108,15 @@ All colors MUST be HSL.
     @apply bg-background text-foreground;
   }
 }
+
+/* Mobile safe area padding for notches */
+.safe-area-pb {
+  padding-bottom: max(env(safe-area-inset-bottom), 0.75rem);
+}
+
+/* Smooth touch interactions */
+@media (hover: none) and (pointer: coarse) {
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+}

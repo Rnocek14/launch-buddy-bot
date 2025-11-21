@@ -21,6 +21,8 @@ import { DeletionRequestDialog } from "@/components/DeletionRequestDialog";
 import { BatchDeletionToolbar } from "@/components/BatchDeletionToolbar";
 import { BatchDeletionDialog } from "@/components/BatchDeletionDialog";
 import { SmartBatchSelector } from "@/components/SmartBatchSelector";
+import { MobileBottomNav } from "@/components/MobileBottomNav";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ContactDiscoveryDialog } from "@/components/ContactDiscoveryDialog";
 import { Navbar } from "@/components/Navbar";
@@ -77,6 +79,7 @@ interface UnmatchedDomain {
 export default function Dashboard() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
   const [user, setUser] = useState<any>(null);
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
@@ -930,7 +933,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className={`min-h-screen bg-background ${isMobile ? 'pb-24' : ''}`}>
       {/* Success Animation */}
       {showSuccessAnimation && (
         <SuccessAnimation
@@ -1922,11 +1925,22 @@ export default function Dashboard() {
         onContactVerified={handleQuickDiscoveryComplete}
       />
 
-      {/* Batch Deletion Toolbar */}
-      <BatchDeletionToolbar
+      {/* Batch Deletion Toolbar - Desktop Only */}
+      {!isMobile && (
+        <BatchDeletionToolbar
+          selectedCount={selectedServices.size}
+          onClear={() => setSelectedServices(new Set())}
+          onDelete={handleBatchDeletion}
+        />
+      )}
+
+      {/* Mobile Bottom Navigation */}
+      <MobileBottomNav
         selectedCount={selectedServices.size}
         onClear={() => setSelectedServices(new Set())}
         onDelete={handleBatchDeletion}
+        onSmartSelect={handleSmartSelectSensitive}
+        totalServices={filteredServices.length}
       />
 
       {/* Batch Deletion Dialog */}
