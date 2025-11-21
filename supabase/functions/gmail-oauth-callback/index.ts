@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.0";
 import { encrypt } from "../_shared/encryption.ts";
+import { detectTokenEncryption } from "../_shared/token-validator.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -107,26 +108,74 @@ serve(async (req: Request): Promise<Response> => {
 
     const expiresAt = new Date(Date.now() + tokens.expires_in * 1000);
 
-    // Encrypt tokens before storing
-    console.log("Encrypting tokens before storage");
+    // === LAYER 3: HARDENED TOKEN ENCRYPTION WITH VALIDATION ===
+    console.log("Encrypting tokens with validation...");
     
     let encryptedAccessToken: string;
     let encryptedRefreshToken: string | null;
     let tokensEncrypted = true;
     
     try {
+      // Step 1: Encrypt tokens
       encryptedAccessToken = await encrypt(tokens.access_token);
       encryptedRefreshToken = tokens.refresh_token ? await encrypt(tokens.refresh_token) : null;
-      console.log("Tokens encrypted successfully", {
+      
+      // Step 2: VALIDATE what we just encrypted
+      const accessDetection = detectTokenEncryption(encryptedAccessToken, 'gmail');
+      const refreshDetection = encryptedRefreshToken 
+        ? detectTokenEncryption(encryptedRefreshToken, 'gmail')
+        : { isEncrypted: true, confidence: 'high', reason: 'No refresh token' };
+      
+      // Step 3: Verify encryption worked correctly
+      if (!accessDetection.isEncrypted) {
+        throw new Error(`Access token encryption validation failed: ${accessDetection.reason}`);
+      }
+      
+      if (encryptedRefreshToken && !refreshDetection.isEncrypted) {
+        throw new Error(`Refresh token encryption validation failed: ${refreshDetection.reason}`);
+      }
+      
+      console.log("✅ Tokens encrypted and validated successfully", {
         accessTokenLength: encryptedAccessToken.length,
-        refreshTokenLength: encryptedRefreshToken?.length
+        refreshTokenLength: encryptedRefreshToken?.length,
+        accessConfidence: accessDetection.confidence,
+        refreshConfidence: refreshDetection.confidence,
+        accessReason: accessDetection.reason,
+        refreshReason: refreshDetection.reason
       });
+      
     } catch (encryptError) {
-      console.error('Failed to encrypt tokens, storing as plain text:', encryptError);
-      // Store plain text as fallback
+      console.error('❌ Token encryption or validation failed:', encryptError);
+      
+      // Fallback: Store plain text BUT validate it's actually plain
+      const plainAccessDetection = detectTokenEncryption(tokens.access_token, 'gmail');
+      const plainRefreshDetection = tokens.refresh_token 
+        ? detectTokenEncryption(tokens.refresh_token, 'gmail')
+        : { isEncrypted: false, confidence: 'high', reason: 'No refresh token' };
+      
+      if (plainAccessDetection.isEncrypted || (tokens.refresh_token && plainRefreshDetection.isEncrypted)) {
+        // This should NEVER happen - original tokens from Google shouldn't be encrypted
+        console.error('CRITICAL: Original tokens from Google appear encrypted!', {
+          accessDetection: plainAccessDetection,
+          refreshDetection: plainRefreshDetection
+        });
+        
+        const origin = req.headers.get('referer') || 'https://launch-buddy-bot.lovable.app';
+        const baseUrl = new URL(origin).origin;
+        return new Response(null, {
+          status: 302,
+          headers: {
+            Location: `${baseUrl}/settings?error=${encodeURIComponent('Token format error - please try reconnecting')}`,
+          },
+        });
+      }
+      
+      // Store as plain text with proper flag
       encryptedAccessToken = tokens.access_token;
       encryptedRefreshToken = tokens.refresh_token || null;
       tokensEncrypted = false;
+      
+      console.warn('⚠️ Storing tokens as plain text due to encryption failure');
     }
 
     // Check if this email is already connected for this user
@@ -180,7 +229,7 @@ serve(async (req: Request): Promise<Response> => {
           refresh_token: encryptedRefreshToken,
           token_expires_at: expiresAt.toISOString(),
           tokens_encrypted: tokensEncrypted,
-          is_primary: isFirstConnection, // First account is automatically primary
+          is_primary: isFirstConnection,
           account_label: profile.email,
         });
 
@@ -196,17 +245,7 @@ serve(async (req: Request): Promise<Response> => {
         });
       }
 
-      console.log(`New Gmail account connected${isFirstConnection ? ' (set as primary)' : ''}`);
-    }
-
-    const dbError = null; // For compatibility with existing code
-
-    if (dbError) {
-      console.error("Database error:", dbError);
-      return new Response(
-        JSON.stringify({ error: "Failed to store Gmail connection" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      console.log(`✅ New Gmail account connected${isFirstConnection ? ' (set as primary)' : ''}`);
     }
 
     console.log("Gmail connection stored successfully");

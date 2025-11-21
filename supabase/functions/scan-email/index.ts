@@ -2,7 +2,8 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getEmailProvider } from "../_shared/email-providers/factory.ts";
 import { ProviderType } from "../_shared/email-providers/types.ts";
-import { decrypt } from "../_shared/encryption.ts";
+import { decrypt, encrypt } from "../_shared/encryption.ts";
+import { detectTokenEncryption, validateTokenState } from "../_shared/token-validator.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -81,8 +82,122 @@ serve(async (req) => {
   }
 });
 
+async function getDecryptedToken(
+  token: string,
+  markedAsEncrypted: boolean,
+  provider: 'gmail' | 'outlook'
+): Promise<string> {
+  // Use smart detection to determine actual token state
+  const detection = detectTokenEncryption(token, provider);
+  
+  console.log(`Token detection: ${detection.reason}, confidence: ${detection.confidence}`);
+
+  if (detection.isEncrypted) {
+    try {
+      const decrypted = await decrypt(token);
+      console.log('Token decrypted successfully');
+      return decrypted;
+    } catch (error) {
+      console.error('Decryption failed despite detection:', error);
+      throw new Error('Token is encrypted but decryption failed - connection needs reset');
+    }
+  }
+
+  // Token is plain text
+  if (markedAsEncrypted) {
+    console.warn('⚠️ Token marked as encrypted but detected as plain - FLAG MISMATCH');
+  }
+  
+  return token;
+}
+
+async function repairTokenState(
+  connectionId: string,
+  connection: any,
+  supabase: any
+): Promise<void> {
+  console.log(`🔧 Attempting automatic token state repair for connection ${connectionId}`);
+  
+  try {
+    // Decrypt the tokens (they're encrypted but mislabeled as plain)
+    const decryptedAccess = await decrypt(connection.access_token);
+    const decryptedRefresh = await decrypt(connection.refresh_token);
+    
+    console.log('✅ Successfully decrypted mislabeled tokens');
+
+    // Re-encrypt them properly
+    const reencryptedAccess = await encrypt(decryptedAccess);
+    const reencryptedRefresh = await encrypt(decryptedRefresh);
+
+    // Update database with correct flag
+    const { error: updateError } = await supabase
+      .from('email_connections')
+      .update({
+        access_token: reencryptedAccess,
+        refresh_token: reencryptedRefresh,
+        tokens_encrypted: true,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', connectionId);
+
+    if (updateError) {
+      throw updateError;
+    }
+
+    console.log('✅ Token state repaired successfully - database updated');
+  } catch (error) {
+    console.error('❌ Token repair failed:', error);
+    
+    // Mark connection as needing manual reconnection
+    await supabase
+      .from('email_connections')
+      .update({
+        tokens_encrypted: false,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', connectionId);
+    
+    throw new Error('Token state corrupted beyond automatic repair - reconnection required');
+  }
+}
+
 async function processConnection(connection: any, user: any, maxResults: number, after: any, query: any, supabase: any) {
   console.log(`Using ${connection.provider} connection: ${connection.email}`);
+
+  // === LAYER 2: SMART TOKEN VALIDATION ===
+  const validation = validateTokenState(connection);
+  
+  if (!validation.isValid) {
+    console.warn('⚠️ Token state validation FAILED:', {
+      connectionId: connection.id,
+      email: connection.email,
+      issues: validation.issues,
+      recommendedAction: validation.recommendedAction
+    });
+
+    // If we detect encrypted tokens mislabeled as plain, attempt auto-repair
+    if (validation.recommendedAction === 'decrypt_and_reencrypt') {
+      try {
+        await repairTokenState(connection.id, connection, supabase);
+        
+        // Reload connection after repair
+        const { data: repairedConnection } = await supabase
+          .from('email_connections')
+          .select('*')
+          .eq('id', connection.id)
+          .single();
+        
+        if (repairedConnection) {
+          connection = repairedConnection;
+          console.log('✅ Using repaired connection for scan');
+        }
+      } catch (repairError) {
+        console.error('❌ Auto-repair failed, proceeding with caution:', repairError);
+      }
+    }
+  } else {
+    console.log('✅ Token state validation passed');
+  }
 
   // Fetch user's last email scan date for incremental scanning
   const { data: profile } = await supabase
@@ -97,29 +212,17 @@ async function processConnection(connection: any, user: any, maxResults: number,
 
   console.log(`Last scan date: ${lastScanDate ? lastScanDate.toISOString() : 'never (full scan)'}`);
 
-  // Get access token (decrypt if encrypted)
-  let accessToken = connection.access_token;
-  if (connection.tokens_encrypted) {
-    try {
-      if (connection.access_token_encrypted) {
-        // Bytea column is populated (Outlook-style)
-        const encryptedBase64 = btoa(String.fromCharCode(...connection.access_token_encrypted));
-        accessToken = await decrypt(encryptedBase64);
-      } else {
-        // Only text column has encrypted data (Gmail-style)
-        accessToken = await decrypt(connection.access_token);
-      }
-    } catch (decryptError) {
-      console.warn('Failed to decrypt access token, treating as plain text:', decryptError);
-      // If decryption fails, assume it's already plain text
-      accessToken = connection.access_token;
-      
-      // Mark for re-encryption on next token refresh
-      await supabase
-        .from('email_connections')
-        .update({ tokens_encrypted: false })
-        .eq('id', connection.id);
-    }
+  // Get access token using smart decryption
+  let accessToken: string;
+  try {
+    accessToken = await getDecryptedToken(
+      connection.access_token,
+      connection.tokens_encrypted,
+      connection.provider
+    );
+  } catch (error) {
+    console.error('Failed to get access token:', error);
+    throw new Error('Unable to access email account - please reconnect your Gmail account');
   }
 
   // Check if token is expired
@@ -132,21 +235,26 @@ async function processConnection(connection: any, user: any, maxResults: number,
     // Get the provider
     const provider = getEmailProvider(connection.provider as ProviderType);
     
-    // Refresh token
-    let refreshToken = connection.refresh_token;
-    if (connection.tokens_encrypted) {
-      if (connection.refresh_token_encrypted) {
-        // Bytea column is populated (Outlook-style)
-        const encryptedBase64 = btoa(String.fromCharCode(...connection.refresh_token_encrypted));
-        refreshToken = encryptedBase64;
-      } else {
-        // Only text column has encrypted data (Gmail-style)
-        refreshToken = connection.refresh_token; // Already encrypted base64
-      }
+    // Get refresh token with smart decryption
+    let refreshToken: string;
+    try {
+      refreshToken = await getDecryptedToken(
+        connection.refresh_token,
+        connection.tokens_encrypted,
+        connection.provider
+      );
+    } catch (error) {
+      console.error('Failed to get refresh token:', error);
+      throw new Error('Unable to refresh access - please reconnect your Gmail account');
     }
 
+    // For encrypted tokens, we need to pass the encrypted base64 string
+    const refreshTokenForProvider = connection.tokens_encrypted 
+      ? connection.refresh_token 
+      : refreshToken;
+
     const tokenData = await provider.refreshToken(
-      refreshToken,
+      refreshTokenForProvider,
       user.id,
       connection.tokens_encrypted || false
     );
@@ -171,7 +279,6 @@ async function processConnection(connection: any, user: any, maxResults: number,
   const provider = getEmailProvider(connection.provider as ProviderType);
   
   // Use incremental scanning if we have a last scan date
-  // The 'after' parameter is a timestamp that the provider will use to filter messages
   const scanAfter = lastScanDate || after;
   
   const messages = await provider.getMessages(accessToken, {
@@ -247,7 +354,7 @@ async function processConnection(connection: any, user: any, maxResults: number,
 
   console.log(`Matched ${matchedServices.length} services, ${unmatchedDomains.length} unmatched`);
 
-  // Check for reappearances - services that were deleted but are still sending emails
+  // Check for reappearances
   const { data: existingServices } = await supabase
     .from('user_services')
     .select('service_id, deletion_requested_at')
@@ -261,15 +368,13 @@ async function processConnection(connection: any, user: any, maxResults: number,
     }
   });
 
-  // Insert matched services into user_services
-  // Use two-step approach to preserve discovered_at on existing services
+  // Insert matched services
   let servicesAdded = 0;
   let servicesReappeared = 0;
   
   for (const match of matchedServices) {
     const isReappeared = reappearedServiceIds.has(match.service_id);
     
-    // Step 1: Insert with ignoreDuplicates to preserve discovered_at
     await supabase
       .from('user_services')
       .upsert({
@@ -279,10 +384,9 @@ async function processConnection(connection: any, user: any, maxResults: number,
         discovered_at: new Date().toISOString(),
       }, {
         onConflict: 'user_id,service_id',
-        ignoreDuplicates: true, // Don't overwrite existing records
+        ignoreDuplicates: true,
       });
 
-    // Step 2: Update last_scanned_at and reappeared_at on all (new and existing)
     const { error: updateError } = await supabase
       .from('user_services')
       .update({
@@ -298,12 +402,10 @@ async function processConnection(connection: any, user: any, maxResults: number,
         servicesReappeared++;
         console.log(`Service ${match.name} reappeared after deletion request`);
       }
-    } else {
-      console.error('Error updating service:', updateError);
     }
   }
 
-  // Update last_email_scan_date in profiles
+  // Update last scan date
   await supabase
     .from('profiles')
     .update({ last_email_scan_date: new Date().toISOString() })
