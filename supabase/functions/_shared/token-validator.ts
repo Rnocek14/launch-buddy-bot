@@ -134,8 +134,13 @@ export function validateTokenState(connection: any): TokenValidationResult {
   
   if (!isValid) {
     // Critical case: tokens are encrypted but flag says they're not
+    // Accept medium confidence for auto-repair to catch more cases
     if (!connection.tokens_encrypted && accessDetection.isEncrypted) {
-      recommendedAction = 'decrypt_and_reencrypt';
+      if (accessDetection.confidence === 'high' || accessDetection.confidence === 'medium') {
+        recommendedAction = 'decrypt_and_reencrypt';
+      } else {
+        recommendedAction = 'reconnect';
+      }
     }
     // Tokens are plain but flag says encrypted
     else if (connection.tokens_encrypted && !accessDetection.isEncrypted) {
