@@ -2,9 +2,9 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Shield, TrendingUp, Globe, ArrowRight, CheckCircle2, AlertTriangle, Loader2, Sparkles } from "lucide-react";
+import { Shield, TrendingUp, Globe, ArrowRight, CheckCircle2, AlertTriangle, Loader2, Sparkles, Eye } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 import { trackEvent } from "@/lib/analytics";
 import { toast } from "sonner";
@@ -119,10 +119,10 @@ export default function PublicResult() {
     return (
       <div className="min-h-screen bg-background">
         <Navbar />
-        <div className="flex items-center justify-center min-h-[80vh]">
+        <div className="flex items-center justify-center min-h-[80vh] px-4">
           <div className="text-center space-y-4">
             <Loader2 className="w-12 h-12 animate-spin text-primary mx-auto" />
-            <p className="text-muted-foreground">Loading result...</p>
+            <p className="text-muted-foreground">Loading shared results...</p>
           </div>
         </div>
       </div>
@@ -133,16 +133,20 @@ export default function PublicResult() {
     return (
       <div className="min-h-screen bg-background">
         <Navbar />
-        <div className="flex items-center justify-center min-h-[80vh]">
-          <Card className="max-w-md p-8 text-center space-y-4">
-            <AlertTriangle className="w-16 h-16 text-yellow-500 mx-auto" />
-            <h2 className="text-2xl font-bold">Result Not Found</h2>
-            <p className="text-muted-foreground">
-              This result link may have expired or doesn't exist.
-            </p>
-            <Button onClick={() => navigate("/")} className="w-full">
-              Go to Homepage
-            </Button>
+        <div className="flex items-center justify-center min-h-[80vh] px-4">
+          <Card className="max-w-md w-full shadow-lg">
+            <CardContent className="pt-8 pb-6 text-center space-y-4">
+              <div className="w-20 h-20 mx-auto mb-4 rounded-2xl bg-muted flex items-center justify-center">
+                <AlertTriangle className="w-10 h-10 text-yellow-600" />
+              </div>
+              <h2 className="text-2xl font-bold">Result Not Found</h2>
+              <p className="text-muted-foreground">
+                This result link may have expired or doesn't exist.
+              </p>
+              <Button onClick={() => navigate("/")} className="w-full sm:w-auto" size="lg">
+                Go to Homepage
+              </Button>
+            </CardContent>
           </Card>
         </div>
       </div>
@@ -157,53 +161,53 @@ export default function PublicResult() {
       
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Hero Section */}
-        <div className="text-center mb-12 space-y-4">
+        <div className="text-center mb-12 space-y-4 px-4">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium mb-4">
             <Sparkles className="w-4 h-4" />
-            Shared Digital Footprint Report
+            <span>Shared Digital Footprint Report</span>
           </div>
-          <h1 className="text-4xl sm:text-5xl font-bold text-foreground">
+          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-foreground">
             Someone just discovered their digital footprint
           </h1>
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+          <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto">
             See how many hidden accounts they found. Then check yours.
           </p>
         </div>
 
         {/* Main Risk Score Card */}
         <Card className={`mb-8 overflow-hidden ${getRiskBgColor()} border-2`}>
-          <div className="p-12 text-center space-y-6">
-            <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-background/50 backdrop-blur-sm mb-4">
-              <RiskIcon className={`w-12 h-12 ${getRiskColor()}`} />
+          <div className="p-6 sm:p-8 lg:p-12 text-center space-y-6">
+            <div className="inline-flex items-center justify-center w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-background/50 backdrop-blur-sm mb-4">
+              <RiskIcon className={`w-10 h-10 sm:w-12 sm:h-12 ${getRiskColor()}`} />
             </div>
             
             <div>
-              <div className="text-muted-foreground text-lg mb-2">Digital Footprint Risk Score</div>
-              <div className={`text-8xl font-bold ${getRiskColor()}`}>
+              <div className="text-muted-foreground text-base sm:text-lg mb-2">Digital Footprint Risk Score</div>
+              <div className={`text-6xl sm:text-7xl lg:text-8xl font-bold ${getRiskColor()}`}>
                 {result.risk_score}
               </div>
-              <div className={`text-2xl font-semibold ${getRiskColor()} capitalize mt-4`}>
+              <div className={`text-xl sm:text-2xl font-semibold ${getRiskColor()} capitalize mt-4`}>
                 {result.risk_level} Risk Level
               </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-6">
-              <div className="bg-background/70 backdrop-blur-sm rounded-xl p-6">
-                <Globe className="w-8 h-8 text-primary mx-auto mb-2" />
-                <div className="text-3xl font-bold text-foreground">{result.service_count}</div>
+              <div className="bg-background/70 backdrop-blur-sm rounded-xl p-4 sm:p-6">
+                <Globe className="w-6 h-6 sm:w-8 sm:h-8 text-primary mx-auto mb-2" />
+                <div className="text-2xl sm:text-3xl font-bold text-foreground">{result.service_count}</div>
                 <div className="text-sm text-muted-foreground">Services Found</div>
               </div>
               
-              <div className="bg-background/70 backdrop-blur-sm rounded-xl p-6">
-                <TrendingUp className="w-8 h-8 text-primary mx-auto mb-2" />
-                <div className="text-3xl font-bold text-foreground">{result.top_categories.length}</div>
+              <div className="bg-background/70 backdrop-blur-sm rounded-xl p-4 sm:p-6">
+                <TrendingUp className="w-6 h-6 sm:w-8 sm:h-8 text-primary mx-auto mb-2" />
+                <div className="text-2xl sm:text-3xl font-bold text-foreground">{result.top_categories.length}</div>
                 <div className="text-sm text-muted-foreground">Categories</div>
               </div>
               
-              <div className="bg-background/70 backdrop-blur-sm rounded-xl p-6">
-                <Shield className="w-8 h-8 text-primary mx-auto mb-2" />
-                <div className="text-3xl font-bold text-foreground">{result.view_count || 0}</div>
-                <div className="text-sm text-muted-foreground">People Viewed</div>
+              <div className="bg-background/70 backdrop-blur-sm rounded-xl p-4 sm:p-6">
+                <Eye className="w-6 h-6 sm:w-8 sm:h-8 text-primary mx-auto mb-2" />
+                <div className="text-2xl sm:text-3xl font-bold text-foreground">{result.view_count || 0}</div>
+                <div className="text-sm text-muted-foreground">Views</div>
               </div>
             </div>
           </div>

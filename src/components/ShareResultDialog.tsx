@@ -228,10 +228,10 @@ export const ShareResultDialog = ({
         </DialogHeader>
 
         <Tabs value={selectedTemplate} onValueChange={(v) => setSelectedTemplate(v as TemplateType)} className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="minimalist">Minimalist</TabsTrigger>
-            <TabsTrigger value="detailed">Detailed</TabsTrigger>
-            <TabsTrigger value="challenge">Challenge</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-3 h-auto">
+            <TabsTrigger value="minimalist" className="text-xs sm:text-sm py-2">Minimalist</TabsTrigger>
+            <TabsTrigger value="detailed" className="text-xs sm:text-sm py-2">Detailed</TabsTrigger>
+            <TabsTrigger value="challenge" className="text-xs sm:text-sm py-2">Challenge</TabsTrigger>
           </TabsList>
 
           <TabsContent value="minimalist" className="mt-6">

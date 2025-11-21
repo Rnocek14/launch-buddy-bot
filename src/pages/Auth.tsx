@@ -217,30 +217,34 @@ export default function Auth() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-background">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <Shield className="w-12 h-12 text-primary mx-auto mb-4" />
-          <CardTitle>Footprint Finder</CardTitle>
-          <CardDescription>Sign in to access your account</CardDescription>
+    <div className="min-h-screen flex items-center justify-center p-4 sm:p-6 bg-background">
+      <Card className="w-full max-w-md shadow-lg">
+        <CardHeader className="text-center space-y-4">
+          <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-primary to-accent p-3">
+            <Shield className="w-full h-full text-primary-foreground" />
+          </div>
+          <div>
+            <CardTitle className="text-2xl">Footprint Finder</CardTitle>
+            <CardDescription className="mt-2">Sign in to discover your digital footprint</CardDescription>
+          </div>
         </CardHeader>
-        <CardContent>
-          <div className="space-y-3 mb-6">
+        <CardContent className="space-y-6">
+          <div className="space-y-3">
             <Button 
               onClick={handleGoogleSignIn} 
               variant="outline" 
-              className="w-full"
+              className="w-full h-12 text-base hover:bg-primary/5 hover:border-primary/30 transition-colors"
               disabled={loading}
             >
               {loading ? (
                 <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Signing in...
+                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                  <span>Signing in...</span>
                 </>
               ) : (
                 <>
-                  <Chrome className="w-4 h-4 mr-2" />
-                  Sign in with Google
+                  <Chrome className="w-5 h-5 mr-2" />
+                  <span>Sign in with Google</span>
                 </>
               )}
             </Button>
@@ -248,29 +252,29 @@ export default function Auth() {
             <Button 
               onClick={handleOutlookSignIn} 
               variant="outline" 
-              className="w-full"
+              className="w-full h-12 text-base hover:bg-primary/5 hover:border-primary/30 transition-colors"
               disabled={loading}
             >
               {loading ? (
                 <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Signing in...
+                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                  <span>Signing in...</span>
                 </>
               ) : (
                 <>
-                  <Mail className="w-4 h-4 mr-2" />
-                  Sign in with Outlook
+                  <Mail className="w-5 h-5 mr-2" />
+                  <span>Sign in with Outlook</span>
                 </>
               )}
             </Button>
           </div>
           
-          <div className="relative mb-6">
+          <div className="relative">
             <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t" />
+              <span className="w-full border-t border-border" />
             </div>
             <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-background px-2 text-muted-foreground">
+              <span className="bg-card px-3 py-1 text-muted-foreground font-medium">
                 Or continue with email
               </span>
             </div>
@@ -371,10 +375,10 @@ export default function Auth() {
             </TabsContent>
           </Tabs>
 
-          <div className="mt-6">
-            <Link to="/">
-              <Button variant="ghost" className="w-full">
-                Back to Home
+          <div className="pt-4 border-t border-border">
+            <Link to="/" className="block">
+              <Button variant="ghost" className="w-full hover:bg-muted">
+                ← Back to Home
               </Button>
             </Link>
           </div>
