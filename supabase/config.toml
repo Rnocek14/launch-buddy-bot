@@ -83,3 +83,6 @@ verify_jwt = false
 
 [functions.check-token-health]
 verify_jwt = true
+
+[functions.fix-token-encryption-states]
+verify_jwt = true
