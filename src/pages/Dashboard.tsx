@@ -22,6 +22,7 @@ import { BatchDeletionToolbar } from "@/components/BatchDeletionToolbar";
 import { BatchDeletionDialog } from "@/components/BatchDeletionDialog";
 import { SmartBatchSelector } from "@/components/SmartBatchSelector";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
+import { MobileFilterDrawer } from "@/components/MobileFilterDrawer";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ContactDiscoveryDialog } from "@/components/ContactDiscoveryDialog";
@@ -1662,51 +1663,78 @@ export default function Dashboard() {
             </div>
 
             {/* Search and Filter */}
-            <Card>
-              <CardContent className="pt-6">
-              <div className="flex flex-col sm:flex-row gap-3">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search services..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-                <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                  <SelectTrigger className="w-full sm:w-[200px]">
-                    <SelectValue placeholder="All Categories" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Categories</SelectItem>
-                    {categories.map(cat => (
-                      <SelectItem key={cat} value={cat}>
-                        {cat} ({services.filter(s => (s.category || "Other") === cat).length})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Select value={selectedContactStatus} onValueChange={setSelectedContactStatus}>
-                  <SelectTrigger className="w-full sm:w-[200px]">
-                    <SelectValue placeholder="All Contact Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Status</SelectItem>
-                    <SelectItem value="verified">
-                      🟢 Verified ({services.filter(s => s.contact_status === 'verified').length})
-                    </SelectItem>
-                    <SelectItem value="ai_discovered">
-                      🟡 AI Discovered ({services.filter(s => s.contact_status === 'ai_discovered').length})
-                    </SelectItem>
-                    <SelectItem value="needs_discovery">
-                      🔴 Needs Discovery ({services.filter(s => s.contact_status === 'needs_discovery').length})
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
+            {isMobile ? (
+              <div className="flex items-center gap-3">
+                <MobileFilterDrawer
+                  searchQuery={searchQuery}
+                  selectedCategory={selectedCategory}
+                  selectedContactStatus={selectedContactStatus}
+                  categories={categories}
+                  services={services}
+                  onSearchChange={setSearchQuery}
+                  onCategoryChange={setSelectedCategory}
+                  onContactStatusChange={setSelectedContactStatus}
+                  onClearAll={() => {
+                    setSearchQuery("");
+                    setSelectedCategory("all");
+                    setSelectedContactStatus("all");
+                  }}
+                />
+                {(searchQuery || selectedCategory !== "all" || selectedContactStatus !== "all") && (
+                  <div className="flex-1 flex items-center gap-2 px-3 py-2 rounded-lg bg-muted/50 border border-border">
+                    <span className="text-xs text-muted-foreground">
+                      {filteredServices.length} results
+                    </span>
+                  </div>
+                )}
               </div>
-              </CardContent>
-            </Card>
+            ) : (
+              <Card>
+                <CardContent className="pt-6">
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search services..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                  <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                    <SelectTrigger className="w-full sm:w-[200px]">
+                      <SelectValue placeholder="All Categories" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Categories</SelectItem>
+                      {categories.map(cat => (
+                        <SelectItem key={cat} value={cat}>
+                          {cat} ({services.filter(s => (s.category || "Other") === cat).length})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select value={selectedContactStatus} onValueChange={setSelectedContactStatus}>
+                    <SelectTrigger className="w-full sm:w-[200px]">
+                      <SelectValue placeholder="All Contact Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Status</SelectItem>
+                      <SelectItem value="verified">
+                        🟢 Verified ({services.filter(s => s.contact_status === 'verified').length})
+                      </SelectItem>
+                      <SelectItem value="ai_discovered">
+                        🟡 AI Discovered ({services.filter(s => s.contact_status === 'ai_discovered').length})
+                      </SelectItem>
+                      <SelectItem value="needs_discovery">
+                        🔴 Needs Discovery ({services.filter(s => s.contact_status === 'needs_discovery').length})
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Batch Selection Helper */}
             {filteredServices.length > 0 && (
