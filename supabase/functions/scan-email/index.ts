@@ -119,13 +119,13 @@ async function repairTokenState(
   console.log(`🔧 Attempting automatic token state repair for connection ${connectionId}`);
   
   try {
-    // Decrypt the tokens (they're encrypted but mislabeled as plain)
+    // Try to decrypt tokens (which should fail if they're actually plain text)
     const decryptedAccess = await decrypt(connection.access_token);
     const decryptedRefresh = await decrypt(connection.refresh_token);
     
     console.log('✅ Successfully decrypted mislabeled tokens');
 
-    // Re-encrypt them properly
+    // If we get here, tokens were encrypted! Re-encrypt them properly
     const reencryptedAccess = await encrypt(decryptedAccess);
     const reencryptedRefresh = await encrypt(decryptedRefresh);
 
@@ -146,9 +146,33 @@ async function repairTokenState(
 
     console.log('✅ Token state repaired successfully - database updated');
   } catch (error) {
-    console.error('❌ Token repair failed:', error);
+    // If decryption fails, tokens might actually be plain text (false positive detection)
+    const errorMessage = error instanceof Error ? error.message : String(error);
     
-    // Mark connection as needing manual reconnection
+    if (errorMessage.includes('Failed to decode base64') || errorMessage.includes('Invalid')) {
+      console.log('ℹ️ Decryption failed → verifying if tokens are actually plain text');
+      
+      // Verify tokens are really plain by checking format
+      const accessCheck = detectTokenEncryption(connection.access_token, connection.provider);
+      const refreshCheck = detectTokenEncryption(connection.refresh_token, connection.provider);
+      
+      if (!accessCheck.isEncrypted && !refreshCheck.isEncrypted) {
+        console.log('✅ Tokens confirmed as plain text, correcting database flag');
+        // Update flag to match reality - tokens are plain and working fine
+        await supabase
+          .from('email_connections')
+          .update({
+            tokens_encrypted: false,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', connectionId);
+        return; // No error, repair not needed
+      }
+    }
+    
+    // Real corruption - rethrow error
+    console.error('❌ Token repair failed with real corruption:', error);
+    
     await supabase
       .from('email_connections')
       .update({

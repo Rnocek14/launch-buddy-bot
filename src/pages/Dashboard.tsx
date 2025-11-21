@@ -351,18 +351,29 @@ export default function Dashboard() {
 
       if (error) throw error;
 
-      // Check for token repair issues
+      // Check for token repair issues - only show error if tokens are actually encrypted
       if (data.tokenRepairStatus === 'failed') {
-        toast({
-          title: "Email Connection Issue Detected",
-          description: "Your email connection needs to be reset. Please reconnect in Settings.",
-          variant: "destructive",
-          action: (
-            <Button variant="outline" size="sm" onClick={() => navigate('/settings')}>
-              Go to Settings
-            </Button>
-          )
-        });
+        // Verify if the connection's tokens are actually marked as encrypted
+        const { data: connectionData } = await supabase
+          .from('email_connections')
+          .select('tokens_encrypted')
+          .eq('user_id', user?.id)
+          .single();
+        
+        // Only show error if tokens_encrypted flag is TRUE (real corruption)
+        // Don't show error if tokens are plain text and working (false positive)
+        if (connectionData?.tokens_encrypted) {
+          toast({
+            title: "Email Connection Issue Detected",
+            description: "Your email connection needs to be reset. Please reconnect in Settings.",
+            variant: "destructive",
+            action: (
+              <Button variant="outline" size="sm" onClick={() => navigate('/settings')}>
+                Go to Settings
+              </Button>
+            )
+          });
+        }
       }
 
       if (data.tokenIssues && data.tokenIssues.length > 0) {

@@ -37,6 +37,11 @@ export function detectTokenEncryption(
     if (token.startsWith('1//')) {
       return { isEncrypted: false, confidence: 'high', reason: 'Gmail refresh token prefix (1//)' };
     }
+    // Google's newer refresh token format: 20-30 alphanumeric chars
+    // Format example: Hm2h..., looks like base64 but is actually plain text
+    if (/^[A-Za-z0-9]{20,30}$/.test(token)) {
+      return { isEncrypted: false, confidence: 'high', reason: 'Gmail new refresh token format' };
+    }
   }
 
   // Microsoft/Outlook plain text pattern (JWT tokens)
