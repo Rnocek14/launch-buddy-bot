@@ -20,6 +20,7 @@ import { useAuthorization } from "@/hooks/useAuthorization";
 import { DeletionRequestDialog } from "@/components/DeletionRequestDialog";
 import { BatchDeletionToolbar } from "@/components/BatchDeletionToolbar";
 import { BatchDeletionDialog } from "@/components/BatchDeletionDialog";
+import { SmartBatchSelector } from "@/components/SmartBatchSelector";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ContactDiscoveryDialog } from "@/components/ContactDiscoveryDialog";
 import { Navbar } from "@/components/Navbar";
@@ -641,6 +642,56 @@ export default function Dashboard() {
   const selectedServicesArray = Array.from(selectedServices)
     .map(id => services.find(s => s.id === id))
     .filter((s): s is Service => s !== undefined);
+
+  const handleSmartSelectOldest = () => {
+    const threeYearsAgo = new Date();
+    threeYearsAgo.setFullYear(threeYearsAgo.getFullYear() - 3);
+    
+    const oldestServices = filteredServices.filter((service: any) => 
+      new Date(service.discovered_at) < threeYearsAgo
+    );
+    setSelectedServices(new Set(oldestServices.map(s => s.id)));
+    toast({
+      title: "Smart Selection",
+      description: `Selected ${oldestServices.length} oldest accounts (3+ years old)`,
+    });
+  };
+
+  const handleSmartSelectSensitive = () => {
+    const sensitiveCategories = ['Social Media', 'Dating', 'Health & Fitness', 'Finance', 'Banking', 'Healthcare'];
+    const sensitiveServices = filteredServices.filter((service: any) =>
+      sensitiveCategories.includes(service.category || '')
+    );
+    setSelectedServices(new Set(sensitiveServices.map(s => s.id)));
+    toast({
+      title: "Smart Selection",
+      description: `Selected ${sensitiveServices.length} sensitive accounts`,
+    });
+  };
+
+  const handleSmartSelectAll = () => {
+    setSelectedServices(new Set(filteredServices.map(s => s.id)));
+    toast({
+      title: "Smart Selection", 
+      description: `Selected all ${filteredServices.length} accounts`,
+    });
+  };
+
+  const getSmartSelectionCounts = () => {
+    const threeYearsAgo = new Date();
+    threeYearsAgo.setFullYear(threeYearsAgo.getFullYear() - 3);
+    
+    const oldestCount = filteredServices.filter((service: any) => 
+      new Date(service.discovered_at) < threeYearsAgo
+    ).length;
+    
+    const sensitiveCategories = ['Social Media', 'Dating', 'Health & Fitness', 'Finance', 'Banking', 'Healthcare'];
+    const sensitiveCount = filteredServices.filter((service: any) =>
+      sensitiveCategories.includes(service.category || '')
+    ).length;
+    
+    return { oldestCount, sensitiveCount };
+  };
 
   const categoryColors: Record<string, string> = {
     "Social": "bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/20",
@@ -1479,18 +1530,30 @@ export default function Dashboard() {
 
             {/* Controls */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <span className="font-medium text-foreground">{filteredServices.length}</span>
-                <span>
-                  {viewTab === 'priority' ? 'priority' : viewTab === 'new' ? 'new' : ''} 
-                  {viewTab !== 'all' && ' '}services
-                  {viewTab === 'all' && (
-                    <>
-                      <span className="mx-1">of</span>
-                      <span className="font-medium text-foreground">{services.length}</span>
-                    </>
-                  )}
-                </span>
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <span className="font-medium text-foreground">{filteredServices.length}</span>
+                  <span>
+                    {viewTab === 'priority' ? 'priority' : viewTab === 'new' ? 'new' : ''} 
+                    {viewTab !== 'all' && ' '}services
+                    {viewTab === 'all' && (
+                      <>
+                        <span className="mx-1">of</span>
+                        <span className="font-medium text-foreground">{services.length}</span>
+                      </>
+                    )}
+                  </span>
+                </div>
+                {filteredServices.length > 0 && (
+                  <SmartBatchSelector
+                    onSelectOldest={handleSmartSelectOldest}
+                    onSelectSensitive={handleSmartSelectSensitive}
+                    onSelectAll={handleSmartSelectAll}
+                    oldestCount={getSmartSelectionCounts().oldestCount}
+                    sensitiveCount={getSmartSelectionCounts().sensitiveCount}
+                    totalCount={filteredServices.length}
+                  />
+                )}
               </div>
               <div className="flex items-center gap-3 w-full sm:w-auto">
                 <Button 
