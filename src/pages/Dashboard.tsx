@@ -466,17 +466,18 @@ export default function Dashboard() {
     try {
       const { data, error } = await supabase.functions.invoke('calculate-risk-score');
       
-      if (error) throw error;
+      if (error) {
+        // Risk score is optional - don't show error toast
+        console.warn('Risk score unavailable:', error);
+        setRiskData(null);
+        return;
+      }
       
       setRiskData(data);
     } catch (error: any) {
-      console.error('Failed to fetch risk score:', error);
-      const errorMsg = getErrorMessage(error);
-      toast({
-        title: errorMsg.title,
-        description: errorMsg.description,
-        variant: "destructive"
-      });
+      // Silent failure - risk score is optional
+      console.warn('Failed to fetch risk score:', error);
+      setRiskData(null);
     } finally {
       setLoadingRisk(false);
     }
