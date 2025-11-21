@@ -30,6 +30,9 @@ interface RiskScoreProps {
     betterThan: number;
     worseThan: number;
   };
+  onFilterOldAccounts?: () => void;
+  onFilterSensitive?: () => void;
+  onFilterCategory?: (category: string) => void;
 }
 
 export function RiskScoreCard({ 
@@ -40,7 +43,10 @@ export function RiskScoreCard({
   percentile,
   exposureFactors = [],
   topCategories = [],
-  comparison
+  comparison,
+  onFilterOldAccounts,
+  onFilterSensitive,
+  onFilterCategory,
 }: RiskScoreProps) {
   const levelConfig = {
     low: {
@@ -130,27 +136,39 @@ export function RiskScoreCard({
               <Progress value={Math.min(100, (factors.totalAccounts / 50) * 100)} className="h-2" />
             </div>
             
-            <div>
+            <button
+              onClick={onFilterOldAccounts}
+              className="w-full text-left hover:bg-accent/50 rounded-lg p-2 -m-2 transition-colors group cursor-pointer"
+              disabled={!onFilterOldAccounts}
+            >
               <div className="flex items-center justify-between text-sm mb-1">
-                <span className="text-muted-foreground">Old Accounts (3+ years)</span>
+                <span className="text-muted-foreground group-hover:text-foreground transition-colors">
+                  Old Accounts (3+ years) {onFilterOldAccounts && '→'}
+                </span>
                 <span className="font-semibold">{factors.oldAccountsCount}</span>
               </div>
               <Progress 
                 value={factors.totalAccounts > 0 ? (factors.oldAccountsCount / factors.totalAccounts) * 100 : 0} 
                 className="h-2" 
               />
-            </div>
+            </button>
             
-            <div>
+            <button
+              onClick={onFilterSensitive}
+              className="w-full text-left hover:bg-accent/50 rounded-lg p-2 -m-2 transition-colors group cursor-pointer"
+              disabled={!onFilterSensitive}
+            >
               <div className="flex items-center justify-between text-sm mb-1">
-                <span className="text-muted-foreground">Sensitive Services</span>
+                <span className="text-muted-foreground group-hover:text-foreground transition-colors">
+                  Sensitive Services {onFilterSensitive && '→'}
+                </span>
                 <span className="font-semibold">{factors.sensitiveAccountsCount}</span>
               </div>
               <Progress 
                 value={Math.min(100, (factors.sensitiveAccountsCount / 10) * 100)} 
                 className="h-2" 
               />
-            </div>
+            </button>
           </div>
         </div>
 
@@ -193,10 +211,17 @@ export function RiskScoreCard({
             <h4 className="text-sm font-semibold mb-3">Account Categories</h4>
             <div className="grid grid-cols-2 gap-2">
               {topCategories.map((cat, idx) => (
-                <div key={idx} className="flex items-center justify-between p-2 rounded bg-muted/30">
-                  <span className="text-sm">{cat.category}</span>
+                <button
+                  key={idx}
+                  onClick={() => onFilterCategory?.(cat.category)}
+                  className="flex items-center justify-between p-2 rounded bg-muted/30 hover:bg-accent/50 transition-colors group cursor-pointer"
+                  disabled={!onFilterCategory}
+                >
+                  <span className="text-sm group-hover:text-foreground transition-colors">
+                    {cat.category} {onFilterCategory && '→'}
+                  </span>
                   <Badge variant="secondary" className="text-xs">{cat.count}</Badge>
-                </div>
+                </button>
               ))}
             </div>
           </div>
