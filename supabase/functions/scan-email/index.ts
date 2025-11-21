@@ -254,15 +254,12 @@ async function processConnection(connection: any, user: any, maxResults: number,
       throw new Error('Unable to refresh access - please reconnect your Gmail account');
     }
 
-    // For encrypted tokens, we need to pass the encrypted base64 string
-    const refreshTokenForProvider = connection.tokens_encrypted 
-      ? connection.refresh_token 
-      : refreshToken;
-
+    // BUG FIX: Always pass the already-decrypted token to provider
+    // The provider will handle re-encryption if needed
     const tokenData = await provider.refreshToken(
-      refreshTokenForProvider,
+      refreshToken,  // Already decrypted above
       user.id,
-      connection.tokens_encrypted || false
+      false  // Tell provider token is NOT encrypted (we already decrypted it)
     );
 
     // Update connection with new token
@@ -294,6 +291,17 @@ async function processConnection(connection: any, user: any, maxResults: number,
   });
 
   console.log(`Fetched ${messages.length} messages ${scanAfter ? `since ${new Date(scanAfter).toISOString()}` : '(full scan)'}`);
+
+  // BUG FIX: If incremental scan returns 0, try a small full scan
+  if (messages.length === 0 && scanAfter) {
+    console.log('⚠️ Incremental scan returned 0 messages, trying full scan with limit 50...');
+    const fullScanMessages = await provider.getMessages(accessToken, {
+      maxResults: 50,
+      query,
+    });
+    console.log(`Full scan returned ${fullScanMessages.length} messages`);
+    messages.push(...fullScanMessages);
+  }
 
   // Process messages to discover services
   const emailDomains = new Map<string, { from: string; count: number }>();

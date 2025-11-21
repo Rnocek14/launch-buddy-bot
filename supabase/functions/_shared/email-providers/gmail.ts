@@ -177,7 +177,10 @@ export class GmailProvider implements EmailProvider {
     });
 
     if (filters?.after) {
-      params.append('q', `after:${filters.after}`);
+      // Convert ISO timestamp to Gmail's YYYY/MM/DD format
+      const date = new Date(filters.after);
+      const gmailDate = `${date.getFullYear()}/${String(date.getMonth() + 1).padStart(2, '0')}/${String(date.getDate()).padStart(2, '0')}`;
+      params.append('q', `after:${gmailDate}`);
     }
 
     if (filters?.query) {
