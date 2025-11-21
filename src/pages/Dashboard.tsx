@@ -24,6 +24,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ContactDiscoveryDialog } from "@/components/ContactDiscoveryDialog";
 import { Navbar } from "@/components/Navbar";
 import { DashboardEmptyState } from "@/components/DashboardEmptyState";
+import { PostScanWizard } from "@/components/PostScanWizard";
 import { ServiceGridSkeleton } from "@/components/ServiceCardSkeleton";
 import { SuccessAnimation } from "@/components/SuccessAnimation";
 import { getErrorMessage, successMessages } from "@/lib/errorMessages";
@@ -121,6 +122,8 @@ export default function Dashboard() {
   const [showShareNudge, setShowShareNudge] = useState(false);
   const [showAdvancedScan, setShowAdvancedScan] = useState(false);
   const [viewTab, setViewTab] = useState<'all' | 'priority' | 'new'>('all');
+  const [showPostScanWizard, setShowPostScanWizard] = useState(false);
+  const [priorityServicesForWizard, setPriorityServicesForWizard] = useState<Service[]>([]);
 
   // Monthly stats state
   const [monthlyStats, setMonthlyStats] = useState<{
@@ -430,6 +433,27 @@ export default function Dashboard() {
       
       await fetchUnmatchedDomains();
       await fetchRiskScore();
+
+      // Show post-scan wizard if this is the first scan or if there are priority services
+      if (freshServices && freshServices.length > 0) {
+        const threeYearsAgo = new Date();
+        threeYearsAgo.setFullYear(threeYearsAgo.getFullYear() - 3);
+        const sensitiveCategories = ['Finance', 'Banking', 'Healthcare', 'Government'];
+        
+        const priority = freshServices.filter((s: any) => {
+          const isOld = new Date(s.discovered_at) <= threeYearsAgo;
+          const isSensitive = sensitiveCategories.includes(s.category);
+          return isOld || isSensitive;
+        }).slice(0, 5);
+
+        if (priority.length > 0 && !window.localStorage.getItem('ff_seen_post_scan_wizard')) {
+          setPriorityServicesForWizard(priority);
+          setTimeout(() => {
+            setShowPostScanWizard(true);
+            window.localStorage.setItem('ff_seen_post_scan_wizard', '1');
+          }, 1500);
+        }
+      }
       
       // Track successful scan completion
       if (user?.id) {
@@ -1819,6 +1843,17 @@ export default function Dashboard() {
           topCategories={riskData.topCategories}
         />
       )}
+
+      {/* Post-Scan Priority Wizard */}
+      <PostScanWizard
+        open={showPostScanWizard}
+        onOpenChange={setShowPostScanWizard}
+        priorityServices={priorityServicesForWizard}
+        totalServices={services.length}
+        onRequestDeletion={handleRequestDeletion}
+        onQuickDiscovery={handleQuickDiscovery}
+        getServiceInitials={getServiceInitials}
+      />
     </div>
   );
 }

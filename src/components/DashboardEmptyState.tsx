@@ -23,10 +23,43 @@ export const DashboardEmptyState = ({
         <Shield className="w-16 h-16 mx-auto mb-4 text-primary" />
         <h2 className="text-3xl font-bold mb-4">Welcome to Footprint Finder</h2>
         <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-          Let's discover your digital footprint and take control of your online privacy.
-          Follow these steps to get started.
+          Discover your digital footprint and take control of your online privacy in minutes.
         </p>
       </div>
+
+      {/* Demo Preview */}
+      <Card className="mb-8 border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
+        <CardHeader>
+          <CardTitle className="text-lg">See What You'll Discover</CardTitle>
+          <CardDescription>
+            Here's an example of what your dashboard will look like after scanning
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {[
+              { name: 'Netflix', category: 'Entertainment', logo: '🎬' },
+              { name: 'Amazon', category: 'Shopping', logo: '📦' },
+              { name: 'LinkedIn', category: 'Professional', logo: '💼' },
+              { name: 'Spotify', category: 'Entertainment', logo: '🎵' },
+            ].map((demo, idx) => (
+              <div 
+                key={idx}
+                className="p-3 rounded-lg border border-border bg-card/50 text-center space-y-2 opacity-60"
+              >
+                <div className="text-3xl">{demo.logo}</div>
+                <div>
+                  <p className="text-sm font-medium truncate">{demo.name}</p>
+                  <p className="text-xs text-muted-foreground">{demo.category}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+          <p className="text-xs text-muted-foreground text-center mt-4">
+            Most users discover 20-50+ services they forgot about
+          </p>
+        </CardContent>
+      </Card>
 
       <div className="grid gap-6">
         {/* Step 1: Authorization */}
