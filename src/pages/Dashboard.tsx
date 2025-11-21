@@ -119,6 +119,8 @@ export default function Dashboard() {
   const [bannerDismissed, setBannerDismissed] = useState(false);
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [showShareNudge, setShowShareNudge] = useState(false);
+  const [showAdvancedScan, setShowAdvancedScan] = useState(false);
+  const [viewTab, setViewTab] = useState<'all' | 'priority' | 'new'>('all');
 
   // Monthly stats state
   const [monthlyStats, setMonthlyStats] = useState<{
@@ -714,8 +716,27 @@ export default function Dashboard() {
       filtered = filtered.filter(s => newServiceIds.has(s.id));
     }
 
+    // Apply tab filter
+    if (viewTab === 'priority') {
+      // Show oldest accounts (3+ years old) OR reappeared accounts OR sensitive categories
+      const threeYearsAgo = new Date();
+      threeYearsAgo.setFullYear(threeYearsAgo.getFullYear() - 3);
+      const sensitiveCategories = ['Finance', 'Banking', 'Healthcare', 'Government'];
+      
+      filtered = filtered.filter((s: any) => {
+        const isOld = new Date(s.discovered_at) <= threeYearsAgo;
+        const isReappeared = !!s.reappeared_at;
+        const isSensitive = sensitiveCategories.includes(s.category);
+        return isOld || isReappeared || isSensitive;
+      });
+    } else if (viewTab === 'new') {
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      filtered = filtered.filter((s: any) => new Date(s.discovered_at) >= thirtyDaysAgo);
+    }
+
     return filtered;
-  }, [services, searchQuery, selectedCategory, selectedContactStatus, hideDeletedServices, filterMode, newServiceIds]);
+  }, [services, searchQuery, selectedCategory, selectedContactStatus, hideDeletedServices, filterMode, newServiceIds, viewTab]);
 
   const newServicesCount = useMemo(() => {
     const thirtyDaysAgo = new Date();
@@ -1124,6 +1145,23 @@ export default function Dashboard() {
                   exposureFactors={riskData.exposureFactors}
                   topCategories={riskData.topCategories}
                   comparison={riskData.comparison}
+                  onFilterOldAccounts={() => {
+                    setViewTab('priority');
+                    document.getElementById("services-grid")?.scrollIntoView({ behavior: "smooth" });
+                  }}
+                  onFilterSensitive={() => {
+                    const sensitiveCategories = ['Finance', 'Banking', 'Healthcare', 'Government'];
+                    const firstSensitive = services.find((s: any) => sensitiveCategories.includes(s.category));
+                    if (firstSensitive) {
+                      setSelectedCategory(firstSensitive.category);
+                      document.getElementById("services-grid")?.scrollIntoView({ behavior: "smooth" });
+                    }
+                  }}
+                  onFilterCategory={(category: string) => {
+                    setSelectedCategory(category);
+                    setViewTab('all');
+                    document.getElementById("services-grid")?.scrollIntoView({ behavior: "smooth" });
+                  }}
                 />
                 <div className="flex justify-center">
                   <Button
@@ -1211,54 +1249,69 @@ export default function Dashboard() {
                 </div>
               )}
 
-              {/* Scan Type Toggle */}
+              {/* Simplified Scan Options */}
               {!scanning && (
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pt-4 border-t border-border/50">
-                  <div className="flex items-center gap-3">
-                    <Button
-                      variant={scanType === 'quick' ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => setScanType('quick')}
-                    >
-                      Quick Scan
-                    </Button>
-                    <Button
-                      variant={scanType === 'deep' ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => setScanType('deep')}
-                    >
-                      Deep Scan
-                    </Button>
-                  </div>
-                  
-                  {/* Account Selection */}
-                  <div className="space-y-2">
-                    <Label className="text-xs text-muted-foreground">Gmail Accounts</Label>
-                    <div className="flex gap-2">
-                      <Button
-                        variant={scanAccountOption === 'all' ? 'default' : 'outline'}
-                        size="sm"
-                        onClick={() => setScanAccountOption('all')}
-                      >
-                        All Accounts
-                      </Button>
-                      <Button
-                        variant={scanAccountOption === 'primary' ? 'default' : 'outline'}
-                        size="sm"
-                        onClick={() => setScanAccountOption('primary')}
-                      >
-                        Primary Only
-                      </Button>
+                <div className="flex flex-col gap-3 pt-4 border-t border-border/50">
+                  <div className="flex items-center justify-between">
+                    <div className="text-xs text-muted-foreground">
+                      Quick scan (~30-60 seconds)
                     </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowAdvancedScan(!showAdvancedScan)}
+                      className="text-xs h-auto p-1"
+                    >
+                      {showAdvancedScan ? 'Hide' : 'Show'} Advanced Options
+                    </Button>
                   </div>
                   
-                  <div className="text-xs text-muted-foreground">
-                    {scanType === 'quick' ? (
-                      <span>500 emails per category • ~30-60 seconds</span>
-                    ) : (
-                      <span>Up to 5,000 emails per category • ~2-5 minutes</span>
-                    )}
-                  </div>
+                  {showAdvancedScan && (
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 p-3 rounded-lg bg-muted/50 border border-border animate-in slide-in-from-top-2">
+                      <div className="flex items-center gap-3">
+                        <Button
+                          variant={scanType === 'quick' ? 'default' : 'outline'}
+                          size="sm"
+                          onClick={() => setScanType('quick')}
+                        >
+                          Quick Scan
+                        </Button>
+                        <Button
+                          variant={scanType === 'deep' ? 'default' : 'outline'}
+                          size="sm"
+                          onClick={() => setScanType('deep')}
+                        >
+                          Deep Scan
+                        </Button>
+                      </div>
+                      
+                      <div className="flex-1 space-y-2">
+                        <Label className="text-xs text-muted-foreground">Gmail Accounts</Label>
+                        <div className="flex gap-2">
+                          <Button
+                            variant={scanAccountOption === 'all' ? 'default' : 'outline'}
+                            size="sm"
+                            onClick={() => setScanAccountOption('all')}
+                          >
+                            All Accounts
+                          </Button>
+                          <Button
+                            variant={scanAccountOption === 'primary' ? 'default' : 'outline'}
+                            size="sm"
+                            onClick={() => setScanAccountOption('primary')}
+                          >
+                            Primary Only
+                          </Button>
+                        </div>
+                      </div>
+                      
+                      <div className="text-xs text-muted-foreground">
+                        {scanType === 'deep' && (
+                          <span>Up to 5,000 emails • ~2-5 minutes</span>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -1344,18 +1397,68 @@ export default function Dashboard() {
           </Card>
         ) : (
           <div className="space-y-6">
+            {/* View Tabs */}
+            <div className="flex items-center gap-2 border-b border-border">
+              <Button
+                variant={viewTab === 'all' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setViewTab('all')}
+                className="rounded-b-none"
+              >
+                All Services
+                <Badge variant="secondary" className="ml-2">
+                  {services.length}
+                </Badge>
+              </Button>
+              <Button
+                variant={viewTab === 'priority' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setViewTab('priority')}
+                className="rounded-b-none gap-2"
+              >
+                <AlertCircle className="w-4 h-4" />
+                Priority
+                <Badge variant="secondary" className="ml-1">
+                  {(() => {
+                    const threeYearsAgo = new Date();
+                    threeYearsAgo.setFullYear(threeYearsAgo.getFullYear() - 3);
+                    const sensitiveCategories = ['Finance', 'Banking', 'Healthcare', 'Government'];
+                    return services.filter((s: any) => {
+                      const isOld = new Date(s.discovered_at) <= threeYearsAgo;
+                      const isReappeared = !!s.reappeared_at;
+                      const isSensitive = sensitiveCategories.includes(s.category);
+                      return isOld || isReappeared || isSensitive;
+                    }).length;
+                  })()}
+                </Badge>
+              </Button>
+              <Button
+                variant={viewTab === 'new' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setViewTab('new')}
+                className="rounded-b-none"
+              >
+                New (30d)
+                <Badge variant="secondary" className="ml-2">
+                  {newServicesCount}
+                </Badge>
+              </Button>
+            </div>
+
             {/* Controls */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <span className="font-medium text-foreground">{filteredServices.length}</span>
-                <span>of</span>
-                <span className="font-medium text-foreground">{services.length}</span>
-                <span>services</span>
-                {newServicesCount > 0 && (
-                  <Badge variant="default" className="ml-2 bg-green-500">
-                    {newServicesCount} NEW
-                  </Badge>
-                )}
+                <span>
+                  {viewTab === 'priority' ? 'priority' : viewTab === 'new' ? 'new' : ''} 
+                  {viewTab !== 'all' && ' '}services
+                  {viewTab === 'all' && (
+                    <>
+                      <span className="mx-1">of</span>
+                      <span className="font-medium text-foreground">{services.length}</span>
+                    </>
+                  )}
+                </span>
               </div>
               <div className="flex items-center gap-3 w-full sm:w-auto">
                 <Button 
@@ -1505,129 +1608,23 @@ export default function Dashboard() {
               </Card>
             ) : (
               <div id="services-grid" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                {filteredServices.map(service => (
-                  <Card 
-                    key={service.id}
-                    className={`group hover:shadow-lg transition-all duration-200 relative ${
-                      selectedServices.has(service.id) 
-                        ? 'border-primary bg-primary/5' 
-                        : 'hover:border-primary/30'
-                    }`}
-                  >
-                    <CardContent className="p-4">
-                      {/* Selection Checkbox */}
-                      <div className="absolute top-3 right-3 z-10">
-                        <Checkbox
-                          checked={selectedServices.has(service.id)}
-                          onCheckedChange={() => toggleServiceSelection(service.id)}
-                          className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
-                        />
-                      </div>
-
-                      <div className="flex flex-col items-center text-center space-y-3">
-                        {/* Logo */}
-                        <div className="relative">
-                          <Avatar className="w-16 h-16 rounded-xl ring-2 ring-border group-hover:ring-primary/30 transition-all">
-                            <AvatarImage 
-                              src={service.logo_url || ''} 
-                              alt={service.name}
-                              className="object-cover"
-                            />
-                            <AvatarFallback className="rounded-xl bg-primary/10 text-primary text-lg font-semibold">
-                              {getServiceInitials(service.name)}
-                            </AvatarFallback>
-                          </Avatar>
-                        </div>
-
-                        {/* Service Name */}
-                        <div className="space-y-1 w-full">
-                          <h3 className="font-semibold text-foreground line-clamp-2 min-h-[2.5rem]">
-                            {service.name}
-                          </h3>
-                          
-                          <div className="flex flex-wrap gap-2 justify-center">
-                            {/* NEW Badge */}
-                            {isServiceNew(service.discovered_at) && (
-                              <Badge className="bg-green-500 text-white text-xs">
-                                NEW
-                              </Badge>
-                            )}
-                            
-                            {/* Reappeared Badge */}
-                            {(service as any).reappeared_at && (
-                              <Badge variant="destructive" className="text-xs">
-                                ⚠️ REAPPEARED
-                              </Badge>
-                            )}
-                            
-                            {/* Category Badge */}
-                            <Badge 
-                              variant="outline" 
-                              className={`text-xs ${categoryColors[service.category] || categoryColors["Other"]}`}
-                            >
-                              {service.category || "Other"}
-                            </Badge>
-                            
-                            {/* Contact Status Badge */}
-                            {getContactStatusBadge(service.contact_status)}
-                          </div>
-                        </div>
-
-                        {/* Date */}
-                        <p className="text-xs text-muted-foreground">
-                          Joined {new Date(service.discovered_at).toLocaleDateString('en-US', { 
-                            month: 'short', 
-                            year: 'numeric' 
-                          })}
-                        </p>
-
-                        {/* Action Buttons */}
-                        <div className="w-full space-y-2">
-                          {/* Quick Discovery Button - Only for needs_discovery status */}
-                          {service.contact_status === 'needs_discovery' && (
-                            <Button
-                              variant="default"
-                              size="sm"
-                              className="w-full bg-gradient-to-r from-primary to-primary/80"
-                              onClick={() => handleQuickDiscovery(service)}
-                            >
-                              <Sparkles className="w-3 h-3 mr-2" />
-                              Discover Contact
-                            </Button>
-                          )}
-                          
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            className="w-full"
-                            onClick={() => handleRequestDeletion(service)}
-                            disabled={authLoading}
-                          >
-                            <Trash2 className="w-3 h-3 mr-2" />
-                            Request Deletion
-                          </Button>
-                          {service.homepage_url && (
-                            <a 
-                              href={service.homepage_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="w-full block"
-                            >
-                              <Button 
-                                variant="outline" 
-                                size="sm" 
-                                className="w-full"
-                              >
-                                Visit Site
-                                <ExternalLink className="w-3 h-3 ml-2" />
-                              </Button>
-                            </a>
-                          )}
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                {filteredServices.map(service => {
+                  const ServiceCardComponent = require('@/components/ServiceCard').ServiceCard;
+                  return (
+                    <ServiceCardComponent
+                      key={service.id}
+                      service={service}
+                      isSelected={selectedServices.has(service.id)}
+                      isNew={isServiceNew(service.discovered_at)}
+                      categoryColor={categoryColors[service.category] || categoryColors["Other"]}
+                      onToggleSelection={toggleServiceSelection}
+                      onRequestDeletion={handleRequestDeletion}
+                      onQuickDiscovery={handleQuickDiscovery}
+                      getServiceInitials={getServiceInitials}
+                      getContactStatusBadge={getContactStatusBadge}
+                    />
+                  );
+                })}
               </div>
             )}
           </div>
