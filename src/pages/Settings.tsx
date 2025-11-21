@@ -185,8 +185,11 @@ export default function Settings() {
     return (
       <div className="min-h-screen bg-background">
         <Navbar />
-        <div className="container max-w-4xl mx-auto pt-24 pb-12 px-4 flex items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <div className="container max-w-4xl mx-auto pt-24 pb-12 px-4 sm:px-6 flex items-center justify-center">
+          <div className="text-center space-y-3">
+            <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
+            <p className="text-sm text-muted-foreground">Loading settings...</p>
+          </div>
         </div>
       </div>
     );
@@ -195,24 +198,24 @@ export default function Settings() {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <div className="container max-w-4xl mx-auto pt-24 pb-12 px-4">
+      <div className="container max-w-4xl mx-auto pt-24 pb-12 px-4 sm:px-6">
         <div className="space-y-6">
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-3xl font-bold">Settings</h1>
+          <div className="space-y-2">
+            <div className="flex items-center gap-3">
+              <h1 className="text-3xl sm:text-4xl font-bold">Settings</h1>
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <HelpCircle className="h-5 w-5 text-muted-foreground cursor-help" />
                   </TooltipTrigger>
-                  <TooltipContent className="max-w-xs">
+                  <TooltipContent className="max-w-xs" side="bottom">
                     <p>Configure your identifiers for deletion requests and manage connected accounts</p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
             </div>
-            <p className="text-muted-foreground mt-2">
-              Manage your account identifiers and preferences
+            <p className="text-muted-foreground">
+              Manage your account identifiers and email connections
             </p>
           </div>
 
@@ -262,35 +265,37 @@ export default function Settings() {
                         <div className="flex-1">
                           <div className="flex items-center gap-2">
                             <span className="font-medium">{identifier.value}</span>
-                            {identifier.is_primary && (
-                              <Badge variant="default" className="gap-1">
+                   {identifier.is_primary && (
+                              <Badge variant="default" className="gap-1 text-xs">
                                 <Star className="h-3 w-3" />
-                                Primary
+                                <span className="hidden sm:inline">Primary</span>
                               </Badge>
                             )}
-                            <Badge variant="outline">{getTypeLabel(identifier.type)}</Badge>
-                            <Badge {...getSourceBadge(identifier.source)}>
+                            <Badge variant="outline" className="text-xs">{getTypeLabel(identifier.type)}</Badge>
+                            <Badge {...getSourceBadge(identifier.source)} className="text-xs">
                               {getSourceBadge(identifier.source).label}
                             </Badge>
                           </div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
+                       <div className="flex items-center gap-2">
                         {!identifier.is_primary && (
                           <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => handleSetPrimary(identifier.id, identifier.type)}
+                            className="hidden sm:flex"
                           >
                             Set as Primary
                           </Button>
                         )}
                         <Button
                           variant="ghost"
-                          size="sm"
+                          size="icon"
                           onClick={() => setDeleteTarget(identifier.id)}
+                          className="text-destructive hover:text-destructive"
                         >
-                          <Trash2 className="h-4 w-4 text-destructive" />
+                          <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
                     </div>

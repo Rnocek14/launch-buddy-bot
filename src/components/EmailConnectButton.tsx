@@ -230,8 +230,11 @@ export function EmailConnectButton() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center p-4">
-        <Loader2 className="h-6 w-6 animate-spin" />
+      <div className="flex items-center justify-center p-8">
+        <div className="text-center space-y-3">
+          <Loader2 className="h-6 w-6 animate-spin text-primary mx-auto" />
+          <p className="text-sm text-muted-foreground">Loading email connections...</p>
+        </div>
       </div>
     );
   }
@@ -243,43 +246,48 @@ export function EmailConnectButton() {
     <div className="space-y-4">
       {connections.length === 0 ? (
         <>
-          <Alert>
-            <AlertDescription>
-              Connect your email account to scan for services and send deletion requests.
-              We support Gmail and Outlook/Microsoft 365.
+          <Alert className="bg-primary/5 border-primary/20">
+            <Mail className="h-4 w-4 text-primary" />
+            <AlertDescription className="ml-2">
+              Connect your email account to scan for services and send deletion requests. We support Gmail and Outlook/Microsoft 365.
             </AlertDescription>
           </Alert>
           
           <Tabs defaultValue="gmail" className="w-full">
             <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="gmail">Gmail</TabsTrigger>
-              <TabsTrigger value="outlook">Outlook</TabsTrigger>
+              <TabsTrigger value="gmail" className="text-sm sm:text-base">
+                Gmail
+              </TabsTrigger>
+              <TabsTrigger value="outlook" className="text-sm sm:text-base">
+                Outlook
+              </TabsTrigger>
             </TabsList>
             
-            <TabsContent value="gmail" className="space-y-4">
+            <TabsContent value="gmail" className="space-y-4 pt-4">
               <p className="text-sm text-muted-foreground">
                 Connect your Google/Gmail account to scan your inbox and send emails.
               </p>
               <Button
                 onClick={() => handleConnect('gmail')}
-                className="w-full"
+                className="w-full h-12"
+                size="lg"
               >
-                <Mail className="mr-2 h-4 w-4" />
-                Connect Gmail Account
+                <Mail className="mr-2 h-5 w-5" />
+                <span>Connect Gmail Account</span>
               </Button>
             </TabsContent>
             
-            <TabsContent value="outlook" className="space-y-4">
+            <TabsContent value="outlook" className="space-y-4 pt-4">
               <p className="text-sm text-muted-foreground">
-                Connect your Microsoft/Outlook account to scan your inbox and send emails.
-                Note: Gmail addresses can also be used as Microsoft accounts.
+                Connect your Microsoft/Outlook account to scan your inbox and send emails. Note: Gmail addresses can also be used as Microsoft accounts.
               </p>
               <Button
                 onClick={() => handleConnect('outlook')}
-                className="w-full"
+                className="w-full h-12"
+                size="lg"
               >
-                <Mail className="mr-2 h-4 w-4" />
-                Connect Outlook Account
+                <Mail className="mr-2 h-5 w-5" />
+                <span>Connect Outlook Account</span>
               </Button>
             </TabsContent>
           </Tabs>
@@ -389,22 +397,22 @@ export function EmailConnectButton() {
           </div>
 
           {/* Add Another Account Buttons */}
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row gap-2">
             <Button
               variant="outline"
               onClick={() => handleConnect('gmail')}
-              className="flex-1"
+              className="flex-1 h-11"
             >
               <Plus className="mr-2 h-4 w-4" />
-              Add Gmail
+              <span>Add Gmail</span>
             </Button>
             <Button
               variant="outline"
               onClick={() => handleConnect('outlook')}
-              className="flex-1"
+              className="flex-1 h-11"
             >
               <Plus className="mr-2 h-4 w-4" />
-              Add Outlook
+              <span>Add Outlook</span>
             </Button>
           </div>
         </>
