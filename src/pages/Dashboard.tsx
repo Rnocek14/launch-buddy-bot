@@ -351,6 +351,27 @@ export default function Dashboard() {
 
       if (error) throw error;
 
+      // Check for token repair issues
+      if (data.tokenRepairStatus === 'failed') {
+        toast({
+          title: "Email Connection Issue Detected",
+          description: "Your email connection needs to be reset. Please reconnect in Settings.",
+          variant: "destructive",
+          action: (
+            <Button variant="outline" size="sm" onClick={() => navigate('/settings')}>
+              Go to Settings
+            </Button>
+          )
+        });
+      }
+
+      if (data.tokenIssues && data.tokenIssues.length > 0) {
+        console.warn('[Token State Issues]', {
+          issues: data.tokenIssues,
+          repairStatus: data.tokenRepairStatus
+        });
+      }
+
       setScanProgress({ currentEmail: 100, totalEmails: 100, status: "Complete!" });
       
       // Success - show animation

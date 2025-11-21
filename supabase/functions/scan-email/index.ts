@@ -165,9 +165,13 @@ async function processConnection(connection: any, user: any, maxResults: number,
   console.log(`Using ${connection.provider} connection: ${connection.email}`);
 
   // === LAYER 2: SMART TOKEN VALIDATION ===
+  let tokenRepairStatus = 'none';
+  let tokenIssues: string[] = [];
+  
   const validation = validateTokenState(connection);
   
   if (!validation.isValid) {
+    tokenIssues = validation.issues;
     console.warn('⚠️ Token state validation FAILED:', {
       connectionId: connection.id,
       email: connection.email,
@@ -179,6 +183,7 @@ async function processConnection(connection: any, user: any, maxResults: number,
     if (validation.recommendedAction === 'decrypt_and_reencrypt') {
       try {
         await repairTokenState(connection.id, connection, supabase);
+        tokenRepairStatus = 'repaired';
         
         // Reload connection after repair
         const { data: repairedConnection } = await supabase
@@ -192,6 +197,7 @@ async function processConnection(connection: any, user: any, maxResults: number,
           console.log('✅ Using repaired connection for scan');
         }
       } catch (repairError) {
+        tokenRepairStatus = 'failed';
         console.error('❌ Auto-repair failed, proceeding with caution:', repairError);
       }
     }
@@ -436,6 +442,8 @@ async function processConnection(connection: any, user: any, maxResults: number,
       message: `Scanned ${messages.length} emails and discovered ${servicesAdded} services${servicesReappeared > 0 ? ` (${servicesReappeared} reappeared after deletion)` : ''}`,
       provider: connection.provider,
       email: connection.email,
+      tokenRepairStatus,
+      tokenIssues: tokenIssues.length > 0 ? tokenIssues : undefined,
     }),
     { 
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
