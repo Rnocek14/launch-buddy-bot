@@ -28,6 +28,7 @@ import { DashboardEmptyState } from "@/components/DashboardEmptyState";
 import { PostScanWizard } from "@/components/PostScanWizard";
 import { ServiceGridSkeleton } from "@/components/ServiceCardSkeleton";
 import { DeletionProgressTracker } from "@/components/DeletionProgressTracker";
+import { ImpactVisualization } from "@/components/ImpactVisualization";
 import { SuccessAnimation } from "@/components/SuccessAnimation";
 import { getErrorMessage, successMessages } from "@/lib/errorMessages";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -828,6 +829,35 @@ export default function Dashboard() {
     return new Date(discoveredAt) >= thirtyDaysAgo;
   };
 
+  // Calculate impact metrics for visualization
+  const impactMetrics = useMemo(() => {
+    const threeYearsAgo = new Date();
+    threeYearsAgo.setFullYear(threeYearsAgo.getFullYear() - 3);
+    const sensitiveCategories = ['Social Media', 'Dating', 'Health & Fitness', 'Finance', 'Banking', 'Healthcare'];
+
+    // Count services with deletion requests
+    const deletedServices = services.filter((s: any) => s.deletion_requested_at);
+    const totalDeletions = deletedServices.length;
+    const servicesRemaining = services.length - totalDeletions;
+
+    // Count old accounts that were deleted
+    const oldAccountsDeleted = deletedServices.filter((s: any) => 
+      new Date(s.discovered_at) < threeYearsAgo
+    ).length;
+
+    // Count sensitive accounts that were deleted
+    const sensitiveAccountsDeleted = deletedServices.filter((s: any) =>
+      sensitiveCategories.includes(s.category || '')
+    ).length;
+
+    return {
+      totalDeletions,
+      servicesRemaining,
+      oldAccountsDeleted,
+      sensitiveAccountsDeleted,
+    };
+  }, [services]);
+
   // Fetch monthly statistics
   async function fetchMonthlyStats() {
     if (!user?.id) return;
@@ -1257,6 +1287,18 @@ export default function Dashboard() {
             {services.length > 0 && (
               <div className="mb-8">
                 <DeletionProgressTracker services={services} />
+              </div>
+            )}
+
+            {/* Impact Visualization */}
+            {services.length > 0 && impactMetrics.totalDeletions > 0 && (
+              <div className="mb-8">
+                <ImpactVisualization
+                  totalDeletions={impactMetrics.totalDeletions}
+                  servicesRemaining={impactMetrics.servicesRemaining}
+                  oldAccountsDeleted={impactMetrics.oldAccountsDeleted}
+                  sensitiveAccountsDeleted={impactMetrics.sensitiveAccountsDeleted}
+                />
               </div>
             )}
 
