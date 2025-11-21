@@ -26,6 +26,7 @@ import { Navbar } from "@/components/Navbar";
 import { DashboardEmptyState } from "@/components/DashboardEmptyState";
 import { PostScanWizard } from "@/components/PostScanWizard";
 import { ServiceGridSkeleton } from "@/components/ServiceCardSkeleton";
+import { DeletionProgressTracker } from "@/components/DeletionProgressTracker";
 import { SuccessAnimation } from "@/components/SuccessAnimation";
 import { getErrorMessage, successMessages } from "@/lib/errorMessages";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -1198,6 +1199,13 @@ export default function Dashboard() {
                     Share Your Score
                   </Button>
                 </div>
+              </div>
+            )}
+
+            {/* Deletion Progress Tracker */}
+            {services.length > 0 && (
+              <div className="mb-8">
+                <DeletionProgressTracker services={services} />
               </div>
             )}
 
