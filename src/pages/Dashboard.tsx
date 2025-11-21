@@ -23,6 +23,7 @@ import { BatchDeletionDialog } from "@/components/BatchDeletionDialog";
 import { SmartBatchSelector } from "@/components/SmartBatchSelector";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
 import { MobileFilterDrawer } from "@/components/MobileFilterDrawer";
+import { FilterChips } from "@/components/FilterChips";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ContactDiscoveryDialog } from "@/components/ContactDiscoveryDialog";
@@ -795,6 +796,12 @@ export default function Dashboard() {
       title: "Export successful",
       description: `Downloaded ${services.length} services to CSV`,
     });
+  };
+
+  const handleClearAllFilters = () => {
+    setSearchQuery("");
+    setSelectedCategory("all");
+    setSelectedContactStatus("all");
   };
 
   const filteredServices = useMemo(() => {
@@ -1773,6 +1780,17 @@ export default function Dashboard() {
                 </div>
               </div>
             )}
+
+            {/* Filter Chips */}
+            <FilterChips
+              searchQuery={searchQuery}
+              selectedCategory={selectedCategory}
+              selectedContactStatus={selectedContactStatus}
+              onRemoveSearch={() => setSearchQuery("")}
+              onRemoveCategory={() => setSelectedCategory("all")}
+              onRemoveContactStatus={() => setSelectedContactStatus("all")}
+              onClearAll={handleClearAllFilters}
+            />
 
             {/* Services Grid */}
             {filteredServices.length === 0 ? (
