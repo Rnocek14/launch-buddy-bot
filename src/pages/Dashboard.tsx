@@ -38,6 +38,8 @@ import { SubscriptionStatusCard } from "@/components/SubscriptionStatusCard";
 import { OnboardingBanner } from "@/components/OnboardingBanner";
 import { ScanResultsBanner } from "@/components/ScanResultsBanner";
 import { TRACKING_EVENTS, trackConversion } from "@/lib/analytics";
+import { usePullToRefresh } from "@/hooks/usePullToRefresh";
+import { PullToRefreshIndicator } from "@/components/PullToRefreshIndicator";
 
 interface Service {
   id: string;
@@ -130,6 +132,18 @@ export default function Dashboard() {
   const [viewTab, setViewTab] = useState<'all' | 'priority' | 'new'>('all');
   const [showPostScanWizard, setShowPostScanWizard] = useState(false);
   const [priorityServicesForWizard, setPriorityServicesForWizard] = useState<Service[]>([]);
+
+  // Pull-to-refresh setup
+  const { isPulling, pullDistance, isRefreshing, setScrollableRef } = usePullToRefresh({
+    onRefresh: async () => {
+      if (!scanning) {
+        await handleScan();
+      }
+    },
+    threshold: 80,
+    maxPullDistance: 150,
+    enabled: isMobile && !scanning,
+  });
 
   // Monthly stats state
   const [monthlyStats, setMonthlyStats] = useState<{
@@ -934,6 +948,15 @@ export default function Dashboard() {
 
   return (
     <div className={`min-h-screen bg-background ${isMobile ? 'pb-24' : ''}`}>
+      {/* Pull-to-refresh indicator (mobile only) */}
+      {isMobile && (
+        <PullToRefreshIndicator
+          pullDistance={pullDistance}
+          isRefreshing={isRefreshing}
+          threshold={80}
+        />
+      )}
+      
       {/* Success Animation */}
       {showSuccessAnimation && (
         <SuccessAnimation
