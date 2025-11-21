@@ -119,4 +119,14 @@ All colors MUST be HSL.
   * {
     -webkit-tap-highlight-color: transparent;
   }
+  
+  /* Disable default pull-to-refresh in browsers */
+  body {
+    overscroll-behavior-y: contain;
+  }
+  
+  /* Smooth momentum scrolling */
+  html {
+    -webkit-overflow-scrolling: touch;
+  }
 }
