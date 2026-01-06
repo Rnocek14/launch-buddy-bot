@@ -17,9 +17,10 @@ import {
   BarChart3,
   Headphones
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { EnterpriseROICalculator } from "@/components/EnterpriseROICalculator";
 
 const benefits = [
   {
@@ -56,6 +57,7 @@ const features = [
 ];
 
 export default function Enterprise() {
+  const formRef = useRef<HTMLDivElement>(null);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -64,6 +66,16 @@ export default function Enterprise() {
     message: "",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleROIAnalysis = (inputs: { employees: number; industry: string }) => {
+    // Pre-fill employee count from calculator
+    setFormData(prev => ({ 
+      ...prev, 
+      employees: inputs.employees.toString(),
+      message: `Industry: ${inputs.industry}. Interested in ROI analysis for ${inputs.employees} employees.`
+    }));
+    formRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -148,6 +160,9 @@ export default function Enterprise() {
           </div>
         </section>
 
+        {/* ROI Calculator */}
+        <EnterpriseROICalculator onGetCustomAnalysis={handleROIAnalysis} />
+
         {/* Features List */}
         <section className="container max-w-6xl mx-auto mb-20">
           <Card className="bg-gradient-to-r from-primary/5 to-accent/5">
@@ -226,7 +241,7 @@ export default function Enterprise() {
         </section>
 
         {/* Contact Form */}
-        <section id="contact-form" className="container max-w-2xl mx-auto">
+        <section id="contact-form" ref={formRef} className="container max-w-2xl mx-auto">
           <Card>
             <CardHeader className="text-center">
               <CardTitle className="text-2xl">Get in Touch</CardTitle>
