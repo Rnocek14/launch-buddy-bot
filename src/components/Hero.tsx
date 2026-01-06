@@ -31,11 +31,11 @@ export const Hero = () => {
           AI-powered inbox scan finds hidden accounts. Guided deletion tools + monthly rescans keep you protected. Start free, upgrade for unlimited from <span className="text-primary font-semibold">$6.58/month</span>.
         </p>
 
-        <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-6">
-          <Link to="/auth">
+        <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-4">
+          <Link to="/free-scan">
             <Button size="lg" className="gap-2 bg-primary hover:bg-primary/90 text-lg px-8 py-6">
               <Shield className="w-5 h-5" />
-              Get Started Free
+              Free Exposure Check
             </Button>
           </Link>
           <Link to="/demo">
@@ -45,9 +45,15 @@ export const Hero = () => {
             </Button>
           </Link>
         </div>
-        <p className="text-sm text-muted-foreground mb-12">
-          Free: 3 deletions/month • Pro: Unlimited for $79/year • Complete: + Data Brokers for $129/year
-        </p>
+        <div className="flex flex-wrap justify-center gap-4 mb-12">
+          <Link to="/auth" className="text-sm text-primary hover:underline">
+            Sign up for full scan →
+          </Link>
+          <span className="text-muted-foreground">|</span>
+          <Link to="/enterprise" className="text-sm text-muted-foreground hover:text-primary">
+            Enterprise solutions →
+          </Link>
+        </div>
 
         {/* Social Proof */}
         <div className="flex flex-col items-center gap-6">
