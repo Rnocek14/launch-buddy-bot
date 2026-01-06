@@ -1,10 +1,13 @@
+import { useState } from "react";
 import { Check } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
 import { Link } from "react-router-dom";
+import { BillingToggle } from "./BillingToggle";
+import type { BillingInterval } from "@/config/pricing";
 
-const plans = [
+const getPlans = (billingInterval: BillingInterval) => [
   {
     name: "Free",
     price: "$0",
@@ -24,8 +27,8 @@ const plans = [
   },
   {
     name: "Pro",
-    price: "$49",
-    period: "/year",
+    price: billingInterval === "year" ? "$49" : "$9.99",
+    period: billingInterval === "year" ? "/year" : "/month",
     description: "Unlimited deletions + deep discovery that finds 2-3× more",
     features: [
       "Everything in Free, plus:",
@@ -37,12 +40,12 @@ const plans = [
       "Monthly automatic rescans",
       "Priority email support",
     ],
-    cta: "Upgrade to Pro",
-    ctaLink: "/subscribe",
+    cta: billingInterval === "year" ? "Upgrade to Pro" : "Start Pro Monthly",
+    ctaLink: `/subscribe?interval=${billingInterval}`,
     popular: true,
     available: true,
-    badge: "Launch pricing for first 200 members",
-    monthlyEquivalent: "Just $4/month",
+    badge: billingInterval === "year" ? "Launch pricing — Save 59%" : null,
+    monthlyEquivalent: billingInterval === "year" ? "Just $4/month" : null,
   },
 ];
 
@@ -55,7 +58,7 @@ const pricingFaq = [
   {
     question: "Is $49 billed monthly or yearly?",
     answer:
-      "$49 is billed once per year. It works out to about $4 per month, but you're only charged once annually, not every month."
+      "$49 is billed once per year. It works out to about $4 per month, but you're only charged once annually, not every month. We also offer a $9.99/month option if you prefer."
   },
   {
     question: "Can I cancel anytime?",
@@ -79,23 +82,57 @@ const pricingFaq = [
   }
 ];
 
+const competitors = [
+  {
+    name: "DeleteMe",
+    price: "$129/year",
+    focus: "Data brokers only",
+    description: "Removes you from data broker sites. Great for that, but doesn't handle service accounts (Netflix, Uber, old shopping sites, etc.).",
+    highlight: false,
+  },
+  {
+    name: "Incogni",
+    price: "$77/year",
+    focus: "Data brokers only",
+    description: "Similar to DeleteMe — focuses on data broker removal. Automated, hands-off approach. No inbox scanning or account discovery.",
+    highlight: false,
+  },
+  {
+    name: "Mine (SayMine)",
+    price: "Free–$99/year",
+    focus: "Account discovery",
+    description: "Closest to us. Scans your inbox, finds accounts. Free tier is limited. Less aggressive contact discovery than our AI scan.",
+    highlight: false,
+  },
+  {
+    name: "Footprint Finder",
+    price: "$49/year or $9.99/mo",
+    focus: "Service accounts",
+    description: "Deep AI scan of your inbox to find forgotten accounts. Unlimited deletion requests. Finds 2-3× more accounts with Pro. Monthly rescans included.",
+    highlight: true,
+  },
+];
+
 export const Pricing = () => {
+  const [billingInterval, setBillingInterval] = useState<BillingInterval>("year");
+  const plans = getPlans(billingInterval);
+
   return (
     <section id="pricing" className="py-24 px-4">
       <div className="container max-w-6xl">
         {/* Launch Pricing Banner */}
-        <div className="mb-8 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs md:text-sm flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+        <div className="mb-8 rounded-xl border border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950/30 px-4 py-3 text-xs md:text-sm flex flex-col md:flex-row md:items-center md:justify-between gap-2">
           <div>
             <span className="font-medium">Launch special:</span>{" "}
             Lock in <span className="font-semibold">$49/year</span> Pro pricing.
             Your rate won't increase as long as you keep your subscription active.
           </div>
-          <div className="text-emerald-700 font-medium">
+          <div className="text-emerald-700 dark:text-emerald-400 font-medium">
             No hidden fees • Cancel anytime
           </div>
         </div>
 
-        <div className="text-center mb-16">
+        <div className="text-center mb-8">
           <h2 className="text-4xl md:text-5xl font-bold mb-4">
             Simple, Transparent Pricing
           </h2>
@@ -104,7 +141,9 @@ export const Pricing = () => {
           </p>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+        <BillingToggle value={billingInterval} onChange={setBillingInterval} />
+
+        <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
           {plans.map((plan, index) => (
             <Card 
               key={index}
@@ -164,50 +203,50 @@ export const Pricing = () => {
           ✨ Limited launch pricing — lock in $49/year forever. Cancel anytime.
         </p>
 
-        {/* Competitor Comparison */}
+        {/* Named Competitor Comparison */}
         <section className="mt-16">
           <h2 className="text-2xl font-semibold mb-4">
-            How Footprint Finder compares
+            How we compare to the competition
           </h2>
           <p className="text-sm text-muted-foreground mb-6">
-            Most privacy cleanup services cost over $100/year and limit how much
-            you can do yourself. Footprint Finder is built to be affordable and
-            hands-on.
+            There are several privacy services out there. Here's how Footprint Finder stacks up — honestly.
           </p>
 
           <div className="overflow-hidden rounded-2xl border">
-            <div className="grid grid-cols-3 bg-muted/40 text-xs font-medium uppercase tracking-wide py-3 px-4">
+            <div className="grid grid-cols-4 bg-muted/40 text-xs font-medium uppercase tracking-wide py-3 px-4">
               <div>Service</div>
-              <div>Typical Price</div>
-              <div>What you get</div>
+              <div>Price</div>
+              <div>Focus</div>
+              <div>Details</div>
             </div>
 
-            <div className="grid grid-cols-3 border-t px-4 py-4 text-sm">
-              <div className="font-semibold">Traditional privacy services</div>
-              <div className="text-muted-foreground">$100–$150/year</div>
-              <div className="text-muted-foreground">
-                Concierge deletion, slower turnaround, limited transparency into what's happening.
+            {competitors.map((comp, index) => (
+              <div 
+                key={index} 
+                className={`grid grid-cols-4 border-t px-4 py-4 text-sm ${
+                  comp.highlight ? "bg-accent/5" : ""
+                }`}
+              >
+                <div className="font-semibold flex items-center gap-2">
+                  {comp.name}
+                  {comp.highlight && (
+                    <Badge className="text-xs bg-accent/20 text-accent-foreground hover:bg-accent/20">
+                      You are here
+                    </Badge>
+                  )}
+                </div>
+                <div className={comp.highlight ? "text-accent font-semibold" : "text-muted-foreground"}>
+                  {comp.price}
+                </div>
+                <div className="text-muted-foreground">{comp.focus}</div>
+                <div className="text-muted-foreground">{comp.description}</div>
               </div>
-            </div>
-
-            <div className="grid grid-cols-3 border-t px-4 py-4 text-sm">
-              <div className="font-semibold">DIY one-off tools</div>
-              <div className="text-muted-foreground">Free–$30 one-time</div>
-              <div className="text-muted-foreground">
-                Manual forms, no inbox scan, no ongoing monitoring, easy to miss accounts.
-              </div>
-            </div>
-
-            <div className="grid grid-cols-3 border-t px-4 py-4 text-sm bg-accent/5">
-              <div className="font-semibold flex items-center gap-2">
-                Footprint Finder <Badge className="text-xs bg-accent/20 text-accent-foreground hover:bg-accent/20">You are here</Badge>
-              </div>
-              <div className="text-accent font-semibold">$49/year</div>
-              <div className="text-muted-foreground">
-                Unlimited deletion requests, deep AI-powered discovery, up to 3 email accounts, monthly automatic rescans.
-              </div>
-            </div>
+            ))}
           </div>
+
+          <p className="text-xs text-muted-foreground mt-4">
+            <strong>Note:</strong> DeleteMe and Incogni focus on data brokers (sites that sell your personal info). We focus on service accounts — the companies you've signed up with. Different problems, complementary solutions.
+          </p>
         </section>
 
         {/* Pricing FAQ */}
