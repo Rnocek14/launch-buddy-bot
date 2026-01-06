@@ -5,6 +5,7 @@ import { ContactVerification } from "@/components/ContactVerification";
 import { BulkDiscoveryTool } from "@/components/BulkDiscoveryTool";
 import { FailedDiscoveriesLog } from "@/components/FailedDiscoveriesLog";
 import { ManualContactReview } from "@/components/ManualContactReview";
+import { EnterpriseLeadsAdmin } from "@/components/EnterpriseLeadsAdmin";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -1392,6 +1393,9 @@ export default function Admin() {
             )}
           </CardContent>
         </Card>
+
+        {/* Enterprise Leads */}
+        <EnterpriseLeadsAdmin />
       </div>
     </div>
   );
