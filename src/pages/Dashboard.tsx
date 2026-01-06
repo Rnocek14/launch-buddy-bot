@@ -42,6 +42,7 @@ import { ScanResultsBanner } from "@/components/ScanResultsBanner";
 import { TRACKING_EVENTS, trackConversion } from "@/lib/analytics";
 import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 import { PullToRefreshIndicator } from "@/components/PullToRefreshIndicator";
+import { ExtensionPrompt } from "@/components/ExtensionPrompt";
 
 interface Service {
   id: string;
@@ -52,6 +53,7 @@ interface Service {
   discovered_at: string;
   contact_status?: 'verified' | 'ai_discovered' | 'needs_discovery';
   domain: string;
+  discovery_source?: 'email' | 'extension' | 'manual';
 }
 
 interface ScanStats {
@@ -273,7 +275,8 @@ export default function Dashboard() {
       category: item.service_catalog.category,
       discovered_at: item.discovered_at,
       contact_status: contactStatusMap.get(item.service_catalog.id) || 'needs_discovery',
-      domain: item.service_catalog.domain || ''
+      domain: item.service_catalog.domain || '',
+      discovery_source: item.discovery_source || 'email'
     }));
 
     setServices(mapped);
@@ -848,6 +851,10 @@ export default function Dashboard() {
     ).length;
   }, [services]);
 
+  const extensionServiceCount = useMemo(() => {
+    return services.filter((s: any) => s.discovery_source === 'extension').length;
+  }, [services]);
+
   const isServiceNew = (discoveredAt: string) => {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
@@ -1078,6 +1085,11 @@ export default function Dashboard() {
 
             {/* Subscription Status Card */}
             <SubscriptionStatusCard />
+
+            {/* Extension Prompt */}
+            <div className="mb-6">
+              <ExtensionPrompt extensionServiceCount={extensionServiceCount} />
+            </div>
 
             {/* This Month Summary Block */}
             {monthlyStats && (

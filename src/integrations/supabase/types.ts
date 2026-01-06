@@ -1158,6 +1158,7 @@ export type Database = {
           deletion_status: string | null
           discovered_at: string
           discovered_from_connection_id: string | null
+          discovery_source: string | null
           first_seen_date: string | null
           last_scanned_at: string
           marked_for_deletion: boolean | null
@@ -1171,6 +1172,7 @@ export type Database = {
           deletion_status?: string | null
           discovered_at?: string
           discovered_from_connection_id?: string | null
+          discovery_source?: string | null
           first_seen_date?: string | null
           last_scanned_at?: string
           marked_for_deletion?: boolean | null
@@ -1184,6 +1186,7 @@ export type Database = {
           deletion_status?: string | null
           discovered_at?: string
           discovered_from_connection_id?: string | null
+          discovery_source?: string | null
           first_seen_date?: string | null
           last_scanned_at?: string
           marked_for_deletion?: boolean | null
