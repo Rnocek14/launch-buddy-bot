@@ -1,6 +1,7 @@
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Shield, AlertTriangle, CheckCircle2, TrendingUp, Clock, Globe } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
 
 interface ShareCardProps {
   template: "minimalist" | "detailed" | "challenge";
@@ -97,11 +98,15 @@ export const ResultShareCard = ({
             <div className="text-white text-4xl font-bold mt-2">footprintfinder.com</div>
           </div>
 
-          {/* QR Code placeholder */}
-          <div className="absolute bottom-16 right-16 bg-white p-4 rounded-2xl">
-            <div className="w-32 h-32 bg-gray-200 flex items-center justify-center text-gray-500 text-sm">
-              QR
-            </div>
+          {/* QR Code */}
+          <div className="absolute bottom-16 right-16 bg-white p-4 rounded-2xl shadow-lg">
+            <QRCodeSVG 
+              value="https://footprintfinder.com" 
+              size={128}
+              bgColor="#ffffff"
+              fgColor="#000000"
+              level="M"
+            />
           </div>
         </div>
       </div>

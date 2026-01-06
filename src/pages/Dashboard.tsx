@@ -44,6 +44,8 @@ import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 import { PullToRefreshIndicator } from "@/components/PullToRefreshIndicator";
 import { ExtensionPrompt } from "@/components/ExtensionPrompt";
 import { BrokerScanCard } from "@/components/BrokerScanCard";
+import { ScoreHistoryChart } from "@/components/ScoreHistoryChart";
+import { ReferralChallengePanel } from "@/components/ReferralChallengePanel";
 
 interface Service {
   id: string;
@@ -1333,6 +1335,16 @@ export default function Dashboard() {
               </div>
             )}
 
+            {/* Score History Chart */}
+            {riskData && (
+              <div className="mb-8">
+                <ScoreHistoryChart 
+                  currentScore={riskData.riskScore} 
+                  currentLevel={riskData.riskLevel} 
+                />
+              </div>
+            )}
+
             {/* Deletion Progress Tracker */}
             {services.length > 0 && (
               <div className="mb-8">
@@ -1351,6 +1363,11 @@ export default function Dashboard() {
                 />
               </div>
             )}
+
+            {/* Referral Challenge Panel */}
+            <div className="mb-8">
+              <ReferralChallengePanel />
+            </div>
 
         {/* Scan Hero Card */}
         <Card className="mb-8 overflow-hidden border-primary/20 bg-gradient-to-br from-card to-primary/5">
