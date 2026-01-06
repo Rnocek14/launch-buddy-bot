@@ -28,6 +28,7 @@ import Help from "./pages/Help";
 import Subscribe from "./pages/Subscribe";
 import Billing from "./pages/Billing";
 import PublicResult from "./pages/PublicResult";
+import BrokerScan from "./pages/BrokerScan";
 import { AuthorizationWizard } from "./components/AuthorizationWizard";
 
 const queryClient = new QueryClient();
@@ -63,6 +64,7 @@ const App = () => (
               <Route path="/billing" element={<Billing />} />
               <Route path="/authorize" element={<AuthorizationWizard />} />
               <Route path="/results/:shareId" element={<PublicResult />} />
+              <Route path="/broker-scan" element={<BrokerScan />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
