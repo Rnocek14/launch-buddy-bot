@@ -43,6 +43,7 @@ import { TRACKING_EVENTS, trackConversion } from "@/lib/analytics";
 import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 import { PullToRefreshIndicator } from "@/components/PullToRefreshIndicator";
 import { ExtensionPrompt } from "@/components/ExtensionPrompt";
+import { BrokerScanCard } from "@/components/BrokerScanCard";
 
 interface Service {
   id: string;
@@ -1090,6 +1091,9 @@ export default function Dashboard() {
             <div className="mb-6">
               <ExtensionPrompt extensionServiceCount={extensionServiceCount} />
             </div>
+
+            {/* Broker Scan Card */}
+            <BrokerScanCard />
 
             {/* This Month Summary Block */}
             {monthlyStats && (
