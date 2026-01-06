@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 const benefits = [
   {
@@ -68,12 +69,21 @@ export default function Enterprise() {
     e.preventDefault();
     setIsSubmitting(true);
     
-    // Simulate form submission
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    toast.success("Thanks for your interest! We'll be in touch within 24 hours.");
-    setFormData({ name: "", email: "", company: "", employees: "", message: "" });
-    setIsSubmitting(false);
+    try {
+      const { data, error } = await supabase.functions.invoke("notify-enterprise-lead", {
+        body: formData,
+      });
+
+      if (error) throw error;
+
+      toast.success("Thanks for your interest! We'll be in touch within 24 hours.");
+      setFormData({ name: "", email: "", company: "", employees: "", message: "" });
+    } catch (error: any) {
+      console.error("Error submitting form:", error);
+      toast.error("Something went wrong. Please try again or email us directly.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
