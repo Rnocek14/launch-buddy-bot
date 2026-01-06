@@ -4,14 +4,17 @@ import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calculator, TrendingUp, Shield, Clock, AlertTriangle, DollarSign, Users, Building2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Calculator, TrendingUp, Shield, Clock, AlertTriangle, DollarSign, Users, Building2, Download } from "lucide-react";
 import { trackEvent, TRACKING_EVENTS } from "@/lib/analytics";
+import jsPDF from "jspdf";
 
 interface CalculatorInputs {
   employees: number;
   industry: string;
   avgAccounts: number;
   sensitivityLevel: string;
+  companyName: string;
 }
 
 interface ROIResults {
@@ -111,9 +114,165 @@ export function EnterpriseROICalculator({ onGetCustomAnalysis }: EnterpriseROICa
     industry: "technology",
     avgAccounts: 75,
     sensitivityLevel: "medium",
+    companyName: "",
   });
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
   const results = useMemo(() => calculateROI(inputs), [inputs]);
+
+  const generatePDF = async () => {
+    setIsGeneratingPdf(true);
+    trackEvent(TRACKING_EVENTS.ROI_REPORT_DOWNLOADED, {
+      companyName: inputs.companyName,
+      employees: inputs.employees,
+      industry: inputs.industry,
+      roi: results.roi,
+    });
+
+    try {
+      const pdf = new jsPDF();
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const margin = 20;
+      let y = 20;
+
+      // Header
+      pdf.setFontSize(24);
+      pdf.setTextColor(79, 70, 229); // Primary color
+      pdf.text("ROI Analysis Report", margin, y);
+      y += 15;
+
+      // Company name
+      pdf.setFontSize(16);
+      pdf.setTextColor(0, 0, 0);
+      const companyText = inputs.companyName || "Your Organization";
+      pdf.text(`Prepared for: ${companyText}`, margin, y);
+      y += 8;
+
+      // Date
+      pdf.setFontSize(10);
+      pdf.setTextColor(100, 100, 100);
+      pdf.text(`Generated: ${new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}`, margin, y);
+      y += 20;
+
+      // Divider
+      pdf.setDrawColor(200, 200, 200);
+      pdf.line(margin, y, pageWidth - margin, y);
+      y += 15;
+
+      // Executive Summary
+      pdf.setFontSize(14);
+      pdf.setTextColor(0, 0, 0);
+      pdf.text("Executive Summary", margin, y);
+      y += 10;
+
+      pdf.setFontSize(11);
+      pdf.setTextColor(60, 60, 60);
+      const summaryText = `Based on your organization profile of ${inputs.employees.toLocaleString()} employees in the ${INDUSTRY_MULTIPLIERS[inputs.industry]?.label || "Technology"} sector, our analysis projects significant cost savings through proactive digital footprint management.`;
+      const summaryLines = pdf.splitTextToSize(summaryText, pageWidth - margin * 2);
+      pdf.text(summaryLines, margin, y);
+      y += summaryLines.length * 6 + 15;
+
+      // Key Metrics Box
+      pdf.setFillColor(245, 245, 255);
+      pdf.roundedRect(margin, y, pageWidth - margin * 2, 50, 3, 3, "F");
+      y += 12;
+
+      pdf.setFontSize(12);
+      pdf.setTextColor(79, 70, 229);
+      pdf.text("KEY METRICS", margin + 10, y);
+      y += 12;
+
+      const metricsData = [
+        ["Annual Net Savings:", formatCurrency(results.netSavings)],
+        ["Return on Investment:", `${formatPercent(results.roi)}`],
+        ["Payback Period:", results.paybackPeriod < 1 ? `${(results.paybackPeriod * 30).toFixed(0)} days` : `${results.paybackPeriod.toFixed(1)} months`],
+        ["Annual Service Cost:", formatCurrency(results.serviceCost)],
+      ];
+
+      pdf.setFontSize(11);
+      pdf.setTextColor(0, 0, 0);
+      const col1X = margin + 10;
+      const col2X = pageWidth / 2 + 10;
+
+      metricsData.forEach((item, idx) => {
+        const xPos = idx % 2 === 0 ? col1X : col2X;
+        const yOffset = Math.floor(idx / 2) * 10;
+        pdf.text(`${item[0]} ${item[1]}`, xPos, y + yOffset);
+      });
+      y += 35;
+
+      // Risk Analysis
+      pdf.setFontSize(14);
+      pdf.setTextColor(0, 0, 0);
+      pdf.text("Risk Analysis", margin, y);
+      y += 10;
+
+      pdf.setFontSize(11);
+      pdf.setTextColor(60, 60, 60);
+      const riskData = [
+        `• Expected Annual Breach Cost (without protection): ${formatCurrency(results.expectedAnnualLoss)}`,
+        `• Total Employee Accounts at Risk: ${results.totalAccountsAtRisk.toLocaleString()}`,
+        `• Estimated Hours Saved per Year: ${results.hourssSavedPerYear.toLocaleString()} hours`,
+        `• Data Sensitivity Level: ${inputs.sensitivityLevel.charAt(0).toUpperCase() + inputs.sensitivityLevel.slice(1)}`,
+      ];
+
+      riskData.forEach((line) => {
+        pdf.text(line, margin, y);
+        y += 7;
+      });
+      y += 10;
+
+      // Methodology
+      pdf.setFontSize(14);
+      pdf.setTextColor(0, 0, 0);
+      pdf.text("Methodology", margin, y);
+      y += 10;
+
+      pdf.setFontSize(10);
+      pdf.setTextColor(80, 80, 80);
+      const methodologyText = "This analysis is based on IBM's 2024 Cost of a Data Breach Report, which found the global average cost of a data breach reached $4.88 million. Our calculations factor in industry-specific multipliers, employee account exposure, and data sensitivity levels to provide a tailored risk assessment.";
+      const methodLines = pdf.splitTextToSize(methodologyText, pageWidth - margin * 2);
+      pdf.text(methodLines, margin, y);
+      y += methodLines.length * 5 + 15;
+
+      // Industry Stats
+      pdf.setFontSize(12);
+      pdf.setTextColor(0, 0, 0);
+      pdf.text("Key Industry Statistics (IBM 2024)", margin, y);
+      y += 8;
+
+      pdf.setFontSize(10);
+      pdf.setTextColor(60, 60, 60);
+      const stats = [
+        "• 73% of data breaches involve the human element",
+        "• Average time to identify and contain a breach: 287 days",
+        "• Organizations with proper training see 40% lower breach costs",
+        "• Healthcare industry has highest average breach cost at $10.93M",
+      ];
+
+      stats.forEach((stat) => {
+        pdf.text(stat, margin, y);
+        y += 6;
+      });
+      y += 15;
+
+      // Footer
+      pdf.setFontSize(10);
+      pdf.setTextColor(100, 100, 100);
+      pdf.text("Footprint Finder - Enterprise Data Privacy Management", margin, 280);
+      pdf.text("Contact: enterprise@footprintfinder.com", margin, 286);
+
+      // Download
+      const fileName = inputs.companyName 
+        ? `ROI-Report-${inputs.companyName.replace(/[^a-zA-Z0-9]/g, "-")}.pdf`
+        : "ROI-Report.pdf";
+      pdf.save(fileName);
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  };
 
   const handleGetAnalysis = () => {
     trackEvent(TRACKING_EVENTS.ROI_CALCULATOR_CTA_CLICKED, {
@@ -155,6 +314,19 @@ export function EnterpriseROICalculator({ onGetCustomAnalysis }: EnterpriseROICa
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-8">
+              {/* Company Name Input */}
+              <div className="space-y-3">
+                <label className="text-sm font-medium flex items-center gap-2">
+                  <Building2 className="w-4 h-4" />
+                  Company Name
+                </label>
+                <Input
+                  placeholder="Enter your company name"
+                  value={inputs.companyName}
+                  onChange={(e) => setInputs(prev => ({ ...prev, companyName: e.target.value }))}
+                />
+              </div>
+
               {/* Employees Slider */}
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
@@ -339,14 +511,25 @@ export function EnterpriseROICalculator({ onGetCustomAnalysis }: EnterpriseROICa
               </Card>
             </div>
 
-            <Button 
-              size="lg" 
-              className="w-full" 
-              onClick={handleGetAnalysis}
-            >
-              <DollarSign className="w-4 h-4 mr-2" />
-              Get Custom Analysis
-            </Button>
+            <div className="flex gap-3">
+              <Button 
+                size="lg" 
+                className="flex-1" 
+                onClick={handleGetAnalysis}
+              >
+                <DollarSign className="w-4 h-4 mr-2" />
+                Get Custom Analysis
+              </Button>
+              <Button 
+                size="lg" 
+                variant="outline"
+                onClick={generatePDF}
+                disabled={isGeneratingPdf}
+              >
+                <Download className="w-4 h-4 mr-2" />
+                {isGeneratingPdf ? "Generating..." : "Download Report"}
+              </Button>
+            </div>
           </div>
         </div>
 

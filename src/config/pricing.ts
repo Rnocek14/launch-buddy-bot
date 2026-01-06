@@ -184,4 +184,5 @@ export const TRACKING_EVENTS = {
   ROI_CALCULATOR_OPENED: "roi_calculator_opened",
   ROI_CALCULATOR_COMPLETED: "roi_calculator_completed",
   ROI_CALCULATOR_CTA_CLICKED: "roi_calculator_cta_clicked",
+  ROI_REPORT_DOWNLOADED: "roi_report_downloaded",
 } as const;
