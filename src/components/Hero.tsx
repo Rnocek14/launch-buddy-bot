@@ -38,6 +38,12 @@ export const Hero = () => {
               Get Started Free
             </Button>
           </Link>
+          <Link to="/demo">
+            <Button size="lg" variant="outline" className="gap-2 text-lg px-8 py-6">
+              <Zap className="w-5 h-5" />
+              Try Live Demo
+            </Button>
+          </Link>
         </div>
         <p className="text-sm text-muted-foreground mb-12">
           Free: 3 deletions/month • Pro: Unlimited deletions + rescans for $49/year

@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import Index from "./pages/Index";
+import Demo from "./pages/Demo";
 import Auth from "./pages/Auth";
 import Admin from "./pages/Admin";
 import AdminAnalytics from "./pages/AdminAnalytics";
@@ -41,6 +42,7 @@ const App = () => (
           <BrowserRouter>
             <Routes>
               <Route path="/" element={<Index />} />
+              <Route path="/demo" element={<Demo />} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/admin" element={<Admin />} />
               <Route path="/admin/analytics" element={<AdminAnalytics />} />
