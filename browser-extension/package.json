@@ -1,0 +1,13 @@
+{
+  "name": "footprint-finder-extension",
+  "version": "1.0.0",
+  "description": "Automatically detect online accounts as you browse",
+  "scripts": {
+    "build": "tsc && cp -r popup dist/ && cp -r assets dist/ && cp manifest.json dist/",
+    "dev": "tsc --watch"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.268",
+    "typescript": "^5.4.0"
+  }
+}
