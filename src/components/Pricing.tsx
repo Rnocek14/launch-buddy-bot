@@ -1,79 +1,73 @@
 import { useState } from "react";
-import { Check } from "lucide-react";
+import { Check, Crown, Shield, Star } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
 import { Link } from "react-router-dom";
 import { BillingToggle } from "./BillingToggle";
 import type { BillingInterval } from "@/config/pricing";
+import { FREE_FEATURES, PRO_FEATURES, COMPLETE_FEATURES, STRIPE_PRICES } from "@/config/pricing";
 
 const getPlans = (billingInterval: BillingInterval) => [
   {
     name: "Free",
     price: "$0",
+    period: "",
     description: "Perfect for getting started",
-    features: [
-      "Connect and scan 1 email account",
-      "See all discovered services",
-      "Complete privacy contact details",
-      "Risk score & analytics",
-      "3 free deletion requests/month",
-      "Shareable privacy report",
-    ],
+    features: [...FREE_FEATURES],
     cta: "Get Started Free",
     ctaLink: "/auth",
     popular: false,
-    available: true,
+    icon: Shield,
   },
   {
     name: "Pro",
-    price: billingInterval === "year" ? "$49" : "$9.99",
+    price: billingInterval === "year" ? "$79" : "$12.99",
     period: billingInterval === "year" ? "/year" : "/month",
-    description: "Unlimited deletions + deep discovery that finds 2-3× more",
-    features: [
-      "Everything in Free, plus:",
-      "Unlimited deletion requests",
-      "Deep AI Scan (finds 2-3× more accounts)",
-      "Connect and scan up to 3 email addresses",
-      "Complete inbox history analysis",
-      "Priority deletion processing",
-      "Monthly automatic rescans",
-      "Priority email support",
-    ],
-    cta: billingInterval === "year" ? "Upgrade to Pro" : "Start Pro Monthly",
-    ctaLink: `/subscribe?interval=${billingInterval}`,
+    description: "Unlimited deletions + deep discovery",
+    features: [...PRO_FEATURES],
+    cta: "Upgrade to Pro",
+    ctaLink: `/subscribe?tier=pro&interval=${billingInterval}`,
     popular: true,
-    available: true,
-    badge: billingInterval === "year" ? "Launch pricing — Save 59%" : null,
-    monthlyEquivalent: billingInterval === "year" ? "Just $4/month" : null,
+    icon: Star,
+    badge: billingInterval === "year" ? "Save 39%" : null,
+    monthlyEquivalent: billingInterval === "year" ? "Just $6.58/month" : null,
+  },
+  {
+    name: "Complete",
+    price: billingInterval === "year" ? "$129" : "$19.99",
+    period: billingInterval === "year" ? "/year" : "/month",
+    description: "Everything + data broker removal",
+    features: [...COMPLETE_FEATURES],
+    cta: "Get Complete",
+    ctaLink: `/subscribe?tier=complete&interval=${billingInterval}`,
+    popular: false,
+    icon: Crown,
+    badge: billingInterval === "year" ? "Best Value" : null,
+    monthlyEquivalent: billingInterval === "year" ? "Just $10.75/month" : null,
   },
 ];
 
 const pricingFaq = [
   {
-    question: "Is there a free version?",
+    question: "What's the difference between Pro and Complete?",
     answer:
-      "Yes. You can use Footprint Finder for free with up to 3 deletion requests and basic scans. The Pro plan unlocks unlimited deletions, deep scans, and up to 3 connected email accounts."
+      "Pro gives you unlimited deletion requests and deep AI scanning for service accounts (Netflix, Uber, shopping sites). Complete adds data broker scanning — we check 20+ sites that sell your personal info and guide you through removal."
   },
   {
-    question: "Is $49 billed monthly or yearly?",
+    question: "Is there a free version?",
     answer:
-      "$49 is billed once per year. It works out to about $4 per month, but you're only charged once annually, not every month. We also offer a $9.99/month option if you prefer."
+      "Yes. You can use Footprint Finder for free with 1 email, 3 deletion requests/month, and basic scans. Upgrade to Pro or Complete to unlock more features."
   },
   {
     question: "Can I cancel anytime?",
     answer:
-      "Yes. You can cancel your Pro subscription at any time from the Billing page. When you cancel, you'll keep Pro features until the end of your current billing period and won't be charged again."
-  },
-  {
-    question: "Will my price ever go up?",
-    answer:
-      "Early adopters lock in the $49/year launch pricing. If we raise prices in the future, existing Pro members keep their original rate as long as they stay subscribed."
+      "Yes. You can cancel your subscription at any time from the Billing page. When you cancel, you'll keep your features until the end of your current billing period."
   },
   {
     question: "Do you offer refunds?",
     answer:
-      "We don't offer automatic refunds, but if something goes wrong or the product doesn't work as promised for you, reach out to support and we'll make it right."
+      "We don't offer automatic refunds, but if something goes wrong or the product doesn't work as promised, reach out to support and we'll make it right."
   },
   {
     question: "Is my payment information secure?",
@@ -87,28 +81,28 @@ const competitors = [
     name: "DeleteMe",
     price: "$129/year",
     focus: "Data brokers only",
-    description: "Removes you from data broker sites. Great for that, but doesn't handle service accounts (Netflix, Uber, old shopping sites, etc.).",
+    description: "Removes you from data broker sites. Great for that, but doesn't handle service accounts.",
     highlight: false,
   },
   {
     name: "Incogni",
     price: "$77/year",
     focus: "Data brokers only",
-    description: "Similar to DeleteMe — focuses on data broker removal. Automated, hands-off approach. No inbox scanning or account discovery.",
+    description: "Similar to DeleteMe — focuses on data broker removal. No inbox scanning.",
     highlight: false,
   },
   {
     name: "Mine (SayMine)",
     price: "Free–$99/year",
     focus: "Account discovery",
-    description: "Closest to us. Scans your inbox, finds accounts. Free tier is limited. Less aggressive contact discovery than our AI scan.",
+    description: "Closest to us. Scans your inbox, finds accounts. Less aggressive contact discovery.",
     highlight: false,
   },
   {
     name: "Footprint Finder",
-    price: "$49/year or $9.99/mo",
-    focus: "Service accounts",
-    description: "Deep AI scan of your inbox to find forgotten accounts. Unlimited deletion requests. Finds 2-3× more accounts with Pro. Monthly rescans included.",
+    price: "$79–$129/year",
+    focus: "Service accounts + brokers",
+    description: "Deep AI scan + data broker removal. The complete privacy solution at competitive pricing.",
     highlight: true,
   },
 ];
@@ -123,9 +117,8 @@ export const Pricing = () => {
         {/* Launch Pricing Banner */}
         <div className="mb-8 rounded-xl border border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950/30 px-4 py-3 text-xs md:text-sm flex flex-col md:flex-row md:items-center md:justify-between gap-2">
           <div>
-            <span className="font-medium">Launch special:</span>{" "}
-            Lock in <span className="font-semibold">$49/year</span> Pro pricing.
-            Your rate won't increase as long as you keep your subscription active.
+            <span className="font-medium">Three simple plans:</span>{" "}
+            Free to start, <span className="font-semibold">Pro at $79/year</span>, or <span className="font-semibold">Complete at $129/year</span> for everything.
           </div>
           <div className="text-emerald-700 dark:text-emerald-400 font-medium">
             No hidden fees • Cancel anytime
@@ -143,64 +136,77 @@ export const Pricing = () => {
 
         <BillingToggle value={billingInterval} onChange={setBillingInterval} />
 
-        <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-          {plans.map((plan, index) => (
-            <Card 
-              key={index}
-              className={`relative ${
-                plan.popular 
-                  ? "border-primary shadow-lg shadow-primary/10 scale-105" 
-                  : "border-border/50"
-              } ${!plan.available ? "opacity-75" : ""}`}
-            >
-              {plan.badge && (
-                <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-primary to-accent">
-                  {plan.badge}
-                </Badge>
-              )}
-              <CardHeader>
-                <CardTitle className="text-2xl">{plan.name}</CardTitle>
-                <CardDescription>{plan.description}</CardDescription>
-                <div className="mt-4">
-                  <span className="text-4xl font-bold">{plan.price}</span>
-                  {plan.period && (
-                    <span className="text-muted-foreground">{plan.period}</span>
-                  )}
-                  {plan.monthlyEquivalent && (
-                    <div className="text-sm text-muted-foreground mt-1">
-                      {plan.monthlyEquivalent}
+        <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+          {plans.map((plan, index) => {
+            const Icon = plan.icon;
+            return (
+              <Card 
+                key={index}
+                className={`relative ${
+                  plan.popular 
+                    ? "border-primary shadow-lg shadow-primary/10 scale-105 z-10" 
+                    : "border-border/50"
+                }`}
+              >
+                {plan.badge && (
+                  <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-primary to-accent">
+                    {plan.badge}
+                  </Badge>
+                )}
+                {plan.popular && (
+                  <Badge className="absolute -top-3 right-4 bg-primary">
+                    Most Popular
+                  </Badge>
+                )}
+                <CardHeader>
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className={`p-2 rounded-lg ${plan.popular ? 'bg-primary/10' : 'bg-muted'}`}>
+                      <Icon className={`w-5 h-5 ${plan.popular ? 'text-primary' : 'text-muted-foreground'}`} />
                     </div>
-                  )}
-                </div>
-              </CardHeader>
-              <CardContent>
-                <Link to={plan.ctaLink || "/auth"} className="w-full">
-                  <Button 
-                    className={`w-full mb-6 ${
-                      plan.popular 
-                        ? "bg-primary hover:bg-primary/90" 
-                        : ""
-                    }`}
-                    variant={plan.popular ? "default" : "outline"}
-                  >
-                    {plan.cta}
-                  </Button>
-                </Link>
-                <ul className="space-y-3">
-                  {plan.features.map((feature, i) => (
-                    <li key={i} className="flex items-start gap-2">
-                      <Check className="w-5 h-5 text-accent shrink-0 mt-0.5" />
-                      <span className="text-sm">{feature}</span>
-                    </li>
-                  ))}
-                </ul>
-              </CardContent>
-            </Card>
-          ))}
+                    <CardTitle className="text-xl">{plan.name}</CardTitle>
+                  </div>
+                  <CardDescription>{plan.description}</CardDescription>
+                  <div className="mt-4">
+                    <span className="text-4xl font-bold">{plan.price}</span>
+                    {plan.period && (
+                      <span className="text-muted-foreground">{plan.period}</span>
+                    )}
+                    {plan.monthlyEquivalent && (
+                      <div className="text-sm text-muted-foreground mt-1">
+                        {plan.monthlyEquivalent}
+                      </div>
+                    )}
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <Link to={plan.ctaLink || "/auth"} className="w-full">
+                    <Button 
+                      className={`w-full mb-6 ${
+                        plan.popular 
+                          ? "bg-primary hover:bg-primary/90" 
+                          : ""
+                      }`}
+                      variant={plan.popular ? "default" : "outline"}
+                    >
+                      {plan.cta}
+                    </Button>
+                  </Link>
+                  <ul className="space-y-3">
+                    {plan.features.map((feature, i) => (
+                      <li key={i} className="flex items-start gap-2">
+                        <Check className="w-5 h-5 text-accent shrink-0 mt-0.5" />
+                        <span className="text-sm">{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
 
         <p className="text-center text-muted-foreground mt-12">
-          ✨ Limited launch pricing — lock in $49/year forever. Cancel anytime.
+          ✨ All plans include our core privacy features. Cancel anytime.
         </p>
 
         {/* Named Competitor Comparison */}
@@ -245,7 +251,7 @@ export const Pricing = () => {
           </div>
 
           <p className="text-xs text-muted-foreground mt-4">
-            <strong>Note:</strong> DeleteMe and Incogni focus on data brokers (sites that sell your personal info). We focus on service accounts — the companies you've signed up with. Different problems, complementary solutions.
+            <strong>Note:</strong> DeleteMe and Incogni focus on data brokers (sites that sell your personal info). Our Complete plan includes both service account discovery AND data broker removal.
           </p>
         </section>
 
@@ -253,7 +259,7 @@ export const Pricing = () => {
         <section className="mt-16 border-t pt-10">
           <h2 className="text-2xl font-semibold mb-4">Pricing FAQ</h2>
           <p className="text-sm text-muted-foreground mb-6">
-            Answers to the most common questions about Footprint Finder Pro.
+            Answers to the most common questions about our plans.
           </p>
           <div className="grid gap-6 md:grid-cols-2">
             {pricingFaq.map((item) => (

@@ -38,7 +38,7 @@ Deno.serve(async (req) => {
 
     const userId = user.id;
 
-    // Check if user has Pro subscription
+    // Check if user has Complete subscription (broker scanning requires Complete tier)
     const { data: subscription } = await supabase
       .from('subscriptions')
       .select('tier, status')
@@ -46,9 +46,10 @@ Deno.serve(async (req) => {
       .eq('status', 'active')
       .single();
 
-    if (!subscription || subscription.tier !== 'pro') {
+    // Broker scanning requires Complete tier
+    if (!subscription || subscription.tier !== 'complete') {
       return new Response(
-        JSON.stringify({ error: 'Pro subscription required for broker scanning' }),
+        JSON.stringify({ error: 'Complete subscription required for broker scanning' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }

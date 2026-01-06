@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Shield, Crown, AlertCircle, Sparkles, RefreshCw, Loader2 } from "lucide-react";
+import { Shield, Crown, AlertCircle, Sparkles, RefreshCw, Loader2, Star } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -87,9 +87,10 @@ export function SubscriptionStatusCard() {
         });
         
         if (refreshing && !silent) {
+          const tierName = data.tier === 'complete' ? 'Complete' : data.tier === 'pro' ? 'Pro' : 'Free';
           toast({
             title: "Status Updated",
-            description: data.tier === 'pro' ? "Pro subscription active" : "Free tier active",
+            description: `${tierName} subscription active`,
           });
         }
       }
@@ -121,54 +122,77 @@ export function SubscriptionStatusCard() {
   }
 
   const isPro = subscriptionData.tier === 'pro';
+  const isComplete = subscriptionData.tier === 'complete';
+  const isPaid = isPro || isComplete;
   const isLowOnDeletions = subscriptionData.remainingDeletions !== null && subscriptionData.remainingDeletions <= 1;
   const isOutOfDeletions = subscriptionData.remainingDeletions === 0;
 
+  const getCardStyle = () => {
+    if (isComplete) return 'border-accent/30 bg-gradient-to-br from-card to-accent/5';
+    if (isPro) return 'border-primary/30 bg-gradient-to-br from-card to-primary/5';
+    if (isOutOfDeletions) return 'border-destructive/30';
+    if (isLowOnDeletions) return 'border-yellow-500/30';
+    return 'border-border';
+  };
+
+  const getIcon = () => {
+    if (isComplete) return <Crown className="w-6 h-6 text-accent" />;
+    if (isPro) return <Star className="w-6 h-6 text-primary" />;
+    if (isOutOfDeletions) return <AlertCircle className="w-6 h-6 text-destructive" />;
+    return <Shield className="w-6 h-6 text-muted-foreground" />;
+  };
+
+  const getTierName = () => {
+    if (isComplete) return 'Complete Plan';
+    if (isPro) return 'Pro Plan';
+    return 'Free Plan';
+  };
+
+  const getTierDescription = () => {
+    if (isComplete) return 'Unlimited deletions + data broker scanning';
+    if (isPro) return 'Unlimited deletion requests + monthly rescans';
+    if (subscriptionData.remainingDeletions === null) return 'Unlimited deletions';
+    if (isOutOfDeletions) {
+      return (
+        <span className="text-destructive font-medium">
+          No deletions remaining this month • <button onClick={() => navigate('/subscribe?tier=pro')} className="underline text-primary font-semibold">Upgrade to Pro for $79/year</button>
+        </span>
+      );
+    }
+    return (
+      <span className={isLowOnDeletions ? 'text-yellow-600 dark:text-yellow-500 font-medium' : ''}>
+        {subscriptionData.remainingDeletions} of 3 deletion requests remaining this month
+      </span>
+    );
+  };
+
   return (
-    <Card className={`mb-8 border-2 ${isPro ? 'border-accent/30 bg-gradient-to-br from-card to-accent/5' : isOutOfDeletions ? 'border-destructive/30' : isLowOnDeletions ? 'border-yellow-500/30' : 'border-border'}`}>
+    <Card className={`mb-8 border-2 ${getCardStyle()}`}>
       <CardContent className="pt-6">
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div className="flex items-center gap-3">
-            <div className={`p-2 rounded-lg ${isPro ? 'bg-accent/10' : 'bg-muted'}`}>
-              {isPro ? (
-                <Crown className="w-6 h-6 text-accent" />
-              ) : isOutOfDeletions ? (
-                <AlertCircle className="w-6 h-6 text-destructive" />
-              ) : (
-                <Shield className="w-6 h-6 text-muted-foreground" />
-              )}
+            <div className={`p-2 rounded-lg ${isPaid ? (isComplete ? 'bg-accent/10' : 'bg-primary/10') : 'bg-muted'}`}>
+              {getIcon()}
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="font-semibold text-foreground">
-                  {isPro ? 'Pro Plan' : 'Free Plan'}
+                  {getTierName()}
                 </h3>
-                {isPro && (
-                  <Badge className="bg-accent text-accent-foreground">
+                {isPaid && (
+                  <Badge className={isComplete ? "bg-accent text-accent-foreground" : "bg-primary text-primary-foreground"}>
                     <Sparkles className="w-3 h-3 mr-1" />
                     Active
                   </Badge>
                 )}
               </div>
               <p className="text-sm text-muted-foreground mt-1">
-                {isPro ? (
-                  'Unlimited deletion requests + monthly rescans'
-                ) : subscriptionData.remainingDeletions === null ? (
-                  'Unlimited deletions'
-                ) : isOutOfDeletions ? (
-                  <span className="text-destructive font-medium">
-                    No deletions remaining this month • <button onClick={() => navigate('/subscribe')} className="underline text-primary font-semibold">Upgrade to Pro for $49/year</button>
-                  </span>
-                ) : (
-                  <span className={isLowOnDeletions ? 'text-yellow-600 dark:text-yellow-500 font-medium' : ''}>
-                    {subscriptionData.remainingDeletions} of 3 deletion requests remaining this month
-                  </span>
-                )}
+                {getTierDescription()}
               </p>
             </div>
           </div>
           <div>
-            {isPro ? (
+            {isPaid ? (
               <div className="flex items-center gap-2">
                 <Button
                   onClick={() => fetchSubscriptionStatus()}
@@ -189,19 +213,29 @@ export function SubscriptionStatusCard() {
                 >
                   Manage Subscription
                 </Button>
+                {isPro && !isComplete && (
+                  <Button
+                    onClick={() => navigate('/subscribe?tier=complete')}
+                    size="sm"
+                    className="bg-gradient-to-r from-accent to-primary text-primary-foreground"
+                  >
+                    <Crown className="w-4 h-4 mr-2" />
+                    Get Complete
+                  </Button>
+                )}
               </div>
             ) : (
               <div className="flex flex-col items-end gap-1">
                 <Button
-                  onClick={() => navigate('/subscribe')}
+                  onClick={() => navigate('/subscribe?tier=pro')}
                   className="bg-gradient-to-r from-primary to-accent text-primary-foreground hover:opacity-90"
                   size="sm"
                 >
-                  <Crown className="w-4 h-4 mr-2" />
+                  <Star className="w-4 h-4 mr-2" />
                   Upgrade to Pro
                 </Button>
                 <p className="text-xs text-muted-foreground">
-                  $49/year • Lock in launch pricing
+                  From $79/year
                 </p>
               </div>
             )}

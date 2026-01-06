@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, CreditCard, Calendar, AlertCircle } from "lucide-react";
+import { Loader2, CreditCard, Calendar, AlertCircle, Crown, Star, Shield } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
@@ -78,7 +78,41 @@ export default function Billing() {
     );
   }
 
-  const isPro = subscriptionData?.tier === 'pro';
+  const tier = subscriptionData?.tier || 'free';
+  const isPro = tier === 'pro';
+  const isComplete = tier === 'complete';
+  const isPaid = isPro || isComplete;
+
+  const getTierInfo = () => {
+    if (isComplete) {
+      return {
+        name: 'Complete Plan',
+        description: 'Unlimited deletion requests, data broker scanning, and priority support',
+        icon: Crown,
+        color: 'accent',
+        price: '$129/year',
+      };
+    }
+    if (isPro) {
+      return {
+        name: 'Pro Plan',
+        description: 'Unlimited deletion requests and advanced features',
+        icon: Star,
+        color: 'primary',
+        price: '$79/year',
+      };
+    }
+    return {
+      name: 'Free Plan',
+      description: '3 deletion requests per month',
+      icon: Shield,
+      color: 'muted',
+      price: 'Free',
+    };
+  };
+
+  const tierInfo = getTierInfo();
+  const Icon = tierInfo.icon;
 
   return (
     <div className="container max-w-4xl py-8">
@@ -104,37 +138,40 @@ export default function Billing() {
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
-              Your payment failed. Please update your payment method to continue using Pro features.
+              Your payment failed. Please update your payment method to continue using {isComplete ? 'Complete' : 'Pro'} features.
             </AlertDescription>
           </Alert>
         )}
 
-        <Card className={isPro ? 'border-accent/30 bg-gradient-to-br from-card to-accent/5' : ''}>
+        <Card className={isPaid ? (isComplete ? 'border-accent/30 bg-gradient-to-br from-card to-accent/5' : 'border-primary/30 bg-gradient-to-br from-card to-primary/5') : ''}>
           <CardHeader>
             <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-2xl">
-                  {isPro ? 'Pro Plan' : 'Free Plan'}
-                </CardTitle>
-                <CardDescription className="mt-1">
-                  {isPro 
-                    ? 'Unlimited deletion requests and advanced features'
-                    : '3 deletion requests per month'}
-                </CardDescription>
+              <div className="flex items-center gap-3">
+                <div className={`p-2 rounded-lg ${isComplete ? 'bg-accent/10' : isPro ? 'bg-primary/10' : 'bg-muted'}`}>
+                  <Icon className={`w-6 h-6 ${isComplete ? 'text-accent' : isPro ? 'text-primary' : 'text-muted-foreground'}`} />
+                </div>
+                <div>
+                  <CardTitle className="text-2xl">
+                    {tierInfo.name}
+                  </CardTitle>
+                  <CardDescription className="mt-1">
+                    {tierInfo.description}
+                  </CardDescription>
+                </div>
               </div>
-              {isPro && (
-                <Badge className="bg-accent text-accent-foreground">
+              {isPaid && (
+                <Badge className={isComplete ? "bg-accent text-accent-foreground" : "bg-primary text-primary-foreground"}>
                   Active
                 </Badge>
               )}
             </div>
           </CardHeader>
           <CardContent className="space-y-6">
-            {isPro ? (
+            {isPaid ? (
               <>
                 {subscriptionData?.subscription_end && (
                   <div className="flex items-start gap-3 p-4 rounded-lg bg-background/50 border border-border">
-                    <Calendar className="w-5 h-5 text-primary mt-0.5" />
+                    <Calendar className={`w-5 h-5 mt-0.5 ${isComplete ? 'text-accent' : 'text-primary'}`} />
                     <div>
                       <p className="font-medium text-foreground">Current Period</p>
                       <p className="text-sm text-muted-foreground mt-1">
@@ -149,7 +186,7 @@ export default function Billing() {
                 )}
 
                 <div className="flex items-start gap-3 p-4 rounded-lg bg-background/50 border border-border">
-                  <CreditCard className="w-5 h-5 text-primary mt-0.5" />
+                  <CreditCard className={`w-5 h-5 mt-0.5 ${isComplete ? 'text-accent' : 'text-primary'}`} />
                   <div className="flex-1">
                     <p className="font-medium text-foreground">Billing Management</p>
                     <p className="text-sm text-muted-foreground mt-1">
@@ -158,21 +195,34 @@ export default function Billing() {
                   </div>
                 </div>
 
-                <Button
-                  onClick={handleManageSubscription}
-                  disabled={portalLoading}
-                  size="lg"
-                  className="w-full"
-                >
-                  {portalLoading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Opening Portal...
-                    </>
-                  ) : (
-                    'Manage in Stripe Portal'
+                <div className="flex gap-3">
+                  <Button
+                    onClick={handleManageSubscription}
+                    disabled={portalLoading}
+                    size="lg"
+                    className="flex-1"
+                  >
+                    {portalLoading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Opening Portal...
+                      </>
+                    ) : (
+                      'Manage in Stripe Portal'
+                    )}
+                  </Button>
+                  
+                  {isPro && !isComplete && (
+                    <Button
+                      onClick={() => navigate('/subscribe?tier=complete')}
+                      size="lg"
+                      className="bg-gradient-to-r from-accent to-primary"
+                    >
+                      <Crown className="w-4 h-4 mr-2" />
+                      Upgrade to Complete
+                    </Button>
                   )}
-                </Button>
+                </div>
               </>
             ) : (
               <>
@@ -187,15 +237,26 @@ export default function Billing() {
 
                 <div className="text-center space-y-4">
                   <p className="text-sm text-muted-foreground">
-                    Upgrade to Pro for unlimited deletions and advanced features
+                    Upgrade for unlimited deletions and advanced features
                   </p>
-                  <Button
-                    onClick={() => navigate('/subscribe')}
-                    size="lg"
-                    className="w-full"
-                  >
-                    Upgrade to Pro
-                  </Button>
+                  <div className="flex gap-3 justify-center">
+                    <Button
+                      onClick={() => navigate('/subscribe?tier=pro')}
+                      size="lg"
+                      variant="outline"
+                    >
+                      <Star className="w-4 h-4 mr-2" />
+                      Pro - $79/year
+                    </Button>
+                    <Button
+                      onClick={() => navigate('/subscribe?tier=complete')}
+                      size="lg"
+                      className="bg-gradient-to-r from-accent to-primary"
+                    >
+                      <Crown className="w-4 h-4 mr-2" />
+                      Complete - $129/year
+                    </Button>
+                  </div>
                 </div>
               </>
             )}

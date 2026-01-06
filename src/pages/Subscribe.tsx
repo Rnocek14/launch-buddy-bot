@@ -1,21 +1,46 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Check, Loader2 } from "lucide-react";
+import { Check, Loader2, Crown, Star } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { STRIPE_PRICES, PRO_FEATURES, TRACKING_EVENTS, BillingInterval } from "@/config/pricing";
+import { 
+  STRIPE_PRICES, 
+  PRO_FEATURES, 
+  COMPLETE_FEATURES, 
+  TRACKING_EVENTS, 
+  BillingInterval,
+  SubscriptionTier 
+} from "@/config/pricing";
 import { trackConversion } from "@/lib/analytics";
 import { BillingToggle } from "@/components/BillingToggle";
+import { Badge } from "@/components/ui/badge";
 
 export default function Subscribe() {
   const [loading, setLoading] = useState(false);
-  const [billingInterval, setBillingInterval] = useState<BillingInterval>("year");
+  const [searchParams] = useSearchParams();
+  const [billingInterval, setBillingInterval] = useState<BillingInterval>(
+    (searchParams.get("interval") as BillingInterval) || "year"
+  );
+  const [selectedTier, setSelectedTier] = useState<"pro" | "complete">(
+    (searchParams.get("tier") as "pro" | "complete") || "pro"
+  );
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const selectedPrice = billingInterval === "year" ? STRIPE_PRICES.PRO_ANNUAL : STRIPE_PRICES.PRO_MONTHLY;
+  const getSelectedPrice = () => {
+    if (selectedTier === "complete") {
+      return billingInterval === "year" 
+        ? STRIPE_PRICES.COMPLETE_ANNUAL 
+        : STRIPE_PRICES.COMPLETE_MONTHLY;
+    }
+    return billingInterval === "year" 
+      ? STRIPE_PRICES.PRO_ANNUAL 
+      : STRIPE_PRICES.PRO_MONTHLY;
+  };
+
+  const selectedPrice = getSelectedPrice();
 
   useEffect(() => {
     checkAuth();
@@ -26,10 +51,10 @@ export default function Subscribe() {
     if (!user) {
       toast({
         title: "Authentication required",
-        description: "Please sign in to upgrade to Pro",
+        description: "Please sign in to upgrade",
         variant: "destructive",
       });
-      navigate("/auth?redirect=/subscribe");
+      navigate(`/auth?redirect=/subscribe?tier=${selectedTier}&interval=${billingInterval}`);
     }
   };
 
@@ -40,11 +65,18 @@ export default function Subscribe() {
       
       // Track checkout initiation
       if (user) {
-        trackConversion(TRACKING_EVENTS.CHECKOUT_INITIATED, user.id, {
-          priceId: selectedPrice.id,
-          amount: selectedPrice.amount,
-          interval: billingInterval,
-        });
+        trackConversion(
+          selectedTier === "complete" 
+            ? TRACKING_EVENTS.UPGRADE_TO_COMPLETE 
+            : TRACKING_EVENTS.CHECKOUT_INITIATED, 
+          user.id, 
+          {
+            priceId: selectedPrice.id,
+            amount: selectedPrice.amount,
+            interval: billingInterval,
+            tier: selectedTier,
+          }
+        );
       }
 
       const { data, error } = await supabase.functions.invoke("create-checkout-session", {
@@ -70,6 +102,9 @@ export default function Subscribe() {
     }
   };
 
+  const features = selectedTier === "complete" ? COMPLETE_FEATURES : PRO_FEATURES;
+  const Icon = selectedTier === "complete" ? Crown : Star;
+
   return (
     <div className="container max-w-4xl py-8">
       <Button
@@ -81,61 +116,96 @@ export default function Subscribe() {
       </Button>
 
       <div className="text-center mb-8">
-        <h1 className="text-4xl font-bold mb-2">Upgrade to Pro</h1>
+        <h1 className="text-4xl font-bold mb-2">
+          Upgrade to {selectedTier === "complete" ? "Complete" : "Pro"}
+        </h1>
         <p className="text-xl text-muted-foreground">
-          Unlimited deletions + complete privacy protection
+          {selectedTier === "complete" 
+            ? "Full privacy protection with data broker removal"
+            : "Unlimited deletions + deep AI scanning"
+          }
         </p>
-        <p className="text-sm text-emerald-700 dark:text-emerald-400 mt-2 font-medium">
-          ✨ Limited launch pricing — your rate won't increase as long as you stay subscribed
-        </p>
+      </div>
+
+      {/* Tier Toggle */}
+      <div className="flex justify-center gap-4 mb-6">
+        <Button
+          variant={selectedTier === "pro" ? "default" : "outline"}
+          onClick={() => setSelectedTier("pro")}
+          className="flex items-center gap-2"
+        >
+          <Star className="w-4 h-4" />
+          Pro
+        </Button>
+        <Button
+          variant={selectedTier === "complete" ? "default" : "outline"}
+          onClick={() => setSelectedTier("complete")}
+          className="flex items-center gap-2"
+        >
+          <Crown className="w-4 h-4" />
+          Complete
+        </Button>
       </div>
 
       <BillingToggle value={billingInterval} onChange={setBillingInterval} />
 
-      <Card className="max-w-2xl mx-auto border-primary/20 shadow-lg">
+      <Card className={`max-w-2xl mx-auto shadow-lg ${
+        selectedTier === "complete" 
+          ? "border-accent/30 bg-gradient-to-br from-card to-accent/5" 
+          : "border-primary/20"
+      }`}>
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
-            <span>Pro {billingInterval === "year" ? "Annual" : "Monthly"}</span>
-            {billingInterval === "year" && (
-              <span className="text-sm font-normal text-muted-foreground bg-accent/10 px-3 py-1 rounded-full">
-                Limited Launch Price
-              </span>
+            <div className="flex items-center gap-2">
+              <Icon className={`w-5 h-5 ${selectedTier === "complete" ? "text-accent" : "text-primary"}`} />
+              <span>{selectedTier === "complete" ? "Complete" : "Pro"} {billingInterval === "year" ? "Annual" : "Monthly"}</span>
+            </div>
+            {selectedTier === "complete" && (
+              <Badge className="bg-accent text-accent-foreground">
+                Best Value
+              </Badge>
             )}
           </CardTitle>
           <CardDescription>
-            Take complete control of your digital footprint
+            {selectedTier === "complete" 
+              ? "The complete privacy protection package"
+              : "Take control of your digital footprint"
+            }
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="text-center mb-8 p-6 bg-muted/30 rounded-lg">
             {billingInterval === "year" ? (
               <>
-                <div className="text-6xl font-bold mb-2">$49</div>
+                <div className="text-6xl font-bold mb-2">
+                  ${selectedTier === "complete" ? "129" : "79"}
+                </div>
                 <div className="text-xl text-muted-foreground mb-3">per year</div>
                 <div className="text-sm text-accent font-medium">
-                  Just $4/month, billed annually
+                  Just ${selectedTier === "complete" ? "10.75" : "6.58"}/month, billed annually
                 </div>
-                <div className="text-xs text-muted-foreground mt-2">
-                  60% cheaper than DeleteMe ($129/year)
-                </div>
+                {selectedTier === "complete" && (
+                  <div className="text-xs text-muted-foreground mt-2">
+                    Same price as DeleteMe, but with email scanning included
+                  </div>
+                )}
               </>
             ) : (
               <>
-                <div className="text-6xl font-bold mb-2">$9.99</div>
-                <div className="text-xl text-muted-foreground mb-3">per month</div>
-                <div className="text-sm text-muted-foreground">
-                  <span className="line-through">$9.99 × 12 = $119.88/year</span>
+                <div className="text-6xl font-bold mb-2">
+                  ${selectedTier === "complete" ? "19.99" : "12.99"}
                 </div>
+                <div className="text-xl text-muted-foreground mb-3">per month</div>
                 <div className="text-xs text-accent font-medium mt-2">
-                  Switch to annual and save $70.88
+                  Switch to annual and save {selectedTier === "complete" ? "46%" : "49%"}
                 </div>
               </>
             )}
           </div>
 
           <div className="space-y-4 mb-8">
-            <h3 className="font-semibold text-lg">Everything you need:</h3>
-            {PRO_FEATURES.map((feature, index) => (
+            <h3 className="font-semibold text-lg">Everything you get:</h3>
+            {features.map((feature, index) => (
               <div key={index} className="flex items-start gap-3">
                 <Check className="w-5 h-5 text-accent shrink-0 mt-0.5" />
                 <span>{feature}</span>
@@ -147,7 +217,11 @@ export default function Subscribe() {
             onClick={handleSubscribe}
             disabled={loading}
             size="lg"
-            className="w-full text-lg h-14"
+            className={`w-full text-lg h-14 ${
+              selectedTier === "complete" 
+                ? "bg-gradient-to-r from-accent to-primary" 
+                : ""
+            }`}
           >
             {loading ? (
               <>
@@ -155,7 +229,7 @@ export default function Subscribe() {
                 Processing...
               </>
             ) : (
-              `Subscribe to Pro - ${selectedPrice.displayPrice}`
+              `Subscribe to ${selectedTier === "complete" ? "Complete" : "Pro"} - ${selectedPrice.displayPrice}`
             )}
           </Button>
 
@@ -163,14 +237,24 @@ export default function Subscribe() {
             <p className="text-sm text-muted-foreground">
               ✓ Cancel anytime • ✓ 100% secure checkout via Stripe
             </p>
-            {billingInterval === "year" && (
-              <p className="text-xs text-muted-foreground">
-                Your rate won't increase as long as you keep your subscription active
-              </p>
-            )}
           </div>
         </CardContent>
       </Card>
+
+      {/* Comparison hint */}
+      {selectedTier === "pro" && (
+        <div className="mt-6 text-center">
+          <p className="text-sm text-muted-foreground">
+            Need data broker removal too?{" "}
+            <button 
+              onClick={() => setSelectedTier("complete")}
+              className="text-primary underline font-medium"
+            >
+              Upgrade to Complete for $50 more/year
+            </button>
+          </p>
+        </div>
+      )}
     </div>
   );
 }
