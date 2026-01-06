@@ -212,16 +212,28 @@ const Organization = () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error("Not authenticated");
 
-      const { error } = await supabase
+      const { data: insertedInvite, error } = await supabase
         .from("organization_invites")
         .insert({
           organization_id: organization.id,
           email: inviteEmail.toLowerCase(),
           role: inviteRole,
           invited_by: session.user.id,
-        });
+        })
+        .select()
+        .single();
 
       if (error) throw error;
+
+      // Send invite email via edge function
+      try {
+        await supabase.functions.invoke("send-org-invite", {
+          body: { inviteId: insertedInvite.id }
+        });
+      } catch (emailError) {
+        console.error("Failed to send invite email:", emailError);
+        // Don't fail the entire operation if email fails
+      }
 
       toast({
         title: "Invite Sent",
