@@ -12,8 +12,21 @@ export const STRIPE_PRICES = {
     interval: "year",
     displayPrice: "$49/year",
     monthlyEquivalent: "$4/month",
+    savings: null,
+  },
+  PRO_MONTHLY: {
+    id: "price_1SUW44Pwo7CiaABeCXvND0Qj",
+    name: "Pro Monthly",
+    amount: 9.99,
+    currency: "USD",
+    interval: "month",
+    displayPrice: "$9.99/month",
+    monthlyEquivalent: null,
+    savings: null,
   },
 } as const;
+
+export type BillingInterval = "month" | "year";
 
 export const SUBSCRIPTION_TIERS = {
   FREE: "free",
