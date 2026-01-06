@@ -1,36 +1,123 @@
 /**
  * Centralized Stripe pricing configuration
  * Single source of truth for all pricing-related constants
+ * 
+ * Three-tier model:
+ * - Free: 1 email, 3 deletions/month, no broker scanning
+ * - Pro: 3 emails, unlimited deletions, no broker scanning
+ * - Complete: 5 emails, unlimited deletions, broker scanning
  */
 
 export const STRIPE_PRICES = {
-  PRO_ANNUAL: {
+  // Legacy prices (for grandfathered users)
+  LEGACY_PRO_ANNUAL: {
     id: "price_1SUqvlPwo7CiaABewIGGxC79",
-    name: "Pro Annual",
+    name: "Pro Annual (Legacy)",
     amount: 49,
     currency: "USD",
     interval: "year",
-    displayPrice: "$49/year",
-    monthlyEquivalent: "$4/month",
-    savings: null,
+    tier: "pro",
   },
-  PRO_MONTHLY: {
+  LEGACY_PRO_MONTHLY: {
     id: "price_1SUW44Pwo7CiaABeCXvND0Qj",
-    name: "Pro Monthly",
+    name: "Pro Monthly (Legacy)",
     amount: 9.99,
     currency: "USD",
     interval: "month",
-    displayPrice: "$9.99/month",
+    tier: "pro",
+  },
+  // New Pro tier prices
+  PRO_ANNUAL: {
+    id: "price_1Smd2JPwo7CiaABexEEYZMFn",
+    name: "Pro Annual",
+    amount: 79,
+    currency: "USD",
+    interval: "year",
+    displayPrice: "$79/year",
+    monthlyEquivalent: "$6.58/month",
+    tier: "pro",
+  },
+  PRO_MONTHLY: {
+    id: "price_1Smd2KPwo7CiaABeBeqI5MAG",
+    name: "Pro Monthly",
+    amount: 12.99,
+    currency: "USD",
+    interval: "month",
+    displayPrice: "$12.99/month",
     monthlyEquivalent: null,
-    savings: null,
+    tier: "pro",
+  },
+  // Complete tier prices
+  COMPLETE_ANNUAL: {
+    id: "price_1Smd2MPwo7CiaABemCv3b6Lj",
+    name: "Complete Annual",
+    amount: 129,
+    currency: "USD",
+    interval: "year",
+    displayPrice: "$129/year",
+    monthlyEquivalent: "$10.75/month",
+    tier: "complete",
+  },
+  COMPLETE_MONTHLY: {
+    id: "price_1Smd2NPwo7CiaABeyV6KFls0",
+    name: "Complete Monthly",
+    amount: 19.99,
+    currency: "USD",
+    interval: "month",
+    displayPrice: "$19.99/month",
+    monthlyEquivalent: null,
+    tier: "complete",
   },
 } as const;
 
+// Map price IDs to tiers for subscription checking
+export const PRICE_ID_TO_TIER: Record<string, SubscriptionTier> = {
+  // Legacy prices map to pro
+  [STRIPE_PRICES.LEGACY_PRO_ANNUAL.id]: "pro",
+  [STRIPE_PRICES.LEGACY_PRO_MONTHLY.id]: "pro",
+  // New Pro prices
+  [STRIPE_PRICES.PRO_ANNUAL.id]: "pro",
+  [STRIPE_PRICES.PRO_MONTHLY.id]: "pro",
+  // Complete prices
+  [STRIPE_PRICES.COMPLETE_ANNUAL.id]: "complete",
+  [STRIPE_PRICES.COMPLETE_MONTHLY.id]: "complete",
+};
+
 export type BillingInterval = "month" | "year";
+export type SubscriptionTier = "free" | "pro" | "complete";
 
 export const SUBSCRIPTION_TIERS = {
   FREE: "free",
   PRO: "pro",
+  COMPLETE: "complete",
+} as const;
+
+// Tier limits
+export const TIER_LIMITS = {
+  free: {
+    emailConnections: 1,
+    deletionsPerMonth: 3,
+    brokerScanning: false,
+    deepScan: false,
+    monthlyRescans: false,
+    prioritySupport: false,
+  },
+  pro: {
+    emailConnections: 3,
+    deletionsPerMonth: null, // unlimited
+    brokerScanning: false,
+    deepScan: true,
+    monthlyRescans: true,
+    prioritySupport: false,
+  },
+  complete: {
+    emailConnections: 5,
+    deletionsPerMonth: null, // unlimited
+    brokerScanning: true,
+    deepScan: true,
+    monthlyRescans: true,
+    prioritySupport: true,
+  },
 } as const;
 
 export const FREE_TIER_LIMITS = {
@@ -38,14 +125,33 @@ export const FREE_TIER_LIMITS = {
   EMAIL_CONNECTIONS: 1,
 } as const;
 
+// Feature lists for each tier
+export const FREE_FEATURES = [
+  "Connect and scan 1 email account",
+  "See all discovered services",
+  "Complete privacy contact details",
+  "Risk score & analytics",
+  "3 deletion requests/month",
+  "Shareable privacy report",
+] as const;
+
 export const PRO_FEATURES = [
+  "Everything in Free, plus:",
   "Unlimited deletion requests",
   "Deep AI Scan (finds 2-3× more accounts)",
   "Connect and scan up to 3 email addresses",
   "Complete inbox history analysis",
   "Priority deletion processing",
   "Monthly automatic rescans",
+] as const;
+
+export const COMPLETE_FEATURES = [
+  "Everything in Pro, plus:",
+  "Data Broker Scanning (20+ sites)",
+  "Guided opt-out instructions",
+  "Connect up to 5 email addresses",
   "Priority email support",
+  "Monthly broker rescans",
 ] as const;
 
 /**
@@ -57,6 +163,7 @@ export const TRACKING_EVENTS = {
   SCAN_COMPLETED: "scan_completed",
   CHECKOUT_INITIATED: "checkout_initiated",
   UPGRADE_TO_PRO: "upgrade_to_pro",
+  UPGRADE_TO_COMPLETE: "upgrade_to_complete",
   SUBSCRIPTION_CANCELLED: "subscription_cancelled",
   SHARE_RESULT_GENERATED: "share_result_generated",
   SHARE_RESULT_DOWNLOADED: "share_result_downloaded",

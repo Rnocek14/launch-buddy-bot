@@ -12,6 +12,19 @@ const logStep = (step: string, details?: any) => {
   console.log(`[CHECK-SUBSCRIPTION] ${step}${detailsStr}`);
 };
 
+// Map Stripe price IDs to tiers
+const PRICE_ID_TO_TIER: Record<string, string> = {
+  // Legacy prices (grandfathered users)
+  "price_1SUqvlPwo7CiaABewIGGxC79": "pro", // Legacy Pro Annual $49
+  "price_1SUW44Pwo7CiaABeCXvND0Qj": "pro", // Legacy Pro Monthly $9.99
+  // New Pro prices
+  "price_1Smd2JPwo7CiaABexEEYZMFn": "pro", // Pro Annual $79
+  "price_1Smd2KPwo7CiaABeBeqI5MAG": "pro", // Pro Monthly $12.99
+  // Complete prices
+  "price_1Smd2MPwo7CiaABemCv3b6Lj": "complete", // Complete Annual $129
+  "price_1Smd2NPwo7CiaABeyV6KFls0": "complete", // Complete Monthly $19.99
+};
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -91,16 +104,25 @@ serve(async (req) => {
     if (hasActiveSub) {
       const subscription = subscriptions.data[0];
       subscriptionEnd = new Date(subscription.current_period_end * 1000).toISOString();
-      tier = 'pro';
       stripeSubscriptionId = subscription.id;
-      logStep("Active subscription found", { subscriptionId: subscription.id, endDate: subscriptionEnd });
+      
+      // Determine tier from price ID
+      const priceId = subscription.items.data[0]?.price?.id;
+      tier = PRICE_ID_TO_TIER[priceId] || 'pro'; // Default to pro for unknown prices
+      
+      logStep("Active subscription found", { 
+        subscriptionId: subscription.id, 
+        endDate: subscriptionEnd,
+        priceId,
+        tier 
+      });
 
       // Update database with subscription info
       const { error: updateError } = await supabaseClient
         .from('subscriptions')
         .upsert({
           user_id: user.id,
-          tier: 'pro',
+          tier: tier,
           status: 'active',
           stripe_customer_id: customerId,
           stripe_subscription_id: stripeSubscriptionId,

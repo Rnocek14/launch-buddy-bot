@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Shield, ShieldAlert, ShieldCheck, ArrowRight, Loader2 } from "lucide-react";
+import { Shield, ShieldAlert, ShieldCheck, ArrowRight, Loader2, Crown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -21,7 +21,7 @@ export function BrokerScanCard() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [scan, setScan] = useState<BrokerScan | null>(null);
-  const [isPro, setIsPro] = useState(false);
+  const [isComplete, setIsComplete] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -42,19 +42,21 @@ export function BrokerScanCard() {
       .eq('status', 'active')
       .single();
 
-    setIsPro(subscription?.tier === 'pro');
+    setIsComplete(subscription?.tier === 'complete');
 
-    // Get latest scan
-    const { data: scanData } = await supabase
-      .from('broker_scans')
-      .select('*')
-      .eq('user_id', session.user.id)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .single();
+    // Get latest scan (only for Complete users)
+    if (subscription?.tier === 'complete') {
+      const { data: scanData } = await supabase
+        .from('broker_scans')
+        .select('*')
+        .eq('user_id', session.user.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
 
-    if (scanData) {
-      setScan(scanData);
+      if (scanData) {
+        setScan(scanData);
+      }
     }
 
     setLoading(false);
@@ -73,26 +75,29 @@ export function BrokerScanCard() {
   // No scan yet - show CTA
   if (!scan) {
     return (
-      <Card className="mb-6 border-primary/20 bg-gradient-to-br from-card via-card to-primary/5 overflow-hidden">
+      <Card className="mb-6 border-accent/20 bg-gradient-to-br from-card via-card to-accent/5 overflow-hidden">
         <CardContent className="p-6">
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-            <div className="p-3 rounded-xl bg-primary/10 shrink-0">
-              <Shield className="h-8 w-8 text-primary" />
+            <div className="p-3 rounded-xl bg-accent/10 shrink-0">
+              <Shield className="h-8 w-8 text-accent" />
             </div>
             <div className="flex-1 space-y-1">
               <div className="flex items-center gap-2">
                 <h3 className="font-semibold text-lg">Data Broker Scan</h3>
-                {!isPro && (
-                  <Badge variant="secondary" className="text-xs">PRO</Badge>
-                )}
+                <Badge className="bg-accent text-accent-foreground text-xs">COMPLETE</Badge>
               </div>
               <p className="text-sm text-muted-foreground">
                 Discover which data brokers have your personal information exposed online. 
                 We'll check 20+ sites and show you how to remove yourself.
               </p>
             </div>
-            <Button onClick={() => navigate('/broker-scan')} className="shrink-0">
-              {isPro ? 'Start Scan' : 'Learn More'}
+            <Button onClick={() => navigate('/broker-scan')} className={isComplete ? '' : 'bg-gradient-to-r from-accent to-primary'}>
+              {isComplete ? 'Start Scan' : (
+                <>
+                  <Crown className="h-4 w-4 mr-2" />
+                  Get Complete
+                </>
+              )}
               <ArrowRight className="h-4 w-4 ml-2" />
             </Button>
           </div>
@@ -108,16 +113,16 @@ export function BrokerScanCard() {
       : 0;
 
     return (
-      <Card className="mb-6 border-primary/20">
+      <Card className="mb-6 border-accent/20">
         <CardContent className="p-6">
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-            <div className="p-3 rounded-xl bg-primary/10 shrink-0">
-              <Shield className="h-8 w-8 text-primary animate-pulse" />
+            <div className="p-3 rounded-xl bg-accent/10 shrink-0">
+              <Shield className="h-8 w-8 text-accent animate-pulse" />
             </div>
             <div className="flex-1 space-y-3">
               <div className="flex items-center gap-2">
                 <h3 className="font-semibold">Data Broker Scan in Progress</h3>
-                <Badge variant="outline" className="text-xs bg-primary/10 text-primary border-primary/30">
+                <Badge variant="outline" className="text-xs bg-accent/10 text-accent border-accent/30">
                   Scanning
                 </Badge>
               </div>

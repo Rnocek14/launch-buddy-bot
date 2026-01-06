@@ -7,6 +7,19 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Map Stripe price IDs to tiers
+const PRICE_ID_TO_TIER: Record<string, string> = {
+  // Legacy prices (grandfathered users)
+  "price_1SUqvlPwo7CiaABewIGGxC79": "pro", // Legacy Pro Annual $49
+  "price_1SUW44Pwo7CiaABeCXvND0Qj": "pro", // Legacy Pro Monthly $9.99
+  // New Pro prices
+  "price_1Smd2JPwo7CiaABexEEYZMFn": "pro", // Pro Annual $79
+  "price_1Smd2KPwo7CiaABeBeqI5MAG": "pro", // Pro Monthly $12.99
+  // Complete prices
+  "price_1Smd2MPwo7CiaABemCv3b6Lj": "complete", // Complete Annual $129
+  "price_1Smd2NPwo7CiaABeyV6KFls0": "complete", // Complete Monthly $19.99
+};
+
 const handler = async (req: Request): Promise<Response> => {
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
@@ -81,12 +94,19 @@ const handler = async (req: Request): Promise<Response> => {
             break;
           }
 
+          // Determine tier from price ID
+          const priceId = subscription.items.data[0]?.price?.id;
+          const tier = PRICE_ID_TO_TIER[priceId] || "pro";
+          const tierName = tier === "complete" ? "Complete" : "Pro";
+
+          console.log(`Subscription tier determined: ${tier} from price: ${priceId}`);
+
           // Create or update subscription record
           const { error: upsertError } = await supabase
             .from("subscriptions")
             .upsert({
               user_id: userId,
-              tier: "pro",
+              tier: tier,
               stripe_customer_id: session.customer as string,
               stripe_subscription_id: subscription.id,
               status: subscription.status,
@@ -100,16 +120,17 @@ const handler = async (req: Request): Promise<Response> => {
           if (upsertError) {
             console.error("Error upserting subscription:", upsertError);
           } else {
-            console.log(`Subscription created/updated for user: ${userId}`);
+            console.log(`Subscription created/updated for user: ${userId} with tier: ${tier}`);
             
-            // Track successful upgrade to Pro
+            // Track successful upgrade
             console.log('[ANALYTICS]', {
-              event: 'upgrade_to_pro',
+              event: tier === 'complete' ? 'upgrade_to_complete' : 'upgrade_to_pro',
               userId,
               properties: {
                 subscriptionId: subscription.id,
                 customerId: session.customer,
-                priceId: subscription.items.data[0]?.price.id,
+                priceId: priceId,
+                tier: tier,
                 amount: session.amount_total ? session.amount_total / 100 : 0,
                 currency: session.currency,
                 timestamp: new Date().toISOString(),
@@ -130,7 +151,7 @@ const handler = async (req: Request): Promise<Response> => {
                 {
                   body: { 
                     email: profile.email, 
-                    tier: "Pro",
+                    tier: tierName,
                     billingDate: new Date(subscription.current_period_end * 1000).toISOString()
                   }
                 }
@@ -151,6 +172,10 @@ const handler = async (req: Request): Promise<Response> => {
         const subscription = event.data.object as Stripe.Subscription;
         console.log(`Subscription updated: ${subscription.id}`);
 
+        // Determine tier from price ID
+        const priceId = subscription.items.data[0]?.price?.id;
+        const tier = PRICE_ID_TO_TIER[priceId] || "pro";
+
         // Find user by stripe subscription ID
         const { data: existingSubscription, error: fetchError } = await supabase
           .from("subscriptions")
@@ -163,10 +188,11 @@ const handler = async (req: Request): Promise<Response> => {
           break;
         }
 
-        // Update subscription status
+        // Update subscription status and tier
         const { error: updateError } = await supabase
           .from("subscriptions")
           .update({
+            tier: tier,
             status: subscription.status,
             current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
             current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
@@ -176,7 +202,7 @@ const handler = async (req: Request): Promise<Response> => {
         if (updateError) {
           console.error("Error updating subscription:", updateError);
         } else {
-          console.log(`Subscription ${subscription.id} status updated to: ${subscription.status}`);
+          console.log(`Subscription ${subscription.id} updated to tier: ${tier}, status: ${subscription.status}`);
         }
         break;
       }

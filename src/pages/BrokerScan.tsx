@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Shield, ShieldAlert, ShieldCheck, Loader2, AlertCircle, ArrowLeft, RefreshCw } from "lucide-react";
+import { Shield, ShieldAlert, ShieldCheck, Loader2, AlertCircle, ArrowLeft, RefreshCw, Crown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,6 +10,7 @@ import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { BrokerResultCard } from "@/components/BrokerResultCard";
 import { OptOutInstructions } from "@/components/OptOutInstructions";
+import { Badge } from "@/components/ui/badge";
 
 interface Broker {
   id: string;
@@ -56,7 +57,8 @@ export default function BrokerScan() {
   const [brokers, setBrokers] = useState<Broker[]>([]);
   const [selectedBroker, setSelectedBroker] = useState<Broker | null>(null);
   const [optOutDialogOpen, setOptOutDialogOpen] = useState(false);
-  const [isPro, setIsPro] = useState(false);
+  const [isComplete, setIsComplete] = useState(false);
+  const [currentTier, setCurrentTier] = useState<'free' | 'pro' | 'complete'>('free');
 
   useEffect(() => {
     checkAuthAndLoad();
@@ -85,8 +87,13 @@ export default function BrokerScan() {
       .eq('status', 'active')
       .single();
 
-    setIsPro(subscription?.tier === 'pro');
-    await loadScanData();
+    const tier = subscription?.tier || 'free';
+    setCurrentTier(tier as 'free' | 'pro' | 'complete');
+    setIsComplete(tier === 'complete');
+    
+    if (tier === 'complete') {
+      await loadScanData();
+    }
     setLoading(false);
   };
 
@@ -206,30 +213,47 @@ export default function BrokerScan() {
           </p>
         </div>
 
-        {/* Pro Gate */}
-        {!isPro && (
-          <Card className="mb-8 border-primary/50 bg-primary/5">
+        {/* Complete Gate */}
+        {!isComplete && (
+          <Card className="mb-8 border-accent/50 bg-gradient-to-br from-card to-accent/5">
             <CardContent className="p-6 text-center">
-              <ShieldAlert className="h-12 w-12 text-primary mx-auto mb-4" />
-              <h3 className="text-lg font-semibold mb-2">Pro Feature</h3>
+              <Crown className="h-12 w-12 text-accent mx-auto mb-4" />
+              <div className="flex items-center justify-center gap-2 mb-2">
+                <h3 className="text-lg font-semibold">Complete Feature</h3>
+                <Badge className="bg-accent text-accent-foreground">COMPLETE</Badge>
+              </div>
               <p className="text-muted-foreground mb-4">
-                Data broker scanning is available on the Pro plan. 
+                Data broker scanning is available on the Complete plan. 
                 Upgrade to find and remove your information from 20+ data broker sites.
               </p>
-              <Button onClick={() => navigate('/subscribe')}>
-                Upgrade to Pro
-              </Button>
+              <div className="space-y-2">
+                <Button 
+                  onClick={() => navigate('/subscribe?tier=complete')}
+                  className="bg-gradient-to-r from-accent to-primary"
+                >
+                  <Crown className="h-4 w-4 mr-2" />
+                  Upgrade to Complete - $129/year
+                </Button>
+                {currentTier === 'pro' && (
+                  <p className="text-xs text-muted-foreground">
+                    You're on Pro. Add broker scanning for $50 more/year.
+                  </p>
+                )}
+              </div>
             </CardContent>
           </Card>
         )}
 
-        {isPro && (
+        {isComplete && (
           <>
             {/* Scan Status Card */}
             <Card className="mb-8">
               <CardHeader>
                 <CardTitle className="flex items-center justify-between">
-                  <span>Scan Status</span>
+                  <div className="flex items-center gap-2">
+                    <span>Scan Status</span>
+                    <Badge className="bg-accent text-accent-foreground text-xs">COMPLETE</Badge>
+                  </div>
                   {scan?.status === 'completed' && (
                     <Button 
                       variant="outline" 

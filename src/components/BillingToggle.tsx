@@ -36,7 +36,7 @@ export function BillingToggle({ value, onChange }: BillingToggleProps) {
             ? "bg-primary-foreground/20 text-primary-foreground" 
             : "bg-accent/20 text-accent"
         )}>
-          Save 59%
+          Save up to 49%
         </span>
       </button>
     </div>
