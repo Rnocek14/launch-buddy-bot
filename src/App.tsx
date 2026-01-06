@@ -29,6 +29,8 @@ import Subscribe from "./pages/Subscribe";
 import Billing from "./pages/Billing";
 import PublicResult from "./pages/PublicResult";
 import BrokerScan from "./pages/BrokerScan";
+import FreeScan from "./pages/FreeScan";
+import Enterprise from "./pages/Enterprise";
 import { AuthorizationWizard } from "./components/AuthorizationWizard";
 
 const queryClient = new QueryClient();
@@ -44,6 +46,8 @@ const App = () => (
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/demo" element={<Demo />} />
+              <Route path="/free-scan" element={<FreeScan />} />
+              <Route path="/enterprise" element={<Enterprise />} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/admin" element={<Admin />} />
               <Route path="/admin/analytics" element={<AdminAnalytics />} />
