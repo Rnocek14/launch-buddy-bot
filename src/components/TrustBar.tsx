@@ -1,29 +1,28 @@
-import { Shield, Lock, FileCheck, Server } from "lucide-react";
-import { Badge } from "./ui/badge";
+import { Shield, Lock, Eye, Database } from "lucide-react";
 
-const badges = [
+const securityFeatures = [
   {
     icon: Shield,
-    title: "GDPR",
-    subtitle: "Compliant",
+    title: "GDPR Ready",
+    subtitle: "Templates Included",
     color: "from-primary to-primary/70",
-  },
-  {
-    icon: FileCheck,
-    title: "SOC 2",
-    subtitle: "Type II",
-    color: "from-accent to-accent/70",
   },
   {
     icon: Lock,
-    title: "AES-256",
-    subtitle: "Encryption",
+    title: "OAuth 2.0",
+    subtitle: "Secure Auth",
+    color: "from-accent to-accent/70",
+  },
+  {
+    icon: Eye,
+    title: "Read-Only",
+    subtitle: "Email Access",
     color: "from-primary to-primary/70",
   },
   {
-    icon: Server,
-    title: "Open",
-    subtitle: "Source",
+    icon: Database,
+    title: "No Storage",
+    subtitle: "Of Email Content",
     color: "from-accent to-accent/70",
   },
 ];
@@ -34,18 +33,18 @@ export const TrustBar = () => {
       <div className="container max-w-6xl">
         <div className="flex flex-col md:flex-row items-center justify-between gap-8">
           <div className="text-center md:text-left">
-            <p className="text-sm text-muted-foreground mb-1">Trusted by thousands</p>
+            <p className="text-sm text-muted-foreground mb-1">Built for privacy</p>
             <h3 className="text-2xl font-bold">
               <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-                Enterprise-Grade
+                Security First
               </span>{" "}
-              Security
+              Design
             </h3>
           </div>
 
           <div className="flex flex-wrap justify-center gap-6">
-            {badges.map((badge, index) => {
-              const Icon = badge.icon;
+            {securityFeatures.map((feature, index) => {
+              const Icon = feature.icon;
               return (
                 <div
                   key={index}
@@ -53,13 +52,13 @@ export const TrustBar = () => {
                   style={{ animationDelay: `${index * 100}ms` }}
                 >
                   <div
-                    className={`w-10 h-10 rounded-lg bg-gradient-to-br ${badge.color} flex items-center justify-center`}
+                    className={`w-10 h-10 rounded-lg bg-gradient-to-br ${feature.color} flex items-center justify-center`}
                   >
                     <Icon className="w-5 h-5 text-white" />
                   </div>
                   <div className="text-left">
-                    <p className="text-sm font-bold leading-tight">{badge.title}</p>
-                    <p className="text-xs text-muted-foreground leading-tight">{badge.subtitle}</p>
+                    <p className="text-sm font-bold leading-tight">{feature.title}</p>
+                    <p className="text-xs text-muted-foreground leading-tight">{feature.subtitle}</p>
                   </div>
                 </div>
               );
