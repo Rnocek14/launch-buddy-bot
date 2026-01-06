@@ -705,6 +705,62 @@ export type Database = {
         }
         Relationships: []
       }
+      employee_scans: {
+        Row: {
+          created_at: string
+          department: string | null
+          employee_email: string
+          employee_name: string | null
+          high_risk_services: number | null
+          id: string
+          last_scanned_at: string | null
+          organization_id: string
+          risk_score: number | null
+          scan_status: string | null
+          services_found: number | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          department?: string | null
+          employee_email: string
+          employee_name?: string | null
+          high_risk_services?: number | null
+          id?: string
+          last_scanned_at?: string | null
+          organization_id: string
+          risk_score?: number | null
+          scan_status?: string | null
+          services_found?: number | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          department?: string | null
+          employee_email?: string
+          employee_name?: string | null
+          high_risk_services?: number | null
+          id?: string
+          last_scanned_at?: string | null
+          organization_id?: string
+          risk_score?: number | null
+          scan_status?: string | null
+          services_found?: number | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_scans_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       enterprise_leads: {
         Row: {
           company: string
@@ -826,6 +882,270 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      offboarding_reports: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          department: string | null
+          employee_email: string
+          employee_name: string | null
+          employee_scan_id: string | null
+          generated_by: string
+          high_priority_count: number | null
+          id: string
+          low_priority_count: number | null
+          medium_priority_count: number | null
+          organization_id: string
+          report_data: Json | null
+          services_to_revoke: Json | null
+          status: string | null
+          termination_date: string | null
+          updated_at: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          department?: string | null
+          employee_email: string
+          employee_name?: string | null
+          employee_scan_id?: string | null
+          generated_by: string
+          high_priority_count?: number | null
+          id?: string
+          low_priority_count?: number | null
+          medium_priority_count?: number | null
+          organization_id: string
+          report_data?: Json | null
+          services_to_revoke?: Json | null
+          status?: string | null
+          termination_date?: string | null
+          updated_at?: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          department?: string | null
+          employee_email?: string
+          employee_name?: string | null
+          employee_scan_id?: string | null
+          generated_by?: string
+          high_priority_count?: number | null
+          id?: string
+          low_priority_count?: number | null
+          medium_priority_count?: number | null
+          organization_id?: string
+          report_data?: Json | null
+          services_to_revoke?: Json | null
+          status?: string | null
+          termination_date?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "offboarding_reports_employee_scan_id_fkey"
+            columns: ["employee_scan_id"]
+            isOneToOne: false
+            referencedRelation: "employee_scans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offboarding_reports_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      org_scan_jobs: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          error_message: string | null
+          failed_scans: number | null
+          id: string
+          initiated_by: string
+          organization_id: string
+          scanned_employees: number | null
+          started_at: string | null
+          status: string | null
+          total_employees: number | null
+          updated_at: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          failed_scans?: number | null
+          id?: string
+          initiated_by: string
+          organization_id: string
+          scanned_employees?: number | null
+          started_at?: string | null
+          status?: string | null
+          total_employees?: number | null
+          updated_at?: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          failed_scans?: number | null
+          id?: string
+          initiated_by?: string
+          organization_id?: string
+          scanned_employees?: number | null
+          started_at?: string | null
+          status?: string | null
+          total_employees?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_scan_jobs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organization_invites: {
+        Row: {
+          accepted_at: string | null
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+          invited_by: string
+          organization_id: string
+          role: Database["public"]["Enums"]["org_role"]
+          token: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          created_at?: string
+          email: string
+          expires_at?: string
+          id?: string
+          invited_by: string
+          organization_id: string
+          role?: Database["public"]["Enums"]["org_role"]
+          token?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          created_at?: string
+          email?: string
+          expires_at?: string
+          id?: string
+          invited_by?: string
+          organization_id?: string
+          role?: Database["public"]["Enums"]["org_role"]
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_invites_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organization_members: {
+        Row: {
+          created_at: string
+          id: string
+          invited_at: string | null
+          invited_by: string | null
+          joined_at: string | null
+          organization_id: string
+          role: Database["public"]["Enums"]["org_role"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          invited_at?: string | null
+          invited_by?: string | null
+          joined_at?: string | null
+          organization_id: string
+          role?: Database["public"]["Enums"]["org_role"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          invited_at?: string | null
+          invited_by?: string | null
+          joined_at?: string | null
+          organization_id?: string
+          role?: Database["public"]["Enums"]["org_role"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_members_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organizations: {
+        Row: {
+          billing_email: string | null
+          created_at: string
+          employee_count: string | null
+          id: string
+          industry: string | null
+          logo_url: string | null
+          max_seats: number | null
+          name: string
+          slug: string
+          stripe_customer_id: string | null
+          subscription_status: string | null
+          subscription_tier: string | null
+          updated_at: string
+        }
+        Insert: {
+          billing_email?: string | null
+          created_at?: string
+          employee_count?: string | null
+          id?: string
+          industry?: string | null
+          logo_url?: string | null
+          max_seats?: number | null
+          name: string
+          slug: string
+          stripe_customer_id?: string | null
+          subscription_status?: string | null
+          subscription_tier?: string | null
+          updated_at?: string
+        }
+        Update: {
+          billing_email?: string | null
+          created_at?: string
+          employee_count?: string | null
+          id?: string
+          industry?: string | null
+          logo_url?: string | null
+          max_seats?: number | null
+          name?: string
+          slug?: string
+          stripe_customer_id?: string | null
+          subscription_status?: string | null
+          subscription_tier?: string | null
+          updated_at?: string
+        }
+        Relationships: []
       }
       privacy_contacts: {
         Row: {
@@ -1525,6 +1845,14 @@ export type Database = {
         Returns: boolean
       }
       is_authorized_agent: { Args: { user_uuid: string }; Returns: boolean }
+      is_org_admin: {
+        Args: { org_id: string; user_uuid: string }
+        Returns: boolean
+      }
+      is_org_member: {
+        Args: { org_id: string; user_uuid: string }
+        Returns: boolean
+      }
       public_status_snapshot: { Args: never; Returns: Json }
       reset_monthly_deletion_counts: { Args: never; Returns: undefined }
       t2_queue_summary: {
@@ -1549,6 +1877,7 @@ export type Database = {
         | "unsubscribed"
       email_provider: "gmail" | "outlook"
       identifier_type: "email" | "phone" | "username" | "other"
+      org_role: "owner" | "admin" | "member"
       retry_reason:
         | "bot_protection"
         | "no_policy_found"
@@ -1696,6 +2025,7 @@ export const Constants = {
       ],
       email_provider: ["gmail", "outlook"],
       identifier_type: ["email", "phone", "username", "other"],
+      org_role: ["owner", "admin", "member"],
       retry_reason: [
         "bot_protection",
         "no_policy_found",
