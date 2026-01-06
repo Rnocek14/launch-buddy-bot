@@ -154,6 +154,14 @@ export const COMPLETE_FEATURES = [
   "Monthly broker rescans",
 ] as const;
 
+// Enterprise pricing tiers
+export const ENTERPRISE_PRICING = {
+  TIER_1: { seats: "25-100", pricePerUser: 49, label: "Starter" },
+  TIER_2: { seats: "100-500", pricePerUser: 39, label: "Professional" },
+  TIER_3: { seats: "500-1000", pricePerUser: 29, label: "Business" },
+  TIER_4: { seats: "1000+", pricePerUser: "Custom", label: "Enterprise" },
+} as const;
+
 /**
  * Analytics event names for conversion tracking
  */
@@ -172,4 +180,8 @@ export const TRACKING_EVENTS = {
   RESULT_PAGE_VIEWED: "result_page_viewed",
   RESULT_PAGE_CONVERSION: "result_page_conversion",
   PUBLIC_RESULT_CREATED: "public_result_created",
+  // ROI Calculator events
+  ROI_CALCULATOR_OPENED: "roi_calculator_opened",
+  ROI_CALCULATOR_COMPLETED: "roi_calculator_completed",
+  ROI_CALCULATOR_CTA_CLICKED: "roi_calculator_cta_clicked",
 } as const;
