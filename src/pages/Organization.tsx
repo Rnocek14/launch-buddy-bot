@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Building2, Users, UserPlus, Mail, Shield, Settings, Crown, Trash2, Loader2 } from "lucide-react";
+import { BulkEmployeeScanPanel } from "@/components/BulkEmployeeScanPanel";
 
 interface Organization {
   id: string;
@@ -557,27 +558,7 @@ const Organization = () => {
           </TabsContent>
 
           <TabsContent value="employees">
-            <Card>
-              <CardHeader>
-                <CardTitle>Employee Scanning</CardTitle>
-                <CardDescription>
-                  Scan and monitor your employees' digital footprints for security risks
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-12">
-                  <Shield className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">Coming Soon</h3>
-                  <p className="text-muted-foreground max-w-md mx-auto">
-                    Bulk employee scanning will allow you to discover and manage service access
-                    across your entire organization.
-                  </p>
-                  <Button className="mt-6" onClick={() => navigate("/enterprise")}>
-                    Learn More About Enterprise
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+            <BulkEmployeeScanPanel organizationId={organization.id} />
           </TabsContent>
         </Tabs>
       </div>

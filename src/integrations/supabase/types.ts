@@ -232,6 +232,86 @@ export type Database = {
         }
         Relationships: []
       }
+      challenge_participants: {
+        Row: {
+          challenge_id: string
+          current_score: number | null
+          id: string
+          joined_at: string
+          rank: number | null
+          starting_score: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          challenge_id: string
+          current_score?: number | null
+          id?: string
+          joined_at?: string
+          rank?: number | null
+          starting_score?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          challenge_id?: string
+          current_score?: number | null
+          id?: string
+          joined_at?: string
+          rank?: number | null
+          starting_score?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "challenge_participants_challenge_id_fkey"
+            columns: ["challenge_id"]
+            isOneToOne: false
+            referencedRelation: "challenges"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      challenges: {
+        Row: {
+          challenge_type: string
+          created_at: string
+          description: string
+          end_date: string | null
+          id: string
+          is_active: boolean
+          name: string
+          prize_description: string | null
+          rules: Json
+          start_date: string
+        }
+        Insert: {
+          challenge_type: string
+          created_at?: string
+          description: string
+          end_date?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          prize_description?: string | null
+          rules?: Json
+          start_date?: string
+        }
+        Update: {
+          challenge_type?: string
+          created_at?: string
+          description?: string
+          end_date?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          prize_description?: string | null
+          rules?: Json
+          start_date?: string
+        }
+        Relationships: []
+      }
       contact_discovery_failures: {
         Row: {
           created_at: string
@@ -1290,6 +1370,77 @@ export type Database = {
         }
         Relationships: []
       }
+      referral_codes: {
+        Row: {
+          code: string
+          created_at: string
+          expires_at: string | null
+          id: string
+          max_uses: number | null
+          updated_at: string
+          user_id: string
+          uses_count: number
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          max_uses?: number | null
+          updated_at?: string
+          user_id: string
+          uses_count?: number
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          max_uses?: number | null
+          updated_at?: string
+          user_id?: string
+          uses_count?: number
+        }
+        Relationships: []
+      }
+      referral_conversions: {
+        Row: {
+          converted_at: string
+          id: string
+          referral_code_id: string | null
+          referred_user_id: string
+          referrer_user_id: string | null
+          reward_granted_at: string | null
+          reward_type: string | null
+        }
+        Insert: {
+          converted_at?: string
+          id?: string
+          referral_code_id?: string | null
+          referred_user_id: string
+          referrer_user_id?: string | null
+          reward_granted_at?: string | null
+          reward_type?: string | null
+        }
+        Update: {
+          converted_at?: string
+          id?: string
+          referral_code_id?: string | null
+          referred_user_id?: string
+          referrer_user_id?: string | null
+          reward_granted_at?: string | null
+          reward_type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referral_conversions_referral_code_id_fkey"
+            columns: ["referral_code_id"]
+            isOneToOne: false
+            referencedRelation: "referral_codes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       request_templates: {
         Row: {
           body_template: string
@@ -1329,6 +1480,45 @@ export type Database = {
           subject_template?: string | null
           template_type?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      risk_score_history: {
+        Row: {
+          created_at: string
+          id: string
+          level: string
+          old_accounts_count: number
+          recorded_at: string
+          score: number
+          sensitive_accounts_count: number
+          total_accounts: number
+          unmatched_domains_count: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          level: string
+          old_accounts_count?: number
+          recorded_at?: string
+          score: number
+          sensitive_accounts_count?: number
+          total_accounts?: number
+          unmatched_domains_count?: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          level?: string
+          old_accounts_count?: number
+          recorded_at?: string
+          score?: number
+          sensitive_accounts_count?: number
+          total_accounts?: number
+          unmatched_domains_count?: number
+          user_id?: string
         }
         Relationships: []
       }
@@ -1813,6 +2003,7 @@ export type Database = {
           removed: boolean
         }[]
       }
+      generate_referral_code: { Args: never; Returns: string }
       get_email_analytics_summary: {
         Args: never
         Returns: {
@@ -1862,6 +2053,7 @@ export type Database = {
           status: string
         }[]
       }
+      use_referral_code: { Args: { p_code: string }; Returns: Json }
     }
     Enums: {
       alpha_status: "pending" | "approved" | "rejected"
