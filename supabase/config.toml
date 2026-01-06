@@ -92,3 +92,6 @@ verify_jwt = false
 
 [functions.scan-brokers]
 verify_jwt = false
+
+[functions.notify-enterprise-lead]
+verify_jwt = false

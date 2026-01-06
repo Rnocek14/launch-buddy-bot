@@ -705,6 +705,42 @@ export type Database = {
         }
         Relationships: []
       }
+      enterprise_leads: {
+        Row: {
+          company: string
+          created_at: string
+          email: string
+          employees: string | null
+          id: string
+          message: string | null
+          name: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          company: string
+          created_at?: string
+          email: string
+          employees?: string | null
+          id?: string
+          message?: string | null
+          name: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          company?: string
+          created_at?: string
+          email?: string
+          employees?: string | null
+          id?: string
+          message?: string | null
+          name?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       golden_runs: {
         Row: {
           build_sha: string | null
