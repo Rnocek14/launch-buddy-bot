@@ -1,0 +1,35 @@
+name: Broker-Scanner
+
+on:
+  schedule:
+    - cron: '0 */4 * * *'   # every 4 hours
+  workflow_dispatch:
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Install dependencies
+        run: npm install playwright @supabase/supabase-js
+      
+      - name: Run Broker Scanner
+        run: npx tsx tools/broker-scanner.ts
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          BROWSERLESS_API_KEY: ${{ secrets.BROWSERLESS_API_KEY }}
+          BROKER_BATCH_SIZE: 5
+          BROKER_SCAN_TIMEOUT_MS: 30000
+      
+      - name: Report Status
+        if: always()
+        run: |
+          echo "Broker scanner run completed"
+          echo "Check logs for details"

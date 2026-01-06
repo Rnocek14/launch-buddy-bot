@@ -77,6 +77,107 @@ export type Database = {
         }
         Relationships: []
       }
+      broker_scan_results: {
+        Row: {
+          broker_id: string
+          created_at: string
+          error_message: string | null
+          expires_at: string | null
+          id: string
+          match_confidence: number | null
+          opted_out_at: string | null
+          profile_url: string | null
+          scanned_at: string | null
+          screenshot_url: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          broker_id: string
+          created_at?: string
+          error_message?: string | null
+          expires_at?: string | null
+          id?: string
+          match_confidence?: number | null
+          opted_out_at?: string | null
+          profile_url?: string | null
+          scanned_at?: string | null
+          screenshot_url?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          broker_id?: string
+          created_at?: string
+          error_message?: string | null
+          expires_at?: string | null
+          id?: string
+          match_confidence?: number | null
+          opted_out_at?: string | null
+          profile_url?: string | null
+          scanned_at?: string | null
+          screenshot_url?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "broker_scan_results_broker_id_fkey"
+            columns: ["broker_id"]
+            isOneToOne: false
+            referencedRelation: "data_brokers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      broker_scans: {
+        Row: {
+          clean_count: number | null
+          completed_at: string | null
+          created_at: string
+          error_count: number | null
+          found_count: number | null
+          id: string
+          scanned_count: number | null
+          started_at: string | null
+          status: string
+          total_brokers: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          clean_count?: number | null
+          completed_at?: string | null
+          created_at?: string
+          error_count?: number | null
+          found_count?: number | null
+          id?: string
+          scanned_count?: number | null
+          started_at?: string | null
+          status?: string
+          total_brokers?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          clean_count?: number | null
+          completed_at?: string | null
+          created_at?: string
+          error_count?: number | null
+          found_count?: number | null
+          id?: string
+          scanned_count?: number | null
+          started_at?: string | null
+          status?: string
+          total_brokers?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       bulk_discovery_jobs: {
         Row: {
           actual_cost: number | null
@@ -177,6 +278,66 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      data_brokers: {
+        Row: {
+          created_at: string
+          id: string
+          instructions: string | null
+          is_active: boolean | null
+          logo_url: string | null
+          name: string
+          opt_out_difficulty: string | null
+          opt_out_time_estimate: string | null
+          opt_out_url: string | null
+          priority: string
+          requires_captcha: boolean | null
+          requires_id: boolean | null
+          requires_phone: boolean | null
+          search_url: string | null
+          slug: string
+          updated_at: string
+          website: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          instructions?: string | null
+          is_active?: boolean | null
+          logo_url?: string | null
+          name: string
+          opt_out_difficulty?: string | null
+          opt_out_time_estimate?: string | null
+          opt_out_url?: string | null
+          priority?: string
+          requires_captcha?: boolean | null
+          requires_id?: boolean | null
+          requires_phone?: boolean | null
+          search_url?: string | null
+          slug: string
+          updated_at?: string
+          website: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          instructions?: string | null
+          is_active?: boolean | null
+          logo_url?: string | null
+          name?: string
+          opt_out_difficulty?: string | null
+          opt_out_time_estimate?: string | null
+          opt_out_url?: string | null
+          priority?: string
+          requires_captcha?: boolean | null
+          requires_id?: boolean | null
+          requires_phone?: boolean | null
+          search_url?: string | null
+          slug?: string
+          updated_at?: string
+          website?: string
+        }
+        Relationships: []
       }
       deletion_requests: {
         Row: {
