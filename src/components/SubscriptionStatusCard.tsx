@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
+import { TierUpgradePrompt } from "./TierUpgradePrompt";
 
 interface SubscriptionData {
   tier: string;
@@ -167,7 +168,14 @@ export function SubscriptionStatusCard() {
   };
 
   return (
-    <Card className={`mb-8 border-2 ${getCardStyle()}`}>
+    <>
+      {/* Prominent upgrade prompt for users approaching limits */}
+      <TierUpgradePrompt 
+        remainingDeletions={subscriptionData.remainingDeletions ?? 0} 
+        currentTier={subscriptionData.tier} 
+      />
+      
+      <Card className={`mb-8 border-2 ${getCardStyle()}`}>
       <CardContent className="pt-6">
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div className="flex items-center gap-3">
@@ -243,5 +251,6 @@ export function SubscriptionStatusCard() {
         </div>
       </CardContent>
     </Card>
+    </>
   );
 }
