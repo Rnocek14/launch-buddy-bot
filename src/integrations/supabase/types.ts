@@ -710,6 +710,7 @@ export type Database = {
           email: string | null
           full_name: string | null
           id: string
+          last_auto_rescan_at: string | null
           last_email_scan_date: string | null
           updated_at: string
         }
@@ -718,6 +719,7 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id: string
+          last_auto_rescan_at?: string | null
           last_email_scan_date?: string | null
           updated_at?: string
         }
@@ -726,6 +728,7 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id?: string
+          last_auto_rescan_at?: string | null
           last_email_scan_date?: string | null
           updated_at?: string
         }

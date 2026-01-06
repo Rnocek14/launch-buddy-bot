@@ -86,3 +86,6 @@ verify_jwt = true
 
 [functions.fix-token-encryption-states]
 verify_jwt = true
+
+[functions.scheduled-rescan]
+verify_jwt = false
