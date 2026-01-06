@@ -183,17 +183,23 @@ export type Database = {
           completed_at: string | null
           contact_email: string | null
           created_at: string
+          days_to_response: number | null
+          follow_up_count: number | null
           id: string
           identifier_used_id: string | null
           identifier_used_type:
             | Database["public"]["Enums"]["identifier_type"]
             | null
           identifier_used_value: string | null
+          last_follow_up_at: string | null
           method: string | null
           notes: string | null
           request_body: Json | null
           request_type: string
           response_data: Json | null
+          response_notes: string | null
+          response_received_at: string | null
+          response_type: string | null
           service_id: string | null
           service_name: string
           status: string
@@ -206,17 +212,23 @@ export type Database = {
           completed_at?: string | null
           contact_email?: string | null
           created_at?: string
+          days_to_response?: number | null
+          follow_up_count?: number | null
           id?: string
           identifier_used_id?: string | null
           identifier_used_type?:
             | Database["public"]["Enums"]["identifier_type"]
             | null
           identifier_used_value?: string | null
+          last_follow_up_at?: string | null
           method?: string | null
           notes?: string | null
           request_body?: Json | null
           request_type: string
           response_data?: Json | null
+          response_notes?: string | null
+          response_received_at?: string | null
+          response_type?: string | null
           service_id?: string | null
           service_name: string
           status?: string
@@ -229,17 +241,23 @@ export type Database = {
           completed_at?: string | null
           contact_email?: string | null
           created_at?: string
+          days_to_response?: number | null
+          follow_up_count?: number | null
           id?: string
           identifier_used_id?: string | null
           identifier_used_type?:
             | Database["public"]["Enums"]["identifier_type"]
             | null
           identifier_used_value?: string | null
+          last_follow_up_at?: string | null
           method?: string | null
           notes?: string | null
           request_body?: Json | null
           request_type?: string
           response_data?: Json | null
+          response_notes?: string | null
+          response_received_at?: string | null
+          response_type?: string | null
           service_id?: string | null
           service_name?: string
           status?: string
