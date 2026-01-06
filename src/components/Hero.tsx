@@ -51,25 +51,25 @@ export const Hero = () => {
 
         {/* Social Proof */}
         <div className="flex flex-col items-center gap-6">
-          <div className="flex items-center gap-2 px-6 py-3 rounded-full bg-emerald-50 border border-emerald-200">
-            <Sparkles className="w-5 h-5 text-emerald-700" />
-            <span className="text-sm font-medium">
-              <span className="text-emerald-700 font-bold">Complete protection</span> for the same price as DeleteMe — with email scanning included
+          <div className="flex items-center gap-2 px-6 py-3 rounded-full bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800">
+            <Sparkles className="w-5 h-5 text-emerald-700 dark:text-emerald-400" />
+            <span className="text-sm font-medium text-emerald-800 dark:text-emerald-300">
+              <span className="font-bold">Email + Data Brokers</span> — the only tool that scans both
             </span>
           </div>
           
           <div className="flex flex-wrap justify-center gap-8 text-sm">
             <div className="flex items-center gap-2">
               <Shield className="w-5 h-5 text-primary" />
-              <span className="text-muted-foreground">Fully Encrypted</span>
+              <span className="text-muted-foreground">169+ Services</span>
             </div>
             <div className="flex items-center gap-2">
               <Zap className="w-5 h-5 text-primary" />
-              <span className="text-muted-foreground">Instant Scan</span>
+              <span className="text-muted-foreground">20 Data Brokers</span>
             </div>
             <div className="flex items-center gap-2">
               <Target className="w-5 h-5 text-primary" />
-              <span className="text-muted-foreground">GDPR Ready</span>
+              <span className="text-muted-foreground">GDPR & CCPA</span>
             </div>
           </div>
         </div>
