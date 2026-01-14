@@ -99,6 +99,194 @@ export const brokerPatterns: BrokerDetectionPattern[] = [
     },
     searchFields: {},
   },
+  // Additional brokers
+  {
+    slug: 'radaris',
+    name: 'Radaris',
+    searchUrlTemplate: 'https://radaris.com/p/{firstName}/{lastName}/{city}-{state}',
+    resultSelectors: {
+      noResults: ['no records found', '.no-results'],
+      hasResults: ['.person-card', '.result-item'],
+      profileLink: '.person-card a',
+    },
+    searchFields: {},
+  },
+  {
+    slug: 'intelius',
+    name: 'Intelius',
+    searchUrlTemplate: 'https://www.intelius.com/people-search/{firstName}-{lastName}/{city}-{state}',
+    resultSelectors: {
+      noResults: ['No results', '.empty-state'],
+      hasResults: ['.person-card', '.search-results'],
+      profileLink: '.person-card a',
+    },
+    searchFields: {},
+  },
+  {
+    slug: 'peoplefinder',
+    name: 'PeopleFinder',
+    searchUrlTemplate: 'https://www.peoplefinder.com/name/{firstName}-{lastName}/{city}-{state}',
+    resultSelectors: {
+      noResults: ['No results found'],
+      hasResults: ['.person-card', '.search-result'],
+      profileLink: '.person-card a',
+    },
+    searchFields: {},
+  },
+  {
+    slug: 'usphonebook',
+    name: 'US Phone Book',
+    searchUrlTemplate: 'https://www.usphonebook.com/{firstName}-{lastName}/{city}-{state}',
+    resultSelectors: {
+      noResults: ['No results'],
+      hasResults: ['.result-card', '.person-info'],
+      profileLink: '.result-card a',
+    },
+    searchFields: {},
+  },
+  {
+    slug: 'anywho',
+    name: 'AnyWho',
+    searchUrlTemplate: 'https://www.anywho.com/people/{firstName}+{lastName}/{city}+{state}',
+    resultSelectors: {
+      noResults: ['No results found'],
+      hasResults: ['.result-card', '.person-card'],
+      profileLink: '.result-card a',
+    },
+    searchFields: {},
+  },
+  {
+    slug: 'zabasearch',
+    name: 'ZabaSearch',
+    searchUrlTemplate: 'https://www.zabasearch.com/people/{firstName}+{lastName}/{city}+{state}',
+    resultSelectors: {
+      noResults: ['No matches', 'no results'],
+      hasResults: ['.result-item', '.person-listing'],
+      profileLink: '.result-item a',
+    },
+    searchFields: {},
+  },
+  {
+    slug: 'instantcheckmate',
+    name: 'Instant Checkmate',
+    searchUrlTemplate: 'https://www.instantcheckmate.com/people/{firstName}-{lastName}/{city}-{state}',
+    resultSelectors: {
+      noResults: ['No results', '.empty-state'],
+      hasResults: ['.person-card', '.result-container'],
+      profileLink: '.person-card a',
+    },
+    searchFields: {},
+  },
+  {
+    slug: 'ussearch',
+    name: 'US Search',
+    searchUrlTemplate: 'https://www.ussearch.com/search/results/person/{firstName}-{lastName}/{city}-{state}',
+    resultSelectors: {
+      noResults: ['No results found'],
+      hasResults: ['.person-card', '.search-result'],
+      profileLink: '.person-card a',
+    },
+    searchFields: {},
+  },
+  {
+    slug: 'peekyou',
+    name: 'PeekYou',
+    searchUrlTemplate: 'https://www.peekyou.com/{firstName}_{lastName}/{city}_{state}',
+    resultSelectors: {
+      noResults: ['no results', 'No matches'],
+      hasResults: ['.result-card', '.person-info'],
+      profileLink: '.result-card a',
+    },
+    searchFields: {},
+  },
+  {
+    slug: 'publicrecordsnow',
+    name: 'PublicRecordsNow',
+    searchUrlTemplate: 'https://www.publicrecordsnow.com/name/{firstName}-{lastName}/{city}-{state}',
+    resultSelectors: {
+      noResults: ['No records found'],
+      hasResults: ['.result-item', '.person-result'],
+      profileLink: '.result-item a',
+    },
+    searchFields: {},
+  },
+  {
+    slug: 'peoplesearchnow',
+    name: 'PeopleSearchNow',
+    searchUrlTemplate: 'https://www.peoplesearchnow.com/person/{firstName}-{lastName}_{city}-{state}',
+    resultSelectors: {
+      noResults: ['No results'],
+      hasResults: ['.person-card', '.result-list'],
+      profileLink: '.person-card a',
+    },
+    searchFields: {},
+  },
+  {
+    slug: 'addresses',
+    name: 'Addresses.com',
+    searchUrlTemplate: 'https://www.addresses.com/people/{firstName}+{lastName}/{city}+{state}',
+    resultSelectors: {
+      noResults: ['No results found'],
+      hasResults: ['.result-card', '.person-info'],
+      profileLink: '.result-card a',
+    },
+    searchFields: {},
+  },
+  {
+    slug: 'mylife',
+    name: 'MyLife',
+    searchUrlTemplate: 'https://www.mylife.com/pub/search?firstName={firstName}&lastName={lastName}&city={city}&state={state}',
+    resultSelectors: {
+      noResults: ['No results', '.empty-state'],
+      hasResults: ['.person-card', '.search-result'],
+      profileLink: '.person-card a',
+    },
+    searchFields: {},
+  },
+  {
+    slug: 'familytreenow',
+    name: 'FamilyTreeNow',
+    searchUrlTemplate: 'https://www.familytreenow.com/search/genealogy/results?first={firstName}&last={lastName}&city={city}&state={state}',
+    resultSelectors: {
+      noResults: ['No results', 'no matches'],
+      hasResults: ['.result-item', '.person-card'],
+      profileLink: '.result-item a',
+    },
+    searchFields: {},
+  },
+  {
+    slug: 'clustrmaps',
+    name: 'ClustrMaps',
+    searchUrlTemplate: 'https://clustrmaps.com/person/{firstName}-{lastName}/{city}-{state}',
+    resultSelectors: {
+      noResults: ['No results found'],
+      hasResults: ['.person-info', '.result-card'],
+      profileLink: '.person-info a',
+    },
+    searchFields: {},
+  },
+  {
+    slug: 'cyberbackgroundchecks',
+    name: 'CyberBackgroundChecks',
+    searchUrlTemplate: 'https://www.cyberbackgroundchecks.com/people/{firstName}-{lastName}/{city}-{state}',
+    resultSelectors: {
+      noResults: ['No records found'],
+      hasResults: ['.person-card', '.result-item'],
+      profileLink: '.person-card a',
+    },
+    searchFields: {},
+  },
+  {
+    slug: 'checkpeople',
+    name: 'CheckPeople',
+    searchUrlTemplate: 'https://checkpeople.com/search?first={firstName}&last={lastName}&city={city}&state={state}',
+    resultSelectors: {
+      noResults: ['No results'],
+      hasResults: ['.person-card', '.search-result'],
+      profileLink: '.person-card a',
+    },
+    searchFields: {},
+  },
 ];
 
 // Status badge colors

@@ -877,6 +877,134 @@ export type Database = {
         }
         Relationships: []
       }
+      exposure_findings: {
+        Row: {
+          created_at: string
+          data_types_found: string[] | null
+          found_at: string
+          id: string
+          removal_difficulty: string | null
+          removal_requested_at: string | null
+          removal_template_type: string | null
+          removal_url: string | null
+          removed_at: string | null
+          scan_id: string | null
+          severity: string
+          snippet: string | null
+          source_name: string
+          source_type: string
+          status: string
+          title: string | null
+          updated_at: string
+          url: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          data_types_found?: string[] | null
+          found_at?: string
+          id?: string
+          removal_difficulty?: string | null
+          removal_requested_at?: string | null
+          removal_template_type?: string | null
+          removal_url?: string | null
+          removed_at?: string | null
+          scan_id?: string | null
+          severity?: string
+          snippet?: string | null
+          source_name: string
+          source_type: string
+          status?: string
+          title?: string | null
+          updated_at?: string
+          url?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          data_types_found?: string[] | null
+          found_at?: string
+          id?: string
+          removal_difficulty?: string | null
+          removal_requested_at?: string | null
+          removal_template_type?: string | null
+          removal_url?: string | null
+          removed_at?: string | null
+          scan_id?: string | null
+          severity?: string
+          snippet?: string | null
+          source_name?: string
+          source_type?: string
+          status?: string
+          title?: string | null
+          updated_at?: string
+          url?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exposure_findings_scan_id_fkey"
+            columns: ["scan_id"]
+            isOneToOne: false
+            referencedRelation: "exposure_scans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      exposure_scans: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          critical_findings: number | null
+          high_findings: number | null
+          id: string
+          low_findings: number | null
+          medium_findings: number | null
+          search_params: Json
+          sources_completed: string[] | null
+          sources_to_scan: string[] | null
+          started_at: string | null
+          status: string
+          total_findings: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          critical_findings?: number | null
+          high_findings?: number | null
+          id?: string
+          low_findings?: number | null
+          medium_findings?: number | null
+          search_params?: Json
+          sources_completed?: string[] | null
+          sources_to_scan?: string[] | null
+          started_at?: string | null
+          status?: string
+          total_findings?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          critical_findings?: number | null
+          high_findings?: number | null
+          id?: string
+          low_findings?: number | null
+          medium_findings?: number | null
+          search_params?: Json
+          sources_completed?: string[] | null
+          sources_to_scan?: string[] | null
+          started_at?: string | null
+          status?: string
+          total_findings?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       golden_runs: {
         Row: {
           build_sha: string | null
