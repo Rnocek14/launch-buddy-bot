@@ -881,6 +881,7 @@ export type Database = {
         Row: {
           created_at: string
           data_types_found: string[] | null
+          evidence: string | null
           found_at: string
           id: string
           removal_difficulty: string | null
@@ -902,6 +903,7 @@ export type Database = {
         Insert: {
           created_at?: string
           data_types_found?: string[] | null
+          evidence?: string | null
           found_at?: string
           id?: string
           removal_difficulty?: string | null
@@ -923,6 +925,7 @@ export type Database = {
         Update: {
           created_at?: string
           data_types_found?: string[] | null
+          evidence?: string | null
           found_at?: string
           id?: string
           removal_difficulty?: string | null
