@@ -11,6 +11,7 @@ import { Footer } from "@/components/Footer";
 import { BrokerResultCard } from "@/components/BrokerResultCard";
 import { OptOutInstructions } from "@/components/OptOutInstructions";
 import { Badge } from "@/components/ui/badge";
+import { BrokerScanProfileForm } from "@/components/BrokerScanProfileForm";
 
 interface Broker {
   id: string;
@@ -59,6 +60,7 @@ export default function BrokerScan() {
   const [optOutDialogOpen, setOptOutDialogOpen] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
   const [currentTier, setCurrentTier] = useState<'free' | 'pro' | 'complete'>('free');
+  const [profileData, setProfileData] = useState<{ firstName: string; lastName: string; city: string; state: string } | null>(null);
 
   useEffect(() => {
     checkAuthAndLoad();
@@ -142,7 +144,7 @@ export default function BrokerScan() {
 
     const { data, error } = await supabase.functions.invoke('scan-brokers', {
       method: 'POST',
-      body: {},
+      body: profileData ? { city: profileData.city, state: profileData.state } : {},
     });
 
     if (error || data?.error) {
@@ -264,6 +266,12 @@ export default function BrokerScan() {
 
         {isComplete && (
           <>
+            {/* Profile Form */}
+            <BrokerScanProfileForm 
+              onProfileReady={setProfileData} 
+              disabled={scanning}
+            />
+
             {/* Scan Status Card */}
             <Card className="mb-8">
               <CardHeader>
