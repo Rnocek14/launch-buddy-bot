@@ -95,3 +95,9 @@ verify_jwt = false
 
 [functions.notify-enterprise-lead]
 verify_jwt = false
+
+[functions.scan-exposure]
+verify_jwt = false
+
+[functions.check-breaches]
+verify_jwt = false
