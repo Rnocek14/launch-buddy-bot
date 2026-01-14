@@ -46,6 +46,7 @@ import { ExtensionPrompt } from "@/components/ExtensionPrompt";
 import { BrokerScanCard } from "@/components/BrokerScanCard";
 import { ScoreHistoryChart } from "@/components/ScoreHistoryChart";
 import { ReferralChallengePanel } from "@/components/ReferralChallengePanel";
+import { ServiceCard } from "@/components/ServiceCard";
 
 interface Service {
   id: string;
@@ -1858,23 +1859,20 @@ export default function Dashboard() {
               </Card>
             ) : (
               <div id="services-grid" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                {filteredServices.map(service => {
-                  const ServiceCardComponent = require('@/components/ServiceCard').ServiceCard;
-                  return (
-                    <ServiceCardComponent
-                      key={service.id}
-                      service={service}
-                      isSelected={selectedServices.has(service.id)}
-                      isNew={isServiceNew(service.discovered_at)}
-                      categoryColor={categoryColors[service.category] || categoryColors["Other"]}
-                      onToggleSelection={toggleServiceSelection}
-                      onRequestDeletion={handleRequestDeletion}
-                      onQuickDiscovery={handleQuickDiscovery}
-                      getServiceInitials={getServiceInitials}
-                      getContactStatusBadge={getContactStatusBadge}
-                    />
-                  );
-                })}
+                {filteredServices.map(service => (
+                  <ServiceCard
+                    key={service.id}
+                    service={service}
+                    isSelected={selectedServices.has(service.id)}
+                    isNew={isServiceNew(service.discovered_at)}
+                    categoryColor={categoryColors[service.category] || categoryColors["Other"]}
+                    onToggleSelection={toggleServiceSelection}
+                    onRequestDeletion={handleRequestDeletion}
+                    onQuickDiscovery={handleQuickDiscovery}
+                    getServiceInitials={getServiceInitials}
+                    getContactStatusBadge={getContactStatusBadge}
+                  />
+                ))}
               </div>
             )}
           </div>
