@@ -199,7 +199,15 @@ export default function Dashboard() {
     }
 
     setUser(session.user);
-    setHasGmailAccess(!!session.provider_token);
+    
+    // Check for stored email connections instead of session.provider_token
+    const { data: connections } = await supabase
+      .from('email_connections')
+      .select('id')
+      .eq('user_id', session.user.id)
+      .limit(1);
+    
+    setHasGmailAccess(connections && connections.length > 0);
     await fetchServices();
     await fetchUnmatchedDomains();
     setLoading(false);
