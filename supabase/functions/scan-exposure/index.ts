@@ -80,7 +80,43 @@ interface ExtractionResult {
   confidence: "high" | "medium" | "low";
   data_exposed: string[];
   snippet: string;
+  evidence: string; // Actual text excerpt from page proving the match
   profile_url: string | null;
+}
+
+interface BlockCheckResult {
+  blocked: boolean;
+  reason: string;
+}
+
+// Priority 1: Blocking Detection - Detect if Browserless returned a blocked/useless page
+function isBlockedPage(html: string): BlockCheckResult {
+  const lowerHtml = html.toLowerCase();
+  
+  // Check for common blocking patterns
+  if (html.length < 2000) {
+    return { blocked: true, reason: "Page too short - likely blocked or error page" };
+  }
+  if (lowerHtml.includes("captcha") || lowerHtml.includes("recaptcha") || lowerHtml.includes("hcaptcha")) {
+    return { blocked: true, reason: "CAPTCHA detected" };
+  }
+  if (lowerHtml.includes("access denied") || lowerHtml.includes("403 forbidden")) {
+    return { blocked: true, reason: "Access denied" };
+  }
+  if (lowerHtml.includes("please enable javascript") || lowerHtml.includes("javascript is required")) {
+    return { blocked: true, reason: "JavaScript rendering failed" };
+  }
+  if (lowerHtml.includes("unusual traffic") || lowerHtml.includes("rate limit") || lowerHtml.includes("too many requests")) {
+    return { blocked: true, reason: "Rate limited" };
+  }
+  if (lowerHtml.includes("blocked") && lowerHtml.includes("security")) {
+    return { blocked: true, reason: "Security block detected" };
+  }
+  if (lowerHtml.includes("verify you are human") || lowerHtml.includes("are you a robot")) {
+    return { blocked: true, reason: "Bot detection triggered" };
+  }
+  
+  return { blocked: false, reason: "" };
 }
 
 async function fetchWithBrowserless(url: string, browserlessToken: string): Promise<string> {
@@ -117,17 +153,25 @@ async function extractWithOpenAI(
 
   const response = await openai.chat.completions.create({
     model: "gpt-4o-mini",
-    max_tokens: 500,
+    max_tokens: 600,
     messages: [
       {
         role: "system",
         content: `You are an expert at analyzing data broker search results pages to determine if a specific person's information is exposed. 
+
 Analyze the HTML and return a JSON object with:
-- found: boolean - true if you found a profile matching the searched person
+- found: boolean - true ONLY if you found a profile clearly matching the searched person
 - confidence: "high" | "medium" | "low" - how confident are you this is the right person
 - data_exposed: array of exposed data types like "name", "phone", "address", "email", "age", "relatives", "employer"
-- snippet: brief text (max 100 chars) showing what was found
-- profile_url: direct URL to the person's profile if visible in the HTML, otherwise null`,
+- snippet: brief summary (max 100 chars) showing what was found
+- evidence: EXACT text excerpt from the HTML that proves the match (max 300 chars). Copy the actual text from the page. If no match found, return empty string.
+- profile_url: direct URL to the person's profile if visible in the HTML, otherwise null
+
+CRITICAL RULES:
+1. ONLY return found=true if you can provide specific evidence text copied from the page
+2. The evidence field MUST contain actual text from the HTML, not a summary
+3. If the page shows "no results" or doesn't contain the person's name, return found=false
+4. Be conservative - when in doubt, return found=false with low confidence`,
       },
       {
         role: "user",
@@ -146,13 +190,19 @@ Return ONLY valid JSON, no explanation.`,
   const content = response.choices[0]?.message?.content || "{}";
   
   try {
-    return JSON.parse(content) as ExtractionResult;
+    const parsed = JSON.parse(content) as ExtractionResult;
+    // Ensure evidence field exists
+    return {
+      ...parsed,
+      evidence: parsed.evidence || "",
+    };
   } catch {
     return {
       found: false,
       confidence: "low",
       data_exposed: [],
       snippet: "Unable to parse results",
+      evidence: "",
       profile_url: null,
     };
   }
@@ -270,14 +320,54 @@ serve(async (req) => {
     // Scan each broker
     for (const broker of brokerPatterns) {
       try {
-        console.log(`Scanning ${broker.name}...`);
         const url = buildBrokerUrl(broker.urlTemplate, searchParams);
+        
+        // Priority 3: Debug Logging
+        console.log(`[SCAN] ${broker.name}`);
+        console.log(`  URL: ${url}`);
         
         // Add delay to avoid rate limiting
         await new Promise((resolve) => setTimeout(resolve, 1500));
         
         const html = await fetchWithBrowserless(url, browserlessToken);
+        
+        // Debug: Log HTML stats
+        console.log(`  HTML length: ${html.length}`);
+        console.log(`  HTML preview: ${html.substring(0, 200).replace(/\s+/g, ' ').trim()}`);
+        
+        // Priority 1: Check for blocking before OpenAI extraction
+        const blockCheck = isBlockedPage(html);
+        console.log(`  Blocked: ${blockCheck.blocked}${blockCheck.blocked ? ` (${blockCheck.reason})` : ''}`);
+        
+        if (blockCheck.blocked) {
+          // Skip OpenAI extraction for blocked pages
+          console.warn(`  ⚠️ Skipping OpenAI extraction - page blocked`);
+          completedSources.push(broker.slug);
+          results.push({
+            broker: broker.name,
+            found: false,
+            blocked: true,
+            blockReason: blockCheck.reason,
+          });
+          
+          // Update scan progress
+          await supabase
+            .from("exposure_scans")
+            .update({
+              sources_completed: completedSources,
+            })
+            .eq("id", currentScanId);
+          
+          continue;
+        }
+        
         const extraction = await extractWithOpenAI(openai, html, searchParams, broker.name);
+        
+        // Debug: Log extraction results
+        console.log(`  Found: ${extraction.found}, Confidence: ${extraction.confidence}`);
+        if (extraction.evidence) {
+          console.log(`  Evidence: ${extraction.evidence.substring(0, 100)}...`);
+        }
 
         if (extraction.found) {
           const severity = getSeverity(extraction.data_exposed);
@@ -315,6 +405,7 @@ serve(async (req) => {
             severity,
             data_exposed: extraction.data_exposed,
             snippet: extraction.snippet,
+            evidence: extraction.evidence,
             profile_url: extraction.profile_url,
             removal_url: broker.optOutUrl,
           });
@@ -341,7 +432,7 @@ serve(async (req) => {
           .eq("id", currentScanId);
 
       } catch (error) {
-        console.error(`Error scanning ${broker.name}:`, error);
+        console.error(`[ERROR] ${broker.name}:`, error);
         completedSources.push(broker.slug);
         results.push({
           broker: broker.name,
