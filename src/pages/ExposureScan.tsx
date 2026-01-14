@@ -42,6 +42,7 @@ interface ExposureFinding {
   status: string;
   data_types_found: string[] | null;
   snippet: string | null;
+  evidence: string | null;
   removal_url: string | null;
   removal_difficulty: string | null;
   title: string | null;
