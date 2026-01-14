@@ -1,14 +1,18 @@
+import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { 
   ExternalLink, 
   Shield, 
   AlertTriangle, 
   Clock, 
   CheckCircle,
-  XCircle,
-  Trash2
+  ChevronDown,
+  ChevronUp,
+  Trash2,
+  FileText
 } from "lucide-react";
 
 interface ExposureFinding {
@@ -20,6 +24,7 @@ interface ExposureFinding {
   status: string;
   data_types_found: string[] | null;
   snippet: string | null;
+  evidence: string | null;
   removal_url: string | null;
   removal_difficulty: string | null;
   title: string | null;
@@ -32,6 +37,8 @@ interface ExposureFindingCardProps {
 }
 
 export default function ExposureFindingCard({ finding, onStartRemoval }: ExposureFindingCardProps) {
+  const [isEvidenceOpen, setIsEvidenceOpen] = useState(false);
+
   const getSeverityConfig = (severity: string) => {
     switch (severity) {
       case "critical":
@@ -140,6 +147,28 @@ export default function ExposureFindingCard({ finding, onStartRemoval }: Exposur
                     </Badge>
                   ))}
                 </div>
+              )}
+              
+              {/* Evidence Collapsible */}
+              {finding.evidence && (
+                <Collapsible open={isEvidenceOpen} onOpenChange={setIsEvidenceOpen} className="mb-2">
+                  <CollapsibleTrigger asChild>
+                    <Button variant="ghost" size="sm" className="h-6 px-2 text-xs gap-1">
+                      <FileText className="h-3 w-3" />
+                      View Evidence
+                      {isEvidenceOpen ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                    </Button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="mt-2">
+                    <div className="p-3 bg-background/50 rounded-md border">
+                      <p className="text-xs font-mono text-muted-foreground whitespace-pre-wrap break-words">
+                        {finding.evidence.length > 500 
+                          ? `${finding.evidence.substring(0, 500)}...` 
+                          : finding.evidence}
+                      </p>
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
               )}
               
               <div className="flex items-center gap-4 text-xs text-muted-foreground">

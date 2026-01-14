@@ -363,6 +363,13 @@ serve(async (req) => {
         
         const extraction = await extractWithOpenAI(openai, html, searchParams, broker.name);
         
+        // Trust gate: found=true requires evidence
+        if (extraction.found && !extraction.evidence?.trim()) {
+          console.warn(`  ⚠️ Downgrading to found=false - no evidence provided`);
+          extraction.found = false;
+          extraction.confidence = "low";
+        }
+        
         // Debug: Log extraction results
         console.log(`  Found: ${extraction.found}, Confidence: ${extraction.confidence}`);
         if (extraction.evidence) {
