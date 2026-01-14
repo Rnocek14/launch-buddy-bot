@@ -124,27 +124,45 @@ export default function BrokerScan() {
   const startScan = async () => {
     setScanning(true);
     
+    // Create a temporary scan state to show progress
+    setScan({
+      id: 'temp',
+      status: 'running',
+      total_brokers: 20,
+      scanned_count: 0,
+      found_count: 0,
+      clean_count: 0,
+      error_count: 0,
+    });
+
+    toast({
+      title: "Scan started",
+      description: "Scanning data brokers... This may take 1-2 minutes.",
+    });
+
     const { data, error } = await supabase.functions.invoke('scan-brokers', {
       method: 'POST',
       body: {},
     });
 
-    if (error || data.error) {
+    if (error || data?.error) {
       toast({
         variant: "destructive",
         title: "Scan failed",
-        description: data?.error || error?.message || "Failed to start scan",
+        description: data?.error || error?.message || "Failed to complete scan",
       });
+      setScan(null);
       setScanning(false);
       return;
     }
 
     toast({
-      title: "Scan started",
-      description: "We're scanning data brokers for your information. This may take a few minutes.",
+      title: "Scan complete!",
+      description: `Found exposures on ${data.scan?.found_count || 0} brokers.`,
     });
 
     setScan(data.scan);
+    await loadScanData(); // Refresh results
     setScanning(false);
   };
 
