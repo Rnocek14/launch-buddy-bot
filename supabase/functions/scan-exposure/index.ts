@@ -373,6 +373,12 @@ serve(async (req) => {
           const severity = getSeverity(extraction.data_exposed);
           
           // Insert finding
+          // Store evidence in snippet field (evidence column doesn't exist in schema yet)
+          // Format: "summary | Evidence: actual excerpt"
+          const snippetWithEvidence = extraction.evidence 
+            ? `${extraction.snippet} | Evidence: ${extraction.evidence.substring(0, 200)}`
+            : extraction.snippet;
+          
           const { error: findingError } = await supabase
             .from("exposure_findings")
             .insert({
@@ -384,7 +390,7 @@ serve(async (req) => {
               severity,
               status: "found",
               data_types_found: extraction.data_exposed,
-              snippet: extraction.snippet,
+              snippet: snippetWithEvidence,
               removal_url: broker.optOutUrl,
               removal_difficulty: broker.difficulty,
             });
