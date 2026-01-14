@@ -349,10 +349,10 @@ Deno.serve(async (req) => {
         );
       }
 
-      // Get user profile for search
+      // Get user profile for search (including city and state)
       const { data: profile } = await supabase
         .from('profiles')
-        .select('full_name')
+        .select('full_name, city, state')
         .eq('id', userId)
         .single();
 
@@ -363,8 +363,8 @@ Deno.serve(async (req) => {
         userProfile = {
           firstName,
           lastName,
-          city: body.city || '',
-          state: body.state || '',
+          city: body.city || profile.city || '',
+          state: body.state || profile.state || '',
         };
       } else {
         // Fallback to email username
@@ -372,8 +372,8 @@ Deno.serve(async (req) => {
         userProfile = {
           firstName: emailName,
           lastName: '',
-          city: body.city || '',
-          state: body.state || '',
+          city: body.city || profile?.city || '',
+          state: body.state || profile?.state || '',
         };
       }
 
