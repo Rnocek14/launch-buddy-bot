@@ -64,9 +64,18 @@ export function BrokerResultCard({
       case 'opted_out':
         return 'Opted Out';
       case 'error':
-        return 'Check Failed';
+        return 'Unknown';
       default:
         return 'Pending';
+    }
+  };
+
+  const getStatusDescription = () => {
+    switch (status) {
+      case 'error':
+        return 'Could not access - check manually';
+      default:
+        return null;
     }
   };
 
@@ -133,6 +142,15 @@ export function BrokerResultCard({
                   Opt Out
                 </Button>
               </>
+            )}
+            
+            {status === 'error' && (
+              <Button variant="outline" size="sm" asChild>
+                <a href={profileUrl || broker.website} target="_blank" rel="noopener noreferrer">
+                  Check Manually
+                  <ExternalLink className="h-3 w-3 ml-1" />
+                </a>
+              </Button>
             )}
             
             {status === 'opted_out' && (
