@@ -56,6 +56,26 @@ serve(async (req) => {
     if (!user?.email) throw new Error("User not authenticated or email not available");
     logStep("User authenticated", { userId: user.id, email: user.email });
 
+    // Check for manual override FIRST - skip Stripe sync if set
+    const { data: existingSub } = await supabaseClient
+      .from('subscriptions')
+      .select('tier, manual_override, current_period_end')
+      .eq('user_id', user.id)
+      .single();
+
+    if (existingSub?.manual_override) {
+      logStep("Manual override active, using database tier", { tier: existingSub.tier });
+      return new Response(JSON.stringify({
+        subscribed: existingSub.tier !== 'free',
+        tier: existingSub.tier,
+        subscription_end: existingSub.current_period_end,
+        manual_override: true
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200,
+      });
+    }
+
     const stripe = new Stripe(stripeKey, { apiVersion: "2024-06-20" });
     const customers = await stripe.customers.list({ email: user.email, limit: 1 });
     
