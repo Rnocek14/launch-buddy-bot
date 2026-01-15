@@ -120,11 +120,22 @@ interface UserProfile {
   state: string;
 }
 
+interface ExtractedData {
+  name?: string;
+  age?: string;
+  addresses?: string[];
+  phone_numbers?: string[];
+  emails?: string[];
+  relatives?: string[];
+  raw_snippet?: string;
+}
+
 interface ScanResult {
   brokerId: string;
   status: 'found' | 'clean' | 'error';
   profileUrl: string | null;
   matchConfidence: number;
+  extractedData?: ExtractedData;
   error?: string;
 }
 
@@ -184,6 +195,138 @@ async function fetchWithBrowserless(url: string, timeout: number = 30000): Promi
     console.error('Browserless fetch error:', error);
     return null;
   }
+}
+
+// Extract personal data from HTML response
+function extractDataFromHtml(html: string, profile: UserProfile): ExtractedData {
+  const data: ExtractedData = {};
+  const htmlLower = html.toLowerCase();
+  
+  // Extract name if visible
+  const fullName = `${profile.firstName} ${profile.lastName}`;
+  if (htmlLower.includes(fullName.toLowerCase())) {
+    data.name = fullName;
+  }
+  
+  // Extract age (patterns like "Age: 35", "35 years old", "(35)")
+  const agePatterns = [
+    /age[:\s]+(\d{1,3})/i,
+    /(\d{1,3})\s*years?\s*old/i,
+    /\((\d{2,3})\)/,
+  ];
+  for (const pattern of agePatterns) {
+    const match = html.match(pattern);
+    if (match && parseInt(match[1]) > 10 && parseInt(match[1]) < 120) {
+      data.age = match[1];
+      break;
+    }
+  }
+  
+  // Extract addresses (common patterns)
+  const addressPatterns = [
+    // Street address patterns
+    /\d+\s+[A-Za-z]+\s+(?:St(?:reet)?|Ave(?:nue)?|Rd|Road|Blvd|Boulevard|Dr(?:ive)?|Ln|Lane|Way|Ct|Court|Pl(?:ace)?)[,.\s]+[A-Za-z\s]+,?\s*[A-Z]{2}\s*\d{5}/gi,
+    // City, State ZIP
+    /[A-Za-z\s]+,\s*[A-Z]{2}\s+\d{5}(?:-\d{4})?/g,
+  ];
+  
+  const addresses = new Set<string>();
+  for (const pattern of addressPatterns) {
+    const matches = html.match(pattern);
+    if (matches) {
+      matches.slice(0, 5).forEach(addr => {
+        const cleaned = addr.trim().replace(/\s+/g, ' ');
+        if (cleaned.length > 10 && cleaned.length < 100) {
+          addresses.add(cleaned);
+        }
+      });
+    }
+  }
+  if (addresses.size > 0) {
+    data.addresses = Array.from(addresses).slice(0, 5);
+  }
+  
+  // Extract phone numbers
+  const phonePattern = /(?:\+?1[-.\s]?)?\(?[2-9]\d{2}\)?[-.\s]?\d{3}[-.\s]?\d{4}/g;
+  const phones = new Set<string>();
+  const phoneMatches = html.match(phonePattern);
+  if (phoneMatches) {
+    phoneMatches.slice(0, 10).forEach(phone => {
+      const cleaned = phone.replace(/\D/g, '');
+      if (cleaned.length === 10 || cleaned.length === 11) {
+        // Format nicely
+        const formatted = cleaned.length === 11 
+          ? `(${cleaned.slice(1, 4)}) ${cleaned.slice(4, 7)}-${cleaned.slice(7)}`
+          : `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6)}`;
+        phones.add(formatted);
+      }
+    });
+  }
+  if (phones.size > 0) {
+    data.phone_numbers = Array.from(phones).slice(0, 5);
+  }
+  
+  // Extract email addresses
+  const emailPattern = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
+  const emails = new Set<string>();
+  const emailMatches = html.match(emailPattern);
+  if (emailMatches) {
+    emailMatches.forEach(email => {
+      const lower = email.toLowerCase();
+      // Filter out common non-personal emails
+      if (!lower.includes('example.com') && 
+          !lower.includes('noreply') && 
+          !lower.includes('support@') &&
+          !lower.includes('info@') &&
+          lower.length < 50) {
+        emails.add(lower);
+      }
+    });
+  }
+  if (emails.size > 0) {
+    data.emails = Array.from(emails).slice(0, 5);
+  }
+  
+  // Extract relatives/associates (look for "Related to:", "Relatives:", "Associates:", "Family:")
+  const relativePatterns = [
+    /(?:related?\s*to|relatives?|associates?|family)[:\s]+([^<\n]{10,200})/gi,
+  ];
+  const relatives = new Set<string>();
+  for (const pattern of relativePatterns) {
+    const matches = html.matchAll(pattern);
+    for (const match of matches) {
+      // Split by common delimiters and clean
+      const names = match[1].split(/[,;•|]/).map(n => n.trim()).filter(n => {
+        // Filter to look like names (2-3 words, each capitalized)
+        const words = n.split(/\s+/);
+        return words.length >= 2 && words.length <= 4 && 
+               words.every(w => w.length > 1 && /^[A-Z]/.test(w));
+      });
+      names.forEach(n => relatives.add(n));
+    }
+  }
+  if (relatives.size > 0) {
+    data.relatives = Array.from(relatives).slice(0, 10);
+  }
+  
+  // Store a sanitized snippet if we found something
+  if (Object.keys(data).length > 0) {
+    // Find a relevant snippet around the user's name
+    const nameIndex = htmlLower.indexOf(profile.firstName.toLowerCase());
+    if (nameIndex > 0) {
+      const start = Math.max(0, nameIndex - 50);
+      const end = Math.min(html.length, nameIndex + 200);
+      let snippet = html.slice(start, end)
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+      if (snippet.length > 50) {
+        data.raw_snippet = snippet.slice(0, 200);
+      }
+    }
+  }
+  
+  return data;
 }
 
 // Fallback direct fetch
@@ -313,12 +456,17 @@ async function scanBroker(
       if (nameInPage) confidence += 0.25;
       if (usedBrowserless) confidence += 0.1; // Higher confidence with browser rendering
       
+      // Extract personal data from the HTML
+      const extractedData = extractDataFromHtml(html, profile);
+      console.log(`${slug}: extracted data keys: ${Object.keys(extractedData).join(', ')}`);
+      
       return {
         slug,
         brokerId: '',
         status: 'found',
         profileUrl: searchUrl,
         matchConfidence: Math.min(confidence, 0.95),
+        extractedData: Object.keys(extractedData).length > 0 ? extractedData : undefined,
       };
     }
 
@@ -546,6 +694,7 @@ Deno.serve(async (req) => {
               status: result.status,
               profile_url: result.profileUrl,
               match_confidence: result.matchConfidence,
+              extracted_data: result.extractedData || null,
               error_message: result.error || null,
               scanned_at: new Date().toISOString(),
             }, {
@@ -625,6 +774,7 @@ Deno.serve(async (req) => {
           status,
           profile_url,
           match_confidence,
+          extracted_data,
           scanned_at,
           opted_out_at,
           broker:data_brokers(

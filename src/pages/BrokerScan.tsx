@@ -10,8 +10,19 @@ import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { BrokerResultCard } from "@/components/BrokerResultCard";
 import { OptOutInstructions } from "@/components/OptOutInstructions";
+import { ExposureDetailsModal } from "@/components/ExposureDetailsModal";
 import { Badge } from "@/components/ui/badge";
 import { BrokerScanProfileForm } from "@/components/BrokerScanProfileForm";
+
+interface ExtractedData {
+  name?: string;
+  age?: string;
+  addresses?: string[];
+  phone_numbers?: string[];
+  emails?: string[];
+  relatives?: string[];
+  raw_snippet?: string;
+}
 
 interface Broker {
   id: string;
@@ -32,10 +43,10 @@ interface ScanResult {
   status: 'pending' | 'scanning' | 'found' | 'clean' | 'error' | 'opted_out';
   profile_url?: string;
   match_confidence?: number;
+  extracted_data?: ExtractedData | null;
   scanned_at?: string;
   broker: Broker;
 }
-
 interface Scan {
   id: string;
   status: 'pending' | 'running' | 'completed' | 'failed';
@@ -57,7 +68,9 @@ export default function BrokerScan() {
   const [results, setResults] = useState<ScanResult[]>([]);
   const [brokers, setBrokers] = useState<Broker[]>([]);
   const [selectedBroker, setSelectedBroker] = useState<Broker | null>(null);
+  const [selectedResult, setSelectedResult] = useState<ScanResult | null>(null);
   const [optOutDialogOpen, setOptOutDialogOpen] = useState(false);
+  const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
   const [currentTier, setCurrentTier] = useState<'free' | 'pro' | 'complete'>('free');
   const [profileData, setProfileData] = useState<{ firstName: string; lastName: string; city: string; state: string } | null>(null);
@@ -199,6 +212,36 @@ export default function BrokerScan() {
   const handleOptOut = (broker: Broker) => {
     setSelectedBroker(broker);
     setOptOutDialogOpen(true);
+  };
+
+  const handleViewDetails = (broker: Broker) => {
+    const result = results.find(r => r.broker.id === broker.id);
+    if (result) {
+      setSelectedResult(result);
+      setSelectedBroker(broker);
+      setDetailsModalOpen(true);
+    }
+  };
+
+  const handleMarkFound = async (broker: Broker) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+
+    await supabase
+      .from('broker_scan_results')
+      .update({ 
+        status: 'found',
+        scanned_at: new Date().toISOString(),
+      })
+      .eq('user_id', session.user.id)
+      .eq('broker_id', broker.id);
+
+    toast({
+      title: "Marked as found",
+      description: "You can now start the opt-out process",
+    });
+
+    await loadScanData();
   };
 
   const handleMarkOptedOut = async (brokerId: string) => {
@@ -404,7 +447,9 @@ export default function BrokerScan() {
                         status={result.status}
                         profileUrl={result.profile_url}
                         matchConfidence={result.match_confidence}
+                        extractedData={result.extracted_data}
                         onOptOut={handleOptOut}
+                        onViewDetails={handleViewDetails}
                       />
                     ))}
                   </div>
@@ -443,6 +488,7 @@ export default function BrokerScan() {
                         status={result.status}
                         profileUrl={result.profile_url}
                         onOptOut={handleOptOut}
+                        onMarkFound={handleMarkFound}
                       />
                     ))}
                   </div>
@@ -491,6 +537,21 @@ export default function BrokerScan() {
         onOpenChange={setOptOutDialogOpen}
         onMarkOptedOut={handleMarkOptedOut}
       />
+
+      {selectedBroker && selectedResult && (
+        <ExposureDetailsModal
+          open={detailsModalOpen}
+          onOpenChange={setDetailsModalOpen}
+          broker={selectedBroker}
+          extractedData={selectedResult.extracted_data || null}
+          profileUrl={selectedResult.profile_url}
+          onOptOut={() => {
+            setDetailsModalOpen(false);
+            handleOptOut(selectedBroker);
+          }}
+          onMarkOptedOut={() => handleMarkOptedOut(selectedBroker.id)}
+        />
+      )}
     </div>
   );
 }
