@@ -275,15 +275,20 @@ export default function BrokerScan() {
   };
 
   const progress = scan ? (scan.scanned_count / scan.total_brokers) * 100 : 0;
-  // Use v2 statuses for filtering
-  const foundResults = results.filter(r => r.status_v2 === 'found' || r.status_v2 === 'possible_match' || r.status === 'found');
+  
+  // Use v2 statuses for filtering - separate exposed from possible
+  const exposedResults = results.filter(r => r.status_v2 === 'found' || (!r.status_v2 && r.status === 'found'));
+  const possibleResults = results.filter(r => r.status_v2 === 'possible_match');
   const cleanResults = results.filter(r => r.status_v2 === 'not_found' || r.status === 'clean');
   const optedOutResults = results.filter(r => r.status === 'opted_out');
-  const unknownResults = results.filter(r => 
+  const issueResults = results.filter(r => 
     r.status_v2 === 'blocked' || r.status_v2 === 'rate_limited' || r.status_v2 === 'provider_error' ||
     r.status_v2 === 'timeout' || r.status_v2 === 'parse_failed' || r.status_v2 === 'request_failed' ||
     r.status_v2 === 'unknown' || (!r.status_v2 && r.status === 'error')
   );
+  
+  // Combined for UI sections
+  const foundResults = [...exposedResults, ...possibleResults];
 
   if (loading) {
     return (
@@ -419,26 +424,31 @@ export default function BrokerScan() {
                 )}
 
                 {scan?.status === 'completed' && (
-                  <div className="grid grid-cols-4 gap-4 text-center">
-                    <div className="p-4 bg-destructive/10 rounded-lg">
-                      <ShieldAlert className="h-6 w-6 text-destructive mx-auto mb-2" />
-                      <p className="text-2xl font-bold text-destructive">{foundResults.length}</p>
-                      <p className="text-sm text-muted-foreground">Exposed</p>
+                  <div className="grid grid-cols-5 gap-3 text-center">
+                    <div className="p-3 bg-destructive/10 rounded-lg">
+                      <ShieldAlert className="h-5 w-5 text-destructive mx-auto mb-1" />
+                      <p className="text-xl font-bold text-destructive">{exposedResults.length}</p>
+                      <p className="text-xs text-muted-foreground">Exposed</p>
                     </div>
-                    <div className="p-4 bg-green-500/10 rounded-lg">
-                      <ShieldCheck className="h-6 w-6 text-green-600 mx-auto mb-2" />
-                      <p className="text-2xl font-bold text-green-600">{cleanResults.length}</p>
-                      <p className="text-sm text-muted-foreground">Clean</p>
+                    <div className="p-3 bg-yellow-500/10 rounded-lg">
+                      <Shield className="h-5 w-5 text-yellow-600 mx-auto mb-1" />
+                      <p className="text-xl font-bold text-yellow-600">{possibleResults.length}</p>
+                      <p className="text-xs text-muted-foreground">Possible</p>
                     </div>
-                    <div className="p-4 bg-orange-500/10 rounded-lg">
-                      <AlertCircle className="h-6 w-6 text-orange-600 mx-auto mb-2" />
-                      <p className="text-2xl font-bold text-orange-600">{unknownResults.length}</p>
-                      <p className="text-sm text-muted-foreground">Unknown</p>
+                    <div className="p-3 bg-green-500/10 rounded-lg">
+                      <ShieldCheck className="h-5 w-5 text-green-600 mx-auto mb-1" />
+                      <p className="text-xl font-bold text-green-600">{cleanResults.length}</p>
+                      <p className="text-xs text-muted-foreground">Clean</p>
                     </div>
-                    <div className="p-4 bg-blue-500/10 rounded-lg">
-                      <Shield className="h-6 w-6 text-blue-600 mx-auto mb-2" />
-                      <p className="text-2xl font-bold text-blue-600">{optedOutResults.length}</p>
-                      <p className="text-sm text-muted-foreground">Opted Out</p>
+                    <div className="p-3 bg-muted rounded-lg">
+                      <AlertCircle className="h-5 w-5 text-muted-foreground mx-auto mb-1" />
+                      <p className="text-xl font-bold text-muted-foreground">{issueResults.length}</p>
+                      <p className="text-xs text-muted-foreground">Issues</p>
+                    </div>
+                    <div className="p-3 bg-blue-500/10 rounded-lg">
+                      <Shield className="h-5 w-5 text-blue-600 mx-auto mb-1" />
+                      <p className="text-xl font-bold text-blue-600">{optedOutResults.length}</p>
+                      <p className="text-xs text-muted-foreground">Opted Out</p>
                     </div>
                   </div>
                 )}
@@ -497,16 +507,16 @@ export default function BrokerScan() {
                   </div>
                 )}
 
-                {unknownResults.length > 0 && (
+                {issueResults.length > 0 && (
                   <div className="space-y-3">
                     <h3 className="text-lg font-semibold flex items-center gap-2">
-                      <AlertCircle className="h-5 w-5 text-orange-600" />
-                      Unknown status for {unknownResults.length} broker{unknownResults.length !== 1 ? 's' : ''}
+                      <AlertCircle className="h-5 w-5 text-muted-foreground" />
+                      Issues with {issueResults.length} broker{issueResults.length !== 1 ? 's' : ''}
                     </h3>
                     <p className="text-sm text-muted-foreground mb-2">
                       These sites blocked our scan. Click "Check Manually" to verify yourself.
                     </p>
-                    {unknownResults.map(result => (
+                    {issueResults.map(result => (
                       <BrokerResultCard
                         key={result.id}
                         broker={result.broker}
