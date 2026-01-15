@@ -214,6 +214,11 @@ export function BrokerResultCard({
               {isFound && evidence_snippet && (
                 <div className="mt-2 p-2 bg-muted/50 rounded text-xs text-muted-foreground max-w-md">
                   <p className="line-clamp-2 italic">"{evidence_snippet}"</p>
+                  {detection_method === 'serp' && (
+                    <p className="text-muted-foreground/70 mt-1 text-[10px]">
+                      Evidence from Google snippet (not the broker page). Confirm by opening the source.
+                    </p>
+                  )}
                   {evidence_url && (
                     <a 
                       href={evidence_url} 

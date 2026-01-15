@@ -38,15 +38,15 @@ export type DetectionMethod = (typeof DETECTION_METHODS)[number];
 
 // UI display mappings
 export const statusLabel: Record<StatusV2, string> = {
-  found: "Found",
-  possible_match: "Possible",
-  not_found: "Not Found",
+  found: "Exposed",
+  possible_match: "Possible exposure",
+  not_found: "Not found",
   blocked: "Blocked",
-  rate_limited: "Rate Limited",
-  provider_error: "Provider Error",
+  rate_limited: "Rate limited",
+  provider_error: "Scan service error",
   timeout: "Timeout",
-  parse_failed: "Parse Failed",
-  request_failed: "Request Failed",
+  parse_failed: "Parse failed",
+  request_failed: "Request failed",
   unknown: "Unknown",
 };
 
