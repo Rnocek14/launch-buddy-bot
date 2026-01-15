@@ -41,6 +41,15 @@ interface Broker {
 interface ScanResult {
   id: string;
   status: 'pending' | 'scanning' | 'found' | 'clean' | 'error' | 'opted_out';
+  status_v2?: string;
+  error_code?: string | null;
+  http_status?: number | null;
+  error_detail?: string | null;
+  detection_method?: string;
+  confidence?: number | null;
+  confidence_breakdown?: Record<string, number> | null;
+  evidence_snippet?: string | null;
+  evidence_url?: string | null;
   profile_url?: string;
   match_confidence?: number;
   extracted_data?: ExtractedData | null;
@@ -266,10 +275,15 @@ export default function BrokerScan() {
   };
 
   const progress = scan ? (scan.scanned_count / scan.total_brokers) * 100 : 0;
-  const foundResults = results.filter(r => r.status === 'found');
-  const cleanResults = results.filter(r => r.status === 'clean');
+  // Use v2 statuses for filtering
+  const foundResults = results.filter(r => r.status_v2 === 'found' || r.status_v2 === 'possible_match' || r.status === 'found');
+  const cleanResults = results.filter(r => r.status_v2 === 'not_found' || r.status === 'clean');
   const optedOutResults = results.filter(r => r.status === 'opted_out');
-  const unknownResults = results.filter(r => r.status === 'error');
+  const unknownResults = results.filter(r => 
+    r.status_v2 === 'blocked' || r.status_v2 === 'rate_limited' || r.status_v2 === 'provider_error' ||
+    r.status_v2 === 'timeout' || r.status_v2 === 'parse_failed' || r.status_v2 === 'request_failed' ||
+    r.status_v2 === 'unknown' || (!r.status_v2 && r.status === 'error')
+  );
 
   if (loading) {
     return (
@@ -445,6 +459,15 @@ export default function BrokerScan() {
                         key={result.id}
                         broker={result.broker}
                         status={result.status}
+                        status_v2={result.status_v2 as any}
+                        error_code={result.error_code}
+                        http_status={result.http_status}
+                        error_detail={result.error_detail}
+                        detection_method={result.detection_method as any}
+                        confidence={result.confidence}
+                        confidence_breakdown={result.confidence_breakdown}
+                        evidence_snippet={result.evidence_snippet}
+                        evidence_url={result.evidence_url}
                         profileUrl={result.profile_url}
                         matchConfidence={result.match_confidence}
                         extractedData={result.extracted_data}
@@ -466,6 +489,8 @@ export default function BrokerScan() {
                         key={result.id}
                         broker={result.broker}
                         status={result.status}
+                        status_v2={result.status_v2 as any}
+                        detection_method={result.detection_method as any}
                         onOptOut={handleOptOut}
                       />
                     ))}
@@ -486,6 +511,11 @@ export default function BrokerScan() {
                         key={result.id}
                         broker={result.broker}
                         status={result.status}
+                        status_v2={result.status_v2 as any}
+                        error_code={result.error_code}
+                        http_status={result.http_status}
+                        error_detail={result.error_detail}
+                        detection_method={result.detection_method as any}
                         profileUrl={result.profile_url}
                         onOptOut={handleOptOut}
                         onMarkFound={handleMarkFound}
