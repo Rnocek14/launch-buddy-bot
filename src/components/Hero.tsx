@@ -1,8 +1,26 @@
+import { useEffect, useState } from "react";
 import { Shield, Zap, Target, Sparkles } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "./ui/button";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Hero = () => {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setIsLoggedIn(!!session);
+    };
+    checkAuth();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
+      setIsLoggedIn(!!session);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
   return (
     <section className="relative min-h-screen flex items-center justify-center px-4 py-20 overflow-hidden">
       {/* Gradient background */}
@@ -46,9 +64,15 @@ export const Hero = () => {
           </Link>
         </div>
         <div className="flex flex-wrap justify-center gap-4 mb-12">
-          <Link to="/auth" className="text-sm text-primary hover:underline">
-            Sign up for full scan →
-          </Link>
+          {isLoggedIn ? (
+            <Link to="/dashboard" className="text-sm text-primary hover:underline">
+              Go to Dashboard →
+            </Link>
+          ) : (
+            <Link to="/auth" className="text-sm text-primary hover:underline">
+              Sign up for full scan →
+            </Link>
+          )}
           <span className="text-muted-foreground">|</span>
           <Link to="/enterprise" className="text-sm text-muted-foreground hover:text-primary">
             Enterprise solutions →
