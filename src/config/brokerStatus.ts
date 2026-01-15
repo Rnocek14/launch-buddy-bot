@@ -23,6 +23,7 @@ export const ERROR_CODE = [
   "timeout",
   "parse_failed",
   "request_failed",
+  "budget_exhausted",
 ] as const;
 
 export type ErrorCode = (typeof ERROR_CODE)[number];
@@ -47,7 +48,18 @@ export const statusLabel: Record<StatusV2, string> = {
   timeout: "Timeout",
   parse_failed: "Parse failed",
   request_failed: "Request failed",
-  unknown: "Unknown",
+  unknown: "Needs manual check",
+};
+
+// Detailed error messages for specific error codes
+export const errorCodeLabel: Record<ErrorCode, string> = {
+  blocked: "Site blocked our request",
+  rate_limited: "Too many requests - try again later",
+  provider_error: "Scan service temporarily unavailable",
+  timeout: "Request timed out",
+  parse_failed: "Could not read site response",
+  request_failed: "Network error occurred",
+  budget_exhausted: "Daily search limit reached",
 };
 
 export const statusTone: Record<StatusV2, "good" | "warn" | "bad" | "neutral"> = {
