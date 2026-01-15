@@ -127,8 +127,7 @@ export default function BrokerScan() {
       .from('subscriptions')
       .select('tier, status')
       .eq('user_id', session.user.id)
-      .eq('status', 'active')
-      .single();
+      .maybeSingle();
 
     const tier = subscription?.tier || 'free';
     setCurrentTier(tier as 'free' | 'pro' | 'complete');

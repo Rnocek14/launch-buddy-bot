@@ -39,8 +39,7 @@ export function BrokerScanCard() {
       .from('subscriptions')
       .select('tier, status')
       .eq('user_id', session.user.id)
-      .eq('status', 'active')
-      .single();
+      .maybeSingle();
 
     setIsComplete(subscription?.tier === 'complete');
 
