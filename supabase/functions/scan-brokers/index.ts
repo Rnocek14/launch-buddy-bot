@@ -7,7 +7,7 @@ const corsHeaders = {
 
 // Status V2 taxonomy
 type StatusV2 = 'found' | 'possible_match' | 'not_found' | 'blocked' | 'rate_limited' | 'provider_error' | 'timeout' | 'parse_failed' | 'request_failed' | 'unknown';
-type ErrorCode = 'blocked' | 'rate_limited' | 'provider_error' | 'timeout' | 'parse_failed' | 'request_failed' | 'budget_exhausted';
+type ErrorCode = 'blocked' | 'rate_limited' | 'provider_error' | 'timeout' | 'parse_failed' | 'request_failed' | 'budget_exhausted' | 'budget_check_failed';
 type DetectionMethod = 'direct' | 'browserless' | 'serp' | 'manual';
 
 // Budget governor: check and consume SERP quota
@@ -37,18 +37,14 @@ async function logSerpRequest(
   resultCount?: number
 ): Promise<void> {
   try {
-    // Generate response hash for deduplication analysis
-    const responseHash = resultCount !== undefined 
-      ? `results:${resultCount}` 
-      : null;
-    
     await supabaseClient.from('serp_requests_log').insert({
       user_id: userId,
       broker_slug: brokerSlug,
       query,
       status,
       error_detail: errorDetail || null,
-      response_hash: responseHash,
+      result_count: resultCount ?? null,
+      response_hash: null, // Reserved for future content-based hash
     });
   } catch (e) {
     console.error('Failed to log SERP request:', e);
@@ -421,8 +417,9 @@ async function serpDiscovery(
     const budgetCheck = await checkSerpBudget(supabaseClient);
     
     if (!budgetCheck.allowed) {
-      // Distinguish user-facing messages: budget exhausted vs RPC system failure
+      // Distinguish error codes: RPC failure vs actual budget exhaustion
       const isRpcFailure = !!budgetCheck.rpcError;
+      const errorCode = isRpcFailure ? 'budget_check_failed' : 'budget_exhausted';
       const logReason = isRpcFailure 
         ? `Budget check failed: ${budgetCheck.rpcError}` 
         : 'Daily SERP budget exhausted';
@@ -433,19 +430,19 @@ async function serpDiscovery(
       console.log(`SERP budget blocked for ${slug}: ${logReason}`);
       await logSerpRequest(supabaseClient, userId, slug, query, 'skipped_budget', logReason);
       
-      // If we have a partial result, use it; otherwise return budget_exhausted
+      // If we have a partial result, use it; otherwise return appropriate error
       const currentBest = bestResult as BestResultType | null;
       if (currentBest && currentBest.score.total >= CONFIDENCE_THRESHOLDS.POSSIBLE_MATCH) {
         // We have a usable partial result, break out of loop to return it
         break;
       }
       
-      // No usable result - return budget exhausted error
+      // No usable result - return with appropriate error code
       return {
         brokerId: null,
         slug,
         status_v2: 'unknown' as StatusV2,
-        error_code: 'budget_exhausted' as ErrorCode,
+        error_code: errorCode as ErrorCode,
         http_status: null,
         error_detail: userMessage,
         detection_method: 'serp' as DetectionMethod,

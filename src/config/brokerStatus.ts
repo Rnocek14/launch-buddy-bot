@@ -24,6 +24,7 @@ export const ERROR_CODE = [
   "parse_failed",
   "request_failed",
   "budget_exhausted",
+  "budget_check_failed",
 ] as const;
 
 export type ErrorCode = (typeof ERROR_CODE)[number];
@@ -60,6 +61,7 @@ export const errorCodeLabel: Record<ErrorCode, string> = {
   parse_failed: "Could not read site response",
   request_failed: "Network error occurred",
   budget_exhausted: "Daily search limit reached",
+  budget_check_failed: "Budget system error",
 };
 
 export const statusTone: Record<StatusV2, "good" | "warn" | "bad" | "neutral"> = {
