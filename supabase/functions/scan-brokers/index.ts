@@ -298,8 +298,14 @@ async function serpDiscovery(
     const results = await serpSearch(query, apiKey);
     
     for (const result of results) {
-      // Ensure the result is actually from this broker's domain
-      if (!result.link.toLowerCase().includes(brokerDomain.toLowerCase())) {
+      // Ensure the result is actually from this broker's domain (stronger check)
+      try {
+        const host = new URL(result.link).hostname.toLowerCase();
+        if (!host.endsWith(brokerDomain.toLowerCase()) && !host.includes(brokerDomain.toLowerCase())) {
+          continue;
+        }
+      } catch {
+        // URL parse failed, skip this result
         continue;
       }
       
@@ -456,13 +462,14 @@ async function fetchDirect(url: string, timeout: number = 10000): Promise<{ html
   }
 }
 
-// Strip script/style tags for safe extraction
+// Strip script/style tags for safe extraction (robust regex)
 function stripScriptStyle(html: string): string {
   return html
-    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, ' ')
-    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, ' ')
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/\s+/g, ' ')
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, " ")
+    .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, " ")
+    .replace(/<noscript\b[^<]*(?:(?!<\/noscript>)<[^<]*)*<\/noscript>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
     .trim();
 }
 
@@ -611,9 +618,12 @@ async function scanBrokerV2(
   // Try Browserless first
   const browserlessResult = await fetchWithBrowserless(searchUrl);
   
+  let directMethod: DetectionMethod = 'direct';
+  
   if (browserlessResult.html && browserlessResult.status === 200) {
     // Successfully got HTML via Browserless
-    const parseResult = analyzeHtml(browserlessResult.html, pattern, profile, searchUrl, 'browserless');
+    directMethod = 'browserless';
+    const parseResult = analyzeHtml(slug, browserlessResult.html, pattern, profile, searchUrl, 'browserless');
     if (parseResult.status_v2 === 'found' || parseResult.status_v2 === 'not_found') {
       return parseResult;
     }
@@ -627,6 +637,7 @@ async function scanBrokerV2(
     };
   } else if (browserlessResult.status === 429 || browserlessResult.status === 400 || browserlessResult.status >= 500) {
     // Browserless provider error
+    directMethod = 'browserless';
     directFailed = true;
     const { status_v2, error_code } = classifyHttpFailure(browserlessResult.status, 'browserless');
     directError = { status_v2, error_code, http_status: browserlessResult.status, error_detail: browserlessResult.error || '' };
@@ -637,7 +648,8 @@ async function scanBrokerV2(
     const directResult = await fetchDirect(searchUrl);
     
     if (directResult.html && directResult.status === 200) {
-      const parseResult = analyzeHtml(directResult.html, pattern, profile, searchUrl, 'direct');
+      directMethod = 'direct';
+      const parseResult = analyzeHtml(slug, directResult.html, pattern, profile, searchUrl, 'direct');
       if (parseResult.status_v2 === 'found' || parseResult.status_v2 === 'not_found') {
         return parseResult;
       }
@@ -660,8 +672,12 @@ async function scanBrokerV2(
     console.log(`${slug}: Direct failed (${directError?.error_code}), trying SERP fallback`);
     const serpResult = await serpDiscovery(slug, pattern.domain, profile, serpApiKey);
     
-    // SERP result overrides direct failure (but we note what happened)
+    // SERP result overrides direct failure (but we note what happened in error_detail)
     if (serpResult.status_v2 === 'found' || serpResult.status_v2 === 'possible_match' || serpResult.status_v2 === 'not_found') {
+      // Preserve note about original failure
+      if (directError) {
+        serpResult.error_detail = `Direct ${directError.error_code} (HTTP ${directError.http_status}); SERP used instead`;
+      }
       return serpResult;
     }
   }
@@ -675,7 +691,7 @@ async function scanBrokerV2(
       error_code: directError.error_code,
       http_status: directError.http_status,
       error_detail: directError.error_detail,
-      detection_method: 'direct',
+      detection_method: directMethod,
       confidence: null,
       confidence_breakdown: null,
       evidence_snippet: null,
@@ -705,6 +721,7 @@ async function scanBrokerV2(
 
 // Analyze HTML and determine result
 function analyzeHtml(
+  slug: string,
   html: string,
   pattern: typeof brokerPatterns[string],
   profile: UserProfile,
@@ -733,7 +750,7 @@ function analyzeHtml(
   if (hasNoResults && !hasResults) {
     return {
       brokerId: '',
-      slug: '',
+      slug,
       status_v2: 'not_found',
       error_code: null,
       http_status: 200,
@@ -793,7 +810,7 @@ function analyzeHtml(
     
     return {
       brokerId: '',
-      slug: '',
+      slug,
       status_v2,
       error_code: null,
       http_status: 200,
@@ -811,7 +828,7 @@ function analyzeHtml(
   // Inconclusive
   return {
     brokerId: '',
-    slug: '',
+    slug,
     status_v2: 'parse_failed',
     error_code: 'parse_failed',
     http_status: 200,
@@ -1016,7 +1033,7 @@ Deno.serve(async (req) => {
           .upsert({
             user_id: userId,
             broker_id: broker.id,
-            status: result.status_v2 === 'found' ? 'found' : result.status_v2 === 'not_found' ? 'clean' : 'error', // Legacy field
+            status: (result.status_v2 === 'found' || result.status_v2 === 'possible_match') ? 'found' : result.status_v2 === 'not_found' ? 'clean' : 'error', // Legacy field
             status_v2: result.status_v2,
             error_code: result.error_code,
             http_status: result.http_status,
