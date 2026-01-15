@@ -11,17 +11,18 @@ type ErrorCode = 'blocked' | 'rate_limited' | 'provider_error' | 'timeout' | 'pa
 type DetectionMethod = 'direct' | 'browserless' | 'serp' | 'manual';
 
 // Budget governor: check and consume SERP quota
-async function checkSerpBudget(supabaseClient: any): Promise<boolean> {
+// Returns { allowed: boolean, rpcError?: string } so caller can distinguish budget exhausted vs RPC failure
+async function checkSerpBudget(supabaseClient: any): Promise<{ allowed: boolean; rpcError?: string }> {
   try {
     const { data, error } = await supabaseClient.rpc('consume_serp_quota', { p_count: 1 });
     if (error) {
       console.error('Budget check error:', error);
-      return false; // Fail closed - don't allow SERP if we can't verify budget
+      return { allowed: false, rpcError: `RPC error: ${error.message}` }; // Fail closed
     }
-    return data === true;
+    return { allowed: data === true };
   } catch (e) {
     console.error('Budget check exception:', e);
-    return false;
+    return { allowed: false, rpcError: `Exception: ${e instanceof Error ? e.message : String(e)}` };
   }
 }
 
@@ -32,15 +33,22 @@ async function logSerpRequest(
   brokerSlug: string,
   query: string,
   status: 'ok' | 'error' | 'skipped_budget' | 'cached',
-  errorDetail?: string
+  errorDetail?: string,
+  resultCount?: number
 ): Promise<void> {
   try {
+    // Generate response hash for deduplication analysis
+    const responseHash = resultCount !== undefined 
+      ? `results:${resultCount}` 
+      : null;
+    
     await supabaseClient.from('serp_requests_log').insert({
       user_id: userId,
       broker_slug: brokerSlug,
       query,
       status,
       error_detail: errorDetail || null,
+      response_hash: responseHash,
     });
   } catch (e) {
     console.error('Failed to log SERP request:', e);
@@ -393,7 +401,9 @@ async function serpSearch(query: string, apiKey: string): Promise<Array<{ title:
 }
 
 // Helper: SERP discovery for a broker with budget governance
+// brokerId is passed through so callers don't get empty string
 async function serpDiscovery(
+  brokerId: string,
   slug: string,
   brokerDomain: string,
   user: UserProfile,
@@ -409,13 +419,18 @@ async function serpDiscovery(
   
   for (const query of queries) {
     // Check budget before each SERP call
-    const budgetOk = await checkSerpBudget(supabaseClient);
-    if (!budgetOk) {
-      console.log(`SERP budget exhausted for ${slug}`);
-      await logSerpRequest(supabaseClient, userId, slug, query, 'skipped_budget', 'Daily SERP budget exhausted');
+    const budgetCheck = await checkSerpBudget(supabaseClient);
+    
+    if (!budgetCheck.allowed) {
+      // Distinguish between budget exhausted vs RPC failure
+      const reason = budgetCheck.rpcError 
+        ? `Budget check failed: ${budgetCheck.rpcError}` 
+        : 'Daily SERP budget exhausted';
+      
+      console.log(`SERP budget blocked for ${slug}: ${reason}`);
+      await logSerpRequest(supabaseClient, userId, slug, query, 'skipped_budget', reason);
       
       // If we have a partial result, use it; otherwise return budget_exhausted
-      // Use explicit cast to avoid TypeScript control flow narrowing issue
       const currentBest = bestResult as BestResultType | null;
       if (currentBest && currentBest.score.total >= CONFIDENCE_THRESHOLDS.POSSIBLE_MATCH) {
         // We have a usable partial result, break out of loop to return it
@@ -424,12 +439,14 @@ async function serpDiscovery(
       
       // No usable result - return budget exhausted error
       return {
-        brokerId: '',
+        brokerId,
         slug,
         status_v2: 'unknown' as StatusV2,
         error_code: 'budget_exhausted' as ErrorCode,
         http_status: null,
-        error_detail: 'Daily SERP search limit reached; manual check recommended',
+        error_detail: budgetCheck.rpcError 
+          ? `Budget check failed; manual check recommended. ${budgetCheck.rpcError}`
+          : 'Daily SERP search limit reached; manual check recommended',
         detection_method: 'serp' as DetectionMethod,
         confidence: null,
         confidence_breakdown: null,
@@ -446,8 +463,8 @@ async function serpDiscovery(
     const results = await serpSearch(query, apiKey);
     totalQueriesUsed++;
     
-    // Log successful SERP request
-    await logSerpRequest(supabaseClient, userId, slug, query, 'ok');
+    // Log SERP request with result count for analytics
+    await logSerpRequest(supabaseClient, userId, slug, query, 'ok', undefined, results.length);
     
     for (const result of results) {
       // Ensure the result is actually from this broker's domain (stronger check)
@@ -480,7 +497,7 @@ async function serpDiscovery(
 
   if (bestResult && bestResult.score.total >= CONFIDENCE_THRESHOLDS.POSSIBLE_MATCH) {
     return {
-      brokerId: '',
+      brokerId,
       slug,
       status_v2: bestResult.score.status_v2,
       error_code: null,
@@ -500,7 +517,7 @@ async function serpDiscovery(
 
   // No matches found via SERP
   return {
-    brokerId: '',
+    brokerId,
     slug,
     status_v2: 'not_found',
     error_code: null,
@@ -831,7 +848,7 @@ async function scanBrokerV2(
   // Direct/Browserless failed - try SERP fallback
   if (directFailed && serpApiKey) {
     console.log(`${slug}: Direct failed (${directError?.error_code}), trying SERP fallback`);
-    const serpResult = await serpDiscovery(slug, pattern.domain, profile, serpApiKey, supabaseClient, userId);
+    const serpResult = await serpDiscovery('', slug, pattern.domain, profile, serpApiKey, supabaseClient, userId);
     
     // SERP result overrides direct failure (but we note what happened in error_detail)
     if (serpResult.status_v2 === 'found' || serpResult.status_v2 === 'possible_match' || serpResult.status_v2 === 'not_found') {
