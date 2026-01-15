@@ -1,8 +1,18 @@
-import { ExternalLink, Shield, ShieldAlert, ShieldCheck, Clock, AlertCircle, CheckCircle2 } from "lucide-react";
+import { ExternalLink, Shield, ShieldAlert, ShieldCheck, Clock, AlertCircle, CheckCircle2, Eye, MapPin, Phone } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { statusColors, difficultyColors } from "@/config/brokers";
+
+interface ExtractedData {
+  name?: string;
+  age?: string;
+  addresses?: string[];
+  phone_numbers?: string[];
+  emails?: string[];
+  relatives?: string[];
+  raw_snippet?: string;
+}
 
 interface Broker {
   id: string;
@@ -23,7 +33,10 @@ interface BrokerResultCardProps {
   status: 'pending' | 'scanning' | 'found' | 'clean' | 'error' | 'opted_out';
   profileUrl?: string;
   matchConfidence?: number;
+  extractedData?: ExtractedData | null;
   onOptOut: (broker: Broker) => void;
+  onViewDetails?: (broker: Broker) => void;
+  onMarkFound?: (broker: Broker) => void;
 }
 
 export function BrokerResultCard({
@@ -31,7 +44,10 @@ export function BrokerResultCard({
   status,
   profileUrl,
   matchConfidence,
+  extractedData,
   onOptOut,
+  onViewDetails,
+  onMarkFound,
 }: BrokerResultCardProps) {
   const statusConfig = statusColors[status] || statusColors.pending;
   const difficultyConfig = difficultyColors[broker.opt_out_difficulty] || difficultyColors.easy;
@@ -70,14 +86,25 @@ export function BrokerResultCard({
     }
   };
 
-  const getStatusDescription = () => {
-    switch (status) {
-      case 'error':
-        return 'Could not access - check manually';
-      default:
-        return null;
+  // Generate a preview of extracted data
+  const getDataPreview = () => {
+    if (!extractedData) return null;
+    
+    const parts: string[] = [];
+    if (extractedData.addresses?.length) {
+      parts.push(`${extractedData.addresses.length} address${extractedData.addresses.length > 1 ? 'es' : ''}`);
     }
+    if (extractedData.phone_numbers?.length) {
+      parts.push(`${extractedData.phone_numbers.length} phone${extractedData.phone_numbers.length > 1 ? 's' : ''}`);
+    }
+    if (extractedData.relatives?.length) {
+      parts.push(`${extractedData.relatives.length} relative${extractedData.relatives.length > 1 ? 's' : ''}`);
+    }
+    
+    return parts.length > 0 ? parts.join(', ') + ' found' : null;
   };
+
+  const dataPreview = getDataPreview();
 
   return (
     <Card className={`border ${status === 'found' ? 'border-destructive/50 bg-destructive/5' : ''}`}>
@@ -103,6 +130,14 @@ export function BrokerResultCard({
                   Match confidence: {Math.round(matchConfidence * 100)}%
                 </p>
               )}
+
+              {/* Data Preview */}
+              {status === 'found' && dataPreview && (
+                <div className="flex items-center gap-1 text-xs text-destructive mt-1">
+                  <MapPin className="h-3 w-3" />
+                  <span>{dataPreview}</span>
+                </div>
+              )}
               
               {status === 'found' && (
                 <div className="flex items-center gap-2 mt-2">
@@ -120,13 +155,29 @@ export function BrokerResultCard({
                   )}
                 </div>
               )}
+
+              {status === 'error' && (
+                <p className="text-xs text-orange-600 mt-1">
+                  Could not access - check manually
+                </p>
+              )}
             </div>
           </div>
 
           <div className="flex flex-col gap-2">
             {status === 'found' && (
               <>
-                {profileUrl && (
+                {onViewDetails && (
+                  <Button 
+                    variant="default" 
+                    size="sm"
+                    onClick={() => onViewDetails(broker)}
+                  >
+                    <Eye className="h-3 w-3 mr-1" />
+                    View Details
+                  </Button>
+                )}
+                {!onViewDetails && profileUrl && (
                   <Button variant="outline" size="sm" asChild>
                     <a href={profileUrl} target="_blank" rel="noopener noreferrer">
                       View Profile
@@ -135,7 +186,7 @@ export function BrokerResultCard({
                   </Button>
                 )}
                 <Button 
-                  variant="default" 
+                  variant="outline" 
                   size="sm"
                   onClick={() => onOptOut(broker)}
                 >
@@ -145,12 +196,24 @@ export function BrokerResultCard({
             )}
             
             {status === 'error' && (
-              <Button variant="outline" size="sm" asChild>
-                <a href={profileUrl || broker.website} target="_blank" rel="noopener noreferrer">
-                  Check Manually
-                  <ExternalLink className="h-3 w-3 ml-1" />
-                </a>
-              </Button>
+              <div className="flex flex-col gap-2">
+                <Button variant="outline" size="sm" asChild>
+                  <a href={profileUrl || broker.website} target="_blank" rel="noopener noreferrer">
+                    Check Manually
+                    <ExternalLink className="h-3 w-3 ml-1" />
+                  </a>
+                </Button>
+                {onMarkFound && (
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => onMarkFound(broker)}
+                    className="text-xs"
+                  >
+                    I found my data
+                  </Button>
+                )}
+              </div>
             )}
             
             {status === 'opted_out' && (

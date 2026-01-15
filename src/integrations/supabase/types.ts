@@ -83,6 +83,7 @@ export type Database = {
           created_at: string
           error_message: string | null
           expires_at: string | null
+          extracted_data: Json | null
           id: string
           match_confidence: number | null
           opted_out_at: string | null
@@ -98,6 +99,7 @@ export type Database = {
           created_at?: string
           error_message?: string | null
           expires_at?: string | null
+          extracted_data?: Json | null
           id?: string
           match_confidence?: number | null
           opted_out_at?: string | null
@@ -113,6 +115,7 @@ export type Database = {
           created_at?: string
           error_message?: string | null
           expires_at?: string | null
+          extracted_data?: Json | null
           id?: string
           match_confidence?: number | null
           opted_out_at?: string | null
