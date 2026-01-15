@@ -172,6 +172,11 @@ interface ScanResultV2 {
   scoring_version: string;
 }
 
+// Helper: ensure every return includes audit fields
+function baseAuditFields(): Pick<ScanResultV2, 'scoring_version' | 'evidence_query'> {
+  return { scoring_version: SCORING_VERSION, evidence_query: null };
+}
+
 // Helper: classify HTTP failure
 function classifyHttpFailure(httpStatus: number | null, provider: 'browserless' | 'direct'): { status_v2: StatusV2; error_code: ErrorCode } {
   if (httpStatus === 403) return { status_v2: 'blocked', error_code: 'blocked' };
@@ -1214,6 +1219,8 @@ Deno.serve(async (req) => {
           confidence_breakdown,
           evidence_snippet,
           evidence_url,
+          evidence_query,
+          scoring_version,
           profile_url,
           match_confidence,
           extracted_data,

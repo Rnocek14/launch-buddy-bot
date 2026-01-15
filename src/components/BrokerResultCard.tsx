@@ -50,6 +50,7 @@ interface BrokerResultCardProps {
   confidence_breakdown?: Record<string, number> | null;
   evidence_snippet?: string | null;
   evidence_url?: string | null;
+  evidence_query?: string | null;
   scoring_version?: string | null;
   profileUrl?: string;
   matchConfidence?: number;
@@ -71,6 +72,7 @@ export function BrokerResultCard({
   confidence_breakdown,
   evidence_snippet,
   evidence_url,
+  evidence_query,
   scoring_version,
   profileUrl,
   matchConfidence,
@@ -269,6 +271,11 @@ export function BrokerResultCard({
                         )}
                         {scoring_version && (
                           <div className="text-muted-foreground/50 mt-1">Model: {scoring_version}</div>
+                        )}
+                        {evidence_query && (
+                          <div className="text-muted-foreground/50 truncate max-w-xs" title={evidence_query}>
+                            Query: {evidence_query}
+                          </div>
                         )}
                       </div>
                     </CollapsibleContent>
