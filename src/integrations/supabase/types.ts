@@ -80,10 +80,18 @@ export type Database = {
       broker_scan_results: {
         Row: {
           broker_id: string
+          confidence: number | null
+          confidence_breakdown: Json | null
           created_at: string
+          detection_method: string
+          error_code: string | null
+          error_detail: string | null
           error_message: string | null
+          evidence_snippet: string | null
+          evidence_url: string | null
           expires_at: string | null
           extracted_data: Json | null
+          http_status: number | null
           id: string
           match_confidence: number | null
           opted_out_at: string | null
@@ -91,15 +99,24 @@ export type Database = {
           scanned_at: string | null
           screenshot_url: string | null
           status: string
+          status_v2: string
           updated_at: string
           user_id: string
         }
         Insert: {
           broker_id: string
+          confidence?: number | null
+          confidence_breakdown?: Json | null
           created_at?: string
+          detection_method?: string
+          error_code?: string | null
+          error_detail?: string | null
           error_message?: string | null
+          evidence_snippet?: string | null
+          evidence_url?: string | null
           expires_at?: string | null
           extracted_data?: Json | null
+          http_status?: number | null
           id?: string
           match_confidence?: number | null
           opted_out_at?: string | null
@@ -107,15 +124,24 @@ export type Database = {
           scanned_at?: string | null
           screenshot_url?: string | null
           status?: string
+          status_v2?: string
           updated_at?: string
           user_id: string
         }
         Update: {
           broker_id?: string
+          confidence?: number | null
+          confidence_breakdown?: Json | null
           created_at?: string
+          detection_method?: string
+          error_code?: string | null
+          error_detail?: string | null
           error_message?: string | null
+          evidence_snippet?: string | null
+          evidence_url?: string | null
           expires_at?: string | null
           extracted_data?: Json | null
+          http_status?: number | null
           id?: string
           match_confidence?: number | null
           opted_out_at?: string | null
@@ -123,6 +149,7 @@ export type Database = {
           scanned_at?: string | null
           screenshot_url?: string | null
           status?: string
+          status_v2?: string
           updated_at?: string
           user_id?: string
         }
