@@ -51,6 +51,81 @@ async function logSerpRequest(
   }
 }
 
+// Cache TTL: 7 days
+const CACHE_TTL_DAYS = 7;
+
+// Helper: generate cache key from query
+function generateCacheKey(query: string): string {
+  // Simple hash using query string - fast and deterministic
+  let hash = 0;
+  for (let i = 0; i < query.length; i++) {
+    const chr = query.charCodeAt(i);
+    hash = ((hash << 5) - hash) + chr;
+    hash |= 0; // Convert to 32bit integer
+  }
+  return `serp_${Math.abs(hash).toString(36)}_${query.length}`;
+}
+
+// Helper: check cache for SERP results
+async function checkSerpCache(
+  supabaseClient: any,
+  query: string
+): Promise<{ hit: boolean; results?: Array<{ title: string; snippet: string; link: string }> }> {
+  try {
+    const cacheKey = generateCacheKey(query);
+    const { data, error } = await supabaseClient
+      .from('serp_cache')
+      .select('results, expires_at')
+      .eq('cache_key', cacheKey)
+      .single();
+    
+    if (error || !data) {
+      return { hit: false };
+    }
+    
+    // Check if expired
+    if (new Date(data.expires_at) < new Date()) {
+      console.log(`Cache expired for query: ${query.substring(0, 50)}...`);
+      return { hit: false };
+    }
+    
+    return { hit: true, results: data.results as Array<{ title: string; snippet: string; link: string }> };
+  } catch (e) {
+    console.error('Cache check error:', e);
+    return { hit: false };
+  }
+}
+
+// Helper: store SERP results in cache
+async function storeSerpCache(
+  supabaseClient: any,
+  brokerSlug: string,
+  query: string,
+  results: Array<{ title: string; snippet: string; link: string }>
+): Promise<void> {
+  try {
+    const cacheKey = generateCacheKey(query);
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + CACHE_TTL_DAYS);
+    
+    await supabaseClient
+      .from('serp_cache')
+      .upsert({
+        cache_key: cacheKey,
+        broker_slug: brokerSlug,
+        query,
+        results,
+        result_count: results.length,
+        expires_at: expiresAt.toISOString(),
+      }, {
+        onConflict: 'cache_key',
+      });
+  } catch (e) {
+    console.error('Cache store error:', e);
+    // Non-fatal - continue without caching
+  }
+}
+
 const CONFIDENCE_THRESHOLDS = {
   FOUND: 0.75,
   POSSIBLE_MATCH: 0.55,
@@ -413,7 +488,43 @@ async function serpDiscovery(
   let totalQueriesUsed = 0;
   
   for (const query of queries) {
-    // Check budget before each SERP call
+    // First, check cache (no budget consumption for cache hits)
+    const cacheResult = await checkSerpCache(supabaseClient, query);
+    
+    if (cacheResult.hit && cacheResult.results) {
+      console.log(`Cache HIT for ${slug}: ${query.substring(0, 40)}...`);
+      
+      // Log as cached (no budget consumed, no result_count since we didn't call API)
+      await logSerpRequest(supabaseClient, userId, slug, query, 'cached', undefined, cacheResult.results.length);
+      
+      // Score cached results
+      for (const result of cacheResult.results) {
+        try {
+          const host = new URL(result.link).hostname.toLowerCase();
+          if (!host.endsWith(brokerDomain.toLowerCase()) && !host.includes(brokerDomain.toLowerCase())) {
+            continue;
+          }
+        } catch {
+          continue;
+        }
+        
+        const score = scoreSerpResult({ title: result.title, snippet: result.snippet, url: result.link, user });
+        
+        if (!bestResult || score.total > bestResult.score.total) {
+          bestResult = { score, result, query };
+        }
+      }
+      
+      // If we found a strong match from cache, stop early
+      if (bestResult && bestResult.score.total >= CONFIDENCE_THRESHOLDS.FOUND) {
+        console.log(`${slug}: Strong SERP match found in cache, stopping early`);
+        break;
+      }
+      
+      continue; // Move to next query without consuming budget
+    }
+    
+    // Cache miss - check budget before SERP call
     const budgetCheck = await checkSerpBudget(supabaseClient);
     
     if (!budgetCheck.allowed) {
@@ -458,8 +569,13 @@ async function serpDiscovery(
       };
     }
     
+    // Cache miss + budget available - call SERP API
+    console.log(`Cache MISS for ${slug}: ${query.substring(0, 40)}... - calling SERP API`);
     const results = await serpSearch(query, apiKey);
     totalQueriesUsed++;
+    
+    // Store in cache for future use
+    await storeSerpCache(supabaseClient, slug, query, results);
     
     // Log SERP request with result count for analytics
     await logSerpRequest(supabaseClient, userId, slug, query, 'ok', undefined, results.length);
