@@ -87,6 +87,7 @@ export type Database = {
           error_code: string | null
           error_detail: string | null
           error_message: string | null
+          evidence_query: string | null
           evidence_snippet: string | null
           evidence_url: string | null
           expires_at: string | null
@@ -97,6 +98,7 @@ export type Database = {
           opted_out_at: string | null
           profile_url: string | null
           scanned_at: string | null
+          scoring_version: string | null
           screenshot_url: string | null
           status: string
           status_v2: string
@@ -112,6 +114,7 @@ export type Database = {
           error_code?: string | null
           error_detail?: string | null
           error_message?: string | null
+          evidence_query?: string | null
           evidence_snippet?: string | null
           evidence_url?: string | null
           expires_at?: string | null
@@ -122,6 +125,7 @@ export type Database = {
           opted_out_at?: string | null
           profile_url?: string | null
           scanned_at?: string | null
+          scoring_version?: string | null
           screenshot_url?: string | null
           status?: string
           status_v2?: string
@@ -137,6 +141,7 @@ export type Database = {
           error_code?: string | null
           error_detail?: string | null
           error_message?: string | null
+          evidence_query?: string | null
           evidence_snippet?: string | null
           evidence_url?: string | null
           expires_at?: string | null
@@ -147,6 +152,7 @@ export type Database = {
           opted_out_at?: string | null
           profile_url?: string | null
           scanned_at?: string | null
+          scoring_version?: string | null
           screenshot_url?: string | null
           status?: string
           status_v2?: string

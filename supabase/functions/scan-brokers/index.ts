@@ -151,6 +151,9 @@ interface UserProfile {
   state: string;
 }
 
+// Scoring version for audit trail - increment when changing thresholds/logic
+const SCORING_VERSION = 'serp_v2.1';
+
 interface ScanResultV2 {
   brokerId: string;
   slug: string;
@@ -165,6 +168,8 @@ interface ScanResultV2 {
   evidence_url: string | null;
   profile_url: string | null;
   extracted_data: Record<string, any> | null;
+  evidence_query: string | null;
+  scoring_version: string;
 }
 
 // Helper: classify HTTP failure
@@ -354,7 +359,7 @@ async function serpDiscovery(
 ): Promise<ScanResultV2> {
   const queries = buildSerpQueries(user, brokerDomain);
   
-  let bestResult: { score: ReturnType<typeof scoreSerpResult>; result: { title: string; snippet: string; link: string } } | null = null;
+  let bestResult: { score: ReturnType<typeof scoreSerpResult>; result: { title: string; snippet: string; link: string }; query: string } | null = null;
   
   for (const query of queries) {
     const results = await serpSearch(query, apiKey);
@@ -374,7 +379,7 @@ async function serpDiscovery(
       const score = scoreSerpResult({ title: result.title, snippet: result.snippet, url: result.link, user });
       
       if (!bestResult || score.total > bestResult.score.total) {
-        bestResult = { score, result };
+        bestResult = { score, result, query };
       }
     }
     
@@ -402,6 +407,8 @@ async function serpDiscovery(
       evidence_url: bestResult.result.link,
       profile_url: bestResult.result.link,
       extracted_data: null,
+      evidence_query: bestResult.query,
+      scoring_version: SCORING_VERSION,
     };
   }
 
@@ -420,6 +427,8 @@ async function serpDiscovery(
     evidence_url: null,
     profile_url: null,
     extracted_data: null,
+    evidence_query: null,
+    scoring_version: SCORING_VERSION,
   };
 }
 
@@ -668,6 +677,8 @@ async function scanBrokerV2(
       evidence_url: null,
       profile_url: null,
       extracted_data: null,
+      evidence_query: null,
+      scoring_version: SCORING_VERSION,
     };
   }
 
@@ -760,6 +771,8 @@ async function scanBrokerV2(
       evidence_url: null,
       profile_url: searchUrl,
       extracted_data: null,
+      evidence_query: null,
+      scoring_version: SCORING_VERSION,
     };
   }
 
@@ -778,6 +791,8 @@ async function scanBrokerV2(
     evidence_url: null,
     profile_url: searchUrl,
     extracted_data: null,
+    evidence_query: null,
+    scoring_version: SCORING_VERSION,
   };
 }
 
@@ -824,6 +839,8 @@ function analyzeHtml(
       evidence_url: null,
       profile_url: null,
       extracted_data: null,
+      evidence_query: null,
+      scoring_version: SCORING_VERSION,
     };
   }
 
@@ -884,6 +901,8 @@ function analyzeHtml(
       evidence_url: searchUrl,
       profile_url: searchUrl,
       extracted_data: extractedData,
+      evidence_query: null,
+      scoring_version: SCORING_VERSION,
     };
   }
 
@@ -902,6 +921,8 @@ function analyzeHtml(
     evidence_url: null,
     profile_url: searchUrl,
     extracted_data: null,
+    evidence_query: null,
+    scoring_version: SCORING_VERSION,
   };
 }
 
@@ -1107,6 +1128,8 @@ Deno.serve(async (req) => {
             evidence_url: result.evidence_url,
             profile_url: result.profile_url,
             extracted_data: result.extracted_data,
+            evidence_query: result.evidence_query,
+            scoring_version: result.scoring_version,
             error_message: result.error_detail,
             match_confidence: result.confidence,
             scanned_at: new Date().toISOString(),

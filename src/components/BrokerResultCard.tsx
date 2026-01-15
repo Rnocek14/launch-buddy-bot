@@ -50,6 +50,7 @@ interface BrokerResultCardProps {
   confidence_breakdown?: Record<string, number> | null;
   evidence_snippet?: string | null;
   evidence_url?: string | null;
+  scoring_version?: string | null;
   profileUrl?: string;
   matchConfidence?: number;
   extractedData?: ExtractedData | null;
@@ -70,6 +71,7 @@ export function BrokerResultCard({
   confidence_breakdown,
   evidence_snippet,
   evidence_url,
+  scoring_version,
   profileUrl,
   matchConfidence,
   extractedData,
@@ -264,6 +266,9 @@ export function BrokerResultCard({
                         )}
                         {effectiveStatus === 'possible_match' && (
                           <div className="text-yellow-600">⚠ No strong signal — confirm manually</div>
+                        )}
+                        {scoring_version && (
+                          <div className="text-muted-foreground/50 mt-1">Model: {scoring_version}</div>
                         )}
                       </div>
                     </CollapsibleContent>
