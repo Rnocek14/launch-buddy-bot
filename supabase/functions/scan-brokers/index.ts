@@ -147,10 +147,77 @@ function buildSearchUrl(template: string, profile: UserProfile): string {
     .replace('{state}', encodeURIComponent(profile.state));
 }
 
+// Use Browserless to render pages like a real browser
+async function fetchWithBrowserless(url: string, timeout: number = 30000): Promise<string | null> {
+  const browserlessApiKey = Deno.env.get('BROWSERLESS_API_KEY');
+  
+  if (!browserlessApiKey) {
+    console.log('BROWSERLESS_API_KEY not set, falling back to direct fetch');
+    return null;
+  }
+
+  try {
+    const response = await fetch('https://chrome.browserless.io/content', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Basic ${btoa(browserlessApiKey + ':')}`,
+      },
+      body: JSON.stringify({
+        url,
+        waitForTimeout: 3000, // Wait for JS to render
+        gotoOptions: {
+          waitUntil: 'networkidle2',
+          timeout: timeout,
+        },
+        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      }),
+    });
+
+    if (!response.ok) {
+      console.log(`Browserless error: ${response.status} ${response.statusText}`);
+      return null;
+    }
+
+    return await response.text();
+  } catch (error) {
+    console.error('Browserless fetch error:', error);
+    return null;
+  }
+}
+
+// Fallback direct fetch
+async function fetchDirect(url: string, timeout: number = 10000): Promise<{ html: string | null; status: number }> {
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+    const response = await fetch(url, {
+      signal: controller.signal,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.5',
+      },
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      return { html: null, status: response.status };
+    }
+
+    return { html: await response.text(), status: response.status };
+  } catch (error) {
+    console.error('Direct fetch error:', error);
+    return { html: null, status: 0 };
+  }
+}
+
 async function scanBroker(
   slug: string,
   profile: UserProfile,
-  timeout: number = 10000
+  useBrowserless: boolean = true
 ): Promise<ScanResult & { slug: string }> {
   const pattern = brokerPatterns[slug];
   
@@ -169,33 +236,47 @@ async function scanBroker(
   console.log(`Scanning ${slug}: ${searchUrl}`);
 
   try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeout);
+    let html: string | null = null;
+    let usedBrowserless = false;
 
-    const response = await fetch(searchUrl, {
-      signal: controller.signal,
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.5',
-      },
-    });
-
-    clearTimeout(timeoutId);
-
-    if (!response.ok) {
-      // Many brokers block scraping - treat as inconclusive
-      console.log(`${slug}: HTTP ${response.status}`);
-      return {
-        slug,
-        brokerId: '',
-        status: 'clean',
-        profileUrl: null,
-        matchConfidence: 0,
-      };
+    // Try Browserless first for better accuracy
+    if (useBrowserless) {
+      html = await fetchWithBrowserless(searchUrl);
+      usedBrowserless = html !== null;
     }
 
-    const html = await response.text();
+    // Fallback to direct fetch
+    if (!html) {
+      const directResult = await fetchDirect(searchUrl);
+      
+      if (directResult.status === 403 || directResult.status === 429) {
+        // Blocked - mark as unknown so user can manually verify
+        console.log(`${slug}: HTTP ${directResult.status} (blocked)`);
+        return {
+          slug,
+          brokerId: '',
+          status: 'error', // Will show as "unknown" in UI
+          profileUrl: searchUrl,
+          matchConfidence: 0,
+          error: `Blocked (HTTP ${directResult.status})`,
+        };
+      }
+      
+      if (!directResult.html) {
+        console.log(`${slug}: Failed to fetch`);
+        return {
+          slug,
+          brokerId: '',
+          status: 'error',
+          profileUrl: searchUrl,
+          matchConfidence: 0,
+          error: 'Failed to fetch',
+        };
+      }
+      
+      html = directResult.html;
+    }
+
     const htmlLower = html.toLowerCase();
 
     // Check for no results patterns
@@ -212,7 +293,7 @@ async function scanBroker(
     const nameInPage = htmlLower.includes(profile.firstName.toLowerCase()) && 
                        htmlLower.includes(profile.lastName.toLowerCase());
 
-    console.log(`${slug}: noResults=${hasNoResults}, hasResults=${hasResults}, nameInPage=${nameInPage}`);
+    console.log(`${slug}: noResults=${hasNoResults}, hasResults=${hasResults}, nameInPage=${nameInPage}, browserless=${usedBrowserless}`);
 
     // Determine result
     if (hasNoResults && !hasResults) {
@@ -225,19 +306,23 @@ async function scanBroker(
       };
     }
 
-    if (hasResults && nameInPage) {
-      // Likely found - calculate confidence
-      const confidence = hasResults && nameInPage ? 0.75 : hasResults ? 0.5 : 0.3;
+    if (hasResults || nameInPage) {
+      // Calculate confidence based on signals
+      let confidence = 0.3;
+      if (hasResults) confidence += 0.3;
+      if (nameInPage) confidence += 0.25;
+      if (usedBrowserless) confidence += 0.1; // Higher confidence with browser rendering
+      
       return {
         slug,
         brokerId: '',
         status: 'found',
         profileUrl: searchUrl,
-        matchConfidence: confidence,
+        matchConfidence: Math.min(confidence, 0.95),
       };
     }
 
-    // Inconclusive - mark as clean to avoid false positives
+    // Inconclusive - mark as clean
     return {
       slug,
       brokerId: '',
@@ -248,13 +333,13 @@ async function scanBroker(
 
   } catch (error) {
     console.error(`Error scanning ${slug}:`, error);
-    // Treat timeouts/errors as clean to avoid false positives
     return {
       slug,
       brokerId: '',
-      status: 'clean',
-      profileUrl: null,
+      status: 'error',
+      profileUrl: searchUrl,
       matchConfidence: 0,
+      error: String(error),
     };
   }
 }
@@ -423,8 +508,8 @@ Deno.serve(async (req) => {
 
       console.log(`Created broker scan ${newScan.id} for user ${userId} (${userProfile.firstName} ${userProfile.lastName})`);
 
-      // Run scans in parallel (batches of 5 to avoid overwhelming)
-      const BATCH_SIZE = 5;
+      // Run scans in parallel (batches of 3 for Browserless to avoid rate limits)
+      const BATCH_SIZE = 3;
       let scannedCount = 0;
       let foundCount = 0;
       let cleanCount = 0;
@@ -433,8 +518,13 @@ Deno.serve(async (req) => {
       for (let i = 0; i < (brokers?.length || 0); i += BATCH_SIZE) {
         const batch = brokers!.slice(i, i + BATCH_SIZE);
         
+        // Add small delay between batches to avoid rate limiting
+        if (i > 0) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+        
         const results = await Promise.all(
-          batch.map(broker => scanBroker(broker.slug, userProfile))
+          batch.map(broker => scanBroker(broker.slug, userProfile, true))
         );
 
         // Save results for each broker
@@ -456,6 +546,7 @@ Deno.serve(async (req) => {
               status: result.status,
               profile_url: result.profileUrl,
               match_confidence: result.matchConfidence,
+              error_message: result.error || null,
               scanned_at: new Date().toISOString(),
             }, {
               onConflict: 'user_id,broker_id',

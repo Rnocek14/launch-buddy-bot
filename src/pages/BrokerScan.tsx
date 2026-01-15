@@ -226,6 +226,7 @@ export default function BrokerScan() {
   const foundResults = results.filter(r => r.status === 'found');
   const cleanResults = results.filter(r => r.status === 'clean');
   const optedOutResults = results.filter(r => r.status === 'opted_out');
+  const unknownResults = results.filter(r => r.status === 'error');
 
   if (loading) {
     return (
@@ -361,7 +362,7 @@ export default function BrokerScan() {
                 )}
 
                 {scan?.status === 'completed' && (
-                  <div className="grid grid-cols-3 gap-4 text-center">
+                  <div className="grid grid-cols-4 gap-4 text-center">
                     <div className="p-4 bg-destructive/10 rounded-lg">
                       <ShieldAlert className="h-6 w-6 text-destructive mx-auto mb-2" />
                       <p className="text-2xl font-bold text-destructive">{foundResults.length}</p>
@@ -371,6 +372,11 @@ export default function BrokerScan() {
                       <ShieldCheck className="h-6 w-6 text-green-600 mx-auto mb-2" />
                       <p className="text-2xl font-bold text-green-600">{cleanResults.length}</p>
                       <p className="text-sm text-muted-foreground">Clean</p>
+                    </div>
+                    <div className="p-4 bg-orange-500/10 rounded-lg">
+                      <AlertCircle className="h-6 w-6 text-orange-600 mx-auto mb-2" />
+                      <p className="text-2xl font-bold text-orange-600">{unknownResults.length}</p>
+                      <p className="text-sm text-muted-foreground">Unknown</p>
                     </div>
                     <div className="p-4 bg-blue-500/10 rounded-lg">
                       <Shield className="h-6 w-6 text-blue-600 mx-auto mb-2" />
@@ -415,6 +421,27 @@ export default function BrokerScan() {
                         key={result.id}
                         broker={result.broker}
                         status={result.status}
+                        onOptOut={handleOptOut}
+                      />
+                    ))}
+                  </div>
+                )}
+
+                {unknownResults.length > 0 && (
+                  <div className="space-y-3">
+                    <h3 className="text-lg font-semibold flex items-center gap-2">
+                      <AlertCircle className="h-5 w-5 text-orange-600" />
+                      Unknown status for {unknownResults.length} broker{unknownResults.length !== 1 ? 's' : ''}
+                    </h3>
+                    <p className="text-sm text-muted-foreground mb-2">
+                      These sites blocked our scan. Click "Check Manually" to verify yourself.
+                    </p>
+                    {unknownResults.map(result => (
+                      <BrokerResultCard
+                        key={result.id}
+                        broker={result.broker}
+                        status={result.status}
+                        profileUrl={result.profile_url}
                         onOptOut={handleOptOut}
                       />
                     ))}
