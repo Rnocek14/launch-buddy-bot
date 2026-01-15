@@ -50,6 +50,7 @@ interface ScanResult {
   confidence_breakdown?: Record<string, number> | null;
   evidence_snippet?: string | null;
   evidence_url?: string | null;
+  evidence_query?: string | null;
   scoring_version?: string | null;
   profile_url?: string;
   match_confidence?: number;
@@ -479,6 +480,7 @@ export default function BrokerScan() {
                         confidence_breakdown={result.confidence_breakdown}
                         evidence_snippet={result.evidence_snippet}
                         evidence_url={result.evidence_url}
+                        evidence_query={result.evidence_query}
                         scoring_version={result.scoring_version}
                         profileUrl={result.profile_url}
                         matchConfidence={result.match_confidence}
