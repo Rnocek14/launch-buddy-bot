@@ -1817,6 +1817,9 @@ export type Database = {
           deletion_count_this_period: number
           id: string
           manual_override: boolean | null
+          overridden_at: string | null
+          overridden_by: string | null
+          override_reason: string | null
           status: string
           stripe_customer_id: string | null
           stripe_subscription_id: string | null
@@ -1831,6 +1834,9 @@ export type Database = {
           deletion_count_this_period?: number
           id?: string
           manual_override?: boolean | null
+          overridden_at?: string | null
+          overridden_by?: string | null
+          override_reason?: string | null
           status?: string
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
@@ -1845,6 +1851,9 @@ export type Database = {
           deletion_count_this_period?: number
           id?: string
           manual_override?: boolean | null
+          overridden_at?: string | null
+          overridden_by?: string | null
+          override_reason?: string | null
           status?: string
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
