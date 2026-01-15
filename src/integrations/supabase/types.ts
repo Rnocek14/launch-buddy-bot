@@ -1695,6 +1695,39 @@ export type Database = {
         }
         Relationships: []
       }
+      serp_cache: {
+        Row: {
+          broker_slug: string
+          cache_key: string
+          created_at: string
+          expires_at: string
+          id: string
+          query: string
+          result_count: number
+          results: Json
+        }
+        Insert: {
+          broker_slug: string
+          cache_key: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          query: string
+          result_count?: number
+          results?: Json
+        }
+        Update: {
+          broker_slug?: string
+          cache_key?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          query?: string
+          result_count?: number
+          results?: Json
+        }
+        Relationships: []
+      }
       serp_requests_log: {
         Row: {
           broker_slug: string | null
