@@ -61,10 +61,27 @@ export default function BrokerScan() {
   const [isComplete, setIsComplete] = useState(false);
   const [currentTier, setCurrentTier] = useState<'free' | 'pro' | 'complete'>('free');
   const [profileData, setProfileData] = useState<{ firstName: string; lastName: string; city: string; state: string } | null>(null);
+  const [cooldownInfo, setCooldownInfo] = useState<{ nextScanAt: Date; remainingSeconds: number } | null>(null);
 
   useEffect(() => {
     checkAuthAndLoad();
   }, []);
+  
+  // Countdown timer for cooldown
+  useEffect(() => {
+    if (!cooldownInfo) return;
+    
+    const interval = setInterval(() => {
+      const remaining = Math.ceil((cooldownInfo.nextScanAt.getTime() - Date.now()) / 1000);
+      if (remaining <= 0) {
+        setCooldownInfo(null);
+      } else {
+        setCooldownInfo(prev => prev ? { ...prev, remainingSeconds: remaining } : null);
+      }
+    }, 1000);
+    
+    return () => clearInterval(interval);
+  }, [cooldownInfo?.nextScanAt]);
 
   useEffect(() => {
     // Poll for updates while scan is running
@@ -148,6 +165,14 @@ export default function BrokerScan() {
     });
 
     if (error || data?.error) {
+      // Handle cooldown error with countdown
+      if (data?.next_scan_at) {
+        setCooldownInfo({
+          nextScanAt: new Date(data.next_scan_at),
+          remainingSeconds: data.remaining_seconds || 0,
+        });
+      }
+      
       toast({
         variant: "destructive",
         title: "Scan failed",
@@ -157,6 +182,9 @@ export default function BrokerScan() {
       setScanning(false);
       return;
     }
+    
+    // Clear cooldown on successful scan
+    setCooldownInfo(null);
 
     toast({
       title: "Scan complete!",
@@ -280,16 +308,23 @@ export default function BrokerScan() {
                     <span>Scan Status</span>
                     <Badge className="bg-accent text-accent-foreground text-xs">COMPLETE</Badge>
                   </div>
-                  {scan?.status === 'completed' && (
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={startScan}
-                      disabled={scanning}
-                    >
-                      <RefreshCw className={`h-4 w-4 mr-2 ${scanning ? 'animate-spin' : ''}`} />
-                      Rescan
-                    </Button>
+                {scan?.status === 'completed' && (
+                    <div className="flex items-center gap-2">
+                      {cooldownInfo && (
+                        <span className="text-xs text-muted-foreground">
+                          Wait {Math.floor(cooldownInfo.remainingSeconds / 60)}:{String(cooldownInfo.remainingSeconds % 60).padStart(2, '0')}
+                        </span>
+                      )}
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={startScan}
+                        disabled={scanning || !!cooldownInfo}
+                      >
+                        <RefreshCw className={`h-4 w-4 mr-2 ${scanning ? 'animate-spin' : ''}`} />
+                        Rescan
+                      </Button>
+                    </div>
                   )}
                 </CardTitle>
                 <CardDescription>
