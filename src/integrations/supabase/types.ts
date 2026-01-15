@@ -1703,6 +1703,7 @@ export type Database = {
           id: string
           query: string
           response_hash: string | null
+          result_count: number | null
           status: string
           user_id: string | null
         }
@@ -1713,6 +1714,7 @@ export type Database = {
           id?: string
           query: string
           response_hash?: string | null
+          result_count?: number | null
           status: string
           user_id?: string | null
         }
@@ -1723,6 +1725,7 @@ export type Database = {
           id?: string
           query?: string
           response_hash?: string | null
+          result_count?: number | null
           status?: string
           user_id?: string | null
         }
