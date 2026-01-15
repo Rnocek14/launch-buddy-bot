@@ -61,8 +61,10 @@ serve(async (req) => {
       .eq('user_id', user.id)
       .maybeSingle(); // ✅ Safe: doesn't throw on missing row
 
+    // ✅ Fail closed on real DB errors - billing/auth gating requires certainty
     if (existingSubErr) {
-      logStep("Error fetching existing subscription", { error: existingSubErr });
+      logStep("Error fetching existing subscription - failing closed", { error: existingSubErr });
+      throw new Error(`Database error checking subscription: ${existingSubErr.message}`);
     }
 
     // ✅ Strict equality check - only true, not truthy
@@ -91,25 +93,40 @@ serve(async (req) => {
     const customers = await stripe.customers.list({ email: user.email, limit: 1 });
     
     if (customers.data.length === 0) {
-      logStep("No customer found, returning unsubscribed state");
+      logStep("No customer found, ensuring free subscription exists");
       
-      // Ensure free subscription exists in database
-      // ✅ Only update if NOT manually overridden (defensive - already early-returned above)
-      const { error: upsertError } = await supabaseClient
+      // ✅ FIX: Replace unsafe upsert with update-then-insert pattern
+      // Try update first; never touch override accounts
+      const { data: updatedRows, error: updateErr } = await supabaseClient
         .from('subscriptions')
-        .upsert({
-          user_id: user.id,
+        .update({
           tier: 'free',
           status: 'active',
-          updated_at: new Date().toISOString()
-        }, {
-          onConflict: 'user_id',
-          ignoreDuplicates: false
+          updated_at: new Date().toISOString(),
         })
-        .eq('manual_override', false); // ✅ Never overwrite override accounts
+        .eq('user_id', user.id)
+        .neq('manual_override', true)
+        .select('user_id'); // ✅ Lets us see if anything was updated
 
-      if (upsertError) {
-        logStep("Error upserting free subscription", { error: upsertError });
+      if (updateErr) {
+        logStep("Error updating free subscription", { error: updateErr });
+      }
+
+      // If no row exists (not just override blocking update), insert
+      if (!updatedRows?.length && !existingSub) {
+        const { error: insertErr } = await supabaseClient
+          .from('subscriptions')
+          .insert({
+            user_id: user.id,
+            tier: 'free',
+            status: 'active',
+            manual_override: false,
+            updated_at: new Date().toISOString(),
+          });
+
+        if (insertErr) {
+          logStep("Error inserting free subscription", { error: insertErr });
+        }
       }
 
       return new Response(JSON.stringify({ 
@@ -151,8 +168,8 @@ serve(async (req) => {
         tier 
       });
 
-      // ✅ Use UPDATE with WHERE clause to never touch override accounts
-      const { error: updateError } = await supabaseClient
+      // ✅ Use UPDATE with .select() to verify rows updated
+      const { data: updatedRows, error: updateError } = await supabaseClient
         .from('subscriptions')
         .update({
           tier: tier,
@@ -164,15 +181,16 @@ serve(async (req) => {
           updated_at: new Date().toISOString()
         })
         .eq('user_id', user.id)
-        .neq('manual_override', true); // ✅ Never overwrite override accounts
+        .neq('manual_override', true) // ✅ Never overwrite override accounts
+        .select('user_id');
 
-      // If no row was updated, insert new one (for users without subscription row)
       if (updateError) {
-        logStep("Error updating subscription, attempting insert", { error: updateError });
+        logStep("Error updating subscription", { error: updateError });
       }
-      
-      // Insert if user doesn't have a subscription row yet
-      if (!existingSub) {
+
+      // ✅ Insert only if no rows updated AND no existing row
+      if (!updatedRows?.length && !existingSub) {
+        logStep("No row updated, inserting new subscription");
         const { error: insertError } = await supabaseClient
           .from('subscriptions')
           .insert({
@@ -193,8 +211,8 @@ serve(async (req) => {
     } else {
       logStep("No active subscription found");
       
-      // ✅ Use UPDATE with WHERE clause to never touch override accounts
-      const { error: updateError } = await supabaseClient
+      // ✅ Use UPDATE with .select() to verify rows updated
+      const { data: updatedRows, error: updateError } = await supabaseClient
         .from('subscriptions')
         .update({
           tier: 'free',
@@ -203,14 +221,16 @@ serve(async (req) => {
           updated_at: new Date().toISOString()
         })
         .eq('user_id', user.id)
-        .neq('manual_override', true); // ✅ Never overwrite override accounts
+        .neq('manual_override', true) // ✅ Never overwrite override accounts
+        .select('user_id');
 
       if (updateError) {
         logStep("Error updating to free tier", { error: updateError });
       }
       
-      // Insert if user doesn't have a subscription row yet
-      if (!existingSub) {
+      // ✅ Insert only if no rows updated AND no existing row
+      if (!updatedRows?.length && !existingSub) {
+        logStep("No row updated, inserting free subscription");
         const { error: insertError } = await supabaseClient
           .from('subscriptions')
           .insert({
