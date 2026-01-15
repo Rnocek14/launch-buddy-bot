@@ -11,8 +11,8 @@ type ErrorCode = 'blocked' | 'rate_limited' | 'provider_error' | 'timeout' | 'pa
 type DetectionMethod = 'direct' | 'browserless' | 'serp' | 'manual';
 
 const CONFIDENCE_THRESHOLDS = {
-  FOUND: 0.60,
-  POSSIBLE_MATCH: 0.45,
+  FOUND: 0.75,
+  POSSIBLE_MATCH: 0.55,
 };
 
 // Broker detection patterns
@@ -180,23 +180,48 @@ function classifyHttpFailure(httpStatus: number | null, provider: 'browserless' 
   return { status_v2: 'request_failed', error_code: 'request_failed' };
 }
 
-// Helper: SERP confidence scoring
+// Helper: normalize name to tokens for URL matching
+function normalizeNameTokens(firstName: string, lastName: string): string[] {
+  return [firstName, lastName]
+    .join(" ")
+    .toLowerCase()
+    .replace(/[^a-z\s]/g, " ")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+}
+
+// Helper: check if URL path contains all name tokens
+function urlHasNameTokens(url: string, tokens: string[]): boolean {
+  try {
+    const u = new URL(url);
+    const path = u.pathname.toLowerCase();
+    return tokens.every(t => path.includes(t));
+  } catch {
+    return false;
+  }
+}
+
+// Helper: SERP confidence scoring with strong signal detection
 function scoreSerpResult({
   title,
   snippet,
+  url,
   user,
 }: {
   title: string;
   snippet: string;
+  url: string;
   user: UserProfile;
-}): { total: number; breakdown: Record<string, number>; status_v2: StatusV2 } {
+}): { total: number; breakdown: Record<string, number>; status_v2: StatusV2; has_strong_signal: boolean } {
   const text = `${title}\n${snippet}`.toLowerCase();
+  const titleLower = title.toLowerCase();
   const fullName = `${user.firstName} ${user.lastName}`.toLowerCase();
 
   let total = 0;
   const breakdown: Record<string, number> = {};
 
-  // Check for full name match
+  // Check for full name match (keep at 0.30)
   if (text.includes(fullName)) {
     breakdown.name_match = 0.30;
     total += 0.30;
@@ -228,14 +253,46 @@ function scoreSerpResult({
     total += 0.15;
   }
 
+  // Check for address hint (conservative regex, only for scoring not strong signal)
+  const addressHint = /\b\d{1,6}\s+[a-z0-9.'-]{2,}\s+(st|street|ave|avenue|dr|drive|rd|road|ln|lane|blvd|boulevard|ct|court|cir|circle|pl|place|ter|terrace)\b/i.test(text);
+  if (addressHint) {
+    breakdown.address_hint = 0.10;
+    total += 0.10;
+  }
+
   total = Math.min(1.0, total);
   breakdown.total = total;
 
-  let status_v2: StatusV2 = 'not_found';
-  if (total >= CONFIDENCE_THRESHOLDS.FOUND) status_v2 = 'found';
-  else if (total >= CONFIDENCE_THRESHOLDS.POSSIBLE_MATCH) status_v2 = 'possible_match';
+  // Strong signal detection (for Exposed status)
+  const nameInTitle = titleLower.includes(fullName);
+  const nameTokens = normalizeNameTokens(user.firstName, user.lastName);
+  const nameInUrl = urlHasNameTokens(url, nameTokens);
+  const hasStrongSignal = nameInTitle || nameInUrl || 
+    (!!breakdown.name_match && (!!breakdown.age_hint || !!breakdown.phone_hint));
+  
+  breakdown.name_in_title = nameInTitle ? 1 : 0;
+  breakdown.name_in_url = nameInUrl ? 1 : 0;
+  breakdown.has_strong_signal = hasStrongSignal ? 1 : 0;
 
-  return { total, breakdown, status_v2 };
+  // Corroborator check (for Possible exposure floor)
+  const hasCorroborator = 
+    !!breakdown.city_match ||
+    !!breakdown.state_match ||
+    !!breakdown.age_hint ||
+    !!breakdown.phone_hint ||
+    !!breakdown.address_hint;
+  
+  const canBePossible = !!breakdown.name_match && hasCorroborator;
+
+  // Determine status with strong signal + corroborator requirements
+  let status_v2: StatusV2 = 'not_found';
+  if (total >= CONFIDENCE_THRESHOLDS.FOUND && hasStrongSignal) {
+    status_v2 = 'found';
+  } else if (total >= CONFIDENCE_THRESHOLDS.POSSIBLE_MATCH && canBePossible) {
+    status_v2 = 'possible_match';
+  }
+
+  return { total, breakdown, status_v2, has_strong_signal: hasStrongSignal };
 }
 
 // Helper: build SERP queries
@@ -309,7 +366,7 @@ async function serpDiscovery(
         continue;
       }
       
-      const score = scoreSerpResult({ title: result.title, snippet: result.snippet, user });
+      const score = scoreSerpResult({ title: result.title, snippet: result.snippet, url: result.link, user });
       
       if (!bestResult || score.total > bestResult.score.total) {
         bestResult = { score, result };

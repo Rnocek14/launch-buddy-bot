@@ -40,7 +40,7 @@ export type DetectionMethod = (typeof DETECTION_METHODS)[number];
 export const statusLabel: Record<StatusV2, string> = {
   found: "Exposed",
   possible_match: "Possible exposure",
-  not_found: "Not found",
+  not_found: "No public match found",
   blocked: "Blocked",
   rate_limited: "Rate limited",
   provider_error: "Scan service error",
@@ -84,8 +84,8 @@ export const statusBadgeClasses: Record<StatusV2, string> = {
   unknown: "bg-muted text-muted-foreground border-border",
 };
 
-// Confidence thresholds
+// Confidence thresholds (must match scan-brokers/index.ts)
 export const CONFIDENCE_THRESHOLDS = {
-  FOUND: 0.60,
-  POSSIBLE_MATCH: 0.45,
+  FOUND: 0.75,
+  POSSIBLE_MATCH: 0.55,
 } as const;
