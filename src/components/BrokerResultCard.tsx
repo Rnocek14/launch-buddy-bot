@@ -259,8 +259,11 @@ export function BrokerResultCard({
                               {k.replace(/_/g, ' ')}: {typeof v === 'number' ? `${Math.round(v * 100)}%` : v}
                             </div>
                           ))}
-                        {confidence_breakdown.has_strong_signal === 1 && (
-                          <div className="text-green-600">Strong signal detected</div>
+                        {effectiveStatus === 'found' && confidence_breakdown.has_strong_signal === 1 && (
+                          <div className="text-green-600">✓ Strong signal confirmed</div>
+                        )}
+                        {effectiveStatus === 'possible_match' && (
+                          <div className="text-yellow-600">⚠ No strong signal — confirm manually</div>
                         )}
                       </div>
                     </CollapsibleContent>

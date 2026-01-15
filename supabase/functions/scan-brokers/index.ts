@@ -216,7 +216,12 @@ function scoreSerpResult({
 }): { total: number; breakdown: Record<string, number>; status_v2: StatusV2; has_strong_signal: boolean } {
   const text = `${title}\n${snippet}`.toLowerCase();
   const titleLower = title.toLowerCase();
-  const fullName = `${user.firstName} ${user.lastName}`.toLowerCase();
+  // Normalize fullName to handle empty lastName
+  const fullName = [user.firstName, user.lastName]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase()
+    .trim();
 
   let total = 0;
   const breakdown: Record<string, number> = {};
