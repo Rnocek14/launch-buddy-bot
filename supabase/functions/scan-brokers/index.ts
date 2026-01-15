@@ -51,28 +51,44 @@ async function logSerpRequest(
   }
 }
 
-// Cache TTL: 7 days
-const CACHE_TTL_DAYS = 7;
+// Cache TTL tiers (days)
+const CACHE_TTL = {
+  NO_RESULTS: 30,   // Empty results = unlikely to change soon
+  HAS_RESULTS: 7,   // Results found = re-validate more often
+  ERROR: 0.25,      // 6 hours for errors (avoid hammering)
+};
 
-// Helper: generate cache key from query
-function generateCacheKey(query: string): string {
-  // Simple hash using query string - fast and deterministic
+// SERP params we use - included in cache key for correctness
+const SERP_PARAMS = { engine: 'google', num: 5 } as const;
+
+// Helper: generate cache key including broker context + SERP params
+function generateCacheKey(brokerSlug: string, query: string): string {
+  // Canonical blob ensures cache key changes if we ever tweak SERP params
+  const canonical = JSON.stringify({
+    provider: 'serpapi',
+    ...SERP_PARAMS,
+    broker: brokerSlug,
+    q: query,
+  });
+  
+  // Simple hash - fast and deterministic
   let hash = 0;
-  for (let i = 0; i < query.length; i++) {
-    const chr = query.charCodeAt(i);
+  for (let i = 0; i < canonical.length; i++) {
+    const chr = canonical.charCodeAt(i);
     hash = ((hash << 5) - hash) + chr;
-    hash |= 0; // Convert to 32bit integer
+    hash |= 0;
   }
-  return `serp_${Math.abs(hash).toString(36)}_${query.length}`;
+  return `serp_${brokerSlug}_${Math.abs(hash).toString(36)}`;
 }
 
 // Helper: check cache for SERP results
 async function checkSerpCache(
   supabaseClient: any,
+  brokerSlug: string,
   query: string
 ): Promise<{ hit: boolean; results?: Array<{ title: string; snippet: string; link: string }> }> {
   try {
-    const cacheKey = generateCacheKey(query);
+    const cacheKey = generateCacheKey(brokerSlug, query);
     const { data, error } = await supabaseClient
       .from('serp_cache')
       .select('results, expires_at')
@@ -85,7 +101,9 @@ async function checkSerpCache(
     
     // Check if expired
     if (new Date(data.expires_at) < new Date()) {
-      console.log(`Cache expired for query: ${query.substring(0, 50)}...`);
+      console.log(`Cache expired for ${brokerSlug}: ${query.substring(0, 40)}...`);
+      // Best-effort cleanup of expired row
+      supabaseClient.from('serp_cache').delete().eq('cache_key', cacheKey).then(() => {});
       return { hit: false };
     }
     
@@ -96,17 +114,24 @@ async function checkSerpCache(
   }
 }
 
-// Helper: store SERP results in cache
+// Helper: store SERP results in cache with tiered TTL
 async function storeSerpCache(
   supabaseClient: any,
   brokerSlug: string,
   query: string,
-  results: Array<{ title: string; snippet: string; link: string }>
+  results: Array<{ title: string; snippet: string; link: string }>,
+  isError: boolean = false
 ): Promise<void> {
   try {
-    const cacheKey = generateCacheKey(query);
+    const cacheKey = generateCacheKey(brokerSlug, query);
     const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + CACHE_TTL_DAYS);
+    
+    // Tiered TTL: errors shortest, no results longest
+    const ttlDays = isError 
+      ? CACHE_TTL.ERROR 
+      : (results.length === 0 ? CACHE_TTL.NO_RESULTS : CACHE_TTL.HAS_RESULTS);
+    
+    expiresAt.setTime(expiresAt.getTime() + ttlDays * 24 * 60 * 60 * 1000);
     
     await supabaseClient
       .from('serp_cache')
@@ -489,7 +514,7 @@ async function serpDiscovery(
   
   for (const query of queries) {
     // First, check cache (no budget consumption for cache hits)
-    const cacheResult = await checkSerpCache(supabaseClient, query);
+    const cacheResult = await checkSerpCache(supabaseClient, slug, query);
     
     if (cacheResult.hit && cacheResult.results) {
       console.log(`Cache HIT for ${slug}: ${query.substring(0, 40)}...`);
