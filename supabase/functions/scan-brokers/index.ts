@@ -5,111 +5,142 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Status V2 taxonomy
+type StatusV2 = 'found' | 'possible_match' | 'not_found' | 'blocked' | 'rate_limited' | 'provider_error' | 'timeout' | 'parse_failed' | 'request_failed' | 'unknown';
+type ErrorCode = 'blocked' | 'rate_limited' | 'provider_error' | 'timeout' | 'parse_failed' | 'request_failed';
+type DetectionMethod = 'direct' | 'browserless' | 'serp' | 'manual';
+
+const CONFIDENCE_THRESHOLDS = {
+  FOUND: 0.60,
+  POSSIBLE_MATCH: 0.45,
+};
+
 // Broker detection patterns
 const brokerPatterns: Record<string, {
   searchUrlTemplate: string;
   noResultsPatterns: string[];
   hasResultsPatterns: string[];
+  domain: string;
 }> = {
   'beenverified': {
     searchUrlTemplate: 'https://www.beenverified.com/f/optout/search?first={firstName}&last={lastName}&city={city}&state={state}',
     noResultsPatterns: ['no results', 'no records found', 'didn\'t find'],
     hasResultsPatterns: ['we found', 'results for', 'person-card', 'result-item'],
+    domain: 'beenverified.com',
   },
   'spokeo': {
     searchUrlTemplate: 'https://www.spokeo.com/search?q={firstName}+{lastName}+{city}+{state}',
     noResultsPatterns: ['no results found', 'no matches', 'couldn\'t find'],
     hasResultsPatterns: ['results for', 'profile found', 'view details'],
+    domain: 'spokeo.com',
   },
   'whitepages': {
     searchUrlTemplate: 'https://www.whitepages.com/name/{firstName}-{lastName}/{city}-{state}',
     noResultsPatterns: ['no results', 'not found', 'no listings'],
     hasResultsPatterns: ['people results', 'found', 'view profile'],
+    domain: 'whitepages.com',
   },
   'truepeoplesearch': {
     searchUrlTemplate: 'https://www.truepeoplesearch.com/results?name={firstName}%20{lastName}&citystatezip={city}%20{state}',
     noResultsPatterns: ['no results', 'nothing found'],
     hasResultsPatterns: ['records found', 'view details', 'address history'],
+    domain: 'truepeoplesearch.com',
   },
   'fastpeoplesearch': {
     searchUrlTemplate: 'https://www.fastpeoplesearch.com/name/{firstName}-{lastName}_{city}-{state}',
     noResultsPatterns: ['no results found', 'no records'],
     hasResultsPatterns: ['people found', 'results', 'view full report'],
+    domain: 'fastpeoplesearch.com',
   },
   'thatsthem': {
     searchUrlTemplate: 'https://thatsthem.com/name/{firstName}-{lastName}/{city}-{state}',
     noResultsPatterns: ['no matches', 'no results'],
     hasResultsPatterns: ['we found', 'result', 'profile'],
+    domain: 'thatsthem.com',
   },
   'radaris': {
     searchUrlTemplate: 'https://radaris.com/p/{firstName}/{lastName}/',
     noResultsPatterns: ['no records found', 'not found'],
     hasResultsPatterns: ['found', 'profile', 'view full'],
+    domain: 'radaris.com',
   },
   'intelius': {
     searchUrlTemplate: 'https://www.intelius.com/people-search/{firstName}-{lastName}/{city}-{state}',
     noResultsPatterns: ['no results', 'not found'],
     hasResultsPatterns: ['results for', 'found', 'view report'],
+    domain: 'intelius.com',
   },
   'peoplefinders': {
     searchUrlTemplate: 'https://www.peoplefinders.com/name/{firstName}-{lastName}/{state}/{city}',
     noResultsPatterns: ['no results', 'no matches'],
     hasResultsPatterns: ['results', 'people found', 'records'],
+    domain: 'peoplefinders.com',
   },
   'usphonebook': {
     searchUrlTemplate: 'https://www.usphonebook.com/{firstName}-{lastName}/{city}-{state}',
     noResultsPatterns: ['no results', 'not found'],
     hasResultsPatterns: ['found', 'results', 'profile'],
+    domain: 'usphonebook.com',
   },
   'instantcheckmate': {
     searchUrlTemplate: 'https://www.instantcheckmate.com/people/{firstName}-{lastName}/{city}-{state}',
     noResultsPatterns: ['no results', 'nothing found'],
     hasResultsPatterns: ['found', 'results', 'report'],
+    domain: 'instantcheckmate.com',
   },
   'mylife': {
     searchUrlTemplate: 'https://www.mylife.com/pub/search?firstName={firstName}&lastName={lastName}&city={city}&state={state}',
     noResultsPatterns: ['no results', 'not found'],
     hasResultsPatterns: ['results', 'profile', 'reputation score'],
+    domain: 'mylife.com',
   },
   'nuwber': {
     searchUrlTemplate: 'https://nuwber.com/search?name={firstName}%20{lastName}&city={city}&state={state}',
     noResultsPatterns: ['no results', 'nothing found'],
     hasResultsPatterns: ['found', 'results', 'profile'],
+    domain: 'nuwber.com',
   },
   'familytreenow': {
     searchUrlTemplate: 'https://www.familytreenow.com/search/genealogy/results?first={firstName}&last={lastName}&city={city}&state={state}',
     noResultsPatterns: ['no results', 'no records'],
     hasResultsPatterns: ['found', 'results', 'record'],
+    domain: 'familytreenow.com',
   },
   'peoplelooker': {
     searchUrlTemplate: 'https://www.peoplelooker.com/f/optout/search?first={firstName}&last={lastName}&city={city}&state={state}',
     noResultsPatterns: ['no results', 'not found'],
     hasResultsPatterns: ['found', 'results', 'profile'],
+    domain: 'peoplelooker.com',
   },
   'truthfinder': {
     searchUrlTemplate: 'https://www.truthfinder.com/people-search?first={firstName}&last={lastName}&city={city}&state={state}',
     noResultsPatterns: ['no results', 'not found'],
     hasResultsPatterns: ['found', 'results', 'report'],
+    domain: 'truthfinder.com',
   },
   'searchpeoplefree': {
     searchUrlTemplate: 'https://www.searchpeoplefree.com/find/{firstName}-{lastName}/{city}-{state}',
     noResultsPatterns: ['no results', 'not found'],
     hasResultsPatterns: ['found', 'results', 'profile'],
+    domain: 'searchpeoplefree.com',
   },
   'cocofinder': {
     searchUrlTemplate: 'https://cocofinder.com/person/{firstName}-{lastName}/{city}-{state}',
     noResultsPatterns: ['no results', 'not found'],
     hasResultsPatterns: ['found', 'results', 'profile'],
+    domain: 'cocofinder.com',
   },
   'cyberbackgroundchecks': {
     searchUrlTemplate: 'https://www.cyberbackgroundchecks.com/people/{firstName}-{lastName}/{city}-{state}',
     noResultsPatterns: ['no results', 'not found'],
     hasResultsPatterns: ['found', 'results', 'records'],
+    domain: 'cyberbackgroundchecks.com',
   },
   'voterrecords': {
     searchUrlTemplate: 'https://voterrecords.com/voters/{firstName}-{lastName}/{state}',
     noResultsPatterns: ['no results', 'not found'],
     hasResultsPatterns: ['found', 'voter', 'records'],
+    domain: 'voterrecords.com',
   },
 };
 
@@ -120,23 +151,208 @@ interface UserProfile {
   state: string;
 }
 
-interface ExtractedData {
-  name?: string;
-  age?: string;
-  addresses?: string[];
-  phone_numbers?: string[];
-  emails?: string[];
-  relatives?: string[];
-  raw_snippet?: string;
+interface ScanResultV2 {
+  brokerId: string;
+  slug: string;
+  status_v2: StatusV2;
+  error_code: ErrorCode | null;
+  http_status: number | null;
+  error_detail: string | null;
+  detection_method: DetectionMethod;
+  confidence: number | null;
+  confidence_breakdown: Record<string, number> | null;
+  evidence_snippet: string | null;
+  evidence_url: string | null;
+  profile_url: string | null;
+  extracted_data: Record<string, any> | null;
 }
 
-interface ScanResult {
-  brokerId: string;
-  status: 'found' | 'clean' | 'error';
-  profileUrl: string | null;
-  matchConfidence: number;
-  extractedData?: ExtractedData;
-  error?: string;
+// Helper: classify HTTP failure
+function classifyHttpFailure(httpStatus: number | null, provider: 'browserless' | 'direct'): { status_v2: StatusV2; error_code: ErrorCode } {
+  if (httpStatus === 403) return { status_v2: 'blocked', error_code: 'blocked' };
+  if (httpStatus === 429) return { status_v2: 'rate_limited', error_code: 'rate_limited' };
+  if (httpStatus && httpStatus >= 500) {
+    return { 
+      status_v2: provider === 'browserless' ? 'provider_error' : 'request_failed', 
+      error_code: provider === 'browserless' ? 'provider_error' : 'request_failed' 
+    };
+  }
+  return { status_v2: 'request_failed', error_code: 'request_failed' };
+}
+
+// Helper: SERP confidence scoring
+function scoreSerpResult({
+  title,
+  snippet,
+  user,
+}: {
+  title: string;
+  snippet: string;
+  user: UserProfile;
+}): { total: number; breakdown: Record<string, number>; status_v2: StatusV2 } {
+  const text = `${title}\n${snippet}`.toLowerCase();
+  const fullName = `${user.firstName} ${user.lastName}`.toLowerCase();
+
+  let total = 0;
+  const breakdown: Record<string, number> = {};
+
+  // Check for full name match
+  if (text.includes(fullName)) {
+    breakdown.name_match = 0.30;
+    total += 0.30;
+  }
+
+  // Check for city match
+  if (user.city && text.includes(user.city.toLowerCase())) {
+    breakdown.city_match = 0.20;
+    total += 0.20;
+  }
+
+  // Check for state match
+  if (user.state && text.includes(user.state.toLowerCase())) {
+    breakdown.state_match = 0.15;
+    total += 0.15;
+  }
+
+  // Check for phone hint (light, don't overfit)
+  const phoneHint = /\(?\d{3}\)?[-.\s]\d{3}[-.\s]\d{4}/.test(text);
+  if (phoneHint) {
+    breakdown.phone_hint = 0.10;
+    total += 0.10;
+  }
+
+  // Check for age hint
+  const ageHint = /\b\d{2}\s*(?:years?\s*old|y\.?o\.?)\b/i.test(text) || /\bage[:\s]+\d{2}/i.test(text);
+  if (ageHint) {
+    breakdown.age_hint = 0.15;
+    total += 0.15;
+  }
+
+  total = Math.min(1.0, total);
+  breakdown.total = total;
+
+  let status_v2: StatusV2 = 'not_found';
+  if (total >= CONFIDENCE_THRESHOLDS.FOUND) status_v2 = 'found';
+  else if (total >= CONFIDENCE_THRESHOLDS.POSSIBLE_MATCH) status_v2 = 'possible_match';
+
+  return { total, breakdown, status_v2 };
+}
+
+// Helper: build SERP queries
+function buildSerpQueries(user: UserProfile, brokerDomain: string): string[] {
+  const fn = user.firstName?.trim();
+  const ln = user.lastName?.trim();
+  const city = user.city?.trim();
+  const state = user.state?.trim();
+
+  const base = `"${fn} ${ln}" site:${brokerDomain}`;
+  const queries = [base];
+
+  if (city) queries.push(`"${fn} ${ln}" "${city}" site:${brokerDomain}`);
+  if (state) queries.push(`"${fn} ${ln}" "${state}" site:${brokerDomain}`);
+
+  return queries;
+}
+
+// Helper: SERP API search
+async function serpSearch(query: string, apiKey: string): Promise<Array<{ title: string; snippet: string; link: string }>> {
+  try {
+    const url = new URL('https://serpapi.com/search.json');
+    url.searchParams.set('engine', 'google');
+    url.searchParams.set('q', query);
+    url.searchParams.set('api_key', apiKey);
+    url.searchParams.set('num', '5');
+
+    const res = await fetch(url.toString(), { method: 'GET' });
+    
+    if (!res.ok) {
+      console.log(`SERP API error: ${res.status}`);
+      return [];
+    }
+    
+    const json = await res.json();
+    const organic = Array.isArray(json?.organic_results) ? json.organic_results : [];
+    return organic.slice(0, 3).map((r: any) => ({
+      title: r.title ?? '',
+      snippet: r.snippet ?? '',
+      link: r.link ?? '',
+    }));
+  } catch (error) {
+    console.error('SERP search error:', error);
+    return [];
+  }
+}
+
+// Helper: SERP discovery for a broker
+async function serpDiscovery(
+  slug: string,
+  brokerDomain: string,
+  user: UserProfile,
+  apiKey: string
+): Promise<ScanResultV2> {
+  const queries = buildSerpQueries(user, brokerDomain);
+  
+  let bestResult: { score: ReturnType<typeof scoreSerpResult>; result: { title: string; snippet: string; link: string } } | null = null;
+  
+  for (const query of queries) {
+    const results = await serpSearch(query, apiKey);
+    
+    for (const result of results) {
+      // Ensure the result is actually from this broker's domain
+      if (!result.link.toLowerCase().includes(brokerDomain.toLowerCase())) {
+        continue;
+      }
+      
+      const score = scoreSerpResult({ title: result.title, snippet: result.snippet, user });
+      
+      if (!bestResult || score.total > bestResult.score.total) {
+        bestResult = { score, result };
+      }
+    }
+    
+    // If we found a strong match, stop early
+    if (bestResult && bestResult.score.total >= CONFIDENCE_THRESHOLDS.FOUND) {
+      break;
+    }
+    
+    // Small delay between queries to avoid rate limiting
+    await new Promise(resolve => setTimeout(resolve, 500));
+  }
+
+  if (bestResult && bestResult.score.total >= CONFIDENCE_THRESHOLDS.POSSIBLE_MATCH) {
+    return {
+      brokerId: '',
+      slug,
+      status_v2: bestResult.score.status_v2,
+      error_code: null,
+      http_status: null,
+      error_detail: null,
+      detection_method: 'serp',
+      confidence: bestResult.score.total,
+      confidence_breakdown: bestResult.score.breakdown,
+      evidence_snippet: bestResult.result.snippet.slice(0, 500),
+      evidence_url: bestResult.result.link,
+      profile_url: bestResult.result.link,
+      extracted_data: null,
+    };
+  }
+
+  // No matches found via SERP
+  return {
+    brokerId: '',
+    slug,
+    status_v2: 'not_found',
+    error_code: null,
+    http_status: null,
+    error_detail: null,
+    detection_method: 'serp',
+    confidence: 0,
+    confidence_breakdown: null,
+    evidence_snippet: null,
+    evidence_url: null,
+    profile_url: null,
+    extracted_data: null,
+  };
 }
 
 function parseFullName(fullName: string): { firstName: string; lastName: string } {
@@ -158,25 +374,30 @@ function buildSearchUrl(template: string, profile: UserProfile): string {
     .replace('{state}', encodeURIComponent(profile.state));
 }
 
+// Jitter delay helper
+function getJitterDelay(): number {
+  return 2500 + Math.random() * 2000; // 2500-4500ms
+}
+
 // Use Browserless to render pages like a real browser
-async function fetchWithBrowserless(url: string, timeout: number = 30000): Promise<string | null> {
+async function fetchWithBrowserless(url: string, timeout: number = 30000): Promise<{ html: string | null; status: number; error?: string }> {
   const browserlessApiKey = Deno.env.get('BROWSERLESS_API_KEY');
   
   if (!browserlessApiKey) {
-    console.log('BROWSERLESS_API_KEY not set, falling back to direct fetch');
-    return null;
+    console.log('BROWSERLESS_API_KEY not set');
+    return { html: null, status: 0, error: 'BROWSERLESS_API_KEY not configured' };
   }
 
   try {
-    const response = await fetch('https://chrome.browserless.io/content', {
+    // Try Bearer token first (more common)
+    const response = await fetch(`https://chrome.browserless.io/content?token=${browserlessApiKey}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Basic ${btoa(browserlessApiKey + ':')}`,
       },
       body: JSON.stringify({
         url,
-        waitForTimeout: 3000, // Wait for JS to render
+        waitForTimeout: 3000,
         gotoOptions: {
           waitUntil: 'networkidle2',
           timeout: timeout,
@@ -186,151 +407,20 @@ async function fetchWithBrowserless(url: string, timeout: number = 30000): Promi
     });
 
     if (!response.ok) {
-      console.log(`Browserless error: ${response.status} ${response.statusText}`);
-      return null;
+      const errorText = await response.text().catch(() => '');
+      console.log(`Browserless error: ${response.status} - ${errorText.slice(0, 200)}`);
+      return { html: null, status: response.status, error: `Browserless: ${response.status} ${errorText.slice(0, 100)}` };
     }
 
-    return await response.text();
+    return { html: await response.text(), status: 200 };
   } catch (error) {
     console.error('Browserless fetch error:', error);
-    return null;
+    return { html: null, status: 0, error: String(error).slice(0, 200) };
   }
 }
 
-// Extract personal data from HTML response
-function extractDataFromHtml(html: string, profile: UserProfile): ExtractedData {
-  const data: ExtractedData = {};
-  const htmlLower = html.toLowerCase();
-  
-  // Extract name if visible
-  const fullName = `${profile.firstName} ${profile.lastName}`;
-  if (htmlLower.includes(fullName.toLowerCase())) {
-    data.name = fullName;
-  }
-  
-  // Extract age (patterns like "Age: 35", "35 years old", "(35)")
-  const agePatterns = [
-    /age[:\s]+(\d{1,3})/i,
-    /(\d{1,3})\s*years?\s*old/i,
-    /\((\d{2,3})\)/,
-  ];
-  for (const pattern of agePatterns) {
-    const match = html.match(pattern);
-    if (match && parseInt(match[1]) > 10 && parseInt(match[1]) < 120) {
-      data.age = match[1];
-      break;
-    }
-  }
-  
-  // Extract addresses (common patterns)
-  const addressPatterns = [
-    // Street address patterns
-    /\d+\s+[A-Za-z]+\s+(?:St(?:reet)?|Ave(?:nue)?|Rd|Road|Blvd|Boulevard|Dr(?:ive)?|Ln|Lane|Way|Ct|Court|Pl(?:ace)?)[,.\s]+[A-Za-z\s]+,?\s*[A-Z]{2}\s*\d{5}/gi,
-    // City, State ZIP
-    /[A-Za-z\s]+,\s*[A-Z]{2}\s+\d{5}(?:-\d{4})?/g,
-  ];
-  
-  const addresses = new Set<string>();
-  for (const pattern of addressPatterns) {
-    const matches = html.match(pattern);
-    if (matches) {
-      matches.slice(0, 5).forEach(addr => {
-        const cleaned = addr.trim().replace(/\s+/g, ' ');
-        if (cleaned.length > 10 && cleaned.length < 100) {
-          addresses.add(cleaned);
-        }
-      });
-    }
-  }
-  if (addresses.size > 0) {
-    data.addresses = Array.from(addresses).slice(0, 5);
-  }
-  
-  // Extract phone numbers
-  const phonePattern = /(?:\+?1[-.\s]?)?\(?[2-9]\d{2}\)?[-.\s]?\d{3}[-.\s]?\d{4}/g;
-  const phones = new Set<string>();
-  const phoneMatches = html.match(phonePattern);
-  if (phoneMatches) {
-    phoneMatches.slice(0, 10).forEach(phone => {
-      const cleaned = phone.replace(/\D/g, '');
-      if (cleaned.length === 10 || cleaned.length === 11) {
-        // Format nicely
-        const formatted = cleaned.length === 11 
-          ? `(${cleaned.slice(1, 4)}) ${cleaned.slice(4, 7)}-${cleaned.slice(7)}`
-          : `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6)}`;
-        phones.add(formatted);
-      }
-    });
-  }
-  if (phones.size > 0) {
-    data.phone_numbers = Array.from(phones).slice(0, 5);
-  }
-  
-  // Extract email addresses
-  const emailPattern = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
-  const emails = new Set<string>();
-  const emailMatches = html.match(emailPattern);
-  if (emailMatches) {
-    emailMatches.forEach(email => {
-      const lower = email.toLowerCase();
-      // Filter out common non-personal emails
-      if (!lower.includes('example.com') && 
-          !lower.includes('noreply') && 
-          !lower.includes('support@') &&
-          !lower.includes('info@') &&
-          lower.length < 50) {
-        emails.add(lower);
-      }
-    });
-  }
-  if (emails.size > 0) {
-    data.emails = Array.from(emails).slice(0, 5);
-  }
-  
-  // Extract relatives/associates (look for "Related to:", "Relatives:", "Associates:", "Family:")
-  const relativePatterns = [
-    /(?:related?\s*to|relatives?|associates?|family)[:\s]+([^<\n]{10,200})/gi,
-  ];
-  const relatives = new Set<string>();
-  for (const pattern of relativePatterns) {
-    const matches = html.matchAll(pattern);
-    for (const match of matches) {
-      // Split by common delimiters and clean
-      const names = match[1].split(/[,;•|]/).map(n => n.trim()).filter(n => {
-        // Filter to look like names (2-3 words, each capitalized)
-        const words = n.split(/\s+/);
-        return words.length >= 2 && words.length <= 4 && 
-               words.every(w => w.length > 1 && /^[A-Z]/.test(w));
-      });
-      names.forEach(n => relatives.add(n));
-    }
-  }
-  if (relatives.size > 0) {
-    data.relatives = Array.from(relatives).slice(0, 10);
-  }
-  
-  // Store a sanitized snippet if we found something
-  if (Object.keys(data).length > 0) {
-    // Find a relevant snippet around the user's name
-    const nameIndex = htmlLower.indexOf(profile.firstName.toLowerCase());
-    if (nameIndex > 0) {
-      const start = Math.max(0, nameIndex - 50);
-      const end = Math.min(html.length, nameIndex + 200);
-      let snippet = html.slice(start, end)
-        .replace(/<[^>]+>/g, ' ')
-        .replace(/\s+/g, ' ')
-        .trim();
-      if (snippet.length > 50) {
-        data.raw_snippet = snippet.slice(0, 200);
-      }
-    }
-  }
-  
-  return data;
-}
-
-// Fallback direct fetch
-async function fetchDirect(url: string, timeout: number = 10000): Promise<{ html: string | null; status: number }> {
+// Fallback direct fetch with better headers
+async function fetchDirect(url: string, timeout: number = 10000): Promise<{ html: string | null; status: number; error?: string }> {
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeout);
@@ -340,156 +430,400 @@ async function fetchDirect(url: string, timeout: number = 10000): Promise<{ html
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.5',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Accept-Encoding': 'gzip, deflate, br',
+        'Referer': 'https://www.google.com/',
+        'DNT': '1',
+        'Connection': 'keep-alive',
+        'Upgrade-Insecure-Requests': '1',
+        'Cache-Control': 'max-age=0',
       },
     });
 
     clearTimeout(timeoutId);
 
     if (!response.ok) {
-      return { html: null, status: response.status };
+      return { html: null, status: response.status, error: `HTTP ${response.status}` };
     }
 
     return { html: await response.text(), status: response.status };
   } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      return { html: null, status: 0, error: 'Request timeout' };
+    }
     console.error('Direct fetch error:', error);
-    return { html: null, status: 0 };
+    return { html: null, status: 0, error: String(error).slice(0, 200) };
   }
 }
 
-async function scanBroker(
+// Strip script/style tags for safe extraction
+function stripScriptStyle(html: string): string {
+  return html
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+// Validate phone number (NANP)
+function isValidNANP(phone: string): boolean {
+  const digits = phone.replace(/\D/g, '');
+  if (digits.length !== 10 && digits.length !== 11) return false;
+  
+  const npa = digits.length === 11 ? digits.slice(1, 4) : digits.slice(0, 3);
+  const nxx = digits.length === 11 ? digits.slice(4, 7) : digits.slice(3, 6);
+  
+  // NPA cannot start with 0 or 1
+  if (npa.startsWith('0') || npa.startsWith('1')) return false;
+  // NXX cannot start with 0 or 1
+  if (nxx.startsWith('0') || nxx.startsWith('1')) return false;
+  // Reject 555 patterns (fake)
+  if (nxx === '555') return false;
+  // Reject repeated digits
+  if (/^(\d)\1{9,}$/.test(digits)) return false;
+  
+  return true;
+}
+
+// Validate name looks like a real name
+function isValidName(name: string): boolean {
+  const words = name.trim().split(/\s+/);
+  if (words.length < 2 || words.length > 4) return false;
+  // Each word should be alpha-heavy and reasonable length
+  return words.every(w => 
+    w.length >= 2 && 
+    w.length <= 20 && 
+    /^[A-Za-z][A-Za-z'-]*$/.test(w)
+  );
+}
+
+// Extract data from HTML with strict validation
+function extractDataFromHtmlStrict(html: string, profile: UserProfile): Record<string, any> | null {
+  const cleanText = stripScriptStyle(html);
+  const data: Record<string, any> = {};
+  
+  // Only proceed if page looks substantial (not a block page)
+  if (cleanText.length < 500) return null;
+  
+  const fullName = `${profile.firstName} ${profile.lastName}`;
+  if (!cleanText.toLowerCase().includes(fullName.toLowerCase())) {
+    return null; // Name not found, don't extract
+  }
+  
+  data.name = fullName;
+  
+  // Extract age with validation
+  const agePatterns = [
+    /age[:\s]+(\d{1,3})/i,
+    /(\d{1,3})\s*years?\s*old/i,
+  ];
+  for (const pattern of agePatterns) {
+    const match = cleanText.match(pattern);
+    if (match) {
+      const age = parseInt(match[1]);
+      if (age >= 18 && age <= 100) {
+        data.age = match[1];
+        break;
+      }
+    }
+  }
+  
+  // Extract phone numbers with strict validation
+  const phonePattern = /(?:\+?1[-.\s]?)?\(?[2-9]\d{2}\)?[-.\s]?\d{3}[-.\s]?\d{4}/g;
+  const phones = new Set<string>();
+  const phoneMatches = cleanText.match(phonePattern);
+  if (phoneMatches) {
+    for (const phone of phoneMatches.slice(0, 10)) {
+      if (isValidNANP(phone)) {
+        const digits = phone.replace(/\D/g, '');
+        const d = digits.length === 11 ? digits.slice(1) : digits;
+        phones.add(`(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}`);
+      }
+    }
+  }
+  if (phones.size > 0) {
+    data.phone_numbers = Array.from(phones).slice(0, 5);
+  }
+  
+  // Extract relatives with strict name validation
+  const relativePatterns = [
+    /(?:related?\s*to|relatives?|associates?|family)[:\s]+([^<\n]{10,200})/gi,
+  ];
+  const relatives = new Set<string>();
+  for (const pattern of relativePatterns) {
+    const matches = cleanText.matchAll(pattern);
+    for (const match of matches) {
+      const names = match[1].split(/[,;•|]/).map(n => n.trim()).filter(isValidName);
+      names.forEach(n => relatives.add(n));
+    }
+  }
+  if (relatives.size > 0) {
+    data.relatives = Array.from(relatives).slice(0, 10);
+  }
+  
+  // Store a snippet only if we found meaningful data
+  if (Object.keys(data).length > 1) {
+    const nameIndex = cleanText.toLowerCase().indexOf(profile.firstName.toLowerCase());
+    if (nameIndex >= 0) {
+      const start = Math.max(0, nameIndex - 30);
+      const end = Math.min(cleanText.length, nameIndex + 170);
+      data.raw_snippet = cleanText.slice(start, end);
+    }
+  }
+  
+  return Object.keys(data).length > 1 ? data : null;
+}
+
+// Main broker scan function with SERP fallback
+async function scanBrokerV2(
   slug: string,
   profile: UserProfile,
-  useBrowserless: boolean = true
-): Promise<ScanResult & { slug: string }> {
+  serpApiKey: string | null
+): Promise<ScanResultV2> {
   const pattern = brokerPatterns[slug];
   
   if (!pattern) {
     console.log(`No pattern for broker: ${slug}`);
     return {
-      slug,
       brokerId: '',
-      status: 'clean',
-      profileUrl: null,
-      matchConfidence: 0,
+      slug,
+      status_v2: 'not_found',
+      error_code: null,
+      http_status: null,
+      error_detail: 'No pattern configured',
+      detection_method: 'direct',
+      confidence: null,
+      confidence_breakdown: null,
+      evidence_snippet: null,
+      evidence_url: null,
+      profile_url: null,
+      extracted_data: null,
     };
   }
 
   const searchUrl = buildSearchUrl(pattern.searchUrlTemplate, profile);
   console.log(`Scanning ${slug}: ${searchUrl}`);
 
-  try {
-    let html: string | null = null;
-    let usedBrowserless = false;
+  let directFailed = false;
+  let directError: { status_v2: StatusV2; error_code: ErrorCode; http_status: number | null; error_detail: string } | null = null;
 
-    // Try Browserless first for better accuracy
-    if (useBrowserless) {
-      html = await fetchWithBrowserless(searchUrl);
-      usedBrowserless = html !== null;
+  // Try Browserless first
+  const browserlessResult = await fetchWithBrowserless(searchUrl);
+  
+  if (browserlessResult.html && browserlessResult.status === 200) {
+    // Successfully got HTML via Browserless
+    const parseResult = analyzeHtml(browserlessResult.html, pattern, profile, searchUrl, 'browserless');
+    if (parseResult.status_v2 === 'found' || parseResult.status_v2 === 'not_found') {
+      return parseResult;
     }
-
-    // Fallback to direct fetch
-    if (!html) {
-      const directResult = await fetchDirect(searchUrl);
-      
-      if (directResult.status === 403 || directResult.status === 429) {
-        // Blocked - mark as unknown so user can manually verify
-        console.log(`${slug}: HTTP ${directResult.status} (blocked)`);
-        return {
-          slug,
-          brokerId: '',
-          status: 'error', // Will show as "unknown" in UI
-          profileUrl: searchUrl,
-          matchConfidence: 0,
-          error: `Blocked (HTTP ${directResult.status})`,
-        };
-      }
-      
-      if (!directResult.html) {
-        console.log(`${slug}: Failed to fetch`);
-        return {
-          slug,
-          brokerId: '',
-          status: 'error',
-          profileUrl: searchUrl,
-          matchConfidence: 0,
-          error: 'Failed to fetch',
-        };
-      }
-      
-      html = directResult.html;
-    }
-
-    const htmlLower = html.toLowerCase();
-
-    // Check for no results patterns
-    const hasNoResults = pattern.noResultsPatterns.some(p => 
-      htmlLower.includes(p.toLowerCase())
-    );
-
-    // Check for has results patterns
-    const hasResults = pattern.hasResultsPatterns.some(p => 
-      htmlLower.includes(p.toLowerCase())
-    );
-
-    // Check if user's name appears in the response
-    const nameInPage = htmlLower.includes(profile.firstName.toLowerCase()) && 
-                       htmlLower.includes(profile.lastName.toLowerCase());
-
-    console.log(`${slug}: noResults=${hasNoResults}, hasResults=${hasResults}, nameInPage=${nameInPage}, browserless=${usedBrowserless}`);
-
-    // Determine result
-    if (hasNoResults && !hasResults) {
-      return {
-        slug,
-        brokerId: '',
-        status: 'clean',
-        profileUrl: null,
-        matchConfidence: 0,
-      };
-    }
-
-    if (hasResults || nameInPage) {
-      // Calculate confidence based on signals
-      let confidence = 0.3;
-      if (hasResults) confidence += 0.3;
-      if (nameInPage) confidence += 0.25;
-      if (usedBrowserless) confidence += 0.1; // Higher confidence with browser rendering
-      
-      // Extract personal data from the HTML
-      const extractedData = extractDataFromHtml(html, profile);
-      console.log(`${slug}: extracted data keys: ${Object.keys(extractedData).join(', ')}`);
-      
-      return {
-        slug,
-        brokerId: '',
-        status: 'found',
-        profileUrl: searchUrl,
-        matchConfidence: Math.min(confidence, 0.95),
-        extractedData: Object.keys(extractedData).length > 0 ? extractedData : undefined,
-      };
-    }
-
-    // Inconclusive - mark as clean
-    return {
-      slug,
-      brokerId: '',
-      status: 'clean',
-      profileUrl: null,
-      matchConfidence: 0,
+    // If parse_failed, we'll try SERP fallback
+    directFailed = true;
+    directError = { 
+      status_v2: 'parse_failed', 
+      error_code: 'parse_failed', 
+      http_status: 200, 
+      error_detail: 'Could not confidently parse results' 
     };
+  } else if (browserlessResult.status === 429 || browserlessResult.status === 400 || browserlessResult.status >= 500) {
+    // Browserless provider error
+    directFailed = true;
+    const { status_v2, error_code } = classifyHttpFailure(browserlessResult.status, 'browserless');
+    directError = { status_v2, error_code, http_status: browserlessResult.status, error_detail: browserlessResult.error || '' };
+  } else {
+    // Browserless not available, try direct fetch
+    await new Promise(resolve => setTimeout(resolve, getJitterDelay()));
+    
+    const directResult = await fetchDirect(searchUrl);
+    
+    if (directResult.html && directResult.status === 200) {
+      const parseResult = analyzeHtml(directResult.html, pattern, profile, searchUrl, 'direct');
+      if (parseResult.status_v2 === 'found' || parseResult.status_v2 === 'not_found') {
+        return parseResult;
+      }
+      directFailed = true;
+      directError = { 
+        status_v2: 'parse_failed', 
+        error_code: 'parse_failed', 
+        http_status: 200, 
+        error_detail: 'Could not confidently parse results' 
+      };
+    } else {
+      directFailed = true;
+      const { status_v2, error_code } = classifyHttpFailure(directResult.status, 'direct');
+      directError = { status_v2, error_code, http_status: directResult.status, error_detail: directResult.error || '' };
+    }
+  }
 
-  } catch (error) {
-    console.error(`Error scanning ${slug}:`, error);
+  // Direct/Browserless failed - try SERP fallback
+  if (directFailed && serpApiKey) {
+    console.log(`${slug}: Direct failed (${directError?.error_code}), trying SERP fallback`);
+    const serpResult = await serpDiscovery(slug, pattern.domain, profile, serpApiKey);
+    
+    // SERP result overrides direct failure (but we note what happened)
+    if (serpResult.status_v2 === 'found' || serpResult.status_v2 === 'possible_match' || serpResult.status_v2 === 'not_found') {
+      return serpResult;
+    }
+  }
+
+  // Return the direct error if SERP didn't help
+  if (directError) {
     return {
-      slug,
       brokerId: '',
-      status: 'error',
-      profileUrl: searchUrl,
-      matchConfidence: 0,
-      error: String(error),
+      slug,
+      status_v2: directError.status_v2,
+      error_code: directError.error_code,
+      http_status: directError.http_status,
+      error_detail: directError.error_detail,
+      detection_method: 'direct',
+      confidence: null,
+      confidence_breakdown: null,
+      evidence_snippet: null,
+      evidence_url: null,
+      profile_url: searchUrl,
+      extracted_data: null,
     };
   }
+
+  // Fallback unknown
+  return {
+    brokerId: '',
+    slug,
+    status_v2: 'unknown',
+    error_code: null,
+    http_status: null,
+    error_detail: 'Could not determine result',
+    detection_method: 'direct',
+    confidence: null,
+    confidence_breakdown: null,
+    evidence_snippet: null,
+    evidence_url: null,
+    profile_url: searchUrl,
+    extracted_data: null,
+  };
+}
+
+// Analyze HTML and determine result
+function analyzeHtml(
+  html: string,
+  pattern: typeof brokerPatterns[string],
+  profile: UserProfile,
+  searchUrl: string,
+  method: DetectionMethod
+): ScanResultV2 {
+  const htmlLower = html.toLowerCase();
+  
+  // Check for no results patterns
+  const hasNoResults = pattern.noResultsPatterns.some(p => 
+    htmlLower.includes(p.toLowerCase())
+  );
+
+  // Check for has results patterns
+  const hasResults = pattern.hasResultsPatterns.some(p => 
+    htmlLower.includes(p.toLowerCase())
+  );
+
+  // Check if user's name appears
+  const nameInPage = htmlLower.includes(profile.firstName.toLowerCase()) && 
+                     htmlLower.includes(profile.lastName.toLowerCase());
+
+  console.log(`${pattern.domain}: noResults=${hasNoResults}, hasResults=${hasResults}, nameInPage=${nameInPage}`);
+
+  // Determine result
+  if (hasNoResults && !hasResults) {
+    return {
+      brokerId: '',
+      slug: '',
+      status_v2: 'not_found',
+      error_code: null,
+      http_status: 200,
+      error_detail: null,
+      detection_method: method,
+      confidence: 0,
+      confidence_breakdown: null,
+      evidence_snippet: null,
+      evidence_url: null,
+      profile_url: null,
+      extracted_data: null,
+    };
+  }
+
+  if (hasResults || nameInPage) {
+    // Calculate confidence
+    let confidence = 0.30;
+    const breakdown: Record<string, number> = { base: 0.30 };
+    
+    if (hasResults) {
+      breakdown.result_pattern = 0.25;
+      confidence += 0.25;
+    }
+    if (nameInPage) {
+      breakdown.name_match = 0.25;
+      confidence += 0.25;
+    }
+    
+    confidence = Math.min(confidence, 0.90);
+    breakdown.total = confidence;
+    
+    // Try to extract data with strict validation
+    const extractedData = extractDataFromHtmlStrict(html, profile);
+    
+    // If we have extracted data, boost confidence
+    if (extractedData && Object.keys(extractedData).length > 2) {
+      confidence = Math.min(confidence + 0.10, 0.95);
+      breakdown.extracted_data = 0.10;
+      breakdown.total = confidence;
+    }
+    
+    // Determine status based on confidence
+    let status_v2: StatusV2 = 'possible_match';
+    if (confidence >= CONFIDENCE_THRESHOLDS.FOUND) {
+      status_v2 = 'found';
+    }
+    
+    // Generate evidence snippet from clean text
+    const cleanText = stripScriptStyle(html);
+    const nameIndex = cleanText.toLowerCase().indexOf(profile.firstName.toLowerCase());
+    let evidenceSnippet = null;
+    if (nameIndex >= 0) {
+      const start = Math.max(0, nameIndex - 30);
+      const end = Math.min(cleanText.length, nameIndex + 270);
+      evidenceSnippet = cleanText.slice(start, end);
+    }
+    
+    return {
+      brokerId: '',
+      slug: '',
+      status_v2,
+      error_code: null,
+      http_status: 200,
+      error_detail: null,
+      detection_method: method,
+      confidence,
+      confidence_breakdown: breakdown,
+      evidence_snippet: evidenceSnippet,
+      evidence_url: searchUrl,
+      profile_url: searchUrl,
+      extracted_data: extractedData,
+    };
+  }
+
+  // Inconclusive
+  return {
+    brokerId: '',
+    slug: '',
+    status_v2: 'parse_failed',
+    error_code: 'parse_failed',
+    http_status: 200,
+    error_detail: 'Inconclusive page content',
+    detection_method: method,
+    confidence: null,
+    confidence_breakdown: null,
+    evidence_snippet: null,
+    evidence_url: null,
+    profile_url: searchUrl,
+    extracted_data: null,
+  };
 }
 
 Deno.serve(async (req) => {
@@ -502,6 +836,7 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
+    const serpApiKey = Deno.env.get('SERP_API_KEY') || null;
 
     // Get auth header
     const authHeader = req.headers.get('Authorization');
@@ -525,7 +860,7 @@ Deno.serve(async (req) => {
 
     const userId = user.id;
 
-    // Check if user has Complete subscription (broker scanning requires Complete tier)
+    // Check if user has Complete subscription
     const { data: subscription } = await supabase
       .from('subscriptions')
       .select('tier, status')
@@ -533,7 +868,6 @@ Deno.serve(async (req) => {
       .eq('status', 'active')
       .single();
 
-    // Broker scanning requires Complete tier
     if (!subscription || subscription.tier !== 'complete') {
       return new Response(
         JSON.stringify({ error: 'Complete subscription required for broker scanning' }),
@@ -542,10 +876,9 @@ Deno.serve(async (req) => {
     }
 
     if (req.method === 'POST') {
-      // Start a new scan
       const body = await req.json().catch(() => ({}));
       
-      // Check if user already has a scan in progress
+      // Check for existing scan in progress
       const { data: existingScan } = await supabase
         .from('broker_scans')
         .select('id, status')
@@ -563,8 +896,8 @@ Deno.serve(async (req) => {
         );
       }
 
-      // Check cooldown (5 minutes for testing, can be bypassed with force=true)
-      const COOLDOWN_MS = 5 * 60 * 1000; // 5 minutes for testing
+      // Cooldown check (5 minutes)
+      const COOLDOWN_MS = 5 * 60 * 1000;
       const forceRescan = body.force === true;
       
       if (!forceRescan) {
@@ -580,11 +913,10 @@ Deno.serve(async (req) => {
           const completedAt = new Date(recentScan.completed_at);
           const nextScanAt = new Date(completedAt.getTime() + COOLDOWN_MS);
           const remainingMs = nextScanAt.getTime() - Date.now();
-          const remainingMinutes = Math.ceil(remainingMs / 60000);
           
           return new Response(
             JSON.stringify({ 
-              error: `Please wait ${remainingMinutes} minute${remainingMinutes !== 1 ? 's' : ''} between scans`,
+              error: `Please wait ${Math.ceil(remainingMs / 60000)} minutes between scans`,
               last_scan: recentScan.completed_at,
               next_scan_at: nextScanAt.toISOString(),
               remaining_seconds: Math.ceil(remainingMs / 1000),
@@ -592,18 +924,15 @@ Deno.serve(async (req) => {
             { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
-      } else {
-        console.log(`Force rescan requested for user ${userId}`);
       }
 
-      // Get user profile for search (including city and state)
+      // Get user profile
       const { data: profile } = await supabase
         .from('profiles')
         .select('full_name, city, state')
         .eq('id', userId)
         .single();
 
-      // Parse name from profile or email
       let userProfile: UserProfile;
       if (profile?.full_name) {
         const { firstName, lastName } = parseFullName(profile.full_name);
@@ -614,7 +943,6 @@ Deno.serve(async (req) => {
           state: body.state || profile.state || '',
         };
       } else {
-        // Fallback to email username
         const emailName = user.email?.split('@')[0] || 'user';
         userProfile = {
           firstName: emailName,
@@ -630,7 +958,7 @@ Deno.serve(async (req) => {
         .select('id, slug', { count: 'exact' })
         .eq('is_active', true);
 
-      // Create new scan record
+      // Create scan record
       const { data: newScan, error: scanError } = await supabase
         .from('broker_scans')
         .insert({
@@ -654,55 +982,60 @@ Deno.serve(async (req) => {
         );
       }
 
-      console.log(`Created broker scan ${newScan.id} for user ${userId} (${userProfile.firstName} ${userProfile.lastName})`);
+      console.log(`Created broker scan ${newScan.id} for user ${userId} (${userProfile.firstName} ${userProfile.lastName}), SERP API: ${serpApiKey ? 'configured' : 'not configured'}`);
 
-      // Run scans in parallel (batches of 3 for Browserless to avoid rate limits)
-      const BATCH_SIZE = 3;
+      // Scan sequentially with jitter (concurrency=1 for reliability)
       let scannedCount = 0;
       let foundCount = 0;
       let cleanCount = 0;
       let errorCount = 0;
 
-      for (let i = 0; i < (brokers?.length || 0); i += BATCH_SIZE) {
-        const batch = brokers!.slice(i, i + BATCH_SIZE);
-        
-        // Add small delay between batches to avoid rate limiting
-        if (i > 0) {
-          await new Promise(resolve => setTimeout(resolve, 1000));
+      for (const broker of brokers || []) {
+        // Add jitter delay between brokers
+        if (scannedCount > 0) {
+          await new Promise(resolve => setTimeout(resolve, getJitterDelay()));
         }
         
-        const results = await Promise.all(
-          batch.map(broker => scanBroker(broker.slug, userProfile, true))
-        );
-
-        // Save results for each broker
-        for (let j = 0; j < results.length; j++) {
-          const result = results[j];
-          const broker = batch[j];
-          
-          scannedCount++;
-          if (result.status === 'found') foundCount++;
-          else if (result.status === 'clean') cleanCount++;
-          else errorCount++;
-
-          // Upsert result
-          await supabase
-            .from('broker_scan_results')
-            .upsert({
-              user_id: userId,
-              broker_id: broker.id,
-              status: result.status,
-              profile_url: result.profileUrl,
-              match_confidence: result.matchConfidence,
-              extracted_data: result.extractedData || null,
-              error_message: result.error || null,
-              scanned_at: new Date().toISOString(),
-            }, {
-              onConflict: 'user_id,broker_id',
-            });
+        const result = await scanBrokerV2(broker.slug, userProfile, serpApiKey);
+        result.brokerId = broker.id;
+        
+        scannedCount++;
+        
+        // Count by status
+        if (result.status_v2 === 'found' || result.status_v2 === 'possible_match') {
+          foundCount++;
+        } else if (result.status_v2 === 'not_found') {
+          cleanCount++;
+        } else {
+          errorCount++;
         }
 
-        // Update scan progress
+        // Upsert result with v2 fields
+        await supabase
+          .from('broker_scan_results')
+          .upsert({
+            user_id: userId,
+            broker_id: broker.id,
+            status: result.status_v2 === 'found' ? 'found' : result.status_v2 === 'not_found' ? 'clean' : 'error', // Legacy field
+            status_v2: result.status_v2,
+            error_code: result.error_code,
+            http_status: result.http_status,
+            error_detail: result.error_detail,
+            detection_method: result.detection_method,
+            confidence: result.confidence,
+            confidence_breakdown: result.confidence_breakdown,
+            evidence_snippet: result.evidence_snippet,
+            evidence_url: result.evidence_url,
+            profile_url: result.profile_url,
+            extracted_data: result.extracted_data,
+            error_message: result.error_detail,
+            match_confidence: result.confidence,
+            scanned_at: new Date().toISOString(),
+          }, {
+            onConflict: 'user_id,broker_id',
+          });
+
+        // Update progress
         await supabase
           .from('broker_scans')
           .update({
@@ -714,7 +1047,7 @@ Deno.serve(async (req) => {
           .eq('id', newScan.id);
       }
 
-      // Mark scan as completed
+      // Mark complete
       const { data: completedScan } = await supabase
         .from('broker_scans')
         .update({
@@ -729,7 +1062,7 @@ Deno.serve(async (req) => {
         .select()
         .single();
 
-      console.log(`Completed scan ${newScan.id}: found=${foundCount}, clean=${cleanCount}`);
+      console.log(`Completed scan ${newScan.id}: found=${foundCount}, clean=${cleanCount}, errors=${errorCount}`);
 
       return new Response(
         JSON.stringify({ 
@@ -741,11 +1074,9 @@ Deno.serve(async (req) => {
     }
 
     if (req.method === 'GET') {
-      // Get scan status and results
       const url = new URL(req.url);
       const scanId = url.searchParams.get('scan_id');
 
-      // Get the latest scan or specific scan
       let scanQuery = supabase
         .from('broker_scans')
         .select('*')
@@ -766,12 +1097,21 @@ Deno.serve(async (req) => {
         );
       }
 
-      // Get results for this user
+      // Get results with v2 fields
       const { data: results } = await supabase
         .from('broker_scan_results')
         .select(`
           id,
           status,
+          status_v2,
+          error_code,
+          http_status,
+          error_detail,
+          detection_method,
+          confidence,
+          confidence_breakdown,
+          evidence_snippet,
+          evidence_url,
           profile_url,
           match_confidence,
           extracted_data,
@@ -794,7 +1134,6 @@ Deno.serve(async (req) => {
         .eq('user_id', userId)
         .order('scanned_at', { ascending: false });
 
-      // Get all brokers for reference
       const { data: brokers } = await supabase
         .from('data_brokers')
         .select('id, name, slug, priority, opt_out_difficulty')
