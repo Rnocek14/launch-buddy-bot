@@ -39,10 +39,7 @@ serve(async (req) => {
   try {
     logStep("Function started");
 
-    const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
-    if (!stripeKey) throw new Error("STRIPE_SECRET_KEY is not set");
-    logStep("Stripe key verified");
-
+    // Auth check first (before any Stripe requirements)
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) throw new Error("No authorization header provided");
     logStep("Authorization header found");
@@ -56,15 +53,24 @@ serve(async (req) => {
     if (!user?.email) throw new Error("User not authenticated or email not available");
     logStep("User authenticated", { userId: user.id, email: user.email });
 
-    // Check for manual override FIRST - skip Stripe sync if set
-    const { data: existingSub } = await supabaseClient
+    // Check for manual override FIRST - before requiring Stripe key
+    // This allows override accounts to work even in environments without Stripe configured
+    const { data: existingSub, error: existingSubErr } = await supabaseClient
       .from('subscriptions')
       .select('tier, manual_override, current_period_end')
       .eq('user_id', user.id)
-      .single();
+      .maybeSingle(); // ✅ Safe: doesn't throw on missing row
 
-    if (existingSub?.manual_override) {
-      logStep("Manual override active, using database tier", { tier: existingSub.tier });
+    if (existingSubErr) {
+      logStep("Error fetching existing subscription", { error: existingSubErr });
+    }
+
+    // ✅ Strict equality check - only true, not truthy
+    if (existingSub?.manual_override === true) {
+      logStep("Manual override active, using database tier", { 
+        tier: existingSub.tier,
+        userId: user.id 
+      });
       return new Response(JSON.stringify({
         subscribed: existingSub.tier !== 'free',
         tier: existingSub.tier,
@@ -76,6 +82,11 @@ serve(async (req) => {
       });
     }
 
+    // Only now require Stripe key (after override check)
+    const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
+    if (!stripeKey) throw new Error("STRIPE_SECRET_KEY is not set");
+    logStep("Stripe key verified");
+
     const stripe = new Stripe(stripeKey, { apiVersion: "2024-06-20" });
     const customers = await stripe.customers.list({ email: user.email, limit: 1 });
     
@@ -83,6 +94,7 @@ serve(async (req) => {
       logStep("No customer found, returning unsubscribed state");
       
       // Ensure free subscription exists in database
+      // ✅ Only update if NOT manually overridden (defensive - already early-returned above)
       const { error: upsertError } = await supabaseClient
         .from('subscriptions')
         .upsert({
@@ -91,8 +103,10 @@ serve(async (req) => {
           status: 'active',
           updated_at: new Date().toISOString()
         }, {
-          onConflict: 'user_id'
-        });
+          onConflict: 'user_id',
+          ignoreDuplicates: false
+        })
+        .eq('manual_override', false); // ✅ Never overwrite override accounts
 
       if (upsertError) {
         logStep("Error upserting free subscription", { error: upsertError });
@@ -137,11 +151,10 @@ serve(async (req) => {
         tier 
       });
 
-      // Update database with subscription info
+      // ✅ Use UPDATE with WHERE clause to never touch override accounts
       const { error: updateError } = await supabaseClient
         .from('subscriptions')
-        .upsert({
-          user_id: user.id,
+        .update({
           tier: tier,
           status: 'active',
           stripe_customer_id: customerId,
@@ -149,31 +162,68 @@ serve(async (req) => {
           current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
           current_period_end: subscriptionEnd,
           updated_at: new Date().toISOString()
-        }, {
-          onConflict: 'user_id'
-        });
+        })
+        .eq('user_id', user.id)
+        .neq('manual_override', true); // ✅ Never overwrite override accounts
 
+      // If no row was updated, insert new one (for users without subscription row)
       if (updateError) {
-        logStep("Error updating subscription", { error: updateError });
+        logStep("Error updating subscription, attempting insert", { error: updateError });
+      }
+      
+      // Insert if user doesn't have a subscription row yet
+      if (!existingSub) {
+        const { error: insertError } = await supabaseClient
+          .from('subscriptions')
+          .insert({
+            user_id: user.id,
+            tier: tier,
+            status: 'active',
+            stripe_customer_id: customerId,
+            stripe_subscription_id: stripeSubscriptionId,
+            current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
+            current_period_end: subscriptionEnd,
+            manual_override: false // Explicit: new Stripe-synced accounts are not overridden
+          });
+        
+        if (insertError) {
+          logStep("Error inserting subscription", { error: insertError });
+        }
       }
     } else {
       logStep("No active subscription found");
       
-      // Update to free tier in database
+      // ✅ Use UPDATE with WHERE clause to never touch override accounts
       const { error: updateError } = await supabaseClient
         .from('subscriptions')
-        .upsert({
-          user_id: user.id,
+        .update({
           tier: 'free',
           status: 'active',
           stripe_customer_id: customerId,
           updated_at: new Date().toISOString()
-        }, {
-          onConflict: 'user_id'
-        });
+        })
+        .eq('user_id', user.id)
+        .neq('manual_override', true); // ✅ Never overwrite override accounts
 
       if (updateError) {
         logStep("Error updating to free tier", { error: updateError });
+      }
+      
+      // Insert if user doesn't have a subscription row yet
+      if (!existingSub) {
+        const { error: insertError } = await supabaseClient
+          .from('subscriptions')
+          .insert({
+            user_id: user.id,
+            tier: 'free',
+            status: 'active',
+            stripe_customer_id: customerId,
+            manual_override: false
+          });
+        
+        if (insertError) {
+          logStep("Error inserting free subscription", { error: insertError });
+        }
       }
     }
 
