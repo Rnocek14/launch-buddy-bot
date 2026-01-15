@@ -200,7 +200,7 @@ interface UserProfile {
 const SCORING_VERSION = 'serp_v2.1';
 
 interface ScanResultV2 {
-  brokerId: string;
+  brokerId: string | null; // nullable - filled by caller when persisting, not by SERP discovery
   slug: string;
   status_v2: StatusV2;
   error_code: ErrorCode | null;
@@ -401,9 +401,8 @@ async function serpSearch(query: string, apiKey: string): Promise<Array<{ title:
 }
 
 // Helper: SERP discovery for a broker with budget governance
-// brokerId is passed through so callers don't get empty string
+// brokerId is nullable - caller fills it when persisting the final result
 async function serpDiscovery(
-  brokerId: string,
   slug: string,
   brokerDomain: string,
   user: UserProfile,
@@ -422,13 +421,17 @@ async function serpDiscovery(
     const budgetCheck = await checkSerpBudget(supabaseClient);
     
     if (!budgetCheck.allowed) {
-      // Distinguish between budget exhausted vs RPC failure
-      const reason = budgetCheck.rpcError 
+      // Distinguish user-facing messages: budget exhausted vs RPC system failure
+      const isRpcFailure = !!budgetCheck.rpcError;
+      const logReason = isRpcFailure 
         ? `Budget check failed: ${budgetCheck.rpcError}` 
         : 'Daily SERP budget exhausted';
+      const userMessage = isRpcFailure
+        ? 'Budget system error — SERP disabled for safety; manual check recommended'
+        : 'Daily limit reached — manual check recommended';
       
-      console.log(`SERP budget blocked for ${slug}: ${reason}`);
-      await logSerpRequest(supabaseClient, userId, slug, query, 'skipped_budget', reason);
+      console.log(`SERP budget blocked for ${slug}: ${logReason}`);
+      await logSerpRequest(supabaseClient, userId, slug, query, 'skipped_budget', logReason);
       
       // If we have a partial result, use it; otherwise return budget_exhausted
       const currentBest = bestResult as BestResultType | null;
@@ -439,14 +442,12 @@ async function serpDiscovery(
       
       // No usable result - return budget exhausted error
       return {
-        brokerId,
+        brokerId: null,
         slug,
         status_v2: 'unknown' as StatusV2,
         error_code: 'budget_exhausted' as ErrorCode,
         http_status: null,
-        error_detail: budgetCheck.rpcError 
-          ? `Budget check failed; manual check recommended. ${budgetCheck.rpcError}`
-          : 'Daily SERP search limit reached; manual check recommended',
+        error_detail: userMessage,
         detection_method: 'serp' as DetectionMethod,
         confidence: null,
         confidence_breakdown: null,
@@ -497,7 +498,7 @@ async function serpDiscovery(
 
   if (bestResult && bestResult.score.total >= CONFIDENCE_THRESHOLDS.POSSIBLE_MATCH) {
     return {
-      brokerId,
+      brokerId: null, // filled by caller when persisting
       slug,
       status_v2: bestResult.score.status_v2,
       error_code: null,
@@ -517,7 +518,7 @@ async function serpDiscovery(
 
   // No matches found via SERP
   return {
-    brokerId,
+    brokerId: null, // filled by caller when persisting
     slug,
     status_v2: 'not_found',
     error_code: null,
@@ -769,7 +770,7 @@ async function scanBrokerV2(
   if (!pattern) {
     console.log(`No pattern for broker: ${slug}`);
     return {
-      brokerId: '',
+      brokerId: null,
       slug,
       status_v2: 'not_found',
       error_code: null,
@@ -848,7 +849,7 @@ async function scanBrokerV2(
   // Direct/Browserless failed - try SERP fallback
   if (directFailed && serpApiKey) {
     console.log(`${slug}: Direct failed (${directError?.error_code}), trying SERP fallback`);
-    const serpResult = await serpDiscovery('', slug, pattern.domain, profile, serpApiKey, supabaseClient, userId);
+    const serpResult = await serpDiscovery(slug, pattern.domain, profile, serpApiKey, supabaseClient, userId);
     
     // SERP result overrides direct failure (but we note what happened in error_detail)
     if (serpResult.status_v2 === 'found' || serpResult.status_v2 === 'possible_match' || serpResult.status_v2 === 'not_found') {
@@ -863,7 +864,7 @@ async function scanBrokerV2(
   // Return the direct error if SERP didn't help
   if (directError) {
     return {
-      brokerId: '',
+      brokerId: null,
       slug,
       status_v2: directError.status_v2,
       error_code: directError.error_code,
@@ -883,7 +884,7 @@ async function scanBrokerV2(
 
   // Fallback unknown
   return {
-    brokerId: '',
+    brokerId: null,
     slug,
     status_v2: 'unknown',
     error_code: null,
@@ -931,7 +932,7 @@ function analyzeHtml(
   // Determine result
   if (hasNoResults && !hasResults) {
     return {
-      brokerId: '',
+      brokerId: null,
       slug,
       status_v2: 'not_found',
       error_code: null,
@@ -993,7 +994,7 @@ function analyzeHtml(
     }
     
     return {
-      brokerId: '',
+      brokerId: null,
       slug,
       status_v2,
       error_code: null,
@@ -1013,7 +1014,7 @@ function analyzeHtml(
 
   // Inconclusive
   return {
-    brokerId: '',
+    brokerId: null,
     slug,
     status_v2: 'parse_failed',
     error_code: 'parse_failed',
