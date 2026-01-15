@@ -1,7 +1,10 @@
-import { ExternalLink, Shield, ShieldAlert, ShieldCheck, Clock, AlertCircle, CheckCircle2, Eye, MapPin, Ban, Zap, HelpCircle, Search } from "lucide-react";
+import { ExternalLink, Shield, ShieldAlert, ShieldCheck, Clock, AlertCircle, CheckCircle2, Eye, MapPin, Ban, Zap, HelpCircle, Search, ChevronDown } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { useState } from "react";
 import { 
   StatusV2, 
   DetectionMethod,
@@ -74,6 +77,7 @@ export function BrokerResultCard({
   onViewDetails,
   onMarkFound,
 }: BrokerResultCardProps) {
+  const [showBreakdown, setShowBreakdown] = useState(false);
   // Use v2 status if available, otherwise fall back to legacy
   const effectiveStatus: StatusV2 = status_v2 || (
     status === 'found' ? 'found' :
@@ -170,12 +174,29 @@ export function BrokerResultCard({
             <div className="space-y-1.5">
               <div className="flex items-center gap-2 flex-wrap">
                 <h4 className="font-medium">{broker.name}</h4>
-                <Badge 
-                  variant="outline" 
-                  className={`${statusBadgeClasses[effectiveStatus]} text-xs`}
-                >
-                  {statusLabel[effectiveStatus]}
-                </Badge>
+                {effectiveStatus === 'not_found' ? (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Badge 
+                        variant="outline" 
+                        className={`${statusBadgeClasses[effectiveStatus]} text-xs cursor-help`}
+                      >
+                        {statusLabel[effectiveStatus]}
+                        <HelpCircle className="h-3 w-3 ml-1" />
+                      </Badge>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs">
+                      <p>No match found in indexed search results. Some brokers may hide results behind paywalls or require direct searches.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                ) : (
+                  <Badge 
+                    variant="outline" 
+                    className={`${statusBadgeClasses[effectiveStatus]} text-xs`}
+                  >
+                    {statusLabel[effectiveStatus]}
+                  </Badge>
+                )}
                 {detection_method && (
                   <Badge variant="outline" className="text-xs bg-background">
                     <Search className="h-3 w-3 mr-1" />
@@ -186,20 +207,65 @@ export function BrokerResultCard({
               
               <p className="text-sm text-muted-foreground">{broker.website}</p>
               
-              {/* Confidence display */}
-              {isFound && effectiveConfidence != null && (
-                <p className="text-xs text-muted-foreground">
-                  Confidence: {Math.round(effectiveConfidence * 100)}%
-                  {confidence_breakdown && (
-                    <span className="text-muted-foreground/70 ml-1">
-                      ({Object.entries(confidence_breakdown)
-                        .filter(([k]) => k !== 'total')
-                        .map(([k, v]) => `${k.replace('_', ' ')}: ${Math.round(v * 100)}%`)
-                        .slice(0, 3)
-                        .join(', ')})
-                    </span>
-                  )}
-                </p>
+              {/* Evidence signals checklist */}
+              {isFound && confidence_breakdown && (
+                <div className="mt-2 space-y-1">
+                  <p className="text-xs font-medium text-muted-foreground">Evidence signals:</p>
+                  <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs">
+                    {confidence_breakdown.name_match ? (
+                      <span className="text-green-600">✅ Name</span>
+                    ) : (
+                      <span className="text-muted-foreground/50">○ Name</span>
+                    )}
+                    {confidence_breakdown.city_match ? (
+                      <span className="text-green-600">✅ City</span>
+                    ) : (
+                      <span className="text-muted-foreground/50">○ City</span>
+                    )}
+                    {confidence_breakdown.state_match ? (
+                      <span className="text-green-600">✅ State</span>
+                    ) : (
+                      <span className="text-muted-foreground/50">○ State</span>
+                    )}
+                    {confidence_breakdown.age_hint ? (
+                      <span className="text-green-600">✅ Age</span>
+                    ) : (
+                      <span className="text-muted-foreground/50">○ Age</span>
+                    )}
+                    {confidence_breakdown.phone_hint ? (
+                      <span className="text-green-600">✅ Phone</span>
+                    ) : (
+                      <span className="text-muted-foreground/50">○ Phone</span>
+                    )}
+                    {confidence_breakdown.address_hint ? (
+                      <span className="text-green-600">✅ Address</span>
+                    ) : (
+                      <span className="text-muted-foreground/50">○ Address</span>
+                    )}
+                  </div>
+                  
+                  {/* Collapsible detailed breakdown */}
+                  <Collapsible open={showBreakdown} onOpenChange={setShowBreakdown}>
+                    <CollapsibleTrigger className="text-[10px] text-muted-foreground hover:text-foreground flex items-center gap-1 mt-1">
+                      <span>Confidence: {Math.round((effectiveConfidence || 0) * 100)}%</span>
+                      <ChevronDown className={`h-3 w-3 transition-transform ${showBreakdown ? 'rotate-180' : ''}`} />
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="mt-1">
+                      <div className="text-[10px] text-muted-foreground/70 space-y-0.5 pl-2 border-l border-border">
+                        {Object.entries(confidence_breakdown)
+                          .filter(([k]) => !['total', 'has_strong_signal', 'name_in_title', 'name_in_url'].includes(k))
+                          .map(([k, v]) => (
+                            <div key={k}>
+                              {k.replace(/_/g, ' ')}: {typeof v === 'number' ? `${Math.round(v * 100)}%` : v}
+                            </div>
+                          ))}
+                        {confidence_breakdown.has_strong_signal === 1 && (
+                          <div className="text-green-600">Strong signal detected</div>
+                        )}
+                      </div>
+                    </CollapsibleContent>
+                  </Collapsible>
+                </div>
               )}
 
               {/* Data Preview */}
@@ -289,10 +355,10 @@ export function BrokerResultCard({
               </>
             )}
             
-            {isError && (
+            {isError && (profileUrl || evidence_url || broker.website) && (
               <div className="flex flex-col gap-2">
                 <Button variant="outline" size="sm" asChild>
-                  <a href={profileUrl || broker.website} target="_blank" rel="noopener noreferrer">
+                  <a href={profileUrl || evidence_url || broker.website} target="_blank" rel="noopener noreferrer">
                     Check Manually
                     <ExternalLink className="h-3 w-3 ml-1" />
                   </a>
