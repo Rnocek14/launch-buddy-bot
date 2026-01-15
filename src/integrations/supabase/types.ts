@@ -1695,6 +1695,60 @@ export type Database = {
         }
         Relationships: []
       }
+      serp_requests_log: {
+        Row: {
+          broker_slug: string | null
+          created_at: string
+          error_detail: string | null
+          id: string
+          query: string
+          response_hash: string | null
+          status: string
+          user_id: string | null
+        }
+        Insert: {
+          broker_slug?: string | null
+          created_at?: string
+          error_detail?: string | null
+          id?: string
+          query: string
+          response_hash?: string | null
+          status: string
+          user_id?: string | null
+        }
+        Update: {
+          broker_slug?: string | null
+          created_at?: string
+          error_detail?: string | null
+          id?: string
+          query?: string
+          response_hash?: string | null
+          status?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      serp_usage_daily: {
+        Row: {
+          day: string
+          searches_limit: number
+          searches_used: number
+          updated_at: string
+        }
+        Insert: {
+          day: string
+          searches_limit?: number
+          searches_used?: number
+          updated_at?: string
+        }
+        Update: {
+          day?: string
+          searches_limit?: number
+          searches_used?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       service_catalog: {
         Row: {
           category: string | null
@@ -2174,6 +2228,7 @@ export type Database = {
       }
     }
     Functions: {
+      consume_serp_quota: { Args: { p_count?: number }; Returns: boolean }
       discovery_quarantine_cleanup: {
         Args: { max_age_days?: number }
         Returns: {
@@ -2205,6 +2260,15 @@ export type Database = {
         }[]
       }
       get_remaining_deletions: { Args: { p_user_id: string }; Returns: number }
+      get_serp_budget_status: {
+        Args: never
+        Returns: {
+          day: string
+          remaining: number
+          searches_limit: number
+          searches_used: number
+        }[]
+      }
       get_user_subscription_tier: {
         Args: { p_user_id: string }
         Returns: string

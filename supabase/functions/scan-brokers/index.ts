@@ -7,8 +7,45 @@ const corsHeaders = {
 
 // Status V2 taxonomy
 type StatusV2 = 'found' | 'possible_match' | 'not_found' | 'blocked' | 'rate_limited' | 'provider_error' | 'timeout' | 'parse_failed' | 'request_failed' | 'unknown';
-type ErrorCode = 'blocked' | 'rate_limited' | 'provider_error' | 'timeout' | 'parse_failed' | 'request_failed';
+type ErrorCode = 'blocked' | 'rate_limited' | 'provider_error' | 'timeout' | 'parse_failed' | 'request_failed' | 'budget_exhausted';
 type DetectionMethod = 'direct' | 'browserless' | 'serp' | 'manual';
+
+// Budget governor: check and consume SERP quota
+async function checkSerpBudget(supabaseClient: any): Promise<boolean> {
+  try {
+    const { data, error } = await supabaseClient.rpc('consume_serp_quota', { p_count: 1 });
+    if (error) {
+      console.error('Budget check error:', error);
+      return false; // Fail closed - don't allow SERP if we can't verify budget
+    }
+    return data === true;
+  } catch (e) {
+    console.error('Budget check exception:', e);
+    return false;
+  }
+}
+
+// Log SERP request for audit trail
+async function logSerpRequest(
+  supabaseClient: any,
+  userId: string | null,
+  brokerSlug: string,
+  query: string,
+  status: 'ok' | 'error' | 'skipped_budget' | 'cached',
+  errorDetail?: string
+): Promise<void> {
+  try {
+    await supabaseClient.from('serp_requests_log').insert({
+      user_id: userId,
+      broker_slug: brokerSlug,
+      query,
+      status,
+      error_detail: errorDetail || null,
+    });
+  } catch (e) {
+    console.error('Failed to log SERP request:', e);
+  }
+}
 
 const CONFIDENCE_THRESHOLDS = {
   FOUND: 0.75,
@@ -355,19 +392,62 @@ async function serpSearch(query: string, apiKey: string): Promise<Array<{ title:
   }
 }
 
-// Helper: SERP discovery for a broker
+// Helper: SERP discovery for a broker with budget governance
 async function serpDiscovery(
   slug: string,
   brokerDomain: string,
   user: UserProfile,
-  apiKey: string
-): Promise<ScanResultV2> {
+  apiKey: string,
+  supabaseClient: any,
+  userId: string | null
+): Promise<ScanResultV2 & { budgetExhausted?: boolean }> {
   const queries = buildSerpQueries(user, brokerDomain);
   
-  let bestResult: { score: ReturnType<typeof scoreSerpResult>; result: { title: string; snippet: string; link: string }; query: string } | null = null;
+  interface BestResultType { score: ReturnType<typeof scoreSerpResult>; result: { title: string; snippet: string; link: string }; query: string }
+  let bestResult: BestResultType | null = null;
+  let totalQueriesUsed = 0;
   
   for (const query of queries) {
+    // Check budget before each SERP call
+    const budgetOk = await checkSerpBudget(supabaseClient);
+    if (!budgetOk) {
+      console.log(`SERP budget exhausted for ${slug}`);
+      await logSerpRequest(supabaseClient, userId, slug, query, 'skipped_budget', 'Daily SERP budget exhausted');
+      
+      // If we have a partial result, use it; otherwise return budget_exhausted
+      // Use explicit cast to avoid TypeScript control flow narrowing issue
+      const currentBest = bestResult as BestResultType | null;
+      if (currentBest && currentBest.score.total >= CONFIDENCE_THRESHOLDS.POSSIBLE_MATCH) {
+        // We have a usable partial result, break out of loop to return it
+        break;
+      }
+      
+      // No usable result - return budget exhausted error
+      return {
+        brokerId: '',
+        slug,
+        status_v2: 'unknown' as StatusV2,
+        error_code: 'budget_exhausted' as ErrorCode,
+        http_status: null,
+        error_detail: 'Daily SERP search limit reached; manual check recommended',
+        detection_method: 'serp' as DetectionMethod,
+        confidence: null,
+        confidence_breakdown: null,
+        evidence_snippet: null,
+        evidence_url: null,
+        profile_url: null,
+        extracted_data: null,
+        evidence_query: query,
+        scoring_version: SCORING_VERSION,
+        budgetExhausted: true,
+      };
+    }
+    
     const results = await serpSearch(query, apiKey);
+    totalQueriesUsed++;
+    
+    // Log successful SERP request
+    await logSerpRequest(supabaseClient, userId, slug, query, 'ok');
     
     for (const result of results) {
       // Ensure the result is actually from this broker's domain (stronger check)
@@ -388,8 +468,9 @@ async function serpDiscovery(
       }
     }
     
-    // If we found a strong match, stop early
+    // If we found a strong match, stop early (cost optimization)
     if (bestResult && bestResult.score.total >= CONFIDENCE_THRESHOLDS.FOUND) {
+      console.log(`${slug}: Strong SERP match found, stopping early after ${totalQueriesUsed} queries`);
       break;
     }
     
@@ -658,11 +739,13 @@ function extractDataFromHtmlStrict(html: string, profile: UserProfile): Record<s
   return Object.keys(data).length > 1 ? data : null;
 }
 
-// Main broker scan function with SERP fallback
+// Main broker scan function with SERP fallback and budget governance
 async function scanBrokerV2(
   slug: string,
   profile: UserProfile,
-  serpApiKey: string | null
+  serpApiKey: string | null,
+  supabaseClient: any,
+  userId: string | null
 ): Promise<ScanResultV2> {
   const pattern = brokerPatterns[slug];
   
@@ -748,7 +831,7 @@ async function scanBrokerV2(
   // Direct/Browserless failed - try SERP fallback
   if (directFailed && serpApiKey) {
     console.log(`${slug}: Direct failed (${directError?.error_code}), trying SERP fallback`);
-    const serpResult = await serpDiscovery(slug, pattern.domain, profile, serpApiKey);
+    const serpResult = await serpDiscovery(slug, pattern.domain, profile, serpApiKey, supabaseClient, userId);
     
     // SERP result overrides direct failure (but we note what happened in error_detail)
     if (serpResult.status_v2 === 'found' || serpResult.status_v2 === 'possible_match' || serpResult.status_v2 === 'not_found') {
@@ -1101,7 +1184,7 @@ Deno.serve(async (req) => {
           await new Promise(resolve => setTimeout(resolve, getJitterDelay()));
         }
         
-        const result = await scanBrokerV2(broker.slug, userProfile, serpApiKey);
+        const result = await scanBrokerV2(broker.slug, userProfile, serpApiKey, supabase, user.id);
         result.brokerId = broker.id;
         
         scannedCount++;
