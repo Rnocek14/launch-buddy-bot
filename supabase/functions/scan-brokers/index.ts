@@ -330,23 +330,37 @@ Deno.serve(async (req) => {
         );
       }
 
-      // Check cooldown (1 scan per 24 hours)
-      const { data: recentScan } = await supabase
-        .from('broker_scans')
-        .select('id, completed_at')
-        .eq('user_id', userId)
-        .eq('status', 'completed')
-        .gte('completed_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
-        .single();
+      // Check cooldown (5 minutes for testing, can be bypassed with force=true)
+      const COOLDOWN_MS = 5 * 60 * 1000; // 5 minutes for testing
+      const forceRescan = body.force === true;
+      
+      if (!forceRescan) {
+        const { data: recentScan } = await supabase
+          .from('broker_scans')
+          .select('id, completed_at')
+          .eq('user_id', userId)
+          .eq('status', 'completed')
+          .gte('completed_at', new Date(Date.now() - COOLDOWN_MS).toISOString())
+          .single();
 
-      if (recentScan) {
-        return new Response(
-          JSON.stringify({ 
-            error: 'Please wait 24 hours between scans',
-            last_scan: recentScan.completed_at,
-          }),
-          { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        if (recentScan) {
+          const completedAt = new Date(recentScan.completed_at);
+          const nextScanAt = new Date(completedAt.getTime() + COOLDOWN_MS);
+          const remainingMs = nextScanAt.getTime() - Date.now();
+          const remainingMinutes = Math.ceil(remainingMs / 60000);
+          
+          return new Response(
+            JSON.stringify({ 
+              error: `Please wait ${remainingMinutes} minute${remainingMinutes !== 1 ? 's' : ''} between scans`,
+              last_scan: recentScan.completed_at,
+              next_scan_at: nextScanAt.toISOString(),
+              remaining_seconds: Math.ceil(remainingMs / 1000),
+            }),
+            { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+      } else {
+        console.log(`Force rescan requested for user ${userId}`);
       }
 
       // Get user profile for search (including city and state)
