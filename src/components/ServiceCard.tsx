@@ -229,6 +229,14 @@ export function ServiceCard({
               </div>
             </div>
 
+            {/* Persistent action link */}
+            <button
+              onClick={(e) => { e.stopPropagation(); onRequestDeletion(service); }}
+              className="text-xs text-destructive hover:text-destructive/80 hover:underline transition-colors"
+            >
+              Request deletion →
+            </button>
+
             {/* Date */}
             <p className={`${isMobile ? 'text-sm' : 'text-xs'} text-muted-foreground`}>
               Joined {new Date(service.discovered_at).toLocaleDateString('en-US', { 
