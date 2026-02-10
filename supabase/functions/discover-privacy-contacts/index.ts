@@ -1011,41 +1011,55 @@ serve(async (req) => {
     console.log(`=== Discovering privacy contacts for: ${service.name} (${service.domain}) ===`);
 
     // ── Cross-user cache: reuse existing high/medium-confidence contacts ──
+    // Look up by service_id AND also by normalized domain for cross-service reuse
+    const CACHE_TTL_DAYS = 90;
+    const cacheMinDate = new Date(Date.now() - CACHE_TTL_DAYS * 24 * 60 * 60 * 1000).toISOString();
+    
     const { data: cachedContacts } = await supabase
       .from('privacy_contacts')
       .select('*')
       .eq('service_id', service_id)
       .in('confidence', ['high', 'medium'])
+      .gte('updated_at', cacheMinDate)
       .order('created_at', { ascending: false })
       .limit(5);
 
     if (cachedContacts && cachedContacts.length > 0) {
-      console.log(`[Cache] ✓ Reusing ${cachedContacts.length} existing contacts for service ${service.domain}`);
-      
-      // Emit cache-hit metric
-      if (!DISABLE_METRICS) {
-        try {
-          await supabase.from('discovery_metrics').insert({
-            domain: service.domain,
-            success: true,
-            method_used: 'cache',
-            time_ms: Date.now() - startTime,
-            urls_considered: 0,
-            cache_hit: true,
-            confidence: cachedContacts[0].confidence,
-          });
-        } catch (e) { console.warn('[Metrics] cache hit log failed:', e); }
-      }
+      // Filter out PDF-only results from cache — those aren't actionable contacts
+      const actionableContacts = cachedContacts.filter((c: any) => {
+        if (c.contact_type === 'form' && c.reasoning?.includes('PDF document')) return false;
+        return true;
+      });
 
-      return new Response(JSON.stringify({
-        success: true,
-        service: service.name,
-        contacts_found: cachedContacts.length,
-        contacts: cachedContacts,
-        method_used: 'cache',
-        cache_hit: true,
-        confidence: cachedContacts[0].confidence,
-      }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
+      if (actionableContacts.length > 0) {
+        console.log(`[Cache] ✓ Reusing ${actionableContacts.length} existing contacts for ${service.domain} (within ${CACHE_TTL_DAYS}d TTL)`);
+        
+        if (!DISABLE_METRICS) {
+          try {
+            await supabase.from('discovery_metrics').insert({
+              domain: service.domain,
+              success: true,
+              method_used: 'cache',
+              time_ms: Date.now() - startTime,
+              urls_considered: 0,
+              cache_hit: true,
+              confidence: actionableContacts[0].confidence,
+            });
+          } catch (e) { console.warn('[Metrics] cache hit log failed:', e); }
+        }
+
+        return new Response(JSON.stringify({
+          success: true,
+          service: service.name,
+          contacts_found: actionableContacts.length,
+          contacts: actionableContacts,
+          method_used: 'cache',
+          cache_hit: true,
+          confidence: actionableContacts[0].confidence,
+        }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
+      } else {
+        console.log(`[Cache] Only PDF-based contacts cached — proceeding with fresh discovery`);
+      }
     }
 
     // Phase 1.2/1.3: Try probes first (security.txt, sitemap with cache)
@@ -1310,7 +1324,10 @@ serve(async (req) => {
         JSON.stringify({
           success: true,
           service: service.name,
-          contacts_found: 1,
+          contacts_found: 0,
+          privacy_policy_found: true,
+          privacy_policy_url: successUrl,
+          requires_manual_review: true,
           contacts: insertedContacts,
           method_used: 't1',
           policy_type: 'pdf',
