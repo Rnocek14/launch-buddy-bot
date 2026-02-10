@@ -537,12 +537,15 @@ export default function Dashboard() {
       }
       
       // Normalize risk data shape for RiskScoreCard compatibility
+      const raw = data ?? {};
       setRiskData({
-        ...data,
-        riskScore: data?.riskScore ?? data?.score,
-        riskLevel: data?.riskLevel ?? data?.level,
-        riskFactors: data?.riskFactors ?? data?.factors,
-        insights: data?.insights ?? '',
+        ...raw,
+        riskScore: raw.riskScore ?? raw.score ?? 0,
+        riskLevel: raw.riskLevel ?? raw.level ?? 'unknown',
+        riskFactors: Array.isArray(raw.riskFactors ?? raw.factors)
+          ? (raw.riskFactors ?? raw.factors)
+          : [],
+        insights: raw.insights ?? '',
       });
     } catch (error: any) {
       // Silent failure - risk score is optional
@@ -1050,8 +1053,8 @@ export default function Dashboard() {
           />
         ) : (
           <>
-            {/* Onboarding Banner (above fold for new users) */}
-            {!monthlyStats?.lastScanDate && <OnboardingBanner />}
+            {/* Onboarding Banner (above fold only for truly new users) */}
+            {services.length === 0 && !scanning && <OnboardingBanner />}
 
             {/* Status Strip */}
             <div className="flex flex-wrap items-center gap-x-6 gap-y-2 py-3 px-4 rounded-lg bg-muted/30 border border-border">
@@ -1175,8 +1178,8 @@ export default function Dashboard() {
                   <span className="ml-auto text-xs text-muted-foreground hidden group-open:inline">▾</span>
                 </summary>
                 <div className="mt-4 space-y-6">
-                  {/* Onboarding Banner (for returning users who haven't seen it above) */}
-                  {monthlyStats?.lastScanDate && <OnboardingBanner />}
+                  {/* Onboarding Banner (for returning users — not shown above fold) */}
+                  {services.length > 0 && <OnboardingBanner />}
 
                   {/* Subscription Status Card */}
                   <SubscriptionStatusCard />
