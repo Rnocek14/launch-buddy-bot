@@ -538,14 +538,16 @@ export default function Dashboard() {
       
       // Normalize risk data shape for RiskScoreCard compatibility
       const raw = data ?? {};
+      const scoreVal = raw.riskScore ?? raw.score ?? 0;
+      const levelVal = raw.riskLevel ?? raw.level ?? 'unknown';
+      const factorsVal = raw.riskFactors ?? raw.factors;
+      const insightsVal = raw.insights;
       setRiskData({
         ...raw,
-        riskScore: raw.riskScore ?? raw.score ?? 0,
-        riskLevel: raw.riskLevel ?? raw.level ?? 'unknown',
-        riskFactors: Array.isArray(raw.riskFactors ?? raw.factors)
-          ? (raw.riskFactors ?? raw.factors)
-          : [],
-        insights: raw.insights ?? '',
+        riskScore: typeof scoreVal === 'number' ? scoreVal : Number(scoreVal) || 0,
+        riskLevel: typeof levelVal === 'string' ? levelVal : 'unknown',
+        riskFactors: Array.isArray(factorsVal) ? factorsVal : [],
+        insights: Array.isArray(insightsVal) ? insightsVal : (typeof insightsVal === 'string' ? insightsVal : ''),
       });
     } catch (error: any) {
       // Silent failure - risk score is optional
@@ -1053,9 +1055,6 @@ export default function Dashboard() {
           />
         ) : (
           <>
-            {/* Onboarding Banner (above fold only for truly new users) */}
-            {services.length === 0 && !scanning && <OnboardingBanner />}
-
             {/* Status Strip */}
             <div className="flex flex-wrap items-center gap-x-6 gap-y-2 py-3 px-4 rounded-lg bg-muted/30 border border-border">
               <div className="flex items-center gap-2">
