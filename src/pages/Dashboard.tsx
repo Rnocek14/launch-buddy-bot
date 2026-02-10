@@ -996,65 +996,42 @@ export default function Dashboard() {
 
       {/* Header */}
       <div className="border-b border-border bg-card mt-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex justify-between items-center">
-            <div className="flex-1">
-              <div className="flex items-center gap-2">
-                <h1 className="text-2xl font-bold text-foreground">Digital Footprint</h1>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <HelpCircle className="h-5 w-5 text-muted-foreground cursor-help" />
-                    </TooltipTrigger>
-                    <TooltipContent className="max-w-xs">
-                      <p>Services discovered from your connected email accounts. Connect Gmail to scan for more.</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </div>
-              <div className="flex items-center gap-3 mt-1">
-                <p className="text-sm text-muted-foreground">{user?.email}</p>
-                {!authLoading && (
-                  <Badge 
-                    variant={isAuthorized ? "default" : "outline"}
-                    className="text-xs"
-                  >
-                    {isAuthorized ? (
-                      <>
-                        <CheckCircle className="w-3 h-3 mr-1" />
-                        Authorized Agent
-                      </>
-                    ) : (
-                      <>
-                        <AlertCircle className="w-3 h-3 mr-1" />
-                        Not Authorized
-                      </>
-                    )}
-                  </Badge>
-                )}
-                {!isAuthorized && !authLoading && (
-                  <Button
-                    variant="link"
-                    size="sm"
-                    onClick={() => navigate("/authorize")}
-                    className="h-auto p-0 text-xs"
-                  >
-                    Complete Authorization →
-                  </Button>
-                )}
-              </div>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <h1 className="text-2xl font-bold text-foreground">Digital Footprint</h1>
+              <p className="text-sm text-muted-foreground mt-1">
+                Scan your connected inbox to find services storing your data.
+              </p>
             </div>
-            <div className="flex items-center gap-2">
-              <Button variant="ghost" size="sm" onClick={handleSignOut}>
-                <LogOut className="w-4 h-4 mr-2" />
-                Sign Out
-              </Button>
+            <div className="flex items-center gap-3">
+              {!scanning ? (
+                <>
+                  <span className="text-xs text-muted-foreground hidden sm:inline">
+                    Takes ~30s · Read-only
+                  </span>
+                  <Button
+                    onClick={hasGmailAccess ? handleScan : handleConnectGmail}
+                    disabled={scanning}
+                    size="lg"
+                    className="h-12 px-6 text-base"
+                  >
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                    {hasGmailAccess ? "Run Scan" : "Connect Gmail to Scan"}
+                  </Button>
+                </>
+              ) : (
+                <Button disabled size="lg" className="h-12 px-6">
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Scanning...
+                </Button>
+              )}
             </div>
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
         {/* Show empty state when no services and not scanning */}
         {services.length === 0 && !scanning ? (
           <DashboardEmptyState
@@ -1066,8 +1043,43 @@ export default function Dashboard() {
           />
         ) : (
           <>
-            {/* Onboarding Banner */}
-            <OnboardingBanner />
+            {/* Status Strip */}
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-2 py-3 px-4 rounded-lg bg-muted/30 border border-border">
+              <div className="flex items-center gap-2">
+                <Shield className="w-4 h-4 text-primary" />
+                <span className="text-sm font-medium">{services.length}</span>
+                <span className="text-sm text-muted-foreground">services found</span>
+              </div>
+              {monthlyStats?.lastScanDate && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Calendar className="w-3.5 h-3.5" />
+                  Last scan: {new Date(monthlyStats.lastScanDate).toLocaleDateString()}
+                </div>
+              )}
+              {riskData && (
+                <div className="flex items-center gap-2">
+                  <Activity className="w-3.5 h-3.5 text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">Risk:</span>
+                  <Badge variant={riskData.riskLevel === 'low' ? 'secondary' : riskData.riskLevel === 'high' ? 'destructive' : 'default'} className="text-xs">
+                    {riskData.riskLevel}
+                  </Badge>
+                </div>
+              )}
+              {!authLoading && (
+                <Badge variant={isAuthorized ? "default" : "outline"} className="text-xs">
+                  {isAuthorized ? (
+                    <><CheckCircle className="w-3 h-3 mr-1" />Authorized</>
+                  ) : (
+                    <><AlertCircle className="w-3 h-3 mr-1" />Not Authorized</>
+                  )}
+                </Badge>
+              )}
+              {!isAuthorized && !authLoading && (
+                <Button variant="link" size="sm" onClick={() => navigate("/authorize")} className="h-auto p-0 text-xs">
+                  Complete Authorization →
+                </Button>
+              )}
+            </div>
 
             {/* Scan Results Banner */}
             {scanResultsBanner && !bannerDismissed && (
@@ -1094,16 +1106,68 @@ export default function Dashboard() {
               />
             )}
 
+            {/* Scan Progress (only while scanning) */}
+            {scanning && scanProgress && (
+              <Card className="overflow-hidden border-primary/20">
+                <CardContent className="pt-6">
+                  <div className="space-y-3">
+                    <div className="flex items-start gap-2 p-3 rounded-lg bg-primary/5 border border-primary/10">
+                      <Loader2 className="w-4 h-4 mt-0.5 animate-spin text-primary flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-foreground font-medium">{scanProgress.status}</p>
+                        {scanProgress.currentEmail === 0 && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            We're checking signup emails, invoices, orders, security alerts, and newsletters
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Progress</span>
+                        <span className="text-primary font-medium">{Math.round((scanProgress.currentEmail / scanProgress.totalEmails) * 100)}%</span>
+                      </div>
+                      <Progress value={(scanProgress.currentEmail / scanProgress.totalEmails) * 100} className="h-2" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Last Scan Results (compact) */}
+            {scanStats && !scanning && (
+              <div className="flex flex-wrap gap-4 text-sm text-muted-foreground px-1">
+                <div className="flex items-center gap-1.5">
+                  <Mail className="w-4 h-4" />
+                  <span>{scanStats.emailsScanned} emails scanned</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <Sparkles className="w-4 h-4" />
+                  <span>{scanStats.servicesFound} services found</span>
+                </div>
+                {scanStats.identifierMatches && scanStats.identifierMatches > 0 && (
+                  <div className="flex items-center gap-1.5 text-primary">
+                    <CheckCircle className="w-4 h-4" />
+                    <span>{scanStats.identifierMatches} matched via identifiers</span>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Collapsible Insights Section */}
             {(riskData || monthlyStats || services.length > 0) && (
-              <details className="mb-8 group">
+              <details className="group">
                 <summary className="flex items-center gap-2 cursor-pointer list-none py-3 px-4 rounded-lg bg-muted/50 border border-border hover:bg-muted transition-colors">
                   <TrendingUp className="w-4 h-4 text-primary" />
-                  <span className="font-medium text-sm text-foreground">Insights & Analytics</span>
-                  <span className="ml-auto text-xs text-muted-foreground group-open:hidden">Click to expand</span>
-                  <span className="ml-auto text-xs text-muted-foreground hidden group-open:inline">Click to collapse</span>
+                  <span className="font-medium text-sm text-foreground">Insights</span>
+                  <span className="text-xs text-muted-foreground ml-1">— Score history, monthly stats, impact</span>
+                  <span className="ml-auto text-xs text-muted-foreground group-open:hidden">▸</span>
+                  <span className="ml-auto text-xs text-muted-foreground hidden group-open:inline">▾</span>
                 </summary>
                 <div className="mt-4 space-y-6">
+                  {/* Onboarding Banner */}
+                  <OnboardingBanner />
+
                   {/* Subscription Status Card */}
                   <SubscriptionStatusCard />
 
@@ -1140,14 +1204,14 @@ export default function Dashboard() {
                             <p className="text-2xl font-bold">{monthlyStats.reappearedCount}</p>
                           </div>
                           <div className="p-4 rounded-lg bg-background/50 border border-border/50 space-y-1">
-                            <span className="text-sm text-muted-foreground">Deletions</span>
+                            <span className="text-sm text-muted-foreground">Deletions Sent</span>
                             <p className="text-2xl font-bold">{monthlyStats.totalDeletions}</p>
                           </div>
                           <div className="p-4 rounded-lg bg-background/50 border border-border/50 space-y-1">
                             <span className="text-sm text-muted-foreground">Last Scan</span>
-                            <p className="text-lg font-semibold">
+                            <p className="text-lg font-bold">
                               {monthlyStats.lastScanDate
-                                ? new Date(monthlyStats.lastScanDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                                ? new Date(monthlyStats.lastScanDate).toLocaleDateString()
                                 : 'Never'}
                             </p>
                           </div>
@@ -1156,43 +1220,19 @@ export default function Dashboard() {
                     </Card>
                   )}
 
-                  {/* Risk Score Card */}
+                  {/* Risk Score & History */}
                   {riskData && (
-                    <RiskScoreCard
-                      score={riskData.riskScore}
-                      level={riskData.riskLevel}
-                      factors={riskData.riskFactors}
-                      insights={riskData.insights}
-                      percentile={riskData.percentile}
-                      exposureFactors={riskData.exposureFactors}
-                      topCategories={riskData.topCategories}
-                      comparison={riskData.comparison}
-                      onFilterOldAccounts={() => {
-                        setViewTab('priority');
-                        document.getElementById("services-grid")?.scrollIntoView({ behavior: "smooth" });
-                      }}
-                      onFilterSensitive={() => {
-                        const sensitiveCategories = ['Finance', 'Banking', 'Healthcare', 'Government'];
-                        const firstSensitive = services.find((s: any) => sensitiveCategories.includes(s.category));
-                        if (firstSensitive) {
-                          setSelectedCategory(firstSensitive.category);
-                          document.getElementById("services-grid")?.scrollIntoView({ behavior: "smooth" });
-                        }
-                      }}
-                      onFilterCategory={(category: string) => {
-                        setSelectedCategory(category);
-                        setViewTab('all');
-                        document.getElementById("services-grid")?.scrollIntoView({ behavior: "smooth" });
-                      }}
-                    />
-                  )}
-
-                  {/* Score History Chart */}
-                  {riskData && (
-                    <ScoreHistoryChart 
-                      currentScore={riskData.riskScore} 
-                      currentLevel={riskData.riskLevel} 
-                    />
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      <RiskScoreCard
+                        score={riskData.riskScore}
+                        level={riskData.riskLevel}
+                        factors={riskData.riskFactors}
+                        insights={riskData.insights || ''}
+                        percentile={riskData.percentile}
+                        topCategories={riskData.topCategories}
+                      />
+                      <ScoreHistoryChart />
+                    </div>
                   )}
 
                   {/* Deletion Progress Tracker */}
@@ -1215,193 +1255,6 @@ export default function Dashboard() {
                 </div>
               </details>
             )}
-
-        {/* Scan Hero Card */}
-        <Card className="mb-8 overflow-hidden border-primary/20 bg-gradient-to-br from-card to-primary/5">
-          <CardContent className="pt-6">
-            <div className="flex flex-col gap-6">
-              {/* Stats Row */}
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-primary/10">
-                  <Shield className="w-6 h-6 text-primary" />
-                </div>
-                <div>
-                  <h2 className="text-3xl font-bold text-foreground">{services.length}</h2>
-                  <p className="text-sm text-muted-foreground">Online accounts discovered</p>
-                </div>
-              </div>
-              
-              {/* Scan Results */}
-              {scanStats && !scanning && (
-                <div className="space-y-3">
-                  <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-                    <div className="flex items-center gap-1.5">
-                      <Mail className="w-4 h-4" />
-                      <span>{scanStats.emailsScanned} emails scanned</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <Sparkles className="w-4 h-4" />
-                      <span>{scanStats.servicesFound} services found</span>
-                    </div>
-                    {scanStats.identifierMatches && scanStats.identifierMatches > 0 && (
-                      <div className="flex items-center gap-1.5 text-primary">
-                        <CheckCircle className="w-4 h-4" />
-                        <span>{scanStats.identifierMatches} matched via identifiers</span>
-                      </div>
-                    )}
-                  </div>
-                  
-                  {scanStats.breakdown && (
-                    <div className="flex flex-wrap gap-2 pt-1">
-                      {scanStats.breakdown.signup > 0 && (
-                        <Badge variant="secondary" className="gap-1.5 text-xs">
-                          <Mail className="w-3 h-3" />
-                          {scanStats.breakdown.signup} signup
-                        </Badge>
-                      )}
-                      {scanStats.breakdown.financial > 0 && (
-                        <Badge variant="secondary" className="gap-1.5 text-xs">
-                          <DollarSign className="w-3 h-3" />
-                          {scanStats.breakdown.financial} invoices
-                        </Badge>
-                      )}
-                      {scanStats.breakdown.commerce > 0 && (
-                        <Badge variant="secondary" className="gap-1.5 text-xs">
-                          <Package className="w-3 h-3" />
-                          {scanStats.breakdown.commerce} orders
-                        </Badge>
-                      )}
-                      {scanStats.breakdown.security > 0 && (
-                        <Badge variant="secondary" className="gap-1.5 text-xs">
-                          <Lock className="w-3 h-3" />
-                          {scanStats.breakdown.security} security
-                        </Badge>
-                      )}
-                      {scanStats.breakdown.engagement > 0 && (
-                        <Badge variant="secondary" className="gap-1.5 text-xs">
-                          <Bell className="w-3 h-3" />
-                          {scanStats.breakdown.engagement} newsletters
-                        </Badge>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Simplified Scan Options */}
-              {!scanning && (
-                <div className="flex flex-col gap-3 pt-4 border-t border-border/50">
-                  <div className="flex items-center justify-between">
-                    <div className="text-xs text-muted-foreground">
-                      Quick scan (~30-60 seconds)
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setShowAdvancedScan(!showAdvancedScan)}
-                      className="text-xs h-auto p-1"
-                    >
-                      {showAdvancedScan ? 'Hide' : 'Show'} Advanced Options
-                    </Button>
-                  </div>
-                  
-                  {showAdvancedScan && (
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 p-3 rounded-lg bg-muted/50 border border-border animate-in slide-in-from-top-2">
-                      <div className="flex items-center gap-3">
-                        <Button
-                          variant={scanType === 'quick' ? 'default' : 'outline'}
-                          size="sm"
-                          onClick={() => setScanType('quick')}
-                        >
-                          Quick Scan
-                        </Button>
-                        <Button
-                          variant={scanType === 'deep' ? 'default' : 'outline'}
-                          size="sm"
-                          onClick={() => setScanType('deep')}
-                        >
-                          Deep Scan
-                        </Button>
-                      </div>
-                      
-                      <div className="flex-1 space-y-2">
-                        <Label className="text-xs text-muted-foreground">Gmail Accounts</Label>
-                        <div className="flex gap-2">
-                          <Button
-                            variant={scanAccountOption === 'all' ? 'default' : 'outline'}
-                            size="sm"
-                            onClick={() => setScanAccountOption('all')}
-                          >
-                            All Accounts
-                          </Button>
-                          <Button
-                            variant={scanAccountOption === 'primary' ? 'default' : 'outline'}
-                            size="sm"
-                            onClick={() => setScanAccountOption('primary')}
-                          >
-                            Primary Only
-                          </Button>
-                        </div>
-                      </div>
-                      
-                      <div className="text-xs text-muted-foreground">
-                        {scanType === 'deep' && (
-                          <span>Up to 5,000 emails • ~2-5 minutes</span>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Scanning Progress */}
-              {scanning && scanProgress && (
-                <div className="space-y-3">
-                  <div className="flex items-start gap-2 p-3 rounded-lg bg-primary/5 border border-primary/10">
-                    <Loader2 className="w-4 h-4 mt-0.5 animate-spin text-primary flex-shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-foreground font-medium">{scanProgress.status}</p>
-                      {scanProgress.currentEmail === 0 && (
-                        <p className="text-xs text-muted-foreground mt-1">
-                          We're checking signup emails, invoices, orders, security alerts, and newsletters
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Progress</span>
-                      <span className="text-primary font-medium">{Math.round((scanProgress.currentEmail / scanProgress.totalEmails) * 100)}%</span>
-                    </div>
-                    <Progress value={(scanProgress.currentEmail / scanProgress.totalEmails) * 100} className="h-2" />
-                  </div>
-                </div>
-              )}
-
-              {/* Scan Button */}
-              <div className="flex justify-center pt-2">
-                <Button 
-                  onClick={handleScan}
-                  disabled={scanning}
-                  size="lg"
-                  className="w-full sm:w-auto min-w-[200px]"
-                >
-                  {scanning ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Scanning...
-                    </>
-                  ) : (
-                    <>
-                      <RefreshCw className="w-4 h-4 mr-2" />
-                      {hasGmailAccess ? `Start ${scanType === 'quick' ? 'Quick' : 'Deep'} Scan` : "Connect Gmail"}
-                    </>
-                  )}
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
 
         {/* Services Section */}
         {services.length === 0 ? (
