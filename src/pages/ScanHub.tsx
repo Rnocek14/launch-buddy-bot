@@ -29,54 +29,57 @@ export default function ScanHub() {
   }, []);
 
   async function loadStatus() {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      navigate("/auth");
-      return;
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        navigate("/auth");
+        return;
+      }
+      setUser(session.user);
+
+      const [servicesRes, brokerRes, exposureRes, profileRes] = await Promise.all([
+        supabase
+          .from("user_services")
+          .select("service_id", { count: "exact", head: true })
+          .eq("user_id", session.user.id),
+        supabase
+          .from("broker_scans")
+          .select("completed_at, found_count")
+          .eq("user_id", session.user.id)
+          .order("created_at", { ascending: false })
+          .limit(1),
+        supabase
+          .from("exposure_scans")
+          .select("completed_at, total_findings")
+          .eq("user_id", session.user.id)
+          .order("created_at", { ascending: false })
+          .limit(1),
+        supabase
+          .from("profiles")
+          .select("last_email_scan_date")
+          .eq("id", session.user.id)
+          .maybeSingle(),
+      ]);
+
+      setStatus({
+        inbox: {
+          lastRun: profileRes.data?.last_email_scan_date || null,
+          serviceCount: servicesRes.count || 0,
+        },
+        peopleSearch: {
+          lastRun: brokerRes.data?.[0]?.completed_at || null,
+          foundCount: brokerRes.data?.[0]?.found_count || 0,
+        },
+        breach: {
+          lastRun: exposureRes.data?.[0]?.completed_at || null,
+          findingCount: exposureRes.data?.[0]?.total_findings || 0,
+        },
+      });
+    } catch (err) {
+      console.error("Error loading scan status:", err);
+    } finally {
+      setLoading(false);
     }
-    setUser(session.user);
-
-    // Load all scan statuses in parallel
-    const [servicesRes, brokerRes, exposureRes] = await Promise.all([
-      supabase
-        .from("user_services")
-        .select("service_id", { count: "exact", head: true })
-        .eq("user_id", session.user.id),
-      supabase
-        .from("broker_scans")
-        .select("completed_at, found_count")
-        .eq("user_id", session.user.id)
-        .order("created_at", { ascending: false })
-        .limit(1),
-      supabase
-        .from("exposure_scans")
-        .select("completed_at, total_findings")
-        .eq("user_id", session.user.id)
-        .order("created_at", { ascending: false })
-        .limit(1),
-    ]);
-
-    const profileRes = await supabase
-      .from("profiles")
-      .select("last_email_scan_date")
-      .eq("id", session.user.id)
-      .single();
-
-    setStatus({
-      inbox: {
-        lastRun: profileRes.data?.last_email_scan_date || null,
-        serviceCount: servicesRes.count || 0,
-      },
-      peopleSearch: {
-        lastRun: brokerRes.data?.[0]?.completed_at || null,
-        foundCount: brokerRes.data?.[0]?.found_count || 0,
-      },
-      breach: {
-        lastRun: exposureRes.data?.[0]?.completed_at || null,
-        findingCount: exposureRes.data?.[0]?.total_findings || 0,
-      },
-    });
-    setLoading(false);
   }
 
   const formatDate = (date: string | null) => {

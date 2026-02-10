@@ -108,14 +108,49 @@ export function CleanUpWizard({
     cancelRef.current = false;
     setIsDiscovering(true);
 
-    // Initialize results
-    const initial: DiscoveryResult[] = cappedServices.map((s) => ({
-      serviceId: s.id,
-      serviceName: s.name,
-      status: s.contact_status === "verified" || s.contact_status === "ai_discovered"
-        ? "found"
-        : "pending",
-    }));
+    // Initialize results — for services with existing contacts, fetch the email
+    const servicesWithContacts = cappedServices.filter(
+      (s) => s.contact_status === "verified" || s.contact_status === "ai_discovered"
+    );
+    const servicesNeedingDiscovery = cappedServices.filter(
+      (s) => s.contact_status !== "verified" && s.contact_status !== "ai_discovered"
+    );
+
+    // Fetch existing contact emails for pre-discovered services
+    let contactMap = new Map<string, { email: string; type: string }>();
+    if (servicesWithContacts.length > 0) {
+      const { data: existingContacts } = await supabase
+        .from("privacy_contacts")
+        .select("service_id, value, contact_type")
+        .in("service_id", servicesWithContacts.map((s) => s.id))
+        .eq("contact_type", "email");
+
+      if (existingContacts) {
+        for (const c of existingContacts) {
+          if (c.service_id && !contactMap.has(c.service_id)) {
+            contactMap.set(c.service_id, { email: c.value, type: c.contact_type });
+          }
+        }
+      }
+    }
+
+    const initial: DiscoveryResult[] = cappedServices.map((s) => {
+      const existing = contactMap.get(s.id);
+      if (existing) {
+        return {
+          serviceId: s.id,
+          serviceName: s.name,
+          status: "found" as const,
+          contactEmail: existing.email,
+          contactType: existing.type,
+        };
+      }
+      return {
+        serviceId: s.id,
+        serviceName: s.name,
+        status: "pending" as const,
+      };
+    });
     setDiscoveryResults(initial);
 
     // Only discover services that need it
@@ -142,7 +177,7 @@ export function CleanUpWizard({
           try {
             const { data, error } = await supabase.functions.invoke(
               "discover-privacy-contacts",
-              { body: { serviceId: item.serviceId } }
+              { body: { service_id: item.serviceId } }
             );
             if (error) throw error;
             return {
