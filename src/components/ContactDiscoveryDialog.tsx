@@ -56,6 +56,7 @@ export const ContactDiscoveryDialog = ({
   onContactVerified,
 }: ContactDiscoveryDialogProps) => {
   const [discovering, setDiscovering] = useState(false);
+  const [discoveryPhase, setDiscoveryPhase] = useState<'checking' | 'reading' | 'extracting' | 'slow'>('checking');
   const [validating, setValidating] = useState(false);
   const [contacts, setContacts] = useState<DiscoveredContact[]>([]);
   const [selectedContact, setSelectedContact] = useState<DiscoveredContact | null>(null);
@@ -91,9 +92,15 @@ export const ContactDiscoveryDialog = ({
     if (!service) return;
 
     setDiscovering(true);
+    setDiscoveryPhase('checking');
     setError(null);
     setContacts([]);
     setSelectedContact(null);
+
+    // Step-based progress for senior UX
+    const phaseTimer1 = setTimeout(() => setDiscoveryPhase('reading'), 3000);
+    const phaseTimer2 = setTimeout(() => setDiscoveryPhase('extracting'), 8000);
+    const phaseTimer3 = setTimeout(() => setDiscoveryPhase('slow'), 20000);
 
     try {
       console.log(`Starting contact discovery for ${service.name}`);
@@ -108,12 +115,10 @@ export const ContactDiscoveryDialog = ({
       if (discoveryError) throw discoveryError;
 
       if (data?.contacts && data.contacts.length > 0) {
-        // Check if this is a PDF-only result (no actionable contacts)
         const isPdfOnly = data.requires_manual_review && data.contacts_found === 0;
         
         if (isPdfOnly) {
           setContacts(data.contacts);
-          // Use info state, not error — PDF found is progress, not failure
           setShowManualEntry(true);
         } else {
           setContacts(data.contacts);
@@ -131,7 +136,6 @@ export const ContactDiscoveryDialog = ({
       let errorMessage = "We couldn't automatically discover privacy contacts.";
       let showGuidedMode = true;
       
-      // Try to parse structured error response from edge function
       try {
         const errorData = err.context?.body || err.body;
         
@@ -140,26 +144,21 @@ export const ContactDiscoveryDialog = ({
             case 'bot_protection':
               errorMessage = `${service.name} has security protections that prevent automated discovery. Many companies use anti-bot technology.`;
               break;
-              
             case 'privacy_policy_not_found':
               errorMessage = `We couldn't locate ${service.name}'s privacy policy. It may be at an unusual URL or require a login.`;
               break;
-              
             case 'timeout':
               errorMessage = `${service.name}'s website took too long to respond.`;
               showGuidedMode = false;
               break;
-              
             case 'network_error':
               errorMessage = `Having trouble connecting to ${service.name}. Please check your connection.`;
               showGuidedMode = false;
               break;
-              
             case 'ai_error':
-              errorMessage = `Our AI analysis service is temporarily unavailable.`;
+              errorMessage = `Our analysis service is temporarily unavailable.`;
               showGuidedMode = false;
               break;
-              
             default:
               errorMessage = `Unable to automatically discover ${service.name}'s privacy contact.`;
           }
@@ -169,12 +168,13 @@ export const ContactDiscoveryDialog = ({
       }
       
       setError(errorMessage);
-      
-      // Show manual entry with guided tips for permanent failures
       if (showGuidedMode) {
         setShowManualEntry(true);
       }
     } finally {
+      clearTimeout(phaseTimer1);
+      clearTimeout(phaseTimer2);
+      clearTimeout(phaseTimer3);
       setDiscovering(false);
     }
   };
@@ -502,21 +502,46 @@ export const ContactDiscoveryDialog = ({
               <h3 className="font-semibold mb-2">No Verified Contact Found</h3>
               <p className="text-sm text-muted-foreground max-w-md mx-auto">
                 We'll check {service.name}'s website for the right email or form for deletion requests.
-                This usually takes 10-15 seconds.
+                This usually takes 15–30 seconds.
               </p>
             </div>
           </div>
         )}
 
-        {/* Discovering State */}
+        {/* Discovering State — step-based progress for senior UX */}
         {discovering && (
-          <div className="py-8 text-center space-y-4">
+          <div className="py-8 text-center space-y-6">
             <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto" />
             <div>
-              <h3 className="font-semibold mb-2">Looking up contacts...</h3>
+              <h3 className="font-semibold mb-2">
+                {discoveryPhase === 'checking' && "Checking website…"}
+                {discoveryPhase === 'reading' && "Reading privacy policy…"}
+                {discoveryPhase === 'extracting' && "Finding contact details…"}
+                {discoveryPhase === 'slow' && "Still working…"}
+              </h3>
               <p className="text-sm text-muted-foreground">
-                Checking {service.name}'s website for privacy contact details
+                {discoveryPhase === 'checking' && `Looking for ${service.name}'s privacy policy page`}
+                {discoveryPhase === 'reading' && `Found the page — now reading through it`}
+                {discoveryPhase === 'extracting' && `Almost done — pulling out the right contact`}
+                {discoveryPhase === 'slow' && `This site is taking longer than usual (up to 30 seconds)`}
               </p>
+            </div>
+            {/* Progress steps */}
+            <div className="flex justify-center gap-2">
+              {['checking', 'reading', 'extracting'].map((step, i) => {
+                const phases = ['checking', 'reading', 'extracting', 'slow'];
+                const currentIdx = phases.indexOf(discoveryPhase);
+                const stepIdx = i;
+                const isDone = currentIdx > stepIdx;
+                const isCurrent = currentIdx === stepIdx || (discoveryPhase === 'slow' && stepIdx === 2);
+                return (
+                  <div key={step} className="flex items-center gap-1">
+                    <div className={`h-2 w-8 rounded-full transition-colors ${
+                      isDone ? 'bg-primary' : isCurrent ? 'bg-primary/50 animate-pulse' : 'bg-muted'
+                    }`} />
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
@@ -838,7 +863,7 @@ export const ContactDiscoveryDialog = ({
                   ) : (
                     <>
                       <CheckCircle2 className="mr-2 h-4 w-4" />
-                      Confirm & Save
+                      Use This Contact
                     </>
                   )}
                 </Button>

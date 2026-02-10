@@ -951,12 +951,49 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // Declare variables outside try block for access in catch block
+  // Declare variables outside try block for access in catch/finally
   let service_id: string | null = null;
   let user: any = null;
   let urlsToTry: string[] = [];
   let supabase: any = null;
   const startTime = Date.now();
+  let metricsEmitted = false; // guard: only emit once
+
+  // ── Unified metrics object — mutated during run, inserted in finally ──
+  const metrics: Record<string, any> = {
+    domain: '',
+    success: false,
+    method_used: 't1' as string,
+    cache_hit: false,
+    time_ms: 0,
+    urls_considered: 0,
+    urls_fetched: 0,
+    urls_considered_top5: 0,
+    hit_in_top5: false,
+    probe_used: null as null | string,
+    llm_calls: 0,
+    input_tokens: null as null | number,
+    output_tokens: null as null | number,
+    model_used: null as null | string,
+    browserless_used: false,
+    error_code: null as null | string,
+    confidence: null as null | string,
+    policy_type: null as null | string,
+    score: null as null | number,
+    lang: null as null | string,
+    vendor: null as null | string,
+    prefill_supported: null as null | boolean,
+    attempt_timeouts: 0,
+    build_sha: Deno.env.get('GITHUB_SHA') ?? null,
+    build_ver: Deno.env.get('APP_VERSION') ?? 'dev',
+  };
+
+  // Counted fetch wrapper — tracks actual HTTP requests
+  let realFetchCount = 0;
+  const countedFetch = (url: string, init?: RequestInit) => {
+    realFetchCount++;
+    return fetch(url, init);
+  };
 
   try {
     const authHeader = req.headers.get('authorization');
@@ -1010,47 +1047,47 @@ serve(async (req) => {
 
     console.log(`=== Discovering privacy contacts for: ${service.name} (${service.domain}) ===`);
 
-    // ── Cross-user cache: reuse existing high/medium-confidence contacts ──
-    // Look up by service_id AND also by normalized domain for cross-service reuse
+    // ── Cross-user cache: reuse contacts by normalized apex domain ──
     const CACHE_TTL_DAYS = 90;
     const cacheMinDate = new Date(Date.now() - CACHE_TTL_DAYS * 24 * 60 * 60 * 1000).toISOString();
-    
+    const apexDomain = normalizeHost(service.domain);
+
+    metrics.domain = service.domain;
+
+    // Look up by DOMAIN (apex-normalized) for cross-service reuse, not just service_id
     const { data: cachedContacts } = await supabase
       .from('privacy_contacts')
-      .select('*')
-      .eq('service_id', service_id)
+      .select('*, service_catalog!inner(domain)')
       .in('confidence', ['high', 'medium'])
       .gte('updated_at', cacheMinDate)
       .order('created_at', { ascending: false })
-      .limit(5);
+      .limit(10);
 
-    if (cachedContacts && cachedContacts.length > 0) {
-      // Filter out PDF-only results from cache — those aren't actionable contacts
-      // Use deterministic URL check, not brittle string matching on reasoning
+    // Filter to same apex domain
+    const domainMatches = (cachedContacts || []).filter((c: any) => {
+      const cd = c.service_catalog?.domain;
+      return cd && normalizeHost(cd) === apexDomain;
+    });
+
+    if (domainMatches.length > 0) {
+      // Filter out PDF-only results — those aren't actionable contacts
       const isPdfUrl = (url: string) => {
         try { return new URL(url).pathname.toLowerCase().endsWith('.pdf'); } catch { return false; }
       };
-      const actionableContacts = cachedContacts.filter((c: any) => {
+      const actionableContacts = domainMatches.filter((c: any) => {
         if (c.contact_type === 'form' && isPdfUrl(c.value)) return false;
         return true;
       });
 
       if (actionableContacts.length > 0) {
-        console.log(`[Cache] ✓ Reusing ${actionableContacts.length} existing contacts for ${service.domain} (within ${CACHE_TTL_DAYS}d TTL)`);
-        
-        if (!DISABLE_METRICS) {
-          try {
-            await supabase.from('discovery_metrics').insert({
-              domain: service.domain,
-              success: true,
-              method_used: 'cache',
-              time_ms: Date.now() - startTime,
-              urls_considered: 0,
-              cache_hit: true,
-              confidence: actionableContacts[0].confidence,
-            });
-          } catch (e) { console.warn('[Metrics] cache hit log failed:', e); }
-        }
+        console.log(`[Cache] ✓ Reusing ${actionableContacts.length} existing contacts for ${apexDomain} (within ${CACHE_TTL_DAYS}d TTL)`);
+
+        metrics.success = true;
+        metrics.method_used = 'cache';
+        metrics.cache_hit = true;
+        metrics.confidence = actionableContacts[0].confidence;
+        metrics.time_ms = Date.now() - startTime;
+        metricsEmitted = true; // will be emitted in finally
 
         return new Response(JSON.stringify({
           success: true,
@@ -1284,30 +1321,23 @@ serve(async (req) => {
       console.log(`[PDF Policy] Found PDF policy at ${sanitizeForLog(successUrl)}`);
       console.log(`[PDF Policy] Returning for manual review — NOT storing as contact`);
 
-      // Phase 1.3: Emit metrics for PDF success with new fields
-      if (!DISABLE_METRICS) {
-        await supabase.from('discovery_metrics').insert({
-          domain: service.domain,
-          success: true,
-          method_used: METHOD_USED,
-          time_ms: Date.now() - startTime,
-          urls_considered: urlsToTry.length,
-          urls_fetched: result?.failedUrls ? result.failedUrls.size + 1 : 1,
-          urls_considered_top5: top5Candidates.length,
-          hit_in_top5: p5.hit_in_top5,
-          policy_type: 'pdf',
-          score: policyScore,
-          confidence,
-          lang: langDetected,
-          cache_hit: cacheHit,
-          vendor: vendorInfo?.platform_detected,
-          prefill_supported: vendorInfo?.pre_fill_supported ?? null,
-          attempt_timeouts: attemptTimeouts,
-          probe_used: securityTxtContact ? 'security_txt' : (sitemapUrls.length > 0 ? 'sitemap' : 'none'),
-          llm_calls: 0,
-          browserless_used: methodUsed === 'browserless',
-        });
-      }
+      // Update unified metrics for PDF
+      metrics.success = true;
+      metrics.policy_type = 'pdf';
+      metrics.score = policyScore;
+      metrics.confidence = confidence;
+      metrics.lang = langDetected;
+      metrics.cache_hit = cacheHit;
+      metrics.vendor = vendorInfo?.platform_detected ?? null;
+      metrics.prefill_supported = vendorInfo?.pre_fill_supported ?? null;
+      metrics.attempt_timeouts = attemptTimeouts;
+      metrics.probe_used = securityTxtContact ? 'security_txt' : (sitemapUrls.length > 0 ? 'sitemap' : null);
+      metrics.browserless_used = methodUsed === 'browserless';
+      metrics.urls_considered = urlsToTry.length;
+      metrics.urls_considered_top5 = top5Candidates.length;
+      metrics.hit_in_top5 = p5.hit_in_top5;
+      metrics.urls_fetched = realFetchCount;
+      metricsEmitted = true;
 
       return new Response(
         JSON.stringify({
@@ -1396,15 +1426,35 @@ Extract all relevant contact methods for data deletion requests.`;
 
     console.log('Calling OpenAI for contact extraction...');
 
-    // Helper function to validate URLs
+    // Helper: validate form URLs with soft-404 and privacy-relevance check
     async function validateContactUrl(url: string): Promise<boolean> {
       try {
         const response = await fetch(url, {
-          method: 'HEAD',
+          method: 'GET',
           signal: AbortSignal.timeout(5000),
           redirect: 'follow',
+          headers: { 'User-Agent': USER_AGENT, 'Range': 'bytes=0-30000' },
         });
-        return response.ok;
+        if (!response.ok && response.status !== 206) return false;
+
+        const ct = response.headers.get('content-type') || '';
+        if (ct.includes('text/html')) {
+          const html = await response.text();
+          const t = html.slice(0, 30000).toLowerCase();
+
+          // Soft-404 detection
+          if (t.includes('page not found') || t.includes('404 error') || t.includes('not found</h1>')) {
+            console.log(`[URL Validation] Soft-404 detected: ${url}`);
+            return false;
+          }
+          // Privacy relevance gate
+          const privacyRelevant = /(privacy|personal information|data subject|gdpr|ccpa|delete|request your data|your rights)/i.test(t);
+          if (!privacyRelevant) {
+            console.log(`[URL Validation] Not privacy-relevant content: ${url}`);
+            return false;
+          }
+        }
+        return true;
       } catch (error) {
         console.log(`[URL Validation] Failed for ${url}:`, error);
         return false;
@@ -1642,44 +1692,27 @@ Extract all relevant contact methods for data deletion requests.`;
     const highCount = insertedContacts.filter((c: any) => c.confidence === 'high').length;
     const overallConfidence = toConfidence(policyScore, successUrl, vendorInfo?.platform_detected);
     
-    // Emit metrics for success
-    const vendorDetected = vendorInfo?.platform_detected ?? null;
-    const buildInfo = {
-      build_sha: Deno.env.get('GITHUB_SHA') ?? null,
-      build_ver: Deno.env.get('APP_VERSION') ?? 'dev'
-    };
-    
-    if (!DISABLE_METRICS) {
-      try {
-        await supabase.from('discovery_metrics').insert({
-          domain: service.domain,
-          success: true,
-          method_used: METHOD_USED,
-          time_ms: Date.now() - startTime,
-          urls_considered: urlsToTry.length,
-          urls_fetched: result?.failedUrls ? result.failedUrls.size + 1 : 1,
-          urls_considered_top5: top5Candidates.length,
-          hit_in_top5: p5.hit_in_top5,
-          policy_type: policy_type || 'html',
-          score: policyScore,
-          confidence: overallConfidence,
-          lang: langDetected,
-          cache_hit: cacheHit,
-          vendor: vendorDetected,
-          prefill_supported: vendorInfo?.pre_fill_supported ?? null,
-          attempt_timeouts: attemptTimeouts,
-          probe_used: securityTxtContact ? 'security_txt' : (sitemapUrls.length > 0 ? 'sitemap' : 'none'),
-          llm_calls: 1,
-          input_tokens: inputTokens,
-          output_tokens: outputTokens,
-          model_used: 'gpt-4o-mini',
-          browserless_used: methodUsed === 'browserless',
-          ...buildInfo
-        });
-      } catch (metricsError) {
-        console.error('[Metrics] Failed to log:', metricsError);
-      }
-    }
+    // Update unified metrics for success
+    metrics.success = true;
+    metrics.policy_type = policy_type || 'html';
+    metrics.score = policyScore;
+    metrics.confidence = overallConfidence;
+    metrics.lang = langDetected;
+    metrics.cache_hit = cacheHit;
+    metrics.vendor = vendorInfo?.platform_detected ?? null;
+    metrics.prefill_supported = vendorInfo?.pre_fill_supported ?? null;
+    metrics.attempt_timeouts = attemptTimeouts;
+    metrics.probe_used = securityTxtContact ? 'security_txt' : (sitemapUrls.length > 0 ? 'sitemap' : null);
+    metrics.llm_calls = 1;
+    metrics.input_tokens = inputTokens;
+    metrics.output_tokens = outputTokens;
+    metrics.model_used = 'gpt-4o-mini';
+    metrics.browserless_used = methodUsed === 'browserless';
+    metrics.urls_considered = urlsToTry.length;
+    metrics.urls_considered_top5 = top5Candidates.length;
+    metrics.hit_in_top5 = p5.hit_in_top5;
+    metrics.urls_fetched = realFetchCount;
+    metricsEmitted = true;
     
     return new Response(
       JSON.stringify({
@@ -1816,29 +1849,11 @@ Extract all relevant contact methods for data deletion requests.`;
       console.error('[Failure Log] Failed to log error:', logError);
     }
     
-    // Emit metrics for failure
-    if (supabase && !DISABLE_METRICS) {
-      try {
-        const buildInfo = {
-          build_sha: Deno.env.get('GITHUB_SHA') ?? null,
-          build_ver: Deno.env.get('APP_VERSION') ?? 'dev'
-        };
-        
-        const p5 = precisionAt5(urlsToTry.slice(0, 5), '');
-        await supabase.from('discovery_metrics').insert({
-          domain: service?.domain ?? service_id,
-          success: false,
-          method_used: METHOD_USED,
-          time_ms: Date.now() - startTime,
-          urls_considered: p5.urls_considered_top5,
-          hit_in_top5: false,
-          error_code: structuredError.error_code,
-          ...buildInfo
-        });
-      } catch (metricsError) {
-        console.error('[Metrics] Failed to log:', metricsError);
-      }
-    }
+    // Update unified metrics for failure
+    metrics.error_code = structuredError.error_code;
+    metrics.urls_considered = urlsToTry.length;
+    metrics.urls_fetched = realFetchCount;
+    metricsEmitted = true;
     
     // Phase 1.4: Enqueue to T2 on eligible failures (with quarantine check)
     if (ENABLE_T2 && structuredError.error_code && T2_RETRY_ON.has(structuredError.error_code) && service_id && supabase) {
@@ -1894,5 +1909,19 @@ Extract all relevant contact methods for data deletion requests.`;
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
       }
     );
+  } finally {
+    // ── Single metrics emit point — always runs ──
+    if (metricsEmitted && supabase && !DISABLE_METRICS) {
+      try {
+        metrics.time_ms = Date.now() - startTime;
+        metrics.urls_fetched = realFetchCount;
+        // Ensure domain is set even on early failures
+        if (!metrics.domain && service_id) metrics.domain = service_id;
+        await supabase.from('discovery_metrics').insert(metrics);
+        console.log(`[Metrics] ✓ Emitted: success=${metrics.success}, llm=${metrics.llm_calls}, tokens=${metrics.input_tokens}/${metrics.output_tokens}, fetches=${metrics.urls_fetched}, probe=${metrics.probe_used}`);
+      } catch (metricsError) {
+        console.error('[Metrics] Failed to emit:', metricsError);
+      }
+    }
   }
 });
