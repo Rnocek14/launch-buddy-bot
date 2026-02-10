@@ -88,7 +88,8 @@ export const DashboardEmptyState = ({
               <div className="space-y-4">
                 <ul className="text-sm text-muted-foreground space-y-2 list-none">
                   <li><strong>Inbox scan:</strong> We read sender names and subject lines to find signups. No email body is read or stored.</li>
-                  <li><strong>Deletion requests:</strong> If Gmail is connected, deletion emails are sent from your Gmail. Otherwise, we send them on your behalf — you approve each one first.</li>
+                  <li><strong>Deletion requests:</strong> If Gmail is connected, deletion emails are sent from <strong>your Gmail</strong>. If not, we send them <strong>on your behalf</strong> — you approve each request first.</li>
+                  <li className="text-xs italic">You can review the email before sending.</li>
                   <li>You can revoke access at any time from Settings.</li>
                 </ul>
                 <Button onClick={onAuthorize} className="w-full sm:w-auto">
