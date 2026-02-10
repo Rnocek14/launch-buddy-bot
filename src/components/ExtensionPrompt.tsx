@@ -2,12 +2,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Chrome, X } from "lucide-react";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 interface ExtensionPromptProps {
   extensionServiceCount?: number;
 }
 
 export function ExtensionPrompt({ extensionServiceCount = 0 }: ExtensionPromptProps) {
+  const navigate = useNavigate();
   const [dismissed, setDismissed] = useState(() => {
     return localStorage.getItem("extension_prompt_dismissed") === "true";
   });
@@ -18,8 +20,7 @@ export function ExtensionPrompt({ extensionServiceCount = 0 }: ExtensionPromptPr
   };
 
   const handleInstall = () => {
-    // Open Chrome Web Store (placeholder URL until published)
-    window.open("https://chrome.google.com/webstore/detail/footprint-finder", "_blank");
+    navigate("/extension");
   };
 
   if (dismissed) return null;
