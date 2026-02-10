@@ -108,11 +108,20 @@ export const ContactDiscoveryDialog = ({
       if (discoveryError) throw discoveryError;
 
       if (data?.contacts && data.contacts.length > 0) {
-        setContacts(data.contacts);
-        toast({
-          title: "Contacts Discovered!",
-          description: `Found ${data.contacts.length} contact method(s) for ${service.name}`,
-        });
+        // Check if this is a PDF-only result (no actionable contacts)
+        const isPdfOnly = data.requires_manual_review && data.contacts_found === 0;
+        
+        if (isPdfOnly) {
+          setContacts(data.contacts);
+          setError(`We found ${service.name}'s privacy policy (PDF), but it needs manual review to find contact details.`);
+          setShowManualEntry(true);
+        } else {
+          setContacts(data.contacts);
+          toast({
+            title: "Contacts Found",
+            description: `Found ${data.contacts.length} contact method(s) for ${service.name}`,
+          });
+        }
       } else {
         setError(`No privacy contacts found for ${service.name}. The privacy policy may not be accessible or doesn't list contact methods.`);
       }
@@ -260,10 +269,9 @@ export const ContactDiscoveryDialog = ({
     const variants: Record<string, { variant: "default" | "secondary" | "destructive"; color: string }> = {
       high: { variant: "default", color: "text-green-600" },
       medium: { variant: "secondary", color: "text-amber-600" },
-      low: { variant: "destructive", color: "text-red-600" },
     };
 
-    const config = variants[confidence] || variants.low;
+    const config = variants[confidence] || variants.medium;
 
     return (
       <Badge variant={config.variant}>
@@ -480,7 +488,7 @@ export const ContactDiscoveryDialog = ({
             Discover Privacy Contact
           </DialogTitle>
           <DialogDescription>
-            AI will analyze {service.name}'s privacy policy to find the correct contact for deletion requests
+            We'll look for the right privacy contact on {service.name}'s website for deletion requests
           </DialogDescription>
         </DialogHeader>
 
@@ -493,7 +501,7 @@ export const ContactDiscoveryDialog = ({
             <div>
               <h3 className="font-semibold mb-2">No Verified Contact Found</h3>
               <p className="text-sm text-muted-foreground max-w-md mx-auto">
-                Let AI analyze {service.name}'s privacy policy to find the correct email or form for deletion requests.
+                We'll check {service.name}'s website for the right email or form for deletion requests.
                 This usually takes 10-15 seconds.
               </p>
             </div>
