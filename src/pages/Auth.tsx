@@ -41,7 +41,9 @@ export default function Auth() {
     checkUser();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (session && (event === "SIGNED_IN" || event === "TOKEN_REFRESHED")) {
+      if (!session) return;
+      // Only redirect if we're still on the auth page
+      if (window.location.pathname.startsWith("/auth") && event === "SIGNED_IN") {
         navigate("/dashboard", { replace: true });
       }
     });
