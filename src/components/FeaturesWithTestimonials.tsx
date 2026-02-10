@@ -7,22 +7,22 @@ const features = [
   {
     icon: Mail,
     title: "Automated Email Scanning",
-    description: "Connect your Gmail or Outlook account and let our AI scan your inbox to automatically discover services and platforms you've signed up for.",
-    highlights: ["OAuth 2.0 secure connection", "Never stores email content", "Instant results"],
+    description: "Connect your Gmail or Outlook account and we'll scan your inbox to automatically discover services and platforms you've signed up for.",
+    highlights: ["Secure sign-in via Google", "Never stores email content", "Instant results"],
     gradient: "from-primary/20 to-accent/20",
   },
   {
     icon: Search,
     title: "Privacy Contact Discovery",
-    description: "Automatically find privacy contacts, GDPR emails, and deletion request forms for each service you've used.",
-    highlights: ["AI-powered search", "Growing database", "Constantly updated"],
+    description: "Automatically find privacy contacts, deletion email addresses, and request forms for each service you've used.",
+    highlights: ["Smart search", "Growing database", "Constantly updated"],
     gradient: "from-accent/20 to-primary/20",
   },
   {
     icon: Send,
     title: "Deletion Request Tracking",
     description: "Send deletion requests with pre-filled templates and track their status in one unified dashboard.",
-    highlights: ["GDPR/CCPA compliant", "One-click sending", "Status monitoring"],
+    highlights: ["Legally compliant", "One-click sending", "Status monitoring"],
     gradient: "from-primary/20 to-accent/20",
   },
 ];
@@ -36,7 +36,7 @@ const benefits = [
   {
     icon: Shield,
     title: "Reduce Data Exposure",
-    description: "The average person has 100+ forgotten accounts. Each one is a potential breach risk.",
+    description: "The average person has 100+ forgotten accounts. Cleaning them up means fewer places your data can be misused.",
   },
   {
     icon: CheckCircle2,
@@ -96,8 +96,8 @@ export const FeaturesWithTestimonials = () => {
           <div className="text-center mb-12">
             <h3 className="text-3xl font-bold mb-4">Why This Matters</h3>
             <p className="text-muted-foreground max-w-2xl mx-auto">
-              Every forgotten account is a potential data breach waiting to happen. 
-              Take control before your data ends up in the wrong hands.
+              Forgotten accounts keep your personal data scattered across the internet.
+              Cleaning up means fewer places where your information is exposed.
             </p>
           </div>
 

@@ -9,12 +9,12 @@ const faqs = [
   {
     question: "How does Footprint Finder protect my privacy?",
     answer:
-      "All scanning happens locally on your device. We never see, store, or transmit your email data or browsing history. Our app simply helps you visualize patterns—you stay in full control of your information.",
+      "We scan email headers (sender names and subject lines) on our secure servers to identify services you've signed up for. We never read or store your email content. You stay in full control of your information and can disconnect at any time.",
   },
   {
     question: "How does the Gmail scanning work?",
     answer:
-      "When you connect your Gmail account, we analyze email headers and senders to identify account registrations. We use OAuth 2.0 for secure authentication and only read the information necessary to detect services. You can disconnect at any time.",
+      "When you connect your Gmail account, we securely sign in using Google's standard login process. We only read sender names and subject lines to identify services — never your email content. You can disconnect at any time from Settings.",
   },
   {
     question: "Do you actually delete my accounts?",
@@ -76,7 +76,7 @@ export const FAQ = () => {
         <div className="text-center mt-12">
           <p className="text-muted-foreground">
             Still have questions?{" "}
-            <a href="#" className="text-primary hover:text-accent transition-colors font-medium">
+            <a href="/help" className="text-primary hover:text-accent transition-colors font-medium">
               Contact our team
             </a>
           </p>
