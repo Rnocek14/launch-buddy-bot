@@ -563,6 +563,7 @@ export type Database = {
       discovery_metrics: {
         Row: {
           attempt_timeouts: number | null
+          browserless_used: boolean | null
           build_sha: string | null
           build_ver: string | null
           cache_hit: boolean | null
@@ -572,10 +573,15 @@ export type Database = {
           error_code: string | null
           hit_in_top5: boolean | null
           id: string
+          input_tokens: number | null
           lang: string | null
+          llm_calls: number | null
           method_used: string
+          model_used: string | null
+          output_tokens: number | null
           policy_type: string | null
           prefill_supported: boolean | null
+          probe_used: string | null
           request_id: string | null
           score: number | null
           status_map: Json | null
@@ -586,10 +592,12 @@ export type Database = {
           time_ms: number
           urls_considered: number | null
           urls_considered_top5: number | null
+          urls_fetched: number | null
           vendor: string | null
         }
         Insert: {
           attempt_timeouts?: number | null
+          browserless_used?: boolean | null
           build_sha?: string | null
           build_ver?: string | null
           cache_hit?: boolean | null
@@ -599,10 +607,15 @@ export type Database = {
           error_code?: string | null
           hit_in_top5?: boolean | null
           id?: string
+          input_tokens?: number | null
           lang?: string | null
+          llm_calls?: number | null
           method_used?: string
+          model_used?: string | null
+          output_tokens?: number | null
           policy_type?: string | null
           prefill_supported?: boolean | null
+          probe_used?: string | null
           request_id?: string | null
           score?: number | null
           status_map?: Json | null
@@ -613,10 +626,12 @@ export type Database = {
           time_ms: number
           urls_considered?: number | null
           urls_considered_top5?: number | null
+          urls_fetched?: number | null
           vendor?: string | null
         }
         Update: {
           attempt_timeouts?: number | null
+          browserless_used?: boolean | null
           build_sha?: string | null
           build_ver?: string | null
           cache_hit?: boolean | null
@@ -626,10 +641,15 @@ export type Database = {
           error_code?: string | null
           hit_in_top5?: boolean | null
           id?: string
+          input_tokens?: number | null
           lang?: string | null
+          llm_calls?: number | null
           method_used?: string
+          model_used?: string | null
+          output_tokens?: number | null
           policy_type?: string | null
           prefill_supported?: boolean | null
+          probe_used?: string | null
           request_id?: string | null
           score?: number | null
           status_map?: Json | null
@@ -640,6 +660,7 @@ export type Database = {
           time_ms?: number
           urls_considered?: number | null
           urls_considered_top5?: number | null
+          urls_fetched?: number | null
           vendor?: string | null
         }
         Relationships: []

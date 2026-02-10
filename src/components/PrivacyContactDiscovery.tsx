@@ -196,11 +196,9 @@ export default function PrivacyContactDiscovery() {
   const getConfidenceBadge = (confidence: string) => {
     switch (confidence) {
       case "high":
-        return <Badge variant="default">High</Badge>;
+        return <Badge variant="default">Strong match</Badge>;
       case "medium":
-        return <Badge variant="secondary">Medium</Badge>;
-      case "low":
-        return <Badge variant="outline">Low</Badge>;
+        return <Badge variant="secondary">Likely match</Badge>;
       default:
         return <Badge variant="outline">{confidence}</Badge>;
     }
