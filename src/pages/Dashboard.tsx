@@ -46,6 +46,8 @@ import { ExtensionPrompt } from "@/components/ExtensionPrompt";
 import { BrokerScanCard } from "@/components/BrokerScanCard";
 import { ScoreHistoryChart } from "@/components/ScoreHistoryChart";
 import { ReferralChallengePanel } from "@/components/ReferralChallengePanel";
+import { SimplifiedServiceCard } from "@/components/SimplifiedServiceCard";
+import { CleanUpWizard } from "@/components/CleanUpWizard";
 import { ServiceCard } from "@/components/ServiceCard";
 
 interface Service {
@@ -140,6 +142,8 @@ export default function Dashboard() {
   const [viewTab, setViewTab] = useState<'all' | 'priority' | 'new'>('all');
   const [showPostScanWizard, setShowPostScanWizard] = useState(false);
   const [priorityServicesForWizard, setPriorityServicesForWizard] = useState<Service[]>([]);
+  const [showCleanUpWizard, setShowCleanUpWizard] = useState(false);
+  const [bulkMode, setBulkMode] = useState(false);
 
   // Pull-to-refresh setup
   const { isPulling, pullDistance, isRefreshing, setScrollableRef } = usePullToRefresh({
@@ -1011,12 +1015,25 @@ export default function Dashboard() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <h1 className="text-2xl font-bold text-foreground">Digital Footprint</h1>
+              <h1 className="text-2xl font-bold text-foreground">Your Online Accounts</h1>
               <p className="text-sm text-muted-foreground mt-1">
-                Scan your connected inbox to find services storing your data.
+                {services.length > 0
+                  ? `${services.length} accounts found — review and clean up what you don't need.`
+                  : "Scan your connected inbox to find services storing your data."}
               </p>
             </div>
             <div className="flex items-center gap-3">
+              {services.length > 0 && (
+                <Button
+                  onClick={() => setShowCleanUpWizard(true)}
+                  variant="outline"
+                  size="lg"
+                  className="h-12 px-6 text-base"
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Clean Up My Accounts
+                </Button>
+              )}
               {!scanning ? (
                 <>
                   <span className="text-xs text-muted-foreground hidden sm:inline">
@@ -1297,7 +1314,7 @@ export default function Dashboard() {
                 <AlertCircle className="w-4 h-4" />
                 Priority
                 <Badge variant="secondary" className="ml-1">
-                  {(() => {
+                 {(() => {
                     const threeYearsAgo = new Date();
                     threeYearsAgo.setFullYear(threeYearsAgo.getFullYear() - 3);
                     const sensitiveCategories = ['Finance', 'Banking', 'Healthcare', 'Government'];
@@ -1311,14 +1328,14 @@ export default function Dashboard() {
                 </Badge>
               </Button>
               <Button
-                variant={viewTab === 'new' ? 'default' : 'ghost'}
+                variant={viewTab === 'all' ? 'default' : 'ghost'}
                 size="sm"
-                onClick={() => setViewTab('new')}
+                onClick={() => setViewTab('all')}
                 className="rounded-b-none"
               >
-                New (30d)
+                All
                 <Badge variant="secondary" className="ml-2">
-                  {newServicesCount}
+                  {services.length}
                 </Badge>
               </Button>
             </div>
@@ -1329,8 +1346,8 @@ export default function Dashboard() {
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <span className="font-medium text-foreground">{filteredServices.length}</span>
                   <span>
-                    {viewTab === 'priority' ? 'priority' : viewTab === 'new' ? 'new' : ''} 
-                    {viewTab !== 'all' && ' '}services
+                    {viewTab === 'priority' ? 'worth reviewing' : ''} 
+                    {viewTab !== 'all' && ' '}accounts
                     {viewTab === 'all' && (
                       <>
                         <span className="mx-1">of</span>
@@ -1339,33 +1356,17 @@ export default function Dashboard() {
                     )}
                   </span>
                 </div>
-                {filteredServices.length > 0 && (
-                  <SmartBatchSelector
-                    onSelectOldest={handleSmartSelectOldest}
-                    onSelectSensitive={handleSmartSelectSensitive}
-                    onSelectAll={handleSmartSelectAll}
-                    oldestCount={getSmartSelectionCounts().oldestCount}
-                    sensitiveCount={getSmartSelectionCounts().sensitiveCount}
-                    totalCount={filteredServices.length}
-                  />
-                )}
               </div>
               <div className="flex items-center gap-3 w-full sm:w-auto">
-                <Button 
-                  variant={hideDeletedServices ? "default" : "outline"}
+                <Button
+                  variant={bulkMode ? "default" : "ghost"}
                   size="sm"
-                  onClick={() => setHideDeletedServices(!hideDeletedServices)}
+                  onClick={() => {
+                    setBulkMode(!bulkMode);
+                    if (bulkMode) setSelectedServices(new Set());
+                  }}
                 >
-                  {hideDeletedServices ? "Show Deleted" : "Hide Deleted"}
-                </Button>
-                <Button 
-                  variant="default" 
-                  size="sm"
-                  onClick={() => navigate("/cleanup")}
-                  className="flex-shrink-0 bg-gradient-to-r from-primary to-primary/80"
-                >
-                  <Sparkles className="w-4 h-4 mr-2" />
-                  AI Cleanup
+                  {bulkMode ? "Done selecting" : "Select multiple"}
                 </Button>
                 <Button 
                   variant="outline" 
@@ -1462,55 +1463,6 @@ export default function Dashboard() {
               </Card>
             )}
 
-            {/* Batch Selection Helper */}
-            {filteredServices.length > 0 && (
-              <div className="flex items-center justify-between text-sm text-muted-foreground">
-                <div className="flex items-center gap-4">
-                  <span>
-                    {selectedServices.size > 0 
-                      ? `${selectedServices.size} ${selectedServices.size === 1 ? 'service' : 'services'} selected`
-                      : 'Select services for batch deletion'}
-                  </span>
-                  {selectedServices.size > 0 && (
-                    <Button
-                      variant="link"
-                      size="sm"
-                      onClick={() => setSelectedServices(new Set())}
-                      className="h-auto p-0 text-xs"
-                    >
-                      Clear selection
-                    </Button>
-                  )}
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      const oldServices = filteredServices
-                        .sort((a, b) => new Date(a.discovered_at).getTime() - new Date(b.discovered_at).getTime())
-                        .slice(0, 10)
-                        .map(s => s.id);
-                      setSelectedServices(new Set(oldServices));
-                    }}
-                  >
-                    Select Oldest 10
-                  </Button>
-                </div>
-              </div>
-            )}
-
-            {/* Filter Chips */}
-            <FilterChips
-              searchQuery={searchQuery}
-              selectedCategory={selectedCategory}
-              selectedContactStatus={selectedContactStatus}
-              onRemoveSearch={() => setSearchQuery("")}
-              onRemoveCategory={() => setSelectedCategory("all")}
-              onRemoveContactStatus={() => setSelectedContactStatus("all")}
-              onClearAll={handleClearAllFilters}
-            />
-
             {/* Services Grid */}
             {filteredServices.length === 0 ? (
               <Card className="border-dashed">
@@ -1541,17 +1493,14 @@ export default function Dashboard() {
                 </p>
                 <div id="services-grid" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 {filteredServices.map(service => (
-                  <ServiceCard
+                  <SimplifiedServiceCard
                     key={service.id}
                     service={service}
-                    isSelected={selectedServices.has(service.id)}
-                    isNew={isServiceNew(service.discovered_at)}
-                    categoryColor={categoryColors[service.category] || categoryColors["Other"]}
-                    onToggleSelection={toggleServiceSelection}
                     onRequestDeletion={handleRequestDeletion}
-                    onQuickDiscovery={handleQuickDiscovery}
                     getServiceInitials={getServiceInitials}
-                    getContactStatusBadge={getContactStatusBadge}
+                    bulkMode={bulkMode}
+                    isSelected={selectedServices.has(service.id)}
+                    onToggleSelection={toggleServiceSelection}
                   />
                 ))}
               </div>
@@ -1769,6 +1718,18 @@ export default function Dashboard() {
         onRequestDeletion={handleRequestDeletion}
         onQuickDiscovery={handleQuickDiscovery}
         getServiceInitials={getServiceInitials}
+      />
+
+      {/* Clean Up Wizard */}
+      <CleanUpWizard
+        open={showCleanUpWizard}
+        onOpenChange={setShowCleanUpWizard}
+        services={services}
+        getServiceInitials={getServiceInitials}
+        onComplete={() => {
+          fetchServices();
+          setShowCleanUpWizard(false);
+        }}
       />
     </div>
   );

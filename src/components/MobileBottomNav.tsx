@@ -69,7 +69,7 @@ export const MobileBottomNav = ({
   // Persistent tab bar
   const tabs = [
     { icon: Home, label: "Home", path: "/dashboard" },
-    { icon: ScanSearch, label: "Scan", path: "/exposure-scan" },
+    { icon: ScanSearch, label: "Scan", path: "/scan" },
     { icon: Settings, label: "Account", path: "/settings" },
     { icon: HelpCircle, label: "Help", path: "/help" },
   ];

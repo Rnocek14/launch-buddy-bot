@@ -35,6 +35,7 @@ import Organization from "./pages/Organization";
 import Offboarding from "./pages/Offboarding";
 import { AuthorizationWizard } from "./components/AuthorizationWizard";
 import ExposureScan from "./pages/ExposureScan";
+import ScanHub from "./pages/ScanHub";
 
 const queryClient = new QueryClient();
 
@@ -75,6 +76,7 @@ const App = () => (
               <Route path="/organization" element={<Organization />} />
               <Route path="/offboarding" element={<Offboarding />} />
               <Route path="/exposure-scan" element={<ExposureScan />} />
+              <Route path="/scan" element={<ScanHub />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>

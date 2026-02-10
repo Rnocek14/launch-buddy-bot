@@ -304,6 +304,16 @@ export default function BrokerScan() {
       <Navbar />
       
       <main className="flex-1 container mx-auto px-4 py-8 max-w-4xl">
+        {/* Deprecation banner */}
+        <div className="mb-6 p-4 rounded-lg bg-muted border border-border flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">
+            This page has moved to <strong>Scan Hub</strong> — your one-stop for all privacy scans.
+          </p>
+          <Button variant="default" size="sm" onClick={() => navigate("/scan")}>
+            Go to Scan Hub
+          </Button>
+        </div>
+
         <Button 
           variant="ghost" 
           className="mb-6"

@@ -237,6 +237,16 @@ export default function ExposureScan() {
     <div className="min-h-screen bg-background">
       <Navbar />
       <div className="container max-w-6xl mx-auto px-4 py-8">
+        {/* Deprecation banner */}
+        <div className="mb-6 p-4 rounded-lg bg-muted border border-border flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">
+            This page has moved to <strong>Scan Hub</strong> — your one-stop for all privacy scans.
+          </p>
+          <Button variant="default" size="sm" onClick={() => navigate("/scan")}>
+            Go to Scan Hub
+          </Button>
+        </div>
+
         <Button
           variant="ghost"
           onClick={() => navigate("/dashboard")}
