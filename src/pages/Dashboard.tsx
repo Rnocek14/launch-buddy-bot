@@ -536,7 +536,14 @@ export default function Dashboard() {
         return;
       }
       
-      setRiskData(data);
+      // Normalize risk data shape for RiskScoreCard compatibility
+      setRiskData({
+        ...data,
+        riskScore: data?.riskScore ?? data?.score,
+        riskLevel: data?.riskLevel ?? data?.level,
+        riskFactors: data?.riskFactors ?? data?.factors,
+        insights: data?.insights ?? '',
+      });
     } catch (error: any) {
       // Silent failure - risk score is optional
       console.warn('Failed to fetch risk score:', error);
@@ -1043,6 +1050,9 @@ export default function Dashboard() {
           />
         ) : (
           <>
+            {/* Onboarding Banner (above fold for new users) */}
+            {!monthlyStats?.lastScanDate && <OnboardingBanner />}
+
             {/* Status Strip */}
             <div className="flex flex-wrap items-center gap-x-6 gap-y-2 py-3 px-4 rounded-lg bg-muted/30 border border-border">
               <div className="flex items-center gap-2">
@@ -1165,8 +1175,8 @@ export default function Dashboard() {
                   <span className="ml-auto text-xs text-muted-foreground hidden group-open:inline">▾</span>
                 </summary>
                 <div className="mt-4 space-y-6">
-                  {/* Onboarding Banner */}
-                  <OnboardingBanner />
+                  {/* Onboarding Banner (for returning users who haven't seen it above) */}
+                  {monthlyStats?.lastScanDate && <OnboardingBanner />}
 
                   {/* Subscription Status Card */}
                   <SubscriptionStatusCard />
@@ -1256,38 +1266,7 @@ export default function Dashboard() {
               </details>
             )}
 
-        {/* Services Section */}
-        {services.length === 0 ? (
-          <Card className="border-dashed">
-            <CardContent className="py-16">
-              <div className="text-center max-w-md mx-auto">
-                <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-primary/10 flex items-center justify-center">
-                  <Shield className="w-10 h-10 text-primary" />
-                </div>
-                <h3 className="text-xl font-semibold text-foreground mb-2">
-                  Discover Your Digital Footprint
-                </h3>
-                <p className="text-muted-foreground mb-6">
-                  Connect your Gmail to automatically scan for online accounts and services you've signed up for over the years.
-                </p>
-                <div className="flex flex-col gap-2 text-sm text-muted-foreground">
-                  <div className="flex items-center gap-2 justify-center">
-                    <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                    <span>Safe & secure - read-only access</span>
-                  </div>
-                  <div className="flex items-center gap-2 justify-center">
-                    <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                    <span>No email content stored</span>
-                  </div>
-                  <div className="flex items-center gap-2 justify-center">
-                    <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                    <span>Results in seconds</span>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ) : (
+        {/* Services Grid Section */}
           <div className="space-y-6">
             {/* View Tabs */}
             <div className="flex items-center gap-2 border-b border-border">
@@ -1567,7 +1546,6 @@ export default function Dashboard() {
               </div>
             )}
           </div>
-        )}
 
         {unmatchedDomains.length > 0 && (
           <Card className="mt-8 border-orange-500/20 bg-orange-500/5">
