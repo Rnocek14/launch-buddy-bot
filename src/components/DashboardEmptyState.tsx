@@ -78,7 +78,7 @@ export const DashboardEmptyState = ({
                   )}
                 </CardTitle>
                 <CardDescription>
-                  Allow us to scan your inbox and send deletion requests on your behalf
+                  Review what we access and how your data is handled
                 </CardDescription>
               </div>
             </div>
@@ -86,9 +86,11 @@ export const DashboardEmptyState = ({
           <CardContent>
             {!isAuthorized ? (
               <div className="space-y-4">
-                <p className="text-sm text-muted-foreground">
-                  We need your permission to read email metadata (sender names only — no content is stored) and to send GDPR/CCPA deletion requests. You can revoke this at any time.
-                </p>
+                <ul className="text-sm text-muted-foreground space-y-2 list-none">
+                  <li><strong>Inbox scan:</strong> We read sender names and subject lines to find signups. No email body is read or stored.</li>
+                  <li><strong>Deletion requests:</strong> We send GDPR/CCPA emails from our service on your behalf — you approve each one first.</li>
+                  <li>You can revoke access at any time from Settings.</li>
+                </ul>
                 <Button onClick={onAuthorize} className="w-full sm:w-auto">
                   I Agree — Continue
                   <ArrowRight className="w-4 h-4 ml-2" />

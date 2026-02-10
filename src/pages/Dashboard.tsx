@@ -1127,13 +1127,18 @@ export default function Dashboard() {
                       <Loader2 className="w-4 h-4 mt-0.5 animate-spin text-primary flex-shrink-0" />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm text-foreground font-medium">
-                          {scanProgress.currentEmail === 0
-                            ? "Step 1 of 3: Connecting to your inbox…"
-                            : scanProgress.currentEmail < 90
-                              ? "Step 2 of 3: Reading your emails…"
-                              : "Step 3 of 3: Matching services — almost done!"}
+                          {(() => {
+                            const pct = scanProgress.totalEmails
+                              ? scanProgress.currentEmail / scanProgress.totalEmails
+                              : 0;
+                            return pct <= 0.05
+                              ? "Step 1 of 3: Connecting to your inbox…"
+                              : pct < 0.85
+                                ? "Step 2 of 3: Reading your emails…"
+                                : "Step 3 of 3: Matching services — almost done!";
+                          })()}
                         </p>
-                        {scanProgress.currentEmail === 0 && (
+                        {scanProgress.totalEmails && (scanProgress.currentEmail / scanProgress.totalEmails) <= 0.05 && (
                           <p className="text-xs text-muted-foreground mt-1">
                             We look for signup emails, invoices, orders, and newsletters
                           </p>
