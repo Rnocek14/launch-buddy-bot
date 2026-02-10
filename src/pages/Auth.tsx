@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, useLocation, Link } from "react-router-dom";
 import { Shield, Loader2, Chrome, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +17,7 @@ const passwordSchema = z.string().min(6, "Password must be at least 6 characters
 
 export default function Auth() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   
@@ -43,7 +44,7 @@ export default function Auth() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (!session) return;
       // Only redirect if we're still on the auth page
-      if (window.location.pathname.startsWith("/auth") && event === "SIGNED_IN") {
+      if (location.pathname.startsWith("/auth") && event === "SIGNED_IN") {
         navigate("/dashboard", { replace: true });
       }
     });
