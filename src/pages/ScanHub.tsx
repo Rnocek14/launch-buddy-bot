@@ -37,7 +37,7 @@ export default function ScanHub() {
       }
       setUser(session.user);
 
-      const [servicesRes, brokerRes, exposureRes, profileRes] = await Promise.all([
+      const [servicesRes, brokerRes, exposureRes, profileRes] = await Promise.allSettled([
         supabase
           .from("user_services")
           .select("service_id", { count: "exact", head: true })
@@ -61,18 +61,23 @@ export default function ScanHub() {
           .maybeSingle(),
       ]);
 
+      const sData = servicesRes.status === "fulfilled" ? servicesRes.value : null;
+      const bData = brokerRes.status === "fulfilled" ? brokerRes.value : null;
+      const eData = exposureRes.status === "fulfilled" ? exposureRes.value : null;
+      const pData = profileRes.status === "fulfilled" ? profileRes.value : null;
+
       setStatus({
         inbox: {
-          lastRun: profileRes.data?.last_email_scan_date || null,
-          serviceCount: servicesRes.count || 0,
+          lastRun: pData?.data?.last_email_scan_date || null,
+          serviceCount: sData?.count || 0,
         },
         peopleSearch: {
-          lastRun: brokerRes.data?.[0]?.completed_at || null,
-          foundCount: brokerRes.data?.[0]?.found_count || 0,
+          lastRun: bData?.data?.[0]?.completed_at || null,
+          foundCount: bData?.data?.[0]?.found_count || 0,
         },
         breach: {
-          lastRun: exposureRes.data?.[0]?.completed_at || null,
-          findingCount: exposureRes.data?.[0]?.total_findings || 0,
+          lastRun: eData?.data?.[0]?.completed_at || null,
+          findingCount: eData?.data?.[0]?.total_findings || 0,
         },
       });
     } catch (err) {

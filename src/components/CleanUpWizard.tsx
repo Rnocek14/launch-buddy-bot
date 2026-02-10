@@ -121,12 +121,17 @@ export function CleanUpWizard({
     if (servicesWithContacts.length > 0) {
       const { data: existingContacts } = await supabase
         .from("privacy_contacts")
-        .select("service_id, value, contact_type")
+        .select("service_id, value, contact_type, confidence, mx_validated")
         .in("service_id", servicesWithContacts.map((s) => s.id))
-        .eq("contact_type", "email");
+        .eq("contact_type", "email")
+        .in("confidence", ["high", "medium"])
+        .order("mx_validated", { ascending: false })
+        .order("confidence", { ascending: true })
+        .order("created_at", { ascending: false });
 
       if (existingContacts) {
         for (const c of existingContacts) {
+          // First match per service wins (best: mx_validated + high confidence + newest)
           if (c.service_id && !contactMap.has(c.service_id)) {
             contactMap.set(c.service_id, { email: c.value, type: c.contact_type });
           }
