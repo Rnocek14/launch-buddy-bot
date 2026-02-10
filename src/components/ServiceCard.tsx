@@ -232,7 +232,7 @@ export function ServiceCard({
             {/* Persistent action link */}
             <button
               onClick={(e) => { e.stopPropagation(); onRequestDeletion(service); }}
-              className="text-xs text-primary hover:text-primary/80 hover:underline transition-colors py-2 px-3 min-h-[44px] flex items-center"
+              className={`text-xs text-primary hover:text-primary/80 hover:underline transition-colors ${isMobile ? 'py-2 px-3 min-h-[44px] -mx-3 flex items-center' : ''}`}
             >
               Request deletion →
             </button>
