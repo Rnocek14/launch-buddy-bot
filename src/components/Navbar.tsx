@@ -1,4 +1,4 @@
-import { Shield, ScanSearch, Settings, ShieldCheck, Activity, Menu, X, CreditCard, BarChart3, Radar } from "lucide-react";
+import { Shield, ScanSearch, Settings, Menu, X, CreditCard, HelpCircle } from "lucide-react";
 import { ThemeToggle } from "./ThemeToggle";
 import { Button } from "./ui/button";
 import { Link, useNavigate } from "react-router-dom";
@@ -80,22 +80,10 @@ export const Navbar = () => {
 
             {user && (
               <>
-                <Link to="/status">
-                  <Button variant="ghost" className="gap-2">
-                    <Activity className="w-4 h-4" />
-                    <span>Status</span>
-                  </Button>
-                </Link>
                 <Link to="/dashboard">
                   <Button variant="ghost" className="gap-2">
                     <ScanSearch className="w-4 h-4" />
                     <span>Dashboard</span>
-                  </Button>
-                </Link>
-                <Link to="/exposure-scan">
-                  <Button variant="ghost" className="gap-2">
-                    <Radar className="w-4 h-4" />
-                    <span>Exposure Scan</span>
                   </Button>
                 </Link>
                 <Link to="/billing">
@@ -108,12 +96,6 @@ export const Navbar = () => {
                   <Button variant="ghost" className="gap-2">
                     <Settings className="w-4 h-4" />
                     <span>Settings</span>
-                  </Button>
-                </Link>
-                <Link to="/admin/analytics">
-                  <Button variant="ghost" className="gap-2">
-                    <BarChart3 className="w-4 h-4" />
-                    <span>Analytics</span>
                   </Button>
                 </Link>
               </>
@@ -179,25 +161,13 @@ export const Navbar = () => {
                     FAQ
                   </Button>
 
-                  {user && (
+                    {user && (
                     <>
                       <div className="border-t border-border my-2" />
-                      <Link to="/status" onClick={closeMobileMenu}>
-                        <Button variant="ghost" className="w-full justify-start gap-2">
-                          <Activity className="w-4 h-4" />
-                          Status
-                        </Button>
-                      </Link>
                       <Link to="/dashboard" onClick={closeMobileMenu}>
                         <Button variant="ghost" className="w-full justify-start gap-2">
                           <ScanSearch className="w-4 h-4" />
                           Dashboard
-                        </Button>
-                      </Link>
-                      <Link to="/exposure-scan" onClick={closeMobileMenu}>
-                        <Button variant="ghost" className="w-full justify-start gap-2">
-                          <Radar className="w-4 h-4" />
-                          Exposure Scan
                         </Button>
                       </Link>
                       <Link to="/billing" onClick={closeMobileMenu}>
@@ -212,16 +182,10 @@ export const Navbar = () => {
                           Settings
                         </Button>
                       </Link>
-                      <Link to="/admin" onClick={closeMobileMenu}>
+                      <Link to="/help" onClick={closeMobileMenu}>
                         <Button variant="ghost" className="w-full justify-start gap-2">
-                          <ShieldCheck className="w-4 h-4" />
-                          Admin
-                        </Button>
-                      </Link>
-                      <Link to="/admin/analytics" onClick={closeMobileMenu}>
-                        <Button variant="ghost" className="w-full justify-start gap-2">
-                          <BarChart3 className="w-4 h-4" />
-                          Analytics
+                          <HelpCircle className="w-4 h-4" />
+                          Help
                         </Button>
                       </Link>
                     </>

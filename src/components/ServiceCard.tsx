@@ -7,6 +7,7 @@ import { Trash2, ExternalLink, Info, Sparkles } from "lucide-react";
 import { useState } from "react";
 import { useSwipeable } from "react-swipeable";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { ServiceCardActions } from "./ServiceCardActions";
 
 interface Service {
   id: string;
@@ -115,8 +116,14 @@ export function ServiceCard({
         onClick={isMobile ? handleCardClick : undefined}
       >
         <CardContent className="p-5 md:p-4">
-          {/* Selection Checkbox - Larger on mobile */}
-          <div className="absolute top-3 right-3 z-20">
+          {/* Top-right controls: checkbox + actions menu */}
+          <div className="absolute top-3 right-3 z-20 flex items-center gap-1">
+            <ServiceCardActions
+              homepageUrl={service.homepage_url}
+              contactStatus={service.contact_status}
+              onRequestDeletion={() => onRequestDeletion(service)}
+              onQuickDiscovery={() => onQuickDiscovery(service)}
+            />
             <Checkbox
               checked={isSelected}
               onCheckedChange={() => onToggleSelection(service.id)}

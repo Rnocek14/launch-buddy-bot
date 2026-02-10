@@ -991,8 +991,11 @@ export default function Dashboard() {
           onComplete={() => setShowSuccessAnimation(false)}
         />
       )}
+      {/* Navigation */}
+      <Navbar />
+
       {/* Header */}
-      <div className="border-b border-border bg-card">
+      <div className="border-b border-border bg-card mt-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex justify-between items-center">
             <div className="flex-1">
@@ -1042,10 +1045,6 @@ export default function Dashboard() {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <Button variant="ghost" size="sm" onClick={() => navigate("/settings")}>
-                <Settings className="w-4 h-4 mr-2" />
-                Settings
-              </Button>
               <Button variant="ghost" size="sm" onClick={handleSignOut}>
                 <LogOut className="w-4 h-4 mr-2" />
                 Sign Out
@@ -1095,288 +1094,127 @@ export default function Dashboard() {
               />
             )}
 
-            {/* Subscription Status Card */}
-            <SubscriptionStatusCard />
+            {/* Collapsible Insights Section */}
+            {(riskData || monthlyStats || services.length > 0) && (
+              <details className="mb-8 group">
+                <summary className="flex items-center gap-2 cursor-pointer list-none py-3 px-4 rounded-lg bg-muted/50 border border-border hover:bg-muted transition-colors">
+                  <TrendingUp className="w-4 h-4 text-primary" />
+                  <span className="font-medium text-sm text-foreground">Insights & Analytics</span>
+                  <span className="ml-auto text-xs text-muted-foreground group-open:hidden">Click to expand</span>
+                  <span className="ml-auto text-xs text-muted-foreground hidden group-open:inline">Click to collapse</span>
+                </summary>
+                <div className="mt-4 space-y-6">
+                  {/* Subscription Status Card */}
+                  <SubscriptionStatusCard />
 
-            {/* Extension Prompt */}
-            <div className="mb-6">
-              <ExtensionPrompt extensionServiceCount={extensionServiceCount} />
-            </div>
+                  {/* Extension Prompt */}
+                  <ExtensionPrompt extensionServiceCount={extensionServiceCount} />
 
-            {/* Broker Scan Card */}
-            <BrokerScanCard />
+                  {/* Broker Scan Card */}
+                  <BrokerScanCard />
 
-            {/* This Month Summary Block */}
-            {monthlyStats && (
-              <Card className="mb-8 overflow-hidden border-primary/20 bg-gradient-to-br from-card via-card to-primary/5">
-                <CardHeader className="pb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-primary/10">
-                      <Calendar className="w-5 h-5 text-primary" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-xl">This Month</CardTitle>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Your privacy activity summary
-                      </p>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  {/* Stats Grid */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    {/* New Services */}
-                    <div className="p-4 rounded-lg bg-background/50 border border-border/50 space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-muted-foreground">New Services</span>
-                        <Sparkles className="w-4 h-4 text-green-500" />
-                      </div>
-                      <div className="flex items-baseline gap-2">
-                        <span className="text-3xl font-bold text-foreground">
-                          {monthlyStats.newServicesCount}
-                        </span>
-                        {monthlyStats.newServicesCount > 0 && (
-                          <Badge variant="secondary" className="text-xs">
-                            NEW
-                          </Badge>
-                        )}
-                      </div>
-                      <Progress 
-                        value={Math.min((monthlyStats.newServicesCount / services.length) * 100, 100)} 
-                        className="h-1.5"
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        Discovered in last 30 days
-                      </p>
-                    </div>
-
-                    {/* Reappeared Services */}
-                    <div className="p-4 rounded-lg bg-background/50 border border-border/50 space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-muted-foreground">Reappeared</span>
-                        <Activity className="w-4 h-4 text-orange-500" />
-                      </div>
-                      <div className="flex items-baseline gap-2">
-                        <span className="text-3xl font-bold text-foreground">
-                          {monthlyStats.reappearedCount}
-                        </span>
-                        {monthlyStats.reappearedCount > 0 && (
-                          <Badge variant="destructive" className="text-xs">
-                            ⚠️
-                          </Badge>
-                        )}
-                      </div>
-                      <Progress 
-                        value={monthlyStats.reappearedCount > 0 ? Math.min((monthlyStats.reappearedCount / services.length) * 100, 100) : 0} 
-                        className="h-1.5"
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        Services still emailing after deletion
-                      </p>
-                    </div>
-
-                    {/* Total Deletions */}
-                    <div className="p-4 rounded-lg bg-background/50 border border-border/50 space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-muted-foreground">Total Deletions</span>
-                        <Trash2 className="w-4 h-4 text-primary" />
-                      </div>
-                      <div className="flex items-baseline gap-2">
-                        <span className="text-3xl font-bold text-foreground">
-                          {monthlyStats.totalDeletions}
-                        </span>
-                      </div>
-                      <Progress 
-                        value={Math.min((monthlyStats.totalDeletions / Math.max(services.length, 1)) * 100, 100)} 
-                        className="h-1.5"
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        Deletion requests sent
-                      </p>
-                    </div>
-
-                    {/* Last Scan */}
-                    <div className="p-4 rounded-lg bg-background/50 border border-border/50 space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-muted-foreground">Last Scan</span>
-                        <RefreshCw className="w-4 h-4 text-muted-foreground" />
-                      </div>
-                      <div className="flex flex-col gap-1">
-                        <span className="text-lg font-semibold text-foreground">
-                          {monthlyStats.lastScanDate
-                            ? new Date(monthlyStats.lastScanDate).toLocaleDateString('en-US', {
-                                month: 'short',
-                                day: 'numeric'
-                              })
-                            : 'Never'}
-                        </span>
-                        {monthlyStats.lastScanDate && (
-                          <span className="text-xs text-muted-foreground">
-                            {(() => {
-                              const daysSince = Math.floor(
-                                (Date.now() - new Date(monthlyStats.lastScanDate).getTime()) / (1000 * 60 * 60 * 24)
-                              );
-                              return daysSince === 0
-                                ? 'Today'
-                                : daysSince === 1
-                                ? 'Yesterday'
-                                : `${daysSince} days ago`;
-                            })()}
-                          </span>
-                        )}
-                      </div>
-                      <div className="pt-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={handleScan}
-                          disabled={scanning}
-                          className="w-full text-xs"
-                        >
-                          <RefreshCw className="w-3 h-3 mr-1" />
-                          Scan Now
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Quick Insights */}
-                  {(monthlyStats.newServicesCount > 0 || monthlyStats.reappearedCount > 0) && (
-                    <div className="pt-4 border-t border-border/50">
-                      <div className="flex items-start gap-3 p-3 rounded-lg bg-primary/5">
-                        <AlertCircle className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-                        <div className="space-y-1">
-                          <p className="text-sm font-medium text-foreground">
-                            {monthlyStats.reappearedCount > 0
-                              ? `${monthlyStats.reappearedCount} service${monthlyStats.reappearedCount > 1 ? 's' : ''} reappeared after deletion`
-                              : `${monthlyStats.newServicesCount} new service${monthlyStats.newServicesCount > 1 ? 's' : ''} discovered`}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {monthlyStats.reappearedCount > 0
-                              ? 'These services are still emailing you. Consider following up on your deletion requests.'
-                              : 'Your digital footprint is growing. Review and manage these new accounts.'}
-                          </p>
+                  {/* This Month Summary */}
+                  {monthlyStats && (
+                    <Card className="overflow-hidden border-primary/20 bg-gradient-to-br from-card via-card to-primary/5">
+                      <CardHeader className="pb-4">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 rounded-lg bg-primary/10">
+                            <Calendar className="w-5 h-5 text-primary" />
+                          </div>
+                          <div>
+                            <CardTitle className="text-xl">This Month</CardTitle>
+                            <p className="text-sm text-muted-foreground mt-1">
+                              Your privacy activity summary
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                    </div>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                          <div className="p-4 rounded-lg bg-background/50 border border-border/50 space-y-1">
+                            <span className="text-sm text-muted-foreground">New Services</span>
+                            <p className="text-2xl font-bold">{monthlyStats.newServicesCount}</p>
+                          </div>
+                          <div className="p-4 rounded-lg bg-background/50 border border-border/50 space-y-1">
+                            <span className="text-sm text-muted-foreground">Reappeared</span>
+                            <p className="text-2xl font-bold">{monthlyStats.reappearedCount}</p>
+                          </div>
+                          <div className="p-4 rounded-lg bg-background/50 border border-border/50 space-y-1">
+                            <span className="text-sm text-muted-foreground">Deletions</span>
+                            <p className="text-2xl font-bold">{monthlyStats.totalDeletions}</p>
+                          </div>
+                          <div className="p-4 rounded-lg bg-background/50 border border-border/50 space-y-1">
+                            <span className="text-sm text-muted-foreground">Last Scan</span>
+                            <p className="text-lg font-semibold">
+                              {monthlyStats.lastScanDate
+                                ? new Date(monthlyStats.lastScanDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                                : 'Never'}
+                            </p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
                   )}
-                </CardContent>
-              </Card>
-            )}
 
-            {/* Viral Share Nudge */}
-            {showShareNudge && riskData && (
-              <Alert className="mb-4 border-primary/40 bg-primary/5">
-                <Sparkles className="h-4 w-4 text-primary" />
-                <AlertTitle>Your digital footprint report is ready 🎯</AlertTitle>
-                <AlertDescription>
-                  We found <strong>{services.length} accounts</strong> tied to your email.
-                  Your risk score is <strong>{riskData.riskScore}</strong> ({riskData.riskLevel} risk).
-                </AlertDescription>
-                <div className="mt-3 flex gap-2">
-                  <Button
-                    size="sm"
-                    onClick={() => {
-                      setShareDialogOpen(true);
-                      setShowShareNudge(false);
-                      window.localStorage.setItem('ff_seen_share_nudge', '1');
-                      trackEvent('share_nudge_clicked');
-                    }}
-                  >
-                    Share My Score
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setShowShareNudge(false);
-                      window.localStorage.setItem('ff_seen_share_nudge', '1');
-                      trackEvent('share_nudge_dismissed');
-                    }}
-                  >
-                    Not now
-                  </Button>
+                  {/* Risk Score Card */}
+                  {riskData && (
+                    <RiskScoreCard
+                      score={riskData.riskScore}
+                      level={riskData.riskLevel}
+                      factors={riskData.riskFactors}
+                      insights={riskData.insights}
+                      percentile={riskData.percentile}
+                      exposureFactors={riskData.exposureFactors}
+                      topCategories={riskData.topCategories}
+                      comparison={riskData.comparison}
+                      onFilterOldAccounts={() => {
+                        setViewTab('priority');
+                        document.getElementById("services-grid")?.scrollIntoView({ behavior: "smooth" });
+                      }}
+                      onFilterSensitive={() => {
+                        const sensitiveCategories = ['Finance', 'Banking', 'Healthcare', 'Government'];
+                        const firstSensitive = services.find((s: any) => sensitiveCategories.includes(s.category));
+                        if (firstSensitive) {
+                          setSelectedCategory(firstSensitive.category);
+                          document.getElementById("services-grid")?.scrollIntoView({ behavior: "smooth" });
+                        }
+                      }}
+                      onFilterCategory={(category: string) => {
+                        setSelectedCategory(category);
+                        setViewTab('all');
+                        document.getElementById("services-grid")?.scrollIntoView({ behavior: "smooth" });
+                      }}
+                    />
+                  )}
+
+                  {/* Score History Chart */}
+                  {riskData && (
+                    <ScoreHistoryChart 
+                      currentScore={riskData.riskScore} 
+                      currentLevel={riskData.riskLevel} 
+                    />
+                  )}
+
+                  {/* Deletion Progress Tracker */}
+                  {services.length > 0 && (
+                    <DeletionProgressTracker services={services} />
+                  )}
+
+                  {/* Impact Visualization */}
+                  {services.length > 0 && impactMetrics.totalDeletions > 0 && (
+                    <ImpactVisualization
+                      totalDeletions={impactMetrics.totalDeletions}
+                      servicesRemaining={impactMetrics.servicesRemaining}
+                      oldAccountsDeleted={impactMetrics.oldAccountsDeleted}
+                      sensitiveAccountsDeleted={impactMetrics.sensitiveAccountsDeleted}
+                    />
+                  )}
+
+                  {/* Referral Challenge Panel */}
+                  <ReferralChallengePanel />
                 </div>
-              </Alert>
+              </details>
             )}
-
-            {/* Risk Score Card */}
-            {riskData && (
-              <div className="mb-8 space-y-4">
-                <RiskScoreCard
-                  score={riskData.riskScore}
-                  level={riskData.riskLevel}
-                  factors={riskData.riskFactors}
-                  insights={riskData.insights}
-                  percentile={riskData.percentile}
-                  exposureFactors={riskData.exposureFactors}
-                  topCategories={riskData.topCategories}
-                  comparison={riskData.comparison}
-                  onFilterOldAccounts={() => {
-                    setViewTab('priority');
-                    document.getElementById("services-grid")?.scrollIntoView({ behavior: "smooth" });
-                  }}
-                  onFilterSensitive={() => {
-                    const sensitiveCategories = ['Finance', 'Banking', 'Healthcare', 'Government'];
-                    const firstSensitive = services.find((s: any) => sensitiveCategories.includes(s.category));
-                    if (firstSensitive) {
-                      setSelectedCategory(firstSensitive.category);
-                      document.getElementById("services-grid")?.scrollIntoView({ behavior: "smooth" });
-                    }
-                  }}
-                  onFilterCategory={(category: string) => {
-                    setSelectedCategory(category);
-                    setViewTab('all');
-                    document.getElementById("services-grid")?.scrollIntoView({ behavior: "smooth" });
-                  }}
-                />
-                <div className="flex justify-center">
-                  <Button
-                    onClick={() => setShareDialogOpen(true)}
-                    size="lg"
-                    className="gap-2"
-                    variant="outline"
-                  >
-                    <Share2 className="w-4 h-4" />
-                    Share Your Score
-                  </Button>
-                </div>
-              </div>
-            )}
-
-            {/* Score History Chart */}
-            {riskData && (
-              <div className="mb-8">
-                <ScoreHistoryChart 
-                  currentScore={riskData.riskScore} 
-                  currentLevel={riskData.riskLevel} 
-                />
-              </div>
-            )}
-
-            {/* Deletion Progress Tracker */}
-            {services.length > 0 && (
-              <div className="mb-8">
-                <DeletionProgressTracker services={services} />
-              </div>
-            )}
-
-            {/* Impact Visualization */}
-            {services.length > 0 && impactMetrics.totalDeletions > 0 && (
-              <div className="mb-8">
-                <ImpactVisualization
-                  totalDeletions={impactMetrics.totalDeletions}
-                  servicesRemaining={impactMetrics.servicesRemaining}
-                  oldAccountsDeleted={impactMetrics.oldAccountsDeleted}
-                  sensitiveAccountsDeleted={impactMetrics.sensitiveAccountsDeleted}
-                />
-              </div>
-            )}
-
-            {/* Referral Challenge Panel */}
-            <div className="mb-8">
-              <ReferralChallengePanel />
-            </div>
 
         {/* Scan Hero Card */}
         <Card className="mb-8 overflow-hidden border-primary/20 bg-gradient-to-br from-card to-primary/5">
