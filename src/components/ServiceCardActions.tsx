@@ -28,11 +28,12 @@ export function ServiceCardActions({
           size="icon"
           className="h-7 w-7 rounded-full hover:bg-muted"
           onClick={(e) => e.stopPropagation()}
+          aria-label="Service actions"
         >
           <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-48">
+      <DropdownMenuContent align="end" className="w-48" onClick={(e) => e.stopPropagation()}>
         <DropdownMenuItem
           onClick={(e) => {
             e.stopPropagation();
