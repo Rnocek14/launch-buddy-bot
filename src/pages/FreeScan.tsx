@@ -10,14 +10,12 @@ import { Link } from "react-router-dom";
 // Simulated exposure categories based on email domain patterns
 // Deterministic hash from email string — same email always gives same number
 function emailHash(email: string): number {
-  let hash = 0;
+  let hash = 5381;
   const str = email.toLowerCase().trim();
   for (let i = 0; i < str.length; i++) {
-    const chr = str.charCodeAt(i);
-    hash = ((hash << 5) - hash) + chr;
-    hash |= 0;
+    hash = ((hash << 5) + hash) ^ str.charCodeAt(i); // djb2 xor variant
   }
-  return Math.abs(hash);
+  return hash >>> 0; // unsigned 32-bit
 }
 
 const getExposurePreview = (email: string) => {

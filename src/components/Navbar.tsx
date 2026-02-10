@@ -1,4 +1,4 @@
-import { Shield, ScanSearch, Settings, Menu, X, CreditCard, HelpCircle } from "lucide-react";
+import { Shield, ScanSearch, Settings, Menu, X, CreditCard, HelpCircle, BarChart3 } from "lucide-react";
 import { ThemeToggle } from "./ThemeToggle";
 import { Button } from "./ui/button";
 import { Link, useNavigate } from "react-router-dom";
@@ -22,6 +22,7 @@ const scrollToSection = (id: string) => {
 
 export const Navbar = () => {
   const [user, setUser] = useState<any>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const navigate = useNavigate();
 
@@ -29,15 +30,28 @@ export const Navbar = () => {
     // Check current session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
+      if (session?.user) checkAdmin(session.user.id);
     });
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
+      if (session?.user) checkAdmin(session.user.id);
+      else setIsAdmin(false);
     });
 
     return () => subscription.unsubscribe();
   }, []);
+
+  const checkAdmin = async (userId: string) => {
+    const { data } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", userId)
+      .eq("role", "admin")
+      .maybeSingle();
+    setIsAdmin(!!data);
+  };
 
   const closeMobileMenu = () => setMobileMenuOpen(false);
 
@@ -98,6 +112,14 @@ export const Navbar = () => {
                     <span>Settings</span>
                   </Button>
                 </Link>
+                {isAdmin && (
+                  <Link to="/admin-analytics">
+                    <Button variant="ghost" className="gap-2">
+                      <BarChart3 className="w-4 h-4" />
+                      <span>Analytics</span>
+                    </Button>
+                  </Link>
+                )}
               </>
             )}
             
@@ -188,6 +210,14 @@ export const Navbar = () => {
                           Help
                         </Button>
                       </Link>
+                      {isAdmin && (
+                        <Link to="/admin-analytics" onClick={closeMobileMenu}>
+                          <Button variant="ghost" className="w-full justify-start gap-2">
+                            <BarChart3 className="w-4 h-4" />
+                            Analytics
+                          </Button>
+                        </Link>
+                      )}
                     </>
                   )}
                   
