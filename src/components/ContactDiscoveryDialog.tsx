@@ -113,7 +113,7 @@ export const ContactDiscoveryDialog = ({
         
         if (isPdfOnly) {
           setContacts(data.contacts);
-          setError(`We found ${service.name}'s privacy policy (PDF), but it needs manual review to find contact details.`);
+          // Use info state, not error — PDF found is progress, not failure
           setShowManualEntry(true);
         } else {
           setContacts(data.contacts);
@@ -513,9 +513,9 @@ export const ContactDiscoveryDialog = ({
           <div className="py-8 text-center space-y-4">
             <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto" />
             <div>
-              <h3 className="font-semibold mb-2">Discovering Contacts...</h3>
+              <h3 className="font-semibold mb-2">Looking up contacts...</h3>
               <p className="text-sm text-muted-foreground">
-                AI is analyzing {service.name}'s privacy policy
+                Checking {service.name}'s website for privacy contact details
               </p>
             </div>
           </div>
@@ -553,6 +553,26 @@ export const ContactDiscoveryDialog = ({
         {/* Manual Entry Form with Guided Tips */}
         {showManualEntry && (
           <div className="space-y-4">
+            {/* PDF-found info banner (non-error) */}
+            {contacts.length > 0 && !error && (
+              <Alert className="border-primary/20 bg-primary/5">
+                <Search className="h-4 w-4 text-primary" />
+                <AlertDescription>
+                  <p className="font-medium mb-1">Privacy policy found (PDF)</p>
+                  <p className="text-sm text-muted-foreground">
+                    We found the privacy policy but need your help to locate the contact email or form inside it.
+                  </p>
+                </AlertDescription>
+              </Alert>
+            )}
+            {error && (
+              <Alert variant="default" className="border-amber-200 bg-amber-50">
+                <AlertTriangle className="h-4 w-4 text-amber-600" />
+                <AlertDescription className="text-amber-900">
+                  <p className="text-sm">{error}</p>
+                </AlertDescription>
+              </Alert>
+            )}
             <div className="pb-3 border-b">
               <h3 className="text-sm font-semibold">Let's Find the Contact Together</h3>
               <p className="text-xs text-muted-foreground mt-1">
