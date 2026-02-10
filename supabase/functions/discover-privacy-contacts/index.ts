@@ -1144,6 +1144,9 @@ serve(async (req) => {
       }
     }
 
+    // Set probe_used early so it's populated even on error paths
+    metrics.probe_used = securityTxtContact ? 'security_txt' : (sitemapUrls.length > 0 ? 'sitemap' : 'none');
+
     // Build comprehensive URL list with Phase 1 enhancements
     const candidateUrls = privacy_url 
       ? [privacy_url]
@@ -1207,7 +1210,7 @@ serve(async (req) => {
     if (DETECT_LANG && candidateUrls.length > 0) {
       try {
         const homeUrl = `https://${service.domain}`;
-        const homeResponse = await fetch(homeUrl, {
+        const homeResponse = await countedFetch(homeUrl, {
           headers: { 'User-Agent': USER_AGENT, 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8', 'Accept-Language': 'en-US,en;q=0.9' },
           redirect: 'follow',
           signal: AbortSignal.timeout(5000)
@@ -1239,6 +1242,10 @@ serve(async (req) => {
     let result = await trySimpleFetch(urlsToTry, service.domain, ATTEMPT_TIMEOUT_MS, EARLY_STOP_CONFIDENCE, cachedHomepageHtml);
     let methodUsed = 'simple_fetch';
     const attemptTimeouts = result?.attemptTimeouts ?? 0;
+    // Count Phase 1 fetches from attempted URLs (1 fetch per attempted URL, minus cached homepage)
+    if (result?.discoveredUrls) {
+      realFetchCount += result.discoveredUrls.length;
+    }
     
     console.log(`[Guardrails] Attempt timeouts: ${attemptTimeouts}, Best score: ${result?.bestScore ?? 'N/A'}`);
     
@@ -1276,6 +1283,7 @@ serve(async (req) => {
       }));
       
       const browserlessResult = await tryBrowserlessFetch(urlsForBrowserless, browserlessApiKey);
+      realFetchCount += urlsForBrowserless.length; // Each browserless URL = 1 fetch
       
       if (browserlessResult) {
         result = {
@@ -1429,7 +1437,7 @@ Extract all relevant contact methods for data deletion requests.`;
     // Helper: validate form URLs with soft-404 and privacy-relevance check
     async function validateContactUrl(url: string): Promise<boolean> {
       try {
-        const response = await fetch(url, {
+        const response = await countedFetch(url, {
           method: 'GET',
           signal: AbortSignal.timeout(5000),
           redirect: 'follow',
@@ -1461,7 +1469,7 @@ Extract all relevant contact methods for data deletion requests.`;
       }
     }
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    const response = await countedFetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${openAIApiKey}`,
