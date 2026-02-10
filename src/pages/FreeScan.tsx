@@ -166,7 +166,7 @@ export default function FreeScan() {
                       <p className="text-muted-foreground mb-4">
                         Based on users with similar email providers, this many services likely hold some of your data.
                         {results.dataBrokers > 0 && (
-                          <> Additionally, up to <span className="font-semibold text-foreground">{results.dataBrokers} data brokers</span> may have your personal information.</>
+                          <> Some data brokers may also have your personal information.</>
                         )}
                       </p>
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -178,7 +178,8 @@ export default function FreeScan() {
                 </CardContent>
               </Card>
 
-              {/* Category Breakdown */}
+              {/* Typical Categories */}
+              <h3 className="text-lg font-semibold text-muted-foreground">Where accounts often show up</h3>
               <div className="grid md:grid-cols-2 gap-4">
                 {results.categories.map((category, index) => (
                   <Card key={index} className="hover:border-primary/50 transition-colors">

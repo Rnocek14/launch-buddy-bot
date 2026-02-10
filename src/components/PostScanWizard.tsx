@@ -240,7 +240,7 @@ export function PostScanWizard({
               <div className="flex items-center gap-2 text-green-800 dark:text-green-200">
                 <CheckCircle className="w-5 h-5" />
                 <p className="text-sm font-medium">
-                  Great progress! You took action on {actedUpon.size} out of {priorityServices.length} high-risk accounts.
+                  Great progress! You reviewed {actedUpon.size} out of {priorityServices.length} accounts.
                 </p>
               </div>
             </div>
