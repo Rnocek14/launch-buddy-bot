@@ -1535,7 +1535,11 @@ export default function Dashboard() {
                 </CardContent>
               </Card>
             ) : (
-              <div id="services-grid" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              <>
+                <p className="text-sm text-muted-foreground mb-4">
+                  You don't need to delete everything — start with accounts you no longer use.
+                </p>
+                <div id="services-grid" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 {filteredServices.map(service => (
                   <ServiceCard
                     key={service.id}
@@ -1551,6 +1555,7 @@ export default function Dashboard() {
                   />
                 ))}
               </div>
+              </>
             )}
           </div>
 
