@@ -436,11 +436,43 @@ export function CleanUpWizard({
                       {r.contactEmail}
                     </span>
                   )}
-                  {r.status === "manual" && (
-                    <Badge variant="outline" className="text-xs shrink-0">
-                      Manual steps needed
-                    </Badge>
-                  )}
+                  {r.status === "manual" && (() => {
+                    const svc = cappedServices.find(s => s.id === r.serviceId);
+                    const privacyUrl = svc ? `https://${svc.domain}/privacy` : null;
+                    return (
+                      <div className="flex items-center gap-2 shrink-0">
+                        {privacyUrl && (
+                          <a
+                            href={privacyUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-primary hover:underline truncate max-w-[140px]"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            Privacy page ↗
+                          </a>
+                        )}
+                        <Badge variant="outline" className="text-xs">
+                          Manual
+                        </Badge>
+                      </div>
+                    );
+                  })()}
+                  {r.status === "not_found" && (() => {
+                    const svc = cappedServices.find(s => s.id === r.serviceId);
+                    const homepageUrl = svc?.homepage_url || (svc ? `https://${svc.domain}` : null);
+                    return homepageUrl ? (
+                      <a
+                        href={homepageUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-muted-foreground hover:text-primary hover:underline truncate max-w-[140px] shrink-0"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        Visit site ↗
+                      </a>
+                    ) : null;
+                  })()}
                 </div>
               ))}
             </div>
@@ -486,12 +518,50 @@ export function CleanUpWizard({
             </div>
 
             {manualCount > 0 && (
-              <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
+              <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 space-y-3">
                 <p className="text-sm text-foreground">
                   <strong>{manualCount} service{manualCount !== 1 ? "s" : ""}</strong> require
-                  manual action (filling out a form or visiting a website). We'll show you
-                  the steps after sending the email requests.
+                  manual action. Visit each service's privacy or account page directly:
                 </p>
+                <div className="space-y-1.5">
+                  {discoveryResults
+                    .filter((r) => r.status === "manual" || r.status === "not_found")
+                    .map((r) => {
+                      const svc = cappedServices.find((s) => s.id === r.serviceId);
+                      const url = svc?.homepage_url || (svc ? `https://${svc.domain}` : null);
+                      const privacyUrl = svc ? `https://${svc.domain}/privacy` : null;
+                      return (
+                        <div
+                          key={r.serviceId}
+                          className="flex items-center justify-between gap-2 text-sm"
+                        >
+                          <span className="font-medium truncate">{r.serviceName}</span>
+                          <div className="flex gap-2 shrink-0">
+                            {privacyUrl && (
+                              <a
+                                href={privacyUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-xs text-primary hover:underline"
+                              >
+                                Privacy page ↗
+                              </a>
+                            )}
+                            {url && (
+                              <a
+                                href={url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-xs text-muted-foreground hover:underline"
+                              >
+                                Website ↗
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
               </div>
             )}
 
@@ -534,21 +604,50 @@ export function CleanUpWizard({
               </p>
             </div>
             {sendResults.manual > 0 && (
-              <div className="p-3 rounded-lg bg-muted border border-border text-sm text-left">
+              <div className="p-3 rounded-lg bg-muted border border-border text-sm text-left space-y-3">
                 <p>
                   <strong>{sendResults.manual} service{sendResults.manual !== 1 ? "s" : ""}</strong>{" "}
-                  need manual steps. Visit your{" "}
-                  <button
-                    onClick={() => {
-                      onOpenChange(false);
-                      // Navigate handled by parent
-                    }}
-                    className="text-primary underline"
-                  >
-                    Deletion Requests
-                  </button>{" "}
-                  page to see instructions.
+                  need manual steps. Use the links below to visit each service directly:
                 </p>
+                <div className="space-y-1.5">
+                  {discoveryResults
+                    .filter((r) => r.status === "manual" || r.status === "not_found")
+                    .map((r) => {
+                      const svc = cappedServices.find((s) => s.id === r.serviceId);
+                      const url = svc?.homepage_url || (svc ? `https://${svc.domain}` : null);
+                      const privacyUrl = svc ? `https://${svc.domain}/privacy` : null;
+                      return (
+                        <div
+                          key={r.serviceId}
+                          className="flex items-center justify-between gap-2"
+                        >
+                          <span className="font-medium truncate">{r.serviceName}</span>
+                          <div className="flex gap-2 shrink-0">
+                            {privacyUrl && (
+                              <a
+                                href={privacyUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-xs text-primary hover:underline"
+                              >
+                                Privacy page ↗
+                              </a>
+                            )}
+                            {url && (
+                              <a
+                                href={url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-xs text-muted-foreground hover:underline"
+                              >
+                                Website ↗
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
               </div>
             )}
             <Button
