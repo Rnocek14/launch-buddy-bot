@@ -3,7 +3,7 @@ import { ThemeToggle } from "./ThemeToggle";
 import { Button } from "./ui/button";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Sheet, SheetContent, SheetTrigger } from "./ui/sheet";
 
 const scrollToSection = (id: string) => {
@@ -25,6 +25,7 @@ export const Navbar = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const navigate = useNavigate();
+  const userIdRef = useRef<string | null>(null);
 
   async function checkAdmin(userId: string) {
     const { data, error } = await supabase
@@ -33,6 +34,7 @@ export const Navbar = () => {
       .eq("user_id", userId)
       .eq("role", "admin")
       .maybeSingle();
+    if (userIdRef.current !== userId) return; // ignore stale response
     if (error) {
       setIsAdmin(false);
       return;
@@ -45,15 +47,19 @@ export const Navbar = () => {
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (cancelled) return;
-      setUser(session?.user ?? null);
-      if (session?.user) checkAdmin(session.user.id);
+      const u = session?.user ?? null;
+      setUser(u);
+      userIdRef.current = u?.id ?? null;
+      if (u) checkAdmin(u.id);
       else setIsAdmin(false);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (cancelled) return;
-      setUser(session?.user ?? null);
-      if (session?.user) checkAdmin(session.user.id);
+      const u = session?.user ?? null;
+      setUser(u);
+      userIdRef.current = u?.id ?? null;
+      if (u) checkAdmin(u.id);
       else setIsAdmin(false);
     });
 
