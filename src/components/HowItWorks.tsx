@@ -1,19 +1,21 @@
 import { Mail, Scan, CheckSquare, Send, ArrowRight } from "lucide-react";
 import { Card, CardContent } from "./ui/card";
+import { Button } from "./ui/button";
+import { Link } from "react-router-dom";
 
 const steps = [
   {
     number: 1,
     icon: Mail,
     title: "Connect Email",
-    description: "Securely connect your Gmail or Outlook account using OAuth 2.0. We never store your email content.",
+    description: "Securely sign in with your Gmail or Outlook account. We only read sender names and subject lines — never your email content.",
     color: "from-primary to-primary/70",
   },
   {
     number: 2,
     icon: Scan,
     title: "Scan & Discover",
-    description: "Our AI scans your inbox and automatically identifies all services you've signed up for across the web.",
+    description: "We scan your inbox and automatically identify services you've signed up for across the web.",
     color: "from-accent to-accent/70",
   },
   {
@@ -142,11 +144,11 @@ export const HowItWorks = () => {
           <p className="text-lg text-muted-foreground mb-6">
             Ready to get started? It takes less than 2 minutes.
           </p>
-          <a href="/auth" className="inline-block">
-            <button className="px-8 py-4 bg-gradient-to-r from-primary to-accent text-primary-foreground rounded-lg font-semibold text-lg hover:shadow-xl hover:shadow-primary/20 transition-all duration-300 hover:scale-105">
+          <Link to="/auth">
+            <Button size="lg" className="px-8 py-4 text-lg">
               Start Your Cleanup
-            </button>
-          </a>
+            </Button>
+          </Link>
         </div>
       </div>
     </section>

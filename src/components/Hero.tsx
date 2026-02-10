@@ -46,7 +46,7 @@ export const Hero = () => {
         </h1>
 
         <p className="text-xl md:text-2xl text-muted-foreground mb-8 max-w-3xl mx-auto leading-relaxed">
-          AI-powered inbox scan finds hidden accounts. Guided deletion tools + monthly rescans keep you protected. Start free, upgrade for unlimited from <span className="text-primary font-semibold">$6.58/month</span>.
+          We scan your inbox to find forgotten accounts, then help you delete them. Monthly rescans keep you protected. Start free, upgrade from <span className="text-primary font-semibold">$6.58/month</span>.
         </p>
 
         <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-4">
@@ -99,7 +99,7 @@ export const Hero = () => {
             </div>
             <div className="flex items-center gap-2">
               <Target className="w-5 h-5 text-primary" />
-              <span className="text-muted-foreground">GDPR & CCPA</span>
+              <span className="text-muted-foreground">Privacy Rights</span>
             </div>
           </div>
         </div>

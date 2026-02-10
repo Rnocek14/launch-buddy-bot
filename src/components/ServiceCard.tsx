@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Trash2, ExternalLink, Info, Sparkles } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useSwipeable } from "react-swipeable";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -134,51 +134,7 @@ export function ServiceCard({
             />
           </div>
 
-          {/* Quick Action Buttons - Desktop Hover Only */}
-          {!isMobile && (
-            <div 
-              className={`absolute inset-0 bg-background/95 backdrop-blur-sm flex items-center justify-center gap-2 p-4 transition-opacity duration-200 z-10 ${
-                isHovered ? 'opacity-100' : 'opacity-0 pointer-events-none'
-              }`}
-            >
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={() => onRequestDeletion(service)}
-                className="gap-2"
-              >
-                <Trash2 className="w-4 h-4" />
-                Delete
-              </Button>
-              {service.homepage_url && (
-                <a 
-                  href={service.homepage_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    className="gap-2"
-                  >
-                    <Info className="w-4 h-4" />
-                    Details
-                  </Button>
-                </a>
-              )}
-              {service.contact_status === 'needs_discovery' && (
-                <Button
-                  variant="default"
-                  size="sm"
-                  onClick={() => onQuickDiscovery(service)}
-                  className="gap-2 bg-accent hover:bg-accent/90"
-                >
-                  <Sparkles className="w-4 h-4" />
-                  Discover
-                </Button>
-              )}
-            </div>
-          )}
+          {/* Hover overlay removed — persistent "Request deletion →" link + ellipsis menu provide all actions */}
 
           <div className="flex flex-col items-center text-center space-y-3">
             {/* Logo - Larger on mobile for better touch */}
