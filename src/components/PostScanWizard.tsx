@@ -80,11 +80,11 @@ export function PostScanWizard({
     const sensitiveCategories = ['Finance', 'Banking', 'Healthcare', 'Government'];
     
     if (years >= 3) {
-      return 'This account is over 3 years old—prime target for data breaches';
+      return 'This account is over 3 years old — older accounts are more likely to hold outdated personal information';
     } else if (sensitiveCategories.includes(currentService.category)) {
-      return 'Sensitive category with high-value personal data';
+      return 'This is a sensitive category that typically stores personal or financial data';
     } else {
-      return 'Older account that may contain outdated personal information';
+      return 'This account may contain personal information you no longer need stored there';
     }
   };
 
@@ -96,10 +96,10 @@ export function PostScanWizard({
             <div className="space-y-1">
               <DialogTitle className="text-2xl flex items-center gap-2">
                 <Sparkles className="w-6 h-6 text-primary" />
-                Priority Cleanup Guide
+                Quick Review: Your Oldest Accounts
               </DialogTitle>
               <DialogDescription className="text-base">
-                We found {priorityServices.length} high-risk accounts to review
+                We found {priorityServices.length} accounts worth reviewing
               </DialogDescription>
             </div>
             <Button
@@ -128,15 +128,15 @@ export function PostScanWizard({
 
         <div className="space-y-6 py-4">
           {/* Service Card */}
-          <Card className="border-2 border-destructive/20 bg-destructive/5">
+          <Card className="border-2 border-muted bg-muted/30">
             <CardContent className="pt-6">
               <div className="flex items-start gap-4">
-                <Avatar className="w-16 h-16 rounded-xl ring-2 ring-destructive/30">
+                <Avatar className="w-16 h-16 rounded-xl ring-2 ring-border">
                   <AvatarImage 
                     src={currentService.logo_url || ''} 
                     alt={currentService.name}
                   />
-                  <AvatarFallback className="rounded-xl bg-destructive/10 text-destructive text-lg font-semibold">
+                  <AvatarFallback className="rounded-xl bg-primary/10 text-primary text-lg font-semibold">
                     {getServiceInitials(currentService.name)}
                   </AvatarFallback>
                 </Avatar>
@@ -150,13 +150,12 @@ export function PostScanWizard({
                   </div>
 
                   <div className="flex flex-wrap gap-2">
-                    <Badge variant="destructive" className="gap-1.5">
-                      <AlertTriangle className="w-3 h-3" />
-                      High Risk
+                    <Badge variant="secondary" className="gap-1.5">
+                      Worth reviewing
                     </Badge>
                     {currentService.contact_status === 'needs_discovery' && (
                       <Badge variant="outline" className="gap-1.5">
-                        ⚠️ Contact needed
+                        Contact needed
                       </Badge>
                     )}
                   </div>
@@ -165,15 +164,13 @@ export function PostScanWizard({
             </CardContent>
           </Card>
 
-          {/* Why this is risky */}
+          {/* Why review this */}
           <div className="space-y-3">
             <h4 className="font-semibold flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4 text-destructive" />
-              Why This Matters
+              Why Review This Account
             </h4>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              {getRiskReason()}. Deleting unused accounts reduces your attack surface and limits
-              exposure if this service experiences a data breach.
+              {getRiskReason()}. Removing unused accounts reduces your exposure if this service ever experiences a data breach.
             </p>
           </div>
 

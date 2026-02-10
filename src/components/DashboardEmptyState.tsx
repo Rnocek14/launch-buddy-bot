@@ -23,7 +23,7 @@ export const DashboardEmptyState = ({
         <Shield className="w-16 h-16 mx-auto mb-4 text-primary" />
         <h2 className="text-3xl font-bold mb-4">Welcome to Footprint Finder</h2>
         <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-          Discover your digital footprint and take control of your online privacy in minutes.
+          Connect your Gmail to discover which services hold your data — then delete what you don't need.
         </p>
       </div>
 
@@ -62,7 +62,7 @@ export const DashboardEmptyState = ({
       </Card>
 
       <div className="grid gap-6">
-        {/* Step 1: Authorization */}
+        {/* Step 1: Accept Privacy Agreement */}
         <Card className={!isAuthorized ? "border-primary shadow-lg" : ""}>
           <CardHeader>
             <div className="flex items-center gap-3">
@@ -72,13 +72,13 @@ export const DashboardEmptyState = ({
               <div className="flex-1">
                 <CardTitle className="flex items-center gap-2">
                   <Shield className="w-5 h-5" />
-                  Authorize Service
+                  Accept Privacy Agreement
                   {isAuthorized && (
                     <span className="text-sm font-normal text-green-600">✓ Completed</span>
                   )}
                 </CardTitle>
                 <CardDescription>
-                  Grant us permission to scan and send deletion requests on your behalf
+                  Allow us to scan your inbox and send deletion requests on your behalf
                 </CardDescription>
               </div>
             </div>
@@ -87,17 +87,16 @@ export const DashboardEmptyState = ({
             {!isAuthorized ? (
               <div className="space-y-4">
                 <p className="text-sm text-muted-foreground">
-                  By authorizing, you allow us to discover services and send GDPR/CCPA deletion
-                  requests on your behalf. You can revoke this at any time.
+                  We need your permission to read email metadata (sender names only — no content is stored) and to send GDPR/CCPA deletion requests. You can revoke this at any time.
                 </p>
                 <Button onClick={onAuthorize} className="w-full sm:w-auto">
-                  Start Authorization
+                  I Agree — Continue
                   <ArrowRight className="w-4 h-4 ml-2" />
                 </Button>
               </div>
             ) : (
               <p className="text-sm text-green-600">
-                ✓ Authorization complete. You're all set to discover services!
+                ✓ Agreement accepted. You're all set!
               </p>
             )}
           </CardContent>

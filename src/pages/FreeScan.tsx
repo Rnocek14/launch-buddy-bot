@@ -38,12 +38,12 @@ const getExposurePreview = (email: string) => {
   return {
     estimatedServices,
     categories: [
-      { name: "Shopping & E-commerce", count: Math.floor(estimatedServices * 0.25), risk: "medium" },
-      { name: "Social Media", count: Math.floor(estimatedServices * 0.15), risk: "high" },
-      { name: "Newsletters & Marketing", count: Math.floor(estimatedServices * 0.30), risk: "low" },
-      { name: "Financial Services", count: Math.floor(estimatedServices * 0.10), risk: "high" },
-      { name: "Travel & Booking", count: Math.floor(estimatedServices * 0.10), risk: "medium" },
-      { name: "Other Services", count: Math.floor(estimatedServices * 0.10), risk: "low" },
+      { name: "Shopping & E-commerce", count: Math.floor(estimatedServices * 0.25) },
+      { name: "Social Media", count: Math.floor(estimatedServices * 0.15) },
+      { name: "Newsletters & Marketing", count: Math.floor(estimatedServices * 0.30) },
+      { name: "Financial Services", count: Math.floor(estimatedServices * 0.10) },
+      { name: "Travel & Booking", count: Math.floor(estimatedServices * 0.10) },
+      { name: "Other Services", count: Math.floor(estimatedServices * 0.10) },
     ],
     dataBrokers,
   };
@@ -74,13 +74,7 @@ export default function FreeScan() {
     setIsScanning(false);
   };
 
-  const getRiskColor = (risk: string) => {
-    switch (risk) {
-      case "high": return "text-red-500";
-      case "medium": return "text-amber-500";
-      default: return "text-emerald-500";
-    }
-  };
+
 
   return (
     <div className="min-h-screen bg-background">
@@ -159,23 +153,25 @@ export default function FreeScan() {
           {results && (
             <div className="space-y-8 animate-fade-in">
               {/* Summary Card */}
-              <Card className="border-amber-500/50 bg-amber-500/5">
+              <Card className="border-primary/30 bg-primary/5">
                 <CardContent className="p-8">
                   <div className="flex flex-col md:flex-row items-center gap-6">
-                    <div className="w-24 h-24 rounded-full bg-amber-500/20 flex items-center justify-center">
-                      <AlertTriangle className="w-12 h-12 text-amber-500" />
+                    <div className="w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center">
+                      <Shield className="w-12 h-12 text-primary" />
                     </div>
                     <div className="text-center md:text-left flex-1">
                       <h2 className="text-3xl font-bold mb-2">
-                        ~{results.estimatedServices}+ Services
+                        Estimated {results.estimatedServices}+ Accounts
                       </h2>
                       <p className="text-muted-foreground mb-4">
-                        Likely have access to your data based on typical email usage patterns. 
-                        Plus <span className="font-semibold text-red-500">{results.dataBrokers} data brokers</span> may be selling your personal information.
+                        Based on users with similar email providers, this many services likely hold some of your data.
+                        {results.dataBrokers > 0 && (
+                          <> Additionally, up to <span className="font-semibold text-foreground">{results.dataBrokers} data brokers</span> may have your personal information.</>
+                        )}
                       </p>
-                      <div className="flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400">
-                        <AlertTriangle className="w-4 h-4" />
-                        <span>Based on email domain analysis. Connect your email for exact results.</span>
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Mail className="w-4 h-4" />
+                        <span>This is an estimate — connect your inbox for exact results.</span>
                       </div>
                     </div>
                   </div>
@@ -193,9 +189,6 @@ export default function FreeScan() {
                           ~{category.count} services
                         </p>
                       </div>
-                      <div className={`text-sm font-medium ${getRiskColor(category.risk)}`}>
-                        {category.risk.charAt(0).toUpperCase() + category.risk.slice(1)} Risk
-                      </div>
                     </CardContent>
                   </Card>
                 ))}
@@ -205,7 +198,7 @@ export default function FreeScan() {
               <Card className="bg-gradient-to-r from-primary/10 to-accent/10 border-primary/30">
                 <CardContent className="p-8 text-center">
                   <h3 className="text-2xl font-bold mb-4">
-                    Get Your Full Report
+                    Get Your Exact Results
                   </h3>
                   <p className="text-muted-foreground mb-6 max-w-lg mx-auto">
                     Connect your email to scan your actual inbox and discover exactly which services have your data. 
@@ -215,7 +208,7 @@ export default function FreeScan() {
                     <Link to="/auth">
                       <Button size="lg" className="gap-2 w-full sm:w-auto">
                         <Shield className="w-5 h-5" />
-                        Start Free Scan
+                        Scan Your Actual Inbox
                         <ArrowRight className="w-4 h-4" />
                       </Button>
                     </Link>

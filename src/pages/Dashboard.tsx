@@ -1126,21 +1126,21 @@ export default function Dashboard() {
                     <div className="flex items-start gap-2 p-3 rounded-lg bg-primary/5 border border-primary/10">
                       <Loader2 className="w-4 h-4 mt-0.5 animate-spin text-primary flex-shrink-0" />
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm text-foreground font-medium">{scanProgress.status}</p>
+                        <p className="text-sm text-foreground font-medium">
+                          {scanProgress.currentEmail === 0
+                            ? "Step 1 of 3: Connecting to your inbox…"
+                            : scanProgress.currentEmail < 90
+                              ? "Step 2 of 3: Reading your emails…"
+                              : "Step 3 of 3: Matching services — almost done!"}
+                        </p>
                         {scanProgress.currentEmail === 0 && (
                           <p className="text-xs text-muted-foreground mt-1">
-                            We're checking signup emails, invoices, orders, security alerts, and newsletters
+                            We look for signup emails, invoices, orders, and newsletters
                           </p>
                         )}
                       </div>
                     </div>
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">Progress</span>
-                        <span className="text-primary font-medium">{Math.round((scanProgress.currentEmail / scanProgress.totalEmails) * 100)}%</span>
-                      </div>
-                      <Progress value={(scanProgress.currentEmail / scanProgress.totalEmails) * 100} className="h-2" />
-                    </div>
+                    <Progress value={(scanProgress.currentEmail / scanProgress.totalEmails) * 100} className="h-2" />
                   </div>
                 </CardContent>
               </Card>
