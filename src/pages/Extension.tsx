@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Navbar } from "@/components/Navbar";
 import { Chrome, Download, CheckCircle, ArrowRight, Puzzle } from "lucide-react";
 
-const CHROME_WEB_STORE_URL = ""; // Set when published
+const CHROME_WEB_STORE_URL = import.meta.env.VITE_CHROME_WEB_STORE_URL as string | undefined;
 
 export default function Extension() {
   const navigate = useNavigate();
