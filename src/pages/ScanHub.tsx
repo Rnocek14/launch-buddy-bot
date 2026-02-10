@@ -1,41 +1,44 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Navbar } from "@/components/Navbar";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
 import { supabase } from "@/integrations/supabase/client";
-import { Mail, Shield, UserSearch, CheckCircle, ArrowRight, Loader2 } from "lucide-react";
+import { Mail, Shield, UserSearch, CheckCircle, ArrowRight, Loader2, RefreshCw } from "lucide-react";
+
+interface ScanCardData {
+  lastRun: string | null;
+  metric: number;
+  error: boolean;
+}
 
 interface ScanStatus {
-  inbox: { lastRun: string | null; serviceCount: number };
-  peopleSearch: { lastRun: string | null; foundCount: number };
-  breach: { lastRun: string | null; findingCount: number };
+  inbox: ScanCardData;
+  peopleSearch: ScanCardData;
+  breach: ScanCardData;
 }
+
+const EMPTY: ScanCardData = { lastRun: null, metric: 0, error: false };
+const ERRORED: ScanCardData = { lastRun: null, metric: 0, error: true };
 
 export default function ScanHub() {
   const navigate = useNavigate();
-  const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState<ScanStatus>({
-    inbox: { lastRun: null, serviceCount: 0 },
-    peopleSearch: { lastRun: null, foundCount: 0 },
-    breach: { lastRun: null, findingCount: 0 },
+    inbox: EMPTY,
+    peopleSearch: EMPTY,
+    breach: EMPTY,
   });
 
-  useEffect(() => {
-    loadStatus();
-  }, []);
-
-  async function loadStatus() {
+  const loadStatus = useCallback(async () => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         navigate("/auth");
         return;
       }
-      setUser(session.user);
 
       const [servicesRes, brokerRes, exposureRes, profileRes] = await Promise.allSettled([
         supabase
@@ -67,25 +70,26 @@ export default function ScanHub() {
       const pData = profileRes.status === "fulfilled" ? profileRes.value : null;
 
       setStatus({
-        inbox: {
-          lastRun: pData?.data?.last_email_scan_date || null,
-          serviceCount: sData?.count || 0,
-        },
-        peopleSearch: {
-          lastRun: bData?.data?.[0]?.completed_at || null,
-          foundCount: bData?.data?.[0]?.found_count || 0,
-        },
-        breach: {
-          lastRun: eData?.data?.[0]?.completed_at || null,
-          findingCount: eData?.data?.[0]?.total_findings || 0,
-        },
+        inbox: sData && pData
+          ? { lastRun: pData.data?.last_email_scan_date || null, metric: sData.count || 0, error: false }
+          : ERRORED,
+        peopleSearch: bData
+          ? { lastRun: bData.data?.[0]?.completed_at || null, metric: bData.data?.[0]?.found_count || 0, error: false }
+          : ERRORED,
+        breach: eData
+          ? { lastRun: eData.data?.[0]?.completed_at || null, metric: eData.data?.[0]?.total_findings || 0, error: false }
+          : ERRORED,
       });
     } catch (err) {
       console.error("Error loading scan status:", err);
     } finally {
       setLoading(false);
     }
-  }
+  }, [navigate]);
+
+  useEffect(() => {
+    loadStatus();
+  }, [loadStatus]);
 
   const formatDate = (date: string | null) => {
     if (!date) return null;
@@ -108,37 +112,40 @@ export default function ScanHub() {
       icon: Mail,
       title: "Inbox Scan",
       description: "Find services linked to your email — signups, subscriptions, and old accounts.",
-      status: status.inbox.lastRun
-        ? `${status.inbox.serviceCount} accounts found`
+      statusText: status.inbox.lastRun
+        ? `${status.inbox.metric} accounts found`
         : null,
       lastRun: formatDate(status.inbox.lastRun),
       action: () => navigate("/dashboard"),
       actionLabel: status.inbox.lastRun ? "View Results" : "Start Scan",
       done: !!status.inbox.lastRun,
+      error: status.inbox.error,
     },
     {
       icon: UserSearch,
       title: "People Search Check",
       description: "See if your name and address appear on data broker websites like Spokeo or Whitepages.",
-      status: status.peopleSearch.lastRun
-        ? `Found on ${status.peopleSearch.foundCount} site${status.peopleSearch.foundCount !== 1 ? "s" : ""}`
+      statusText: status.peopleSearch.lastRun
+        ? `Found on ${status.peopleSearch.metric} site${status.peopleSearch.metric !== 1 ? "s" : ""}`
         : null,
       lastRun: formatDate(status.peopleSearch.lastRun),
       action: () => navigate("/broker-scan"),
       actionLabel: status.peopleSearch.lastRun ? "View Results" : "Run Check",
       done: !!status.peopleSearch.lastRun,
+      error: status.peopleSearch.error,
     },
     {
       icon: Shield,
       title: "Breach Check",
       description: "Check if your email appeared in any known data leaks or security breaches.",
-      status: status.breach.lastRun
-        ? `${status.breach.findingCount} exposure${status.breach.findingCount !== 1 ? "s" : ""} found`
+      statusText: status.breach.lastRun
+        ? `${status.breach.metric} exposure${status.breach.metric !== 1 ? "s" : ""} found`
         : null,
       lastRun: formatDate(status.breach.lastRun),
       action: () => navigate("/exposure-scan"),
       actionLabel: status.breach.lastRun ? "View Results" : "Run Check",
       done: !!status.breach.lastRun,
+      error: status.breach.error,
     },
   ];
 
@@ -158,19 +165,27 @@ export default function ScanHub() {
             <Card
               key={scan.title}
               className={`transition-all hover:shadow-md ${
-                scan.done ? "border-border" : "border-primary/30 shadow-sm"
+                scan.error
+                  ? "border-destructive/30"
+                  : scan.done
+                    ? "border-border"
+                    : "border-primary/30 shadow-sm"
               }`}
             >
               <CardContent className="p-5">
                 <div className="flex items-start gap-4">
                   <div
                     className={`p-3 rounded-xl shrink-0 ${
-                      scan.done
-                        ? "bg-green-500/10 text-green-600 dark:text-green-400"
-                        : "bg-primary/10 text-primary"
+                      scan.error
+                        ? "bg-destructive/10 text-destructive"
+                        : scan.done
+                          ? "bg-green-500/10 text-green-600 dark:text-green-400"
+                          : "bg-primary/10 text-primary"
                     }`}
                   >
-                    {scan.done ? (
+                    {scan.error ? (
+                      <RefreshCw className="w-6 h-6" />
+                    ) : scan.done ? (
                       <CheckCircle className="w-6 h-6" />
                     ) : (
                       <scan.icon className="w-6 h-6" />
@@ -186,23 +201,42 @@ export default function ScanHub() {
                         </Badge>
                       )}
                     </div>
-                    <p className="text-sm text-muted-foreground leading-relaxed">
-                      {scan.description}
-                    </p>
-                    {scan.status && (
-                      <p className="text-sm font-medium text-foreground">{scan.status}</p>
+                    {scan.error ? (
+                      <p className="text-sm text-muted-foreground">
+                        Couldn't load this right now.
+                      </p>
+                    ) : (
+                      <>
+                        <p className="text-sm text-muted-foreground leading-relaxed">
+                          {scan.description}
+                        </p>
+                        {scan.statusText && (
+                          <p className="text-sm font-medium text-foreground">{scan.statusText}</p>
+                        )}
+                      </>
                     )}
                   </div>
 
-                  <Button
-                    onClick={scan.action}
-                    variant={scan.done ? "outline" : "default"}
-                    size="lg"
-                    className="shrink-0 self-center min-h-[44px]"
-                  >
-                    {scan.actionLabel}
-                    <ArrowRight className="w-4 h-4 ml-1" />
-                  </Button>
+                  {scan.error ? (
+                    <Button
+                      onClick={loadStatus}
+                      variant="outline"
+                      size="lg"
+                      className="shrink-0 self-center min-h-[44px]"
+                    >
+                      Try again
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={scan.action}
+                      variant={scan.done ? "outline" : "default"}
+                      size="lg"
+                      className="shrink-0 self-center min-h-[44px]"
+                    >
+                      {scan.actionLabel}
+                      <ArrowRight className="w-4 h-4 ml-1" />
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </Card>
