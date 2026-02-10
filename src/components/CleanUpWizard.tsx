@@ -125,6 +125,9 @@ export function CleanUpWizard({
         .in("service_id", servicesWithContacts.map((s) => s.id))
         .eq("contact_type", "email")
         .in("confidence", ["high", "medium"])
+        // Ordering: mx_validated DESC (verified first), confidence ASC (works because
+        // "high" < "medium" lexicographically — relies on confidence values being only high/medium),
+        // then newest first. First match per service_id wins via the Map below.
         .order("mx_validated", { ascending: false })
         .order("confidence", { ascending: true })
         .order("created_at", { ascending: false });
