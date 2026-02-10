@@ -1026,8 +1026,12 @@ serve(async (req) => {
 
     if (cachedContacts && cachedContacts.length > 0) {
       // Filter out PDF-only results from cache — those aren't actionable contacts
+      // Use deterministic URL check, not brittle string matching on reasoning
+      const isPdfUrl = (url: string) => {
+        try { return new URL(url).pathname.toLowerCase().endsWith('.pdf'); } catch { return false; }
+      };
       const actionableContacts = cachedContacts.filter((c: any) => {
-        if (c.contact_type === 'form' && c.reasoning?.includes('PDF document')) return false;
+        if (c.contact_type === 'form' && isPdfUrl(c.value)) return false;
         return true;
       });
 
