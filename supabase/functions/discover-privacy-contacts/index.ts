@@ -28,13 +28,15 @@ const DISABLE_METRICS = bool(Deno.env.get('DISCOVERY_DISABLE_METRICS'));
 const DOMAIN_BUDGET_MS = Math.min(60000, Math.max(3000, int(Deno.env.get('DISCOVERY_DOMAIN_BUDGET_MS'), 25000)));
 
 // Phase 1.2: Feature flags for probes
-const ENABLE_SECURITY_TXT = bool(Deno.env.get('PROBE_SECURITY_TXT'));
-const ENABLE_SITEMAP = bool(Deno.env.get('PROBE_SITEMAP'));
-const ENABLE_VENDOR_DET = bool(Deno.env.get('DETECT_VENDOR'));
+// Probes default ON — set env to 'false' to disable
+const boolDefault = (v?: string, def = true) => v === undefined ? def : v.toLowerCase() === 'true';
+const ENABLE_SECURITY_TXT = boolDefault(Deno.env.get('PROBE_SECURITY_TXT'), true);
+const ENABLE_SITEMAP = boolDefault(Deno.env.get('PROBE_SITEMAP'), true);
+const ENABLE_VENDOR_DET = boolDefault(Deno.env.get('DETECT_VENDOR'), true);
 
 // Phase 1.3: Feature flags for language and cache
-const DETECT_LANG = bool(Deno.env.get('DETECT_LANG'));
-const CACHE_SITEMAP = bool(Deno.env.get('CACHE_SITEMAP'));
+const DETECT_LANG = boolDefault(Deno.env.get('DETECT_LANG'), true);
+const CACHE_SITEMAP = boolDefault(Deno.env.get('CACHE_SITEMAP'), true);
 
 // Phase 1.3: Tail latency guardrails
 const TAIL_P95_GOAL_MS = Math.min(8000, Math.max(3000, int(Deno.env.get('TAIL_P95_GOAL_MS'), 5000)));
@@ -500,20 +502,7 @@ function extractAndScorePrivacyLinks(html: string, baseDomain: string, pageUrl: 
         console.log(`[Domain Hint] Strong boost for privacy_url_pattern match`);
       }
       
-      // Apply domain boost_paths
-      if (domainHint?.boost_paths) {
-        const urlPath = new URL(canonicalHref).pathname;
-        if (domainHint.boost_paths.some(path => urlPath.includes(path))) {
-          score += 10;
-          console.log(`[Domain Hint] Boosting score for boost_paths match`);
-        }
-      }
-      
-      // Boost for privacy_url_pattern match (domain-specific known good URLs)
-      if (domainHint?.privacy_url_pattern && canonicalHref.includes(domainHint.privacy_url_pattern)) {
-        score += 20;
-        console.log(`[Domain Hint] Strong boost for privacy_url_pattern match`);
-      }
+      // (duplicate scoring block removed — already applied at L488-501)
 
       // Phase 1.1 Refinement #1: DOM ancestry footer check (more reliable)
       const isInFooter = !!(anchor.closest && anchor.closest('footer'));
@@ -681,7 +670,8 @@ async function trySimpleFetch(
   urlsToTry: string[], 
   domain: string,
   attemptTimeoutMs: number,
-  earlyStopScore: number
+  earlyStopScore: number,
+  cachedHomepageHtml?: string | null
 ): Promise<{ 
   content: string; 
   url: string; 
@@ -714,17 +704,30 @@ async function trySimpleFetch(
     attemptedUrls.push(url);
     
     try {
-      const fetchPromise = fetch(url, {
-        headers: {
-          'User-Agent': USER_AGENT,
-          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-          'Accept-Language': 'en-US,en;q=0.9',
-        },
-        redirect: 'follow',
-        signal: AbortSignal.timeout(15000)
-      });
-      
-      const pageResponse = await withAttemptTimeout(fetchPromise, attemptTimeoutMs);
+      // Reuse cached homepage HTML if this is one of the homepage URLs
+      const isHomepage = url === `https://${domain}` || url === `https://www.${domain}`;
+      let pageResponse: Response;
+      let usedCache = false;
+
+      if (isHomepage && cachedHomepageHtml) {
+        console.log(`[Phase 1] Using cached homepage HTML for ${sanitizeForLog(url)}`);
+        pageResponse = new Response(cachedHomepageHtml, {
+          status: 200,
+          headers: { 'content-type': 'text/html' }
+        });
+        usedCache = true;
+      } else {
+        const fetchPromise = fetch(url, {
+          headers: {
+            'User-Agent': USER_AGENT,
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.9',
+          },
+          redirect: 'follow',
+          signal: AbortSignal.timeout(15000)
+        });
+        pageResponse = await withAttemptTimeout(fetchPromise, attemptTimeoutMs);
+      }
 
       if (pageResponse.ok) {
         // Phase 1.1 Refinement #5: Check for PDF early
@@ -1007,6 +1010,44 @@ serve(async (req) => {
 
     console.log(`=== Discovering privacy contacts for: ${service.name} (${service.domain}) ===`);
 
+    // ── Cross-user cache: reuse existing high/medium-confidence contacts ──
+    const { data: cachedContacts } = await supabase
+      .from('privacy_contacts')
+      .select('*')
+      .eq('service_id', service_id)
+      .in('confidence', ['high', 'medium'])
+      .order('created_at', { ascending: false })
+      .limit(5);
+
+    if (cachedContacts && cachedContacts.length > 0) {
+      console.log(`[Cache] ✓ Reusing ${cachedContacts.length} existing contacts for service ${service.domain}`);
+      
+      // Emit cache-hit metric
+      if (!DISABLE_METRICS) {
+        try {
+          await supabase.from('discovery_metrics').insert({
+            domain: service.domain,
+            success: true,
+            method_used: 'cache',
+            time_ms: Date.now() - startTime,
+            urls_considered: 0,
+            cache_hit: true,
+            confidence: cachedContacts[0].confidence,
+          });
+        } catch (e) { console.warn('[Metrics] cache hit log failed:', e); }
+      }
+
+      return new Response(JSON.stringify({
+        success: true,
+        service: service.name,
+        contacts_found: cachedContacts.length,
+        contacts: cachedContacts,
+        method_used: 'cache',
+        cache_hit: true,
+        confidence: cachedContacts[0].confidence,
+      }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
+    }
+
     // Phase 1.2/1.3: Try probes first (security.txt, sitemap with cache)
     let securityTxtContact: { type: string; contact: string; url: string } | null = null;
     let sitemapUrls: string[] = [];
@@ -1104,19 +1145,21 @@ serve(async (req) => {
           `https://www.${service.domain}/about/privacy`,
         ].filter(Boolean);
     
-    // Phase 1.3: Language detection for locale preference
+    // Phase 1.3: Language detection — reuse homepage HTML to avoid double-fetch
     let langDetected = 'en';
+    let cachedHomepageHtml: string | null = null;
+    
     if (DETECT_LANG && candidateUrls.length > 0) {
       try {
-        // Quick fetch of homepage to detect language
         const homeUrl = `https://${service.domain}`;
         const homeResponse = await fetch(homeUrl, {
-          headers: { 'User-Agent': USER_AGENT },
+          headers: { 'User-Agent': USER_AGENT, 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8', 'Accept-Language': 'en-US,en;q=0.9' },
+          redirect: 'follow',
           signal: AbortSignal.timeout(5000)
         });
         if (homeResponse.ok) {
-          const html = await homeResponse.text();
-          const guess = detectLanguage(html, html.slice(0, 10000));
+          cachedHomepageHtml = await homeResponse.text();
+          const guess = detectLanguage(cachedHomepageHtml, cachedHomepageHtml.slice(0, 10000));
           if (guess) {
             langDetected = guess.lang;
             console.log(`[Lang] Detected: ${langDetected} (confidence: ${guess.confidence.toFixed(2)})`);
@@ -1138,7 +1181,7 @@ serve(async (req) => {
     }
 
     // Phase 1: Try simple fetch with enhanced URL discovery and tail guardrails
-    let result = await trySimpleFetch(urlsToTry, service.domain, ATTEMPT_TIMEOUT_MS, EARLY_STOP_CONFIDENCE);
+    let result = await trySimpleFetch(urlsToTry, service.domain, ATTEMPT_TIMEOUT_MS, EARLY_STOP_CONFIDENCE, cachedHomepageHtml);
     let methodUsed = 'simple_fetch';
     const attemptTimeouts = result?.attemptTimeouts ?? 0;
     
@@ -1403,8 +1446,8 @@ Extract all relevant contact methods for data deletion requests.`;
                         },
                         confidence: {
                           type: 'string',
-                          enum: ['high', 'medium', 'low'],
-                          description: 'Confidence level that this is the correct contact method'
+                          enum: ['high', 'medium'],
+                          description: 'Confidence level — only return high or medium confidence contacts'
                         },
                         reasoning: {
                           type: 'string',
@@ -1768,7 +1811,7 @@ Extract all relevant contact methods for data deletion requests.`;
         
         const p5 = precisionAt5(urlsToTry.slice(0, 5), '');
         await supabase.from('discovery_metrics').insert({
-          domain: service_id,
+          domain: service?.domain ?? service_id,
           success: false,
           method_used: METHOD_USED,
           time_ms: Date.now() - startTime,
