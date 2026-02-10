@@ -34,7 +34,7 @@ export const Hero = () => {
         {/* Icon badge */}
         <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-50 border border-emerald-200 mb-8">
           <Sparkles className="w-4 h-4 text-emerald-700" />
-          <span className="text-sm font-medium text-emerald-700">Plans from $79/year • Complete protection at $129/year</span>
+          <span className="text-sm font-medium text-emerald-700">Free to start — no credit card required</span>
         </div>
 
         <h1 className="text-5xl md:text-7xl font-bold mb-6 bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
@@ -46,7 +46,7 @@ export const Hero = () => {
         </h1>
 
         <p className="text-xl md:text-2xl text-muted-foreground mb-8 max-w-3xl mx-auto leading-relaxed">
-          We scan your inbox to find forgotten accounts, then help you delete them. Monthly rescans keep you protected. Start free, upgrade from <span className="text-primary font-semibold">$6.58/month</span>.
+          We look for signup emails to find accounts holding your data, then help you delete them. Monthly rescans help you stay up to date.
         </p>
 
         <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-4">
