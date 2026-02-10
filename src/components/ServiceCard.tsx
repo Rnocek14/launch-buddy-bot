@@ -1,5 +1,4 @@
 import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -44,7 +43,6 @@ export function ServiceCard({
   getServiceInitials,
   getContactStatusBadge,
 }: ServiceCardProps) {
-  const [isHovered, setIsHovered] = useState(false);
   const [swipeOffset, setSwipeOffset] = useState(0);
   const [swipeAction, setSwipeAction] = useState<'delete' | 'info' | null>(null);
   const isMobile = useIsMobile();
@@ -111,8 +109,6 @@ export function ServiceCard({
             : 'hover:border-primary/30 hover:shadow-lg'
         } ${isMobile ? 'active:scale-[0.98]' : ''}`}
         style={isMobile ? { transform: `translateX(${swipeOffset}px)` } : undefined}
-        onMouseEnter={() => !isMobile && setIsHovered(true)}
-        onMouseLeave={() => !isMobile && setIsHovered(false)}
         onClick={isMobile ? handleCardClick : undefined}
       >
         <CardContent className="p-5 md:p-4">
