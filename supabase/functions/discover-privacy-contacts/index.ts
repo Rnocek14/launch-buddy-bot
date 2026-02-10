@@ -66,7 +66,7 @@ const METHOD_USED = 't1' as const;
 interface ContactFinding {
   contact_type: 'email' | 'form' | 'phone' | 'other';
   value: string;
-  confidence: 'high' | 'medium' | 'low';
+  confidence: 'high' | 'medium';
   reasoning: string;
 }
 
@@ -1279,50 +1279,35 @@ serve(async (req) => {
     const p5 = precisionAt5(top5Candidates, successUrl);
     console.log(`[Metrics] Precision@5: hit=${p5.hit_in_top5}, considered=${p5.urls_considered_top5}`);
 
-// Phase 1.1 Refinement #5: Handle PDF policies differently
+// Phase 1.1 Refinement #5: Handle PDF policies — do NOT store as contact
     if (policy_type === 'pdf') {
       console.log(`[PDF Policy] Found PDF policy at ${sanitizeForLog(successUrl)}`);
-      console.log(`[PDF Policy] Storing PDF URL for manual review - AI text extraction not implemented yet`);
-      
-      // Store the PDF URL as a form contact for now (user can open and review)
-      const { data: insertedContacts, error: insertError } = await supabase
-        .from('privacy_contacts')
-        .insert([{
-          service_id: service_id,
-          contact_type: 'form',
-          value: successUrl,
-          confidence: 'medium',
-          reasoning: 'Privacy policy is available as a PDF document. Manual review required to extract contact information.',
-          verified: false,
-          added_by: 'ai',
-          source_url: successUrl,
-        }])
-        .select();
-
-      if (insertError) {
-        console.error('Error inserting PDF policy contact:', insertError);
-        throw insertError;
-      }
+      console.log(`[PDF Policy] Returning for manual review — NOT storing as contact`);
 
       // Phase 1.3: Emit metrics for PDF success with new fields
-      await supabase.from('discovery_metrics').insert({
-        domain: service.domain,
-        success: true,
-        method_used: METHOD_USED,
-        time_ms: Date.now() - startTime,
-        urls_considered: urlsToTry.length,
-        urls_considered_top5: top5Candidates.length,
-        hit_in_top5: p5.hit_in_top5,
-        policy_type: 'pdf',
-        score: policyScore,
-        confidence,
-        lang: langDetected,
-        cache_hit: cacheHit,
-        vendor: vendorInfo?.platform_detected,
-        vendor_evidence: vendorInfo?.evidence ? sanitizeForLog(vendorInfo.evidence) : undefined,
-        prefill_supported: vendorInfo?.pre_fill_supported ?? null,
-        attempt_timeouts: attemptTimeouts
-      });
+      if (!DISABLE_METRICS) {
+        await supabase.from('discovery_metrics').insert({
+          domain: service.domain,
+          success: true,
+          method_used: METHOD_USED,
+          time_ms: Date.now() - startTime,
+          urls_considered: urlsToTry.length,
+          urls_fetched: result?.failedUrls ? result.failedUrls.size + 1 : 1,
+          urls_considered_top5: top5Candidates.length,
+          hit_in_top5: p5.hit_in_top5,
+          policy_type: 'pdf',
+          score: policyScore,
+          confidence,
+          lang: langDetected,
+          cache_hit: cacheHit,
+          vendor: vendorInfo?.platform_detected,
+          prefill_supported: vendorInfo?.pre_fill_supported ?? null,
+          attempt_timeouts: attemptTimeouts,
+          probe_used: securityTxtContact ? 'security_txt' : (sitemapUrls.length > 0 ? 'sitemap' : 'none'),
+          llm_calls: 0,
+          browserless_used: methodUsed === 'browserless',
+        });
+      }
 
       return new Response(
         JSON.stringify({
@@ -1332,7 +1317,7 @@ serve(async (req) => {
           privacy_policy_found: true,
           privacy_policy_url: successUrl,
           requires_manual_review: true,
-          contacts: insertedContacts,
+          contacts: [],
           method_used: 't1',
           policy_type: 'pdf',
           confidence,
@@ -1340,11 +1325,7 @@ serve(async (req) => {
           url: successUrl,
           lang_detected: langDetected,
           cache_hit: cacheHit,
-          reasons: ['PDF policy found'],
-          ...(vendorInfo && { 
-            platform_detected: vendorInfo.platform_detected,
-            pre_fill_supported: vendorInfo.pre_fill_supported
-          }),
+          reasons: ['PDF policy found — manual review required'],
           vendor_form_hints: {
             platform: vendorHint.platform,
             prefill_supported: vendorHint.prefill_supported,
@@ -1498,6 +1479,12 @@ Extract all relevant contact methods for data deletion requests.`;
     const aiResponse = await response.json();
     const toolCall = aiResponse.choices[0].message.tool_calls?.[0];
     
+    // Capture token usage for cost tracking
+    const tokenUsage = aiResponse.usage || {};
+    const inputTokens = tokenUsage.prompt_tokens || null;
+    const outputTokens = tokenUsage.completion_tokens || null;
+    console.log(`[Cost] OpenAI tokens: ${inputTokens} in / ${outputTokens} out (model: gpt-4o-mini)`);
+    
     if (!toolCall) {
       throw new Error('No tool call response from AI');
     }
@@ -1585,24 +1572,26 @@ Extract all relevant contact methods for data deletion requests.`;
       }
     }
 
-    // Validate URLs for form contacts
+    // Validate URLs for form contacts — DISCARD invalid ones entirely (no hallucinated URLs)
+    const urlValidatedContacts: typeof validContacts = [];
     for (const contact of validContacts) {
       if (contact.contact_type === 'form' && contact.value) {
         console.log(`[URL Validation] Checking form URL: ${contact.value}`);
         const isValid = await validateContactUrl(contact.value);
         
         if (!isValid) {
-          console.warn(`[URL Validation] Invalid form URL detected: ${contact.value}`);
-          // Reduce confidence for invalid URLs
-          if (contact.confidence === 'high') contact.confidence = 'medium';
-          else if (contact.confidence === 'medium') contact.confidence = 'low';
-          
-          contact.reasoning = `${contact.reasoning} (Note: URL validation failed - this form may not be accessible)`;
+          console.warn(`[URL Validation] ❌ Discarding invalid form URL: ${contact.value}`);
+          // Do NOT store — hallucinated URLs must never reach the DB
+          continue;
         } else {
           console.log(`[URL Validation] ✓ Valid form URL: ${contact.value}`);
         }
       }
+      urlValidatedContacts.push(contact);
     }
+    
+    // Replace validContacts with only URL-validated ones
+    const finalContacts = urlValidatedContacts;
 
     // Check for existing contacts to avoid duplicates
     const { data: existingContacts } = await supabase
@@ -1614,7 +1603,7 @@ Extract all relevant contact methods for data deletion requests.`;
       (existingContacts || []).map((c: any) => `${c.contact_type}:${c.value.toLowerCase()}`)
     );
 
-    const contactsToInsert = validContacts
+    const contactsToInsert = finalContacts
       .filter(contact => {
         const key = `${contact.contact_type}:${contact.value.toLowerCase()}`;
         if (existingSet.has(key)) {
@@ -1668,6 +1657,7 @@ Extract all relevant contact methods for data deletion requests.`;
           method_used: METHOD_USED,
           time_ms: Date.now() - startTime,
           urls_considered: urlsToTry.length,
+          urls_fetched: result?.failedUrls ? result.failedUrls.size + 1 : 1,
           urls_considered_top5: top5Candidates.length,
           hit_in_top5: p5.hit_in_top5,
           policy_type: policy_type || 'html',
@@ -1676,10 +1666,14 @@ Extract all relevant contact methods for data deletion requests.`;
           lang: langDetected,
           cache_hit: cacheHit,
           vendor: vendorDetected,
-          vendor_evidence: vendorInfo?.evidence ? sanitizeForLog(vendorInfo.evidence) : undefined,
-          security_contact: securityTxtContact?.contact,
           prefill_supported: vendorInfo?.pre_fill_supported ?? null,
           attempt_timeouts: attemptTimeouts,
+          probe_used: securityTxtContact ? 'security_txt' : (sitemapUrls.length > 0 ? 'sitemap' : 'none'),
+          llm_calls: 1,
+          input_tokens: inputTokens,
+          output_tokens: outputTokens,
+          model_used: 'gpt-4o-mini',
+          browserless_used: methodUsed === 'browserless',
           ...buildInfo
         });
       } catch (metricsError) {

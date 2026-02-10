@@ -16,7 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, CheckCircle2, XCircle, Mail, Globe, Phone, AlertTriangle, Sparkles, PlusCircle, RefreshCw, Search } from "lucide-react";
+import { Loader2, CheckCircle2, XCircle, Mail, Globe, Phone, AlertTriangle, Search, PlusCircle, RefreshCw } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ServiceTypeGuides } from "./ServiceTypeGuides";
 import { GuidedDiscoveryTips } from "./GuidedDiscoveryTips";
@@ -266,16 +266,16 @@ export const ContactDiscoveryDialog = ({
   };
 
   const getConfidenceBadge = (confidence: string) => {
-    const variants: Record<string, { variant: "default" | "secondary" | "destructive"; color: string }> = {
-      high: { variant: "default", color: "text-green-600" },
-      medium: { variant: "secondary", color: "text-amber-600" },
+    const variants: Record<string, { variant: "default" | "secondary" | "destructive"; label: string }> = {
+      high: { variant: "default", label: "Strong match" },
+      medium: { variant: "secondary", label: "Likely match" },
     };
 
     const config = variants[confidence] || variants.medium;
 
     return (
       <Badge variant={config.variant}>
-        {confidence}
+        {config.label}
       </Badge>
     );
   };
@@ -484,8 +484,8 @@ export const ContactDiscoveryDialog = ({
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-primary" />
-            Discover Privacy Contact
+            <Search className="h-5 w-5 text-primary" />
+            Find Privacy Contact
           </DialogTitle>
           <DialogDescription>
             We'll look for the right privacy contact on {service.name}'s website for deletion requests
@@ -496,7 +496,7 @@ export const ContactDiscoveryDialog = ({
         {contacts.length === 0 && !discovering && !error && (
           <div className="py-8 text-center space-y-4">
             <div className="w-16 h-16 mx-auto bg-primary/10 rounded-full flex items-center justify-center">
-              <Sparkles className="h-8 w-8 text-primary" />
+              <Search className="h-8 w-8 text-primary" />
             </div>
             <div>
               <h3 className="font-semibold mb-2">No Verified Contact Found</h3>
@@ -744,8 +744,8 @@ export const ContactDiscoveryDialog = ({
                           {getConfidenceBadge(contact.confidence)}
                           {contact.mx_validated && (
                             <Badge variant="outline" className="gap-1">
-                              <Globe className="h-3 w-3" />
-                              MX Valid
+                              <CheckCircle2 className="h-3 w-3" />
+                              Email verified
                             </Badge>
                           )}
                         </div>
@@ -806,7 +806,7 @@ export const ContactDiscoveryDialog = ({
           ) : (
             <>
               <Button variant="outline" onClick={handleClose} disabled={discovering || validating}>
-                {contacts.length > 0 ? "Skip for Now" : "Cancel"}
+                {contacts.length > 0 ? "Close" : "Cancel"}
               </Button>
 
               {contacts.length === 0 && !discovering && !error && (
@@ -818,8 +818,8 @@ export const ContactDiscoveryDialog = ({
                     </>
                   ) : (
                     <>
-                      <Sparkles className="mr-2 h-4 w-4" />
-                      Discover Contacts
+                      <Search className="mr-2 h-4 w-4" />
+                      Find Contact
                     </>
                   )}
                 </Button>
@@ -838,7 +838,7 @@ export const ContactDiscoveryDialog = ({
                   ) : (
                     <>
                       <CheckCircle2 className="mr-2 h-4 w-4" />
-                      Validate & Use
+                      Confirm & Save
                     </>
                   )}
                 </Button>
