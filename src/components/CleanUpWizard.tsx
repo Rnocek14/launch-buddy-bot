@@ -94,6 +94,15 @@ export function CleanUpWizard({
     setSelectedIds(next);
   };
 
+  const selectAll = () => {
+    const allIds = services.slice(0, MAX_PER_RUN).map((s) => s.id);
+    setSelectedIds(new Set(allIds));
+  };
+
+  const deselectAll = () => {
+    setSelectedIds(new Set());
+  };
+
   const selectOldest = () => {
     const threeYearsAgo = new Date();
     threeYearsAgo.setFullYear(threeYearsAgo.getFullYear() - 3);
@@ -102,6 +111,8 @@ export function CleanUpWizard({
       .map((s) => s.id);
     setSelectedIds(new Set(old.slice(0, MAX_PER_RUN)));
   };
+
+  const allSelected = selectedIds.size >= Math.min(services.length, MAX_PER_RUN);
 
   // Step 2: Batch contact discovery
   const runDiscovery = useCallback(async () => {
@@ -306,9 +317,18 @@ export function CleanUpWizard({
                 {selectedIds.size} selected
                 {selectedIds.size >= MAX_PER_RUN && ` (max ${MAX_PER_RUN} per run)`}
               </p>
-              <Button variant="ghost" size="sm" onClick={selectOldest}>
-                Select oldest accounts
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={allSelected ? deselectAll : selectAll}
+                >
+                  {allSelected ? "Deselect all" : "Select all"}
+                </Button>
+                <Button variant="ghost" size="sm" onClick={selectOldest}>
+                  Select oldest
+                </Button>
+              </div>
             </div>
             <div className="max-h-[50vh] overflow-y-auto space-y-1 pr-1">
               {services.map((s) => (
