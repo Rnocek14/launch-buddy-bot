@@ -842,6 +842,90 @@ export type Database = {
         }
         Relationships: []
       }
+      email_subscriptions: {
+        Row: {
+          connection_id: string | null
+          created_at: string
+          email_count: number
+          first_seen_at: string
+          has_one_click: boolean
+          id: string
+          last_error: string | null
+          last_seen_at: string
+          last_unsubscribe_attempt_at: string | null
+          sender_domain: string
+          sender_email: string
+          sender_name: string | null
+          service_id: string | null
+          status: string
+          subject_sample: string | null
+          unsubscribe_mailto: string | null
+          unsubscribe_url: string | null
+          unsubscribed_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          connection_id?: string | null
+          created_at?: string
+          email_count?: number
+          first_seen_at?: string
+          has_one_click?: boolean
+          id?: string
+          last_error?: string | null
+          last_seen_at?: string
+          last_unsubscribe_attempt_at?: string | null
+          sender_domain: string
+          sender_email: string
+          sender_name?: string | null
+          service_id?: string | null
+          status?: string
+          subject_sample?: string | null
+          unsubscribe_mailto?: string | null
+          unsubscribe_url?: string | null
+          unsubscribed_at?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          connection_id?: string | null
+          created_at?: string
+          email_count?: number
+          first_seen_at?: string
+          has_one_click?: boolean
+          id?: string
+          last_error?: string | null
+          last_seen_at?: string
+          last_unsubscribe_attempt_at?: string | null
+          sender_domain?: string
+          sender_email?: string
+          sender_name?: string | null
+          service_id?: string | null
+          status?: string
+          subject_sample?: string | null
+          unsubscribe_mailto?: string | null
+          unsubscribe_url?: string | null
+          unsubscribed_at?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_subscriptions_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: false
+            referencedRelation: "email_connections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_subscriptions_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "service_catalog"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employee_scans: {
         Row: {
           created_at: string
@@ -2057,6 +2141,53 @@ export type Database = {
           user_label?: string | null
         }
         Relationships: []
+      }
+      unsubscribe_audit_log: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          id: string
+          method: string
+          response_status: number | null
+          result: string
+          sender_domain: string
+          sender_email: string
+          subscription_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          method: string
+          response_status?: number | null
+          result: string
+          sender_domain: string
+          sender_email: string
+          subscription_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          method?: string
+          response_status?: number | null
+          result?: string
+          sender_domain?: string
+          sender_email?: string
+          subscription_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "unsubscribe_audit_log_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "email_subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_authorizations: {
         Row: {

@@ -2,6 +2,29 @@
 import { EmailProvider, TokenData, ConnectionData, EmailMessage, ScanFilters, EmailData } from './types.ts';
 import { encrypt, decrypt } from '../encryption.ts';
 
+/**
+ * Parse List-Unsubscribe header for Outlook messages.
+ */
+function parseOutlookListUnsubscribe(header: string): { url?: string; mailto?: string } {
+  const result: { url?: string; mailto?: string } = {};
+  if (!header) return result;
+  
+  const parts = header.split(',').map(p => p.trim());
+  for (const part of parts) {
+    const match = part.match(/^<(.+)>$/);
+    if (!match) continue;
+    const value = match[1];
+    if (value.startsWith('https://')) {
+      result.url = value;
+    } else if (value.startsWith('http://')) {
+      if (!result.url) result.url = value;
+    } else if (value.startsWith('mailto:')) {
+      result.mailto = value;
+    }
+  }
+  return result;
+}
+
 export class OutlookProvider implements EmailProvider {
   private clientId: string;
   private clientSecret: string;
@@ -200,7 +223,7 @@ export class OutlookProvider implements EmailProvider {
     let url = 'https://graph.microsoft.com/v1.0/me/messages';
     const params = new URLSearchParams({
       $top: (filters?.maxResults || 100).toString(),
-      $select: 'id,from,subject,receivedDateTime,bodyPreview',
+      $select: 'id,from,subject,receivedDateTime,bodyPreview,internetMessageHeaders',
       $orderby: 'receivedDateTime DESC',
     });
 
@@ -227,12 +250,23 @@ export class OutlookProvider implements EmailProvider {
 
     if (data.value) {
       for (const msg of data.value) {
+        // Extract List-Unsubscribe headers from internetMessageHeaders
+        const iHeaders: { name: string; value: string }[] = msg.internetMessageHeaders || [];
+        const listUnsub = iHeaders.find((h: any) => h.name.toLowerCase() === 'list-unsubscribe')?.value || '';
+        const listUnsubPost = iHeaders.find((h: any) => h.name.toLowerCase() === 'list-unsubscribe-post')?.value || '';
+        
+        const { url: unsubscribeUrl, mailto: unsubscribeMailto } = parseOutlookListUnsubscribe(listUnsub);
+        const hasOneClick = listUnsubPost.toLowerCase().includes('list-unsubscribe=one-click');
+
         messages.push({
           id: msg.id,
           from: msg.from?.emailAddress?.address || '',
           subject: msg.subject || '',
           date: msg.receivedDateTime || '',
           snippet: msg.bodyPreview || '',
+          unsubscribeUrl,
+          unsubscribeMailto,
+          hasOneClick: hasOneClick || undefined,
         });
       }
     }

@@ -327,8 +327,19 @@ async function processConnection(connection: any, user: any, maxResults: number,
     messages.push(...fullScanMessages);
   }
 
-  // Process messages to discover services
+  // Process messages to discover services AND subscriptions
   const emailDomains = new Map<string, { from: string; count: number }>();
+  const subscriptionMap = new Map<string, {
+    senderEmail: string;
+    senderName: string;
+    senderDomain: string;
+    subjectSample: string;
+    unsubscribeUrl?: string;
+    unsubscribeMailto?: string;
+    hasOneClick: boolean;
+    count: number;
+    lastSeen: string;
+  }>();
   
   for (const message of messages) {
     if (!message.from) continue;
@@ -344,6 +355,40 @@ async function processConnection(connection: any, user: any, maxResults: number,
       existing.count++;
     } else {
       emailDomains.set(domain, { from: message.from, count: 1 });
+    }
+
+    // Subscription detection: if message has List-Unsubscribe header, track it
+    if (message.unsubscribeUrl || message.unsubscribeMailto) {
+      // Extract sender email address
+      const senderEmailMatch = message.from.match(/<?([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})>?/);
+      const senderEmail = senderEmailMatch ? senderEmailMatch[1].toLowerCase() : message.from.toLowerCase();
+      // Extract display name (everything before the <email>)
+      const senderName = message.from.replace(/<[^>]+>/, '').trim().replace(/^"(.*)"$/, '$1') || senderEmail;
+
+      const existing = subscriptionMap.get(senderEmail);
+      if (existing) {
+        existing.count++;
+        // Keep the most recent subject and unsubscribe info
+        if (message.date > existing.lastSeen) {
+          existing.lastSeen = message.date;
+          existing.subjectSample = message.subject;
+          if (message.unsubscribeUrl) existing.unsubscribeUrl = message.unsubscribeUrl;
+          if (message.unsubscribeMailto) existing.unsubscribeMailto = message.unsubscribeMailto;
+          if (message.hasOneClick) existing.hasOneClick = true;
+        }
+      } else {
+        subscriptionMap.set(senderEmail, {
+          senderEmail,
+          senderName,
+          senderDomain: domain,
+          subjectSample: message.subject,
+          unsubscribeUrl: message.unsubscribeUrl,
+          unsubscribeMailto: message.unsubscribeMailto,
+          hasOneClick: message.hasOneClick || false,
+          count: 1,
+          lastSeen: message.date,
+        });
+      }
     }
   }
 
@@ -464,14 +509,57 @@ async function processConnection(connection: any, user: any, maxResults: number,
       });
   }
 
+  // === SUBSCRIPTION DETECTION UPSERT ===
+  let subscriptionsDetected = 0;
+  if (subscriptionMap.size > 0) {
+    console.log(`Detected ${subscriptionMap.size} email subscriptions with List-Unsubscribe headers`);
+    
+    // Cross-reference subscription domains with service catalog
+    for (const [senderEmail, sub] of subscriptionMap.entries()) {
+      const matchedService = catalogServices?.find(s => 
+        s.domain.toLowerCase() === sub.senderDomain ||
+        sub.senderDomain.includes(s.domain.toLowerCase()) ||
+        s.domain.toLowerCase().includes(sub.senderDomain)
+      );
+
+      const { error: subError } = await supabaseAdmin
+        .from('email_subscriptions')
+        .upsert({
+          user_id: user.id,
+          connection_id: connection.id,
+          sender_domain: sub.senderDomain,
+          sender_email: sub.senderEmail,
+          sender_name: sub.senderName,
+          subject_sample: sub.subjectSample?.substring(0, 500),
+          unsubscribe_url: sub.unsubscribeUrl?.substring(0, 2000),
+          unsubscribe_mailto: sub.unsubscribeMailto?.substring(0, 500),
+          has_one_click: sub.hasOneClick,
+          last_seen_at: sub.lastSeen ? new Date(sub.lastSeen).toISOString() : new Date().toISOString(),
+          email_count: sub.count,
+          service_id: matchedService?.id || null,
+        }, {
+          onConflict: 'user_id,sender_email',
+          ignoreDuplicates: false,
+        });
+
+      if (subError) {
+        console.error(`Failed to upsert subscription for ${senderEmail}:`, subError.message);
+      } else {
+        subscriptionsDetected++;
+      }
+    }
+    console.log(`Upserted ${subscriptionsDetected} subscriptions`);
+  }
+
   return new Response(
     JSON.stringify({ 
       success: true,
       servicesFound: servicesAdded,
       servicesReappeared,
+      subscriptionsDetected,
       emailsScanned: messages.length,
       unmatchedCount: unmatchedDomains.length,
-      message: `Scanned ${messages.length} emails and discovered ${servicesAdded} services${servicesReappeared > 0 ? ` (${servicesReappeared} reappeared after deletion)` : ''}`,
+      message: `Scanned ${messages.length} emails and discovered ${servicesAdded} services${servicesReappeared > 0 ? ` (${servicesReappeared} reappeared after deletion)` : ''}${subscriptionsDetected > 0 ? `, ${subscriptionsDetected} subscriptions` : ''}`,
       provider: connection.provider,
       email: connection.email,
       tokenRepairStatus,
