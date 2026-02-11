@@ -5,7 +5,8 @@ import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Shield, Mail, AlertTriangle, CheckCircle, ArrowRight, Lock, Zap, Eye, Search } from "lucide-react";
+import { Shield, Mail, AlertTriangle, CheckCircle, ArrowRight, Lock, Zap, Eye, Search, Info } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Link } from "react-router-dom";
 
 // Deterministic hash from email string
@@ -174,15 +175,27 @@ export default function FreeScan() {
                       <Shield className="w-12 h-12 text-primary" />
                     </div>
                     <div className="text-center md:text-left flex-1">
-                      <h2 className="text-3xl font-bold mb-2">
-                        Estimated {results.estimatedServices}+ Accounts
-                      </h2>
+                      <div className="flex items-center gap-2 justify-center md:justify-start mb-2">
+                        <h2 className="text-3xl font-bold">
+                          Typically {results.estimatedServices - 10}–{results.estimatedServices + 10} Accounts
+                        </h2>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Info className="w-4 h-4 text-muted-foreground cursor-help shrink-0" />
+                            </TooltipTrigger>
+                            <TooltipContent className="max-w-xs">
+                              <p>This estimate is based on statistical patterns for your email provider — not inbox access. A secure inbox scan shows your exact accounts.</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
                       <p className="text-muted-foreground mb-2">
-                        Based on users with similar email providers, this many services likely hold some of your data.
+                        Emails from this provider are commonly linked to this many services, based on public data trends.
                       </p>
                       {results.dataBrokers > 0 && (
                         <p className="text-sm font-medium text-destructive/80">
-                          + {results.dataBrokers} data brokers may have your personal information
+                          + {results.dataBrokers} data brokers may list your personal information
                         </p>
                       )}
                     </div>
@@ -213,11 +226,11 @@ export default function FreeScan() {
                     <span className="text-sm font-medium text-amber-800 dark:text-amber-300">This is only what's publicly visible</span>
                   </div>
                   <h3 className="text-xl font-bold mb-3">
-                    Most accounts never appear in breach databases
+                    Breach databases only show what was compromised
                   </h3>
                   <p className="text-muted-foreground max-w-xl mx-auto">
-                    The services above are estimates. Your real footprint — newsletters, old signups,
-                    forgotten accounts — lives in your inbox. A secure inbox scan finds the exact services holding your data.
+                    They don't show newsletters, free trials, old signups, or accounts you forgot about.
+                    Your real footprint lives in your inbox. A secure inbox scan finds the exact services holding your data.
                   </p>
                 </CardContent>
               </Card>
