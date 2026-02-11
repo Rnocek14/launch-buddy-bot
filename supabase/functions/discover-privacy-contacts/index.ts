@@ -6,6 +6,7 @@ import type { VendorDetection } from '../_shared/probes.ts';
 import {
   probeSecurityTxt as probeSecurityTxtShared,
   probeSitemap as probeSitemapShared,
+  probeSitemapUrl as probeSitemapUrlShared,
   probeRobotsTxt as probeRobotsTxtShared,
   detectVendor as detectVendorShared,
   precisionAt5,
@@ -1136,9 +1137,8 @@ serve(async (req) => {
           console.log(`[Probe] Trying ${robotsSitemapUrls.length} sitemaps from robots.txt...`);
           for (const smUrl of robotsSitemapUrls.slice(0, 3)) {
             try {
-              // Re-use probeSitemap logic by extracting domain from sitemap URL
-              const smDomain = new URL(smUrl).hostname;
-              const urls = await probeSitemap(smDomain);
+              // Fetch the actual sitemap URL directly (not just the domain)
+              const urls = await probeSitemapUrlShared(smUrl);
               sitemapUrls.push(...urls);
             } catch {}
           }
