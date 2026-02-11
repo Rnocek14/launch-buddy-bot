@@ -177,7 +177,7 @@ export default function FreeScan() {
                     <div className="text-center md:text-left flex-1">
                       <div className="flex items-center gap-2 justify-center md:justify-start mb-2">
                         <h2 className="text-3xl font-bold">
-                          Typically {results.estimatedServices - 10}–{results.estimatedServices + 10} Accounts
+                          Typically {Math.round(Math.max(10, results.estimatedServices - 10) / 5) * 5}–{Math.round((results.estimatedServices + 10) / 5) * 5} Accounts
                         </h2>
                         <TooltipProvider>
                           <Tooltip>
@@ -185,7 +185,7 @@ export default function FreeScan() {
                               <Info className="w-4 h-4 text-muted-foreground cursor-help shrink-0" />
                             </TooltipTrigger>
                             <TooltipContent className="max-w-xs">
-                              <p>This estimate is based on statistical patterns for your email provider — not inbox access. A secure inbox scan shows your exact accounts.</p>
+                              <p>This preview is based on provider-level patterns. Connect Gmail to see your exact accounts.</p>
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
