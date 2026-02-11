@@ -26,6 +26,10 @@ export interface EmailMessage {
   date: string;
   snippet?: string;
   body?: string;
+  // Subscription detection fields
+  unsubscribeUrl?: string;
+  unsubscribeMailto?: string;
+  hasOneClick?: boolean;
 }
 
 export interface ScanFilters {

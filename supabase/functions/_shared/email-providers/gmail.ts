@@ -2,6 +2,31 @@
 import { EmailProvider, TokenData, ConnectionData, EmailMessage, ScanFilters, EmailData } from './types.ts';
 import { encrypt, decrypt } from '../encryption.ts';
 
+/**
+ * Parse List-Unsubscribe header value into URL and mailto components.
+ * Format: `<https://example.com/unsub>, <mailto:unsub@example.com>`
+ */
+function parseListUnsubscribe(header: string): { url?: string; mailto?: string } {
+  const result: { url?: string; mailto?: string } = {};
+  if (!header) return result;
+  
+  const parts = header.split(',').map(p => p.trim());
+  for (const part of parts) {
+    const match = part.match(/^<(.+)>$/);
+    if (!match) continue;
+    const value = match[1];
+    if (value.startsWith('https://')) {
+      result.url = value;
+    } else if (value.startsWith('http://')) {
+      // Only use http as fallback if no https found
+      if (!result.url) result.url = value;
+    } else if (value.startsWith('mailto:')) {
+      result.mailto = value;
+    }
+  }
+  return result;
+}
+
 export class GmailProvider implements EmailProvider {
   private clientId: string;
   private clientSecret: string;
@@ -220,12 +245,22 @@ export class GmailProvider implements EmailProvider {
           const subject = headers.find((h: any) => h.name === 'Subject')?.value || '';
           const date = headers.find((h: any) => h.name === 'Date')?.value || '';
 
+          // Extract List-Unsubscribe headers for subscription detection
+          const listUnsub = headers.find((h: any) => h.name.toLowerCase() === 'list-unsubscribe')?.value || '';
+          const listUnsubPost = headers.find((h: any) => h.name.toLowerCase() === 'list-unsubscribe-post')?.value || '';
+          
+          const { url: unsubscribeUrl, mailto: unsubscribeMailto } = parseListUnsubscribe(listUnsub);
+          const hasOneClick = listUnsubPost.toLowerCase().includes('list-unsubscribe=one-click');
+
           messages.push({
             id: msg.id,
             from,
             subject,
             date,
             snippet: detail.snippet,
+            unsubscribeUrl,
+            unsubscribeMailto,
+            hasOneClick: hasOneClick || undefined,
           });
         }
       }
