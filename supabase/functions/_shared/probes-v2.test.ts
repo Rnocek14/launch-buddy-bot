@@ -1,6 +1,6 @@
-// Tests for Phase 2 probe enhancements: smart content window, policy URL validator, isOfficialDomain
+// Tests for Phase 2 probe enhancements: smart content window, policy URL validator, isOfficialDomain, isSoft404
 
-import { extractSmartContentWindow, validatePolicyUrl, isOfficialDomain } from './probes.ts';
+import { extractSmartContentWindow, validatePolicyUrl, isOfficialDomain, isSoft404 } from './probes.ts';
 
 Deno.test('extractSmartContentWindow: short text returned as-is', () => {
   const text = 'Hello world';
@@ -124,4 +124,37 @@ Deno.test('validatePolicyUrl: non-privacy URL needs ≥2 signals', () => {
   const content = 'This page contains information about personal data.';
   const r = validatePolicyUrl('https://example.com/legal', 'example.com', content);
   if (r.valid) throw new Error('Non-privacy URL with only 1 signal should be rejected');
+});
+
+// ── isSoft404 tests ──
+
+Deno.test('isSoft404: detects "page not found" in short content', () => {
+  const html = '<h1>Page Not Found</h1><p>The page you requested does not exist.</p>';
+  if (!isSoft404(html)) throw new Error('Should detect soft-404');
+});
+
+Deno.test('isSoft404: does not flag real privacy policy', () => {
+  const content = 'Privacy Policy. We collect personal data including your name, email address. ' +
+    'You have the right to request deletion of your data under GDPR. ' +
+    'Contact our Data Protection Officer at dpo@example.com. ' +
+    'x '.repeat(2000); // Make it long enough
+  if (isSoft404(content)) throw new Error('Should not flag real privacy policy as soft-404');
+});
+
+Deno.test('isSoft404: detects "404 error" with short content', () => {
+  const html = '<div>404 error - this page doesn\'t exist</div>';
+  if (!isSoft404(html)) throw new Error('Should detect 404 error signal');
+});
+
+Deno.test('isSoft404: does not flag long page with incidental "not found" mention', () => {
+  // A real policy that happens to mention "not found" in context
+  const content = 'Privacy Policy. If the requested data is not found in our systems, we will notify you. ' +
+    'We collect personal data as described in our GDPR compliance documentation. ' +
+    'x '.repeat(3000);
+  if (isSoft404(content)) throw new Error('Should not flag incidental mention in long content');
+});
+
+Deno.test('isSoft404: detects multiple signals even in long content', () => {
+  const content = '<h1>Page Not Found</h1><p>Oops! We couldn\'t find this page.</p>' + 'x '.repeat(3000);
+  if (!isSoft404(content)) throw new Error('Should detect 2+ signals regardless of length');
 });

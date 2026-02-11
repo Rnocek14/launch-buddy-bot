@@ -297,6 +297,25 @@ export function extractSmartContentWindow(text: string, maxSize = 10000): string
   return [first, '...', ...sections, '...', last].join('\n');
 }
 
+// -------------------- Soft-404 Detection --------------------
+const SOFT_404_SIGNALS = [
+  'page not found', '404 error', 'not found</h1>', 'page doesn\'t exist',
+  'page does not exist', 'no longer available', 'page has been removed',
+  'we couldn\'t find', 'we could not find', 'this page isn\'t available',
+  'nothing here', 'oops!', 'error 404', 'page you requested',
+  'page you are looking for', 'sorry, we can\'t find',
+];
+
+export function isSoft404(content: string): boolean {
+  const lower = content.slice(0, 5000).toLowerCase();
+  const matchCount = SOFT_404_SIGNALS.filter(s => lower.includes(s)).length;
+  // Require at least 1 signal AND short content (real policies are long)
+  if (matchCount >= 1 && content.length < 3000) return true;
+  // Or 2+ signals regardless of length (strong indicator)
+  if (matchCount >= 2) return true;
+  return false;
+}
+
 // -------------------- Policy URL Validator --------------------
 // Validates discovered URLs: domain must match, content must have privacy signals
 const PRIVACY_SIGNALS = [
