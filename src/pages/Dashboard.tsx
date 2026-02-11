@@ -44,6 +44,7 @@ import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 import { PullToRefreshIndicator } from "@/components/PullToRefreshIndicator";
 import { ExtensionPrompt } from "@/components/ExtensionPrompt";
 import { BrokerScanCard } from "@/components/BrokerScanCard";
+import { PrivacySnapshot } from "@/components/PrivacySnapshot";
 import { ScoreHistoryChart } from "@/components/ScoreHistoryChart";
 import { ReferralChallengePanel } from "@/components/ReferralChallengePanel";
 import { SimplifiedServiceCard } from "@/components/SimplifiedServiceCard";
@@ -1072,43 +1073,8 @@ export default function Dashboard() {
           />
         ) : (
           <>
-            {/* Status Strip */}
-            <div className="flex flex-wrap items-center gap-x-6 gap-y-2 py-3 px-4 rounded-lg bg-muted/30 border border-border">
-              <div className="flex items-center gap-2">
-                <Shield className="w-4 h-4 text-primary" />
-                <span className="text-sm font-medium">{services.length}</span>
-                <span className="text-sm text-muted-foreground">services found</span>
-              </div>
-              {monthlyStats?.lastScanDate && (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Calendar className="w-3.5 h-3.5" />
-                  Last scan: {new Date(monthlyStats.lastScanDate).toLocaleDateString()}
-                </div>
-              )}
-              {riskData && (
-                <div className="flex items-center gap-2">
-                  <Activity className="w-3.5 h-3.5 text-muted-foreground" />
-                  <span className="text-sm text-muted-foreground">Risk:</span>
-                  <Badge variant={riskData.riskLevel === 'low' ? 'secondary' : riskData.riskLevel === 'high' ? 'destructive' : 'default'} className="text-xs">
-                    {riskData.riskLevel}
-                  </Badge>
-                </div>
-              )}
-              {!authLoading && (
-                <Badge variant={isAuthorized ? "default" : "outline"} className="text-xs">
-                  {isAuthorized ? (
-                    <><CheckCircle className="w-3 h-3 mr-1" />Authorized</>
-                  ) : (
-                    <><AlertCircle className="w-3 h-3 mr-1" />Not Authorized</>
-                  )}
-                </Badge>
-              )}
-              {!isAuthorized && !authLoading && (
-                <Button variant="link" size="sm" onClick={() => navigate("/authorize")} className="h-auto p-0 text-xs">
-                  Complete Authorization →
-                </Button>
-              )}
-            </div>
+            {/* Privacy Snapshot — unified view of all scan results */}
+            <PrivacySnapshot />
 
             {/* Scan Results Banner */}
             {scanResultsBanner && !bannerDismissed && (
@@ -1208,8 +1174,7 @@ export default function Dashboard() {
                   {/* Extension Prompt */}
                   <ExtensionPrompt extensionServiceCount={extensionServiceCount} />
 
-                  {/* Broker Scan Card */}
-                  <BrokerScanCard />
+                   {/* Broker scan results now shown in Privacy Snapshot above */}
 
                   {/* This Month Summary */}
                   {monthlyStats && (
