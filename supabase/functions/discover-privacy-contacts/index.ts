@@ -6,9 +6,13 @@ import type { VendorDetection } from '../_shared/probes.ts';
 import {
   probeSecurityTxt as probeSecurityTxtShared,
   probeSitemap as probeSitemapShared,
+  probeRobotsTxt as probeRobotsTxtShared,
   detectVendor as detectVendorShared,
   precisionAt5,
   toConfidence as toConfidenceShared,
+  extractSmartContentWindow,
+  validatePolicyUrl,
+  isOfficialDomain,
 } from '../_shared/probes.ts';
 import { detectLanguage, rankByLocale } from '../_shared/lang.ts';
 import { getSitemapCache, setSitemapCache } from '../_shared/cache.ts';
@@ -382,6 +386,7 @@ function isPrivacyPolicy(html: string, url: string): { isPolicy: boolean; score:
 }
 
 // Phase 1.1 Enhanced: Score and extract privacy policy URLs from HTML using DOM parser
+// With footer-first optimization: if footer has strong privacy links, skip body noise
 function extractAndScorePrivacyLinks(html: string, baseDomain: string, pageUrl: string): ScoredLink[] {
   const scoredLinks: ScoredLink[] = [];
   const normalizedDomain = normalizeHost(baseDomain);
@@ -395,121 +400,78 @@ function extractAndScorePrivacyLinks(html: string, baseDomain: string, pageUrl: 
     const htmlLang = doc.documentElement.getAttribute('lang')?.substring(0, 2).toLowerCase() || 'en';
     const languageKeywords = (PRIVACY_KEYWORDS as any)[htmlLang] || PRIVACY_KEYWORDS.en;
 
-    // Extract all <a> tags using DOM
-    const allAnchors = doc.querySelectorAll('a');
-    
-    allAnchors.forEach((anchor: any) => {
+    // Footer-first: extract footer links separately
+    const footerElements = doc.querySelectorAll('footer a');
+    const footerLinks: ScoredLink[] = [];
+
+    const scoreAnchor = (anchor: any, isInFooter: boolean): ScoredLink | null => {
       let href = anchor.getAttribute('href');
-      if (!href) return;
+      if (!href) return null;
 
       const linkText = anchor.textContent?.trim() || '';
       
-      // Skip non-HTTP links
-      if (href.includes('mailto:') || href.includes('javascript:') || href.includes('tel:')) {
-        return;
+      if (href.includes('mailto:') || href.includes('javascript:') || href.includes('tel:') || href.startsWith('#')) {
+        return null;
       }
 
-      // Skip fragment-only links
-      if (href.startsWith('#')) {
-        return;
-      }
-
-      // Phase 1.1 Refinement #2: Canonicalize URL with base tag support
       const canonicalHref = canonicalizeUrl(href, pageUrl, doc);
-      if (!canonicalHref) return;
+      if (!canonicalHref) return null;
 
-      // Filter out pure fragment links
       try {
         const urlObj = new URL(canonicalHref);
-        if (urlObj.pathname === '/' && urlObj.search === '' && urlObj.hash) {
-          return;
-        }
+        if (urlObj.pathname === '/' && urlObj.search === '' && urlObj.hash) return null;
+        // Domain validation: reject links to other domains
+        if (!isOfficialDomain(urlObj.hostname, baseDomain)) return null;
       } catch {
-        return;
+        return null;
       }
 
-      // Calculate score
       let score = 0;
       const combined = (canonicalHref + ' ' + linkText).toLowerCase();
       const lowerUrl = canonicalHref.toLowerCase();
       const lowerText = linkText.toLowerCase();
 
-      // Apply domain exclude_paths - skip this link entirely if it matches
       if (domainHint?.exclude_paths) {
         const urlPath = new URL(canonicalHref).pathname;
-        const shouldExclude = domainHint.exclude_paths.some(path => urlPath.includes(path));
-        if (shouldExclude) {
-          console.log(`[Domain Hint] Excluding ${urlPath} - matches exclude_paths`);
-          return; // Skip this link entirely
-        }
+        if (domainHint.exclude_paths.some(path => urlPath.includes(path))) return null;
       }
       
-      // Context-aware filtering: detect and penalize product/shopping pages
-      // Note: /c/ removed from global penalties as some sites (Target) use it for help pages
       const productPaths = ['/products/', '/shop/', '/p/', '/cart', '/checkout', '/store/', '/category/', '/browse/'];
       const productKeywords = ['shop', 'buy', 'cart', 'checkout', 'sale', 'price', 'product', 'for sale', 'buy now'];
       const legalPaths = ['/legal/', '/privacy/', '/policies/', '/about/privacy', '/privacy-policy', '/privacidad', '/datenschutz'];
       
       let penalty = 0;
-      
-      // Strong penalty for product/shopping context
-      if (productPaths.some(path => lowerUrl.includes(path))) {
-        penalty += 20;
-      }
-      
-      if (productKeywords.some(kw => lowerText.includes(kw) || lowerUrl.includes(kw))) {
-        penalty += 15;
-      }
-      
-      // Check for price indicators ($, €, etc.)
-      if (/[\$€£¥]/.test(linkText)) {
-        penalty += 10;
-      }
-      
-      // Cap penalty to avoid extreme negatives
+      if (productPaths.some(path => lowerUrl.includes(path))) penalty += 20;
+      if (productKeywords.some(kw => lowerText.includes(kw) || lowerUrl.includes(kw))) penalty += 15;
+      if (/[\$€£¥]/.test(linkText)) penalty += 10;
       penalty = Math.min(penalty, 40);
 
-      // Use language-specific keywords
       languageKeywords.high.forEach((keyword: string) => {
         if (combined.includes(keyword.toLowerCase())) score += 15;
       });
-
       languageKeywords.medium.forEach((keyword: string) => {
         if (combined.includes(keyword.toLowerCase())) score += 10;
       });
-
       languageKeywords.low.forEach((keyword: string) => {
         if (combined.includes(keyword.toLowerCase())) score += 5;
       });
       
-      // Boost for legal/privacy paths
-      if (legalPaths.some(path => lowerUrl.includes(path))) {
-        score += 15;
-      }
+      if (legalPaths.some(path => lowerUrl.includes(path))) score += 15;
       
-      // Apply domain boost_paths
       if (domainHint?.boost_paths) {
         const urlPath = new URL(canonicalHref).pathname;
         if (domainHint.boost_paths.some(path => urlPath.includes(path))) {
           score += 10;
-          console.log(`[Domain Hint] Boosting score for boost_paths match`);
         }
       }
       
-      // Boost for privacy_url_pattern match (domain-specific known good URLs)
       if (domainHint?.privacy_url_pattern && canonicalHref.includes(domainHint.privacy_url_pattern)) {
         score += 20;
-        console.log(`[Domain Hint] Strong boost for privacy_url_pattern match`);
       }
-      
-      // (duplicate scoring block removed — already applied at L488-501)
 
-      // Phase 1.1 Refinement #1: DOM ancestry footer check (more reliable)
-      const isInFooter = !!(anchor.closest && anchor.closest('footer'));
       const location = isInFooter ? 'footer' : 'body';
       if (isInFooter) score += 10;
 
-      // Tiny polish: Check for canonical link hint
       const canonicalLink = doc.querySelector('link[rel="canonical"]');
       if (canonicalLink) {
         const canonicalUrl = canonicalLink.getAttribute('href');
@@ -518,7 +480,6 @@ function extractAndScorePrivacyLinks(html: string, baseDomain: string, pageUrl: 
         }
       }
 
-      // Exact match bonus (language-aware)
       const lowerLinkText = linkText.toLowerCase();
       if (lowerLinkText === 'privacy policy' || lowerLinkText === 'privacy' ||
           lowerLinkText === 'política de privacidad' || lowerLinkText === 'privacidad' ||
@@ -529,7 +490,6 @@ function extractAndScorePrivacyLinks(html: string, baseDomain: string, pageUrl: 
         score += 20;
       }
 
-      // Penalize if URL is too generic
       const urlPath = canonicalHref.split('?')[0];
       if (urlPath.endsWith('/') || 
           urlPath === `https://${normalizedDomain}` || 
@@ -537,19 +497,46 @@ function extractAndScorePrivacyLinks(html: string, baseDomain: string, pageUrl: 
         score -= 10;
       }
       
-      // Apply penalties with floor to avoid extreme negatives
       score = Math.max(score - penalty, -50);
 
-      // Only include links with positive score
       if (score > 0) {
-        scoredLinks.push({ url: canonicalHref, score, linkText, location });
+        return { url: canonicalHref, score, linkText, location };
       }
+      return null;
+    };
+
+    // Score footer links first
+    footerElements.forEach((anchor: any) => {
+      const link = scoreAnchor(anchor, true);
+      if (link) footerLinks.push(link);
+    });
+
+    // Footer-first optimization: if footer has strong privacy links (score >= 25), use only those
+    const strongFooterLinks = footerLinks.filter(l => l.score >= 25);
+    if (strongFooterLinks.length > 0) {
+      console.log(`[Footer-First] Found ${strongFooterLinks.length} strong footer privacy links, skipping body scan`);
+      strongFooterLinks.sort((a, b) => b.score - a.score);
+      const seen = new Set<string>();
+      return strongFooterLinks.filter(link => {
+        const key = urlKey(link.url);
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+    }
+
+    // Fall through: score ALL anchors (including footer ones again for consistency)
+    const allAnchors = doc.querySelectorAll('a');
+    allAnchors.forEach((anchor: any) => {
+      const isInFooter = !!(anchor.closest && anchor.closest('footer'));
+      const link = scoreAnchor(anchor, isInFooter);
+      if (link) scoredLinks.push(link);
     });
 
     // Sort by score descending
     scoredLinks.sort((a, b) => b.score - a.score);
 
-    // Phase 1.1 Refinement #3: Deduplicate using urlKey (normalizes www/apex)
+    // Deduplicate using urlKey (normalizes www/apex)
     const seen = new Set<string>();
     const uniqueLinks = scoredLinks.filter(link => {
       const key = urlKey(link.url);
@@ -796,16 +783,16 @@ async function trySimpleFetch(
           }
         }
         
-        // Strip HTML for AI processing
-        const content = html
+        // Strip HTML for AI processing — use smart content window
+        const strippedText = html
           .replace(/<script[^>]*>.*?<\/script>/gis, '')
           .replace(/<style[^>]*>.*?<\/style>/gis, '')
           .replace(/<[^>]+>/g, ' ')
           .replace(/&nbsp;/g, ' ')
           .replace(/&[a-z]+;/g, ' ')
           .replace(/\s+/g, ' ')
-          .trim()
-          .substring(0, 8000);
+          .trim();
+        const content = extractSmartContentWindow(strippedText, 10000);
         
         // Check content quality and verify it's actually privacy policy content
         if (content.length > 200) {
@@ -921,14 +908,14 @@ async function tryBrowserlessFetch(urlsToTry: string[], browserlessApiKey: strin
       if (response.ok) {
         const html = await response.text();
         
-        // Strip HTML for AI processing
-        const content = html
+        // Strip HTML for AI processing — use smart content window
+        const strippedText = html
           .replace(/<script[^>]*>.*?<\/script>/gis, '')
           .replace(/<style[^>]*>.*?<\/style>/gis, '')
           .replace(/<[^>]+>/g, ' ')
           .replace(/\s+/g, ' ')
-          .trim()
-          .substring(0, 8000);
+          .trim();
+        const content = extractSmartContentWindow(strippedText, 10000);
         
         if (content.length > 200) {
           console.log(`[Phase 2] Successfully fetched via Browserless: ${url} (${content.length} chars)`);
@@ -1103,7 +1090,7 @@ serve(async (req) => {
       }
     }
 
-    // Phase 1.2/1.3: Try probes first (security.txt, sitemap with cache)
+    // Phase 1.2/1.3: Try probes first (security.txt, robots.txt, sitemap with cache)
     let securityTxtContact: { type: string; contact: string; url: string } | null = null;
     let sitemapUrls: string[] = [];
     let cacheHit = false;
@@ -1114,6 +1101,17 @@ serve(async (req) => {
       if (securityTxtContact) {
         console.log(`[Probe] ✓ Found security.txt contact: ${securityTxtContact.contact}`);
       }
+    }
+    
+    // robots.txt probe: discover additional sitemap locations
+    let robotsSitemapUrls: string[] = [];
+    try {
+      robotsSitemapUrls = await probeRobotsTxtShared(service.domain);
+      if (robotsSitemapUrls.length > 0) {
+        console.log(`[Probe] ✓ robots.txt found ${robotsSitemapUrls.length} sitemap URLs`);
+      }
+    } catch (e) {
+      console.warn('[Probe] robots.txt probe failed:', e);
     }
     
     if (ENABLE_SITEMAP) {
@@ -1129,13 +1127,26 @@ serve(async (req) => {
         }
       }
       
-      // Fetch if not cached
+      // Fetch if not cached — try standard path + any robots.txt-discovered sitemaps
       if (!sitemapUrls.length) {
         sitemapUrls = await probeSitemap(service.domain);
+        
+        // Also try sitemaps discovered from robots.txt
+        if (sitemapUrls.length === 0 && robotsSitemapUrls.length > 0) {
+          console.log(`[Probe] Trying ${robotsSitemapUrls.length} sitemaps from robots.txt...`);
+          for (const smUrl of robotsSitemapUrls.slice(0, 3)) {
+            try {
+              // Re-use probeSitemap logic by extracting domain from sitemap URL
+              const smDomain = new URL(smUrl).hostname;
+              const urls = await probeSitemap(smDomain);
+              sitemapUrls.push(...urls);
+            } catch {}
+          }
+        }
+        
         if (sitemapUrls.length > 0) {
           console.log(`[Probe] ✓ Found ${sitemapUrls.length} privacy URLs in sitemap`);
           
-          // Phase 1.3: Store in cache
           if (CACHE_SITEMAP) {
             await setSitemapCache(supabase, service.domain, sitemapUrls);
             console.log(`[Probe] Cached sitemap results for ${service.domain}`);
@@ -1145,63 +1156,53 @@ serve(async (req) => {
     }
 
     // Set probe_used early so it's populated even on error paths
-    metrics.probe_used = securityTxtContact ? 'security_txt' : (sitemapUrls.length > 0 ? 'sitemap' : 'none');
+    metrics.probe_used = securityTxtContact ? 'security_txt' : (sitemapUrls.length > 0 ? 'sitemap' : (robotsSitemapUrls.length > 0 ? 'robots_txt' : 'none'));
 
-    // Build comprehensive URL list with Phase 1 enhancements
+    // Build URL list with tiered approach: Tier 1 (high-probability) + Tier 2 (lazy, only if Tier 1 fails)
+    const d = service.domain;
+    
+    // Tier 1: High-probability paths (5-7 paths, no www duplication — dedupe later)
+    const tier1 = [
+      ...sitemapUrls.slice(0, 3),              // Sitemap-discovered (highest signal)
+      service.privacy_form_url,                 // Explicit from catalog
+      `https://www.${d}`,                       // Homepage (for link extraction)
+      `https://${d}`,                           // Homepage non-www
+      `https://${d}/privacy`,                   // Most common path
+      `https://${d}/privacy-policy`,            // Second most common
+      `https://${d}/legal/privacy`,             // Legal section
+      `https://${d}/privacy-notice`,            // Common in EU
+      `https://${d}/privacy-center`,            // Common for large companies
+    ].filter(Boolean) as string[];
+    
+    // Tier 2: Lazy paths (only tried if Tier 1 yields nothing)
+    const tier2 = [
+      `https://${d}/.well-known/privacy-policy.txt`,
+      `https://${d}/privacypolicy`,
+      `https://${d}/legal/privacy-policy`,
+      `https://${d}/legal`,
+      `https://${d}/ccpa`,
+      `https://${d}/gdpr`,
+      `https://${d}/privacy-rights`,
+      `https://${d}/your-privacy-rights`,
+      `https://${d}/help/privacy`,
+      `https://${d}/support/privacy`,
+      `https://${d}/about/privacy`,
+    ];
+
+    // Deduplicate www/non-www upfront
+    const dedupeUrls = (urls: string[]): string[] => {
+      const seen = new Set<string>();
+      return urls.filter(u => {
+        const key = urlKey(u);
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+    };
+    
     const candidateUrls = privacy_url 
       ? [privacy_url]
-      : [
-          // Phase 1.2: Sitemap-discovered URLs
-          ...sitemapUrls.slice(0, 3),
-          
-          // Explicit privacy form URL from catalog
-          service.privacy_form_url,
-          
-          // Try homepage FIRST for link extraction (moved up for better discovery)
-          `https://www.${service.domain}`,
-          `https://${service.domain}`,
-          
-          // .well-known standard (RFC 8615)
-          `https://${service.domain}/.well-known/privacy-policy.txt`,
-          `https://www.${service.domain}/.well-known/privacy-policy.txt`,
-          
-          // Common privacy policy paths
-          `https://${service.domain}/privacy`,
-          `https://www.${service.domain}/privacy`,
-          `https://${service.domain}/privacy-policy`,
-          `https://www.${service.domain}/privacy-policy`,
-          `https://${service.domain}/privacy-notice`,
-          `https://${service.domain}/privacypolicy`,
-          `https://www.${service.domain}/privacypolicy`,
-          
-          // Legal section paths
-          `https://${service.domain}/legal/privacy`,
-          `https://www.${service.domain}/legal/privacy`,
-          `https://${service.domain}/legal/privacy-policy`,
-          `https://www.${service.domain}/legal/privacy-policy`,
-          `https://${service.domain}/legal`,
-          `https://www.${service.domain}/legal`,
-          
-          // CCPA/GDPR specific paths
-          `https://${service.domain}/ccpa`,
-          `https://www.${service.domain}/ccpa`,
-          `https://${service.domain}/gdpr`,
-          `https://www.${service.domain}/gdpr`,
-          `https://${service.domain}/privacy-rights`,
-          `https://www.${service.domain}/privacy-rights`,
-          `https://${service.domain}/your-privacy-rights`,
-          `https://www.${service.domain}/your-privacy-rights`,
-          
-          // Help/Support section paths
-          `https://${service.domain}/help/privacy`,
-          `https://www.${service.domain}/help/privacy`,
-          `https://${service.domain}/support/privacy`,
-          `https://www.${service.domain}/support/privacy`,
-          
-          // About section
-          `https://${service.domain}/about/privacy`,
-          `https://www.${service.domain}/about/privacy`,
-        ].filter(Boolean);
+      : dedupeUrls([...tier1, ...tier2]);
     
     // Phase 1.3: Language detection — reuse homepage HTML to avoid double-fetch
     let langDetected = 'en';
@@ -1302,6 +1303,16 @@ serve(async (req) => {
     }
 
     const { content: privacyContent, url: successUrl, policy_type } = result;
+
+    // Policy URL validator: reject junk even if "discovered"
+    if (policy_type !== 'pdf') {
+      const policyValidation = validatePolicyUrl(successUrl, service.domain, privacyContent);
+      if (!policyValidation.valid) {
+        console.warn(`[Policy Validator] Rejected ${sanitizeForLog(successUrl)}: ${policyValidation.reason}`);
+        throw new Error(`Unable to find privacy policy. Discovered URL was rejected: ${policyValidation.reason}. Please provide a direct URL.`);
+      }
+      console.log(`[Policy Validator] ✓ Accepted ${sanitizeForLog(successUrl)}`);
+    }
 
     // Phase 1.2: Detect vendor and calculate confidence (with feature flags)
     let vendorInfo: VendorDetection | null = null;

@@ -190,6 +190,139 @@ export function detectVendor(input: { url?: string; html?: string }): VendorDete
   return { platform_detected: 'none', pre_fill_supported: false };
 }
 
+// -------------------- robots.txt Sitemap Discovery --------------------
+export async function probeRobotsTxt(domain: string, timeoutMs = PROBE_TIMEOUT_MS): Promise<string[]> {
+  const url = `https://${domain}/robots.txt`;
+  try {
+    const r = await fetchText(url, timeoutMs);
+    if (!r.ok) return [];
+    const t = await r.text();
+    // Extract Sitemap: directives (case-insensitive per spec)
+    const sitemaps: string[] = [];
+    for (const line of t.split('\n')) {
+      const m = line.match(/^\s*Sitemap:\s*(.+)/i);
+      if (m) {
+        const sitemapUrl = m[1].trim();
+        if (sitemapUrl.startsWith('http')) {
+          sitemaps.push(sitemapUrl);
+        }
+      }
+    }
+    return sitemaps;
+  } catch {}
+  return [];
+}
+
+// -------------------- Smart Content Window --------------------
+// Replaces naive 8KB truncation with targeted extraction:
+// First 3KB + keyword-matched sections + last 2KB
+const CONTACT_KEYWORDS = [
+  'contact us', 'data protection officer', 'dpo@', 'privacy@', 'gdpr@', 'ccpa@',
+  'exercise your rights', 'deletion request', 'data subject', 'your rights',
+  'opt out', 'opt-out', 'delete my', 'remove my', 'erasure',
+  'data-protection@', 'mailto:', 'email us', 'write to us',
+];
+
+export function extractSmartContentWindow(text: string, maxSize = 10000): string {
+  if (text.length <= maxSize) return text;
+
+  const first = text.slice(0, 3000);
+  const last = text.slice(-2000);
+  const budget = maxSize - first.length - last.length; // ~5KB for keyword sections
+
+  // Find paragraphs/sections containing contact-related keywords
+  const lower = text.toLowerCase();
+  const sections: string[] = [];
+  let used = 0;
+
+  for (const kw of CONTACT_KEYWORDS) {
+    let idx = lower.indexOf(kw);
+    while (idx !== -1 && used < budget) {
+      // Extract a window around the keyword (300 chars before, 500 chars after)
+      const start = Math.max(0, idx - 300);
+      const end = Math.min(text.length, idx + kw.length + 500);
+      const chunk = text.slice(start, end);
+      if (used + chunk.length <= budget) {
+        sections.push(chunk);
+        used += chunk.length;
+      }
+      idx = lower.indexOf(kw, idx + kw.length + 500);
+    }
+  }
+
+  return [first, '...', ...sections, '...', last].join('\n');
+}
+
+// -------------------- Policy URL Validator --------------------
+// Validates discovered URLs: domain must match, content must have privacy signals
+const PRIVACY_SIGNALS = [
+  'privacy policy', 'personal data', 'gdpr', 'ccpa', 'data protection',
+  'controller', 'data protection officer', 'your rights', 'data subject',
+  'personal information', 'we collect', 'delete your', 'erasure',
+];
+
+const OFFICIAL_SUBDOMAINS = ['privacy', 'legal', 'help', 'support', 'policies', 'terms'];
+
+export function isOfficialDomain(candidateHost: string, targetDomain: string): boolean {
+  const normCandidate = candidateHost.replace(/^www\./i, '').toLowerCase();
+  const normTarget = targetDomain.replace(/^www\./i, '').toLowerCase();
+
+  // Exact match
+  if (normCandidate === normTarget) return true;
+
+  // Allow known official subdomains (e.g., privacy.google.com for google.com)
+  for (const sub of OFFICIAL_SUBDOMAINS) {
+    if (normCandidate === `${sub}.${normTarget}`) return true;
+  }
+
+  // Allow same registrable domain (simple check: last 2 segments match)
+  const candidateParts = normCandidate.split('.');
+  const targetParts = normTarget.split('.');
+  if (candidateParts.length >= 2 && targetParts.length >= 2) {
+    const cReg = candidateParts.slice(-2).join('.');
+    const tReg = targetParts.slice(-2).join('.');
+    if (cReg === tReg) return true;
+  }
+
+  return false;
+}
+
+export function validatePolicyUrl(url: string, targetDomain: string, content?: string): { valid: boolean; reason?: string } {
+  try {
+    const parsed = new URL(url);
+
+    // Domain check
+    if (!isOfficialDomain(parsed.hostname, targetDomain)) {
+      return { valid: false, reason: `Domain mismatch: ${parsed.hostname} vs ${targetDomain}` };
+    }
+
+    // Reject PDFs unless explicitly supported
+    if (parsed.pathname.toLowerCase().endsWith('.pdf')) {
+      return { valid: false, reason: 'PDF policy — requires manual review' };
+    }
+
+    // If we have content, check for privacy signals
+    if (content) {
+      const lower = content.toLowerCase();
+      const signalCount = PRIVACY_SIGNALS.filter(s => lower.includes(s)).length;
+      if (signalCount < 2) {
+        return { valid: false, reason: `Only ${signalCount} privacy signals (need ≥2)` };
+      }
+
+      // Reject "terms" mislabeled as privacy
+      const hasTermsTitle = /terms\s+(of\s+)?(service|use)/i.test(lower.slice(0, 2000));
+      const hasPrivacyTitle = /privacy\s*(policy|notice|statement)/i.test(lower.slice(0, 2000));
+      if (hasTermsTitle && !hasPrivacyTitle) {
+        return { valid: false, reason: 'Appears to be Terms of Service, not Privacy Policy' };
+      }
+    }
+
+    return { valid: true };
+  } catch {
+    return { valid: false, reason: 'Invalid URL' };
+  }
+}
+
 // -------------------- Precision@5 & Confidence --------------------
 export function precisionAt5(candidatesTop5: string[], finalUrl: string) {
   // finalUrl may redirect → compare by hostname+path (normalized)
