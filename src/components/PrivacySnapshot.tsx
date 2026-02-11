@@ -7,7 +7,6 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   Mail,
   ShieldAlert,
-  ShieldCheck,
   UserSearch,
   ArrowRight,
   Loader2,
@@ -18,6 +17,7 @@ import {
 interface SnapshotData {
   accounts: {
     count: number;
+    newCount: number;
     lastScan: string | null;
   };
   brokers: {
@@ -25,8 +25,8 @@ interface SnapshotData {
     clean: number;
     total: number;
     lastScan: string | null;
-    topBrokers: Array<{ name: string; hasExposure: boolean }>;
-    status: string | null; // 'pending' | 'running' | 'completed' | null
+    topBrokers: Array<{ name: string; status: string }>;
+    scanStatus: string | null;
   };
   breaches: {
     total: number;
@@ -35,6 +35,8 @@ interface SnapshotData {
     lastScan: string | null;
   };
 }
+
+type Severity = "danger" | "warn" | "ok" | "empty" | "running";
 
 export function PrivacySnapshot() {
   const navigate = useNavigate();
@@ -58,7 +60,7 @@ export function PrivacySnapshot() {
         await Promise.all([
           supabase
             .from("user_services")
-            .select("service_id", { count: "exact", head: true })
+            .select("service_id, first_discovered_at", { count: "exact" })
             .eq("user_id", userId),
           supabase
             .from("broker_scans")
@@ -68,9 +70,9 @@ export function PrivacySnapshot() {
             .limit(1),
           supabase
             .from("broker_scan_results")
-            .select("broker_id, status_v2, data_brokers(name)")
+            .select("broker_id, status_v2, confidence, data_brokers(name)")
             .eq("user_id", userId)
-            .in("status_v2", ["exposed", "possible"])
+            .in("status_v2", ["found", "possible_match"])
             .order("confidence", { ascending: false })
             .limit(3),
           supabase
@@ -88,11 +90,21 @@ export function PrivacySnapshot() {
 
       const brokerScan = brokerScanRes.data?.[0];
       const exposureScan = exposureRes.data?.[0];
+      const lastScanDate = profileRes.data?.last_email_scan_date;
+
+      // Count new services since last scan
+      let newCount = 0;
+      if (lastScanDate && servicesRes.data) {
+        newCount = servicesRes.data.filter(
+          (s: any) => s.first_discovered_at && new Date(s.first_discovered_at) > new Date(lastScanDate)
+        ).length;
+      }
 
       setData({
         accounts: {
           count: servicesRes.count || 0,
-          lastScan: profileRes.data?.last_email_scan_date || null,
+          newCount,
+          lastScan: lastScanDate || null,
         },
         brokers: {
           found: brokerScan?.found_count || 0,
@@ -101,9 +113,9 @@ export function PrivacySnapshot() {
           lastScan: brokerScan?.completed_at || null,
           topBrokers: (brokerResultsRes.data || []).map((r: any) => ({
             name: r.data_brokers?.name || "Unknown",
-            hasExposure: true,
+            status: r.status_v2 || "unknown",
           })),
-          status: brokerScan?.status || null,
+          scanStatus: brokerScan?.status || null,
         },
         breaches: {
           total: exposureScan?.total_findings || 0,
@@ -141,6 +153,64 @@ export function PrivacySnapshot() {
     });
   };
 
+  // --- Broker severity with running/pending handling ---
+  const brokerSeverity: Severity = (() => {
+    const s = data.brokers.scanStatus;
+    if (!s) return "empty";
+    if (s === "running" || s === "pending") return "running";
+    if (data.brokers.found > 0) return "danger";
+    return "ok";
+  })();
+
+  // --- Format top brokers with status labels, capped at 3 with +N ---
+  const formatTopBrokers = () => {
+    const brokers = data.brokers.topBrokers;
+    if (brokers.length === 0) return null;
+    const shown = brokers.slice(0, 3).map((b) => {
+      const label = b.status === "possible_match" ? "possible" : "exposed";
+      return `${b.name} (${label})`;
+    });
+    const remaining = data.brokers.found - shown.length;
+    if (remaining > 0) shown.push(`+${remaining} more`);
+    return shown.join(", ");
+  };
+
+  // --- Accounts details ---
+  const accountsDetails = (() => {
+    if (data.accounts.count === 0 && !data.accounts.lastScan)
+      return "Connect your email to discover accounts";
+    if (data.accounts.count === 0)
+      return "No accounts discovered yet";
+    if (data.accounts.newCount > 0)
+      return `${data.accounts.newCount} new since last scan`;
+    return "Services discovered from your inbox scan";
+  })();
+
+  // --- Broker details ---
+  const brokerDetails = (() => {
+    if (brokerSeverity === "running") return "Scan in progress…";
+    if (data.brokers.found > 0) return formatTopBrokers() || "Exposures found";
+    if (data.brokers.lastScan) return `No broker listings found across ${data.brokers.total} checked`;
+    return "Check if your info appears on data broker sites";
+  })();
+
+  // --- Broker action label ---
+  const brokerActionLabel = (() => {
+    if (brokerSeverity === "running") return "View progress";
+    if (data.brokers.lastScan) {
+      return data.brokers.found > 0 ? "Remove my data" : "View results";
+    }
+    return "Run check";
+  })();
+
+  // --- Breaches severity ---
+  const breachesSeverity: Severity = (() => {
+    if (!data.breaches.lastScan) return "empty";
+    if (data.breaches.critical > 0 || data.breaches.high > 0) return "danger";
+    if (data.breaches.total > 0) return "warn";
+    return "ok";
+  })();
+
   const tiles = [
     {
       key: "accounts",
@@ -148,12 +218,13 @@ export function PrivacySnapshot() {
       title: "Online Accounts",
       metric: data.accounts.count,
       metricLabel: data.accounts.count === 1 ? "account found" : "accounts found",
-      severity: data.accounts.count > 30 ? "warn" : data.accounts.count > 0 ? "ok" : "empty",
+      severity: (data.accounts.count > 30 ? "warn" : data.accounts.count > 0 ? "ok" : "empty") as Severity,
       lastScan: formatDate(data.accounts.lastScan),
-      details: data.accounts.count > 0
-        ? "Services discovered from your inbox scan"
-        : "Connect your email to discover accounts",
-      action: () => (data.accounts.count > 0 ? document.getElementById("services-grid")?.scrollIntoView({ behavior: "smooth" }) : navigate("/settings")),
+      details: accountsDetails,
+      action: () =>
+        data.accounts.count > 0
+          ? document.getElementById("services-grid")?.scrollIntoView({ behavior: "smooth" })
+          : navigate("/settings"),
       actionLabel: data.accounts.count > 0 ? "View accounts" : "Connect email",
     },
     {
@@ -162,25 +233,11 @@ export function PrivacySnapshot() {
       title: "Broker Exposure",
       metric: data.brokers.found,
       metricLabel: data.brokers.found === 1 ? "broker has your data" : "brokers have your data",
-      severity:
-        !data.brokers.status || data.brokers.status === "pending"
-          ? "empty"
-          : data.brokers.found > 0
-            ? "danger"
-            : "ok",
+      severity: brokerSeverity,
       lastScan: formatDate(data.brokers.lastScan),
-      details:
-        data.brokers.found > 0
-          ? data.brokers.topBrokers.map((b) => b.name).join(", ")
-          : data.brokers.lastScan
-            ? `Clean across ${data.brokers.total} brokers checked`
-            : "Check if your info appears on data broker sites",
+      details: brokerDetails,
       action: () => navigate("/broker-scan"),
-      actionLabel: data.brokers.lastScan
-        ? data.brokers.found > 0
-          ? "Remove my data"
-          : "View results"
-        : "Run check",
+      actionLabel: brokerActionLabel,
     },
     {
       key: "breaches",
@@ -188,14 +245,7 @@ export function PrivacySnapshot() {
       title: "Data Breaches",
       metric: data.breaches.total,
       metricLabel: data.breaches.total === 1 ? "exposure found" : "exposures found",
-      severity:
-        !data.breaches.lastScan
-          ? "empty"
-          : data.breaches.critical > 0 || data.breaches.high > 0
-            ? "danger"
-            : data.breaches.total > 0
-              ? "warn"
-              : "ok",
+      severity: breachesSeverity,
       lastScan: formatDate(data.breaches.lastScan),
       details:
         data.breaches.total > 0
@@ -212,34 +262,41 @@ export function PrivacySnapshot() {
     },
   ];
 
-  const severityStyles = {
+  const severityStyles: Record<Severity, {
+    border: string;
+    iconBg: string;
+    iconColor: string;
+    metricColor: string;
+  }> = {
     danger: {
       border: "border-destructive/30",
       iconBg: "bg-destructive/10",
       iconColor: "text-destructive",
       metricColor: "text-destructive",
-      Icon: AlertTriangle,
     },
     warn: {
       border: "border-amber-500/30",
       iconBg: "bg-amber-500/10",
       iconColor: "text-amber-600 dark:text-amber-400",
       metricColor: "text-amber-600 dark:text-amber-400",
-      Icon: AlertTriangle,
     },
     ok: {
       border: "border-green-500/30",
       iconBg: "bg-green-500/10",
       iconColor: "text-green-600 dark:text-green-400",
       metricColor: "text-green-600 dark:text-green-400",
-      Icon: CheckCircle,
+    },
+    running: {
+      border: "border-blue-500/30",
+      iconBg: "bg-blue-500/10",
+      iconColor: "text-blue-600 dark:text-blue-400",
+      metricColor: "text-blue-600 dark:text-blue-400",
     },
     empty: {
       border: "border-border",
       iconBg: "bg-muted",
       iconColor: "text-muted-foreground",
       metricColor: "text-muted-foreground",
-      Icon: null,
     },
   };
 
@@ -250,8 +307,9 @@ export function PrivacySnapshot() {
       </h2>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {tiles.map((tile) => {
-          const style = severityStyles[tile.severity as keyof typeof severityStyles];
+          const style = severityStyles[tile.severity];
           const TileIcon = tile.icon;
+          const isRunning = tile.severity === "running";
 
           return (
             <Card
@@ -263,27 +321,41 @@ export function PrivacySnapshot() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <div className={`p-2 rounded-lg ${style.iconBg}`}>
-                      <TileIcon className={`w-4 h-4 ${style.iconColor}`} />
+                      {isRunning ? (
+                        <Loader2 className={`w-4 h-4 ${style.iconColor} animate-spin`} />
+                      ) : (
+                        <TileIcon className={`w-4 h-4 ${style.iconColor}`} />
+                      )}
                     </div>
                     <span className="font-medium text-sm text-foreground">
                       {tile.title}
                     </span>
                   </div>
-                  {tile.lastScan && (
+                  {tile.lastScan ? (
                     <Badge variant="secondary" className="text-[10px]">
                       {tile.lastScan}
                     </Badge>
+                  ) : (
+                    <span className="text-[10px] text-muted-foreground">Never scanned</span>
                   )}
                 </div>
 
                 {/* Metric */}
                 <div>
-                  <span className={`text-2xl font-bold ${style.metricColor}`}>
-                    {tile.metric}
-                  </span>
-                  <span className="text-sm text-muted-foreground ml-1.5">
-                    {tile.metricLabel}
-                  </span>
+                  {isRunning ? (
+                    <span className={`text-sm font-medium ${style.metricColor}`}>
+                      Scanning…
+                    </span>
+                  ) : (
+                    <>
+                      <span className={`text-2xl font-bold ${style.metricColor}`}>
+                        {tile.metric}
+                      </span>
+                      <span className="text-sm text-muted-foreground ml-1.5">
+                        {tile.metricLabel}
+                      </span>
+                    </>
+                  )}
                 </div>
 
                 {/* Details */}
