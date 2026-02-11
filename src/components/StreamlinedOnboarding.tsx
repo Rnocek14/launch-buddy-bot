@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, CheckCircle, Mail, Shield, ArrowRight } from "lucide-react";
+import { Loader2, CheckCircle, Mail, Shield, ArrowRight, Lock } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 
 interface StreamlinedOnboardingProps {
@@ -104,7 +104,7 @@ export function StreamlinedOnboarding({ onComplete }: StreamlinedOnboardingProps
                 <div>
                   <p className="font-medium">Quick Authorization</p>
                   <p className="text-sm text-muted-foreground">
-                    Grant permission to send GDPR/CCPA deletion requests on your behalf
+                    Grant permission to send deletion requests on your behalf
                   </p>
                 </div>
               </div>
@@ -113,27 +113,39 @@ export function StreamlinedOnboarding({ onComplete }: StreamlinedOnboardingProps
                   2
                 </div>
                 <div>
-                  <p className="font-medium">Connect Your Gmail</p>
+                  <p className="font-medium">Run Secure Inbox Scan</p>
                   <p className="text-sm text-muted-foreground">
-                    Scan your inbox to discover services automatically (read-only access)
+                    Find hidden accounts by scanning sender metadata (read-only)
                   </p>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Privacy & Security */}
-          <div className="p-4 rounded-lg border border-border bg-background space-y-2">
+          {/* Trust bullets — clear, confident, no jargon */}
+          <div className="p-4 rounded-lg border border-border bg-background space-y-3">
             <h4 className="font-medium flex items-center gap-2">
               <Shield className="w-4 h-4 text-primary" />
-              Your Privacy & Security
+              How We Protect Your Data
             </h4>
-            <ul className="text-sm text-muted-foreground space-y-1.5 ml-6">
-              <li>• We never store email content—only service names</li>
-              <li>• All tokens are encrypted</li>
-              <li>• Read-only access—we can't send or delete emails</li>
-              <li>• Disconnect anytime in Settings</li>
-            </ul>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-muted-foreground">
+              <div className="flex items-center gap-2">
+                <CheckCircle className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+                <span>Read-only access to your inbox</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+                <span>We scan sender metadata only</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+                <span>No email content is ever stored</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+                <span>Disconnect anytime in Settings</span>
+              </div>
+            </div>
           </div>
 
           <Button 
@@ -249,12 +261,20 @@ export function StreamlinedOnboarding({ onComplete }: StreamlinedOnboardingProps
           <div className="space-y-4">
             <h3 className="font-semibold">What happens next:</h3>
             <div className="space-y-3 text-sm">
-              <div className="flex items-start gap-2">
+                <div className="flex items-start gap-2">
                 <div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
                   <Mail className="w-3 h-3 text-primary" />
                 </div>
                 <p>
-                  You'll be redirected to Google to grant read-only access to your Gmail
+                  You'll be redirected to Google's secure login — we only request read-only access
+                </p>
+              </div>
+              <div className="flex items-start gap-2">
+                <div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <Lock className="w-3 h-3 text-primary" />
+                </div>
+                <p>
+                  We scan sender metadata only — no email content is read or stored
                 </p>
               </div>
               <div className="flex items-start gap-2">
@@ -262,7 +282,7 @@ export function StreamlinedOnboarding({ onComplete }: StreamlinedOnboardingProps
                   <CheckCircle className="w-3 h-3 text-primary" />
                 </div>
                 <p>
-                  After connecting, you'll return here and can start your first scan
+                  After connecting, you'll return here and see your real accounts immediately
                 </p>
               </div>
             </div>
@@ -281,8 +301,8 @@ export function StreamlinedOnboarding({ onComplete }: StreamlinedOnboardingProps
               </>
             ) : (
               <>
-                <Mail className="w-4 h-4 mr-2" />
-                Connect Gmail
+                <Shield className="w-4 h-4 mr-2" />
+                Run Secure Inbox Scan
               </>
             )}
           </Button>
