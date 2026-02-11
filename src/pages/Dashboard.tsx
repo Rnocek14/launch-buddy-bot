@@ -1284,8 +1284,7 @@ export default function Dashboard() {
                     />
                   )}
 
-                  {/* Referral Challenge Panel */}
-                  <ReferralChallengePanel />
+                  {/* Referral panel moved to bottom of page */}
                 </div>
               </details>
             )}
@@ -1618,6 +1617,11 @@ export default function Dashboard() {
             </CardContent>
           </Card>
         )}
+
+        {/* Referral Challenge Panel - below main content */}
+        <div className="mt-8">
+          <ReferralChallengePanel />
+        </div>
 
         <div className="mt-8 p-4 bg-muted/50 rounded-lg text-sm text-muted-foreground">
           <p className="flex items-start gap-2">
