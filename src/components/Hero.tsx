@@ -1,11 +1,15 @@
 import { useEffect, useState } from "react";
-import { Shield, Zap, Target, Sparkles } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Shield, Zap, Target, Lock, AlertTriangle, Search } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "./ui/button";
+import { Input } from "./ui/input";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Hero = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [email, setEmail] = useState("");
+  const [error, setError] = useState("");
+  const navigate = useNavigate();
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -21,6 +25,18 @@ export const Hero = () => {
     return () => subscription.unsubscribe();
   }, []);
 
+  const handleScan = (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+
+    if (!email || !email.includes("@")) {
+      setError("Please enter a valid email address");
+      return;
+    }
+
+    navigate(`/free-scan?email=${encodeURIComponent(email.trim())}`);
+  };
+
   return (
     <section className="relative min-h-screen flex items-center justify-center px-4 py-20 overflow-hidden">
       {/* Gradient background */}
@@ -32,45 +48,59 @@ export const Hero = () => {
       
       <div className="container relative z-10 max-w-5xl text-center">
         {/* Icon badge */}
-        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-50 border border-emerald-200 mb-8">
-          <Sparkles className="w-4 h-4 text-emerald-700" />
-          <span className="text-sm font-medium text-emerald-700">Free to start — no credit card required</span>
+        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 mb-8">
+          <Shield className="w-4 h-4 text-emerald-700 dark:text-emerald-400" />
+          <span className="text-sm font-medium text-emerald-700 dark:text-emerald-400">No login required · Takes 10 seconds</span>
         </div>
 
         <h1 className="text-5xl md:text-7xl font-bold mb-6 bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-          Find Your Digital Footprint,
+          See What's Exposed
           <br />
           <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-            Take Control Back
+            About You Online
           </span>
         </h1>
 
-        <p className="text-xl md:text-2xl text-muted-foreground mb-8 max-w-3xl mx-auto leading-relaxed">
-          We look for signup emails to find accounts holding your data, then help you delete them. Monthly rescans help you stay up to date.
+        <p className="text-xl md:text-2xl text-muted-foreground mb-10 max-w-3xl mx-auto leading-relaxed">
+          Enter your email to get an instant exposure report. No signup, no inbox access — just results.
         </p>
 
-        <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-4">
-          <Link to="/free-scan">
-            <Button size="lg" className="gap-2 bg-primary hover:bg-primary/90 text-lg px-8 py-6">
-              <Shield className="w-5 h-5" />
-              Free Exposure Check
+        {/* Email scan form — the main CTA */}
+        <form onSubmit={handleScan} className="max-w-lg mx-auto mb-4">
+          <div className="flex flex-col sm:flex-row gap-3">
+            <Input
+              type="email"
+              placeholder="your@email.com"
+              value={email}
+              onChange={(e) => { setEmail(e.target.value); setError(""); }}
+              className="flex-1 h-14 text-lg px-5 bg-background border-border"
+            />
+            <Button type="submit" size="lg" className="gap-2 h-14 text-lg px-8 bg-primary hover:bg-primary/90">
+              <Search className="w-5 h-5" />
+              Run Free Scan
             </Button>
-          </Link>
-          <Link to="/demo">
-            <Button size="lg" variant="outline" className="gap-2 text-lg px-8 py-6">
-              <Zap className="w-5 h-5" />
-              Try Live Demo
-            </Button>
-          </Link>
+          </div>
+          {error && (
+            <p className="text-sm text-destructive flex items-center justify-center gap-2 mt-3">
+              <AlertTriangle className="w-4 h-4" />
+              {error}
+            </p>
+          )}
+        </form>
+
+        <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground mb-12">
+          <Lock className="w-3 h-3" />
+          <span>We don't store or share your email · No inbox access</span>
         </div>
+
         <div className="flex flex-wrap justify-center gap-4 mb-12">
           {isLoggedIn ? (
             <Link to="/dashboard" className="text-sm text-primary hover:underline">
               Go to Dashboard →
             </Link>
           ) : (
-            <Link to="/auth" className="text-sm text-primary hover:underline">
-              Sign up for full scan →
+            <Link to="/auth" className="text-sm text-muted-foreground hover:text-primary">
+              Already have an account? Sign in →
             </Link>
           )}
           <span className="text-muted-foreground">|</span>
@@ -81,25 +111,18 @@ export const Hero = () => {
 
         {/* Social Proof */}
         <div className="flex flex-col items-center gap-6">
-          <div className="flex items-center gap-2 px-6 py-3 rounded-full bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800">
-            <Sparkles className="w-5 h-5 text-emerald-700 dark:text-emerald-400" />
-            <span className="text-sm font-medium text-emerald-800 dark:text-emerald-300">
-              <span className="font-bold">Email + Data Brokers</span> — the only tool that scans both
-            </span>
-          </div>
-          
           <div className="flex flex-wrap justify-center gap-8 text-sm">
             <div className="flex items-center gap-2">
               <Shield className="w-5 h-5 text-primary" />
-              <span className="text-muted-foreground">169+ Services</span>
+              <span className="text-muted-foreground">169+ Services Tracked</span>
             </div>
             <div className="flex items-center gap-2">
               <Zap className="w-5 h-5 text-primary" />
-              <span className="text-muted-foreground">20 Data Brokers</span>
+              <span className="text-muted-foreground">20 Data Brokers Checked</span>
             </div>
             <div className="flex items-center gap-2">
               <Target className="w-5 h-5 text-primary" />
-              <span className="text-muted-foreground">Privacy Rights</span>
+              <span className="text-muted-foreground">GDPR / CCPA Compliant</span>
             </div>
           </div>
         </div>
