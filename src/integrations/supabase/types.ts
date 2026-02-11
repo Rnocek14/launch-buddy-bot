@@ -2316,6 +2316,7 @@ export type Database = {
           unique_opens: number
         }[]
       }
+      get_privacy_snapshot: { Args: { p_user_id: string }; Returns: Json }
       get_remaining_deletions: { Args: { p_user_id: string }; Returns: number }
       get_serp_budget_status: {
         Args: never
