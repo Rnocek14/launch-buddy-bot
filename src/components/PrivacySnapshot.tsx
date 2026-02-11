@@ -214,7 +214,7 @@ export function PrivacySnapshot() {
       metric: data.brokers.found,
       metricLabel: data.brokers.found === 1 ? "broker has your data" : "brokers have your data",
       severity: brokerSeverity,
-      lastScan: formatDate(data.brokers.last_scan) || (brokerSeverity === "running" ? "In progress" : null),
+      lastScan: formatDate(data.brokers.last_scan) || (brokerSeverity === "running" ? `In progress${data.brokers.scan_started ? ` • started ${formatDate(data.brokers.scan_started)}` : ""}` : null),
       details: brokerDetails,
       action: () => navigate("/broker-scan"),
       actionLabel: brokerActionLabel,
