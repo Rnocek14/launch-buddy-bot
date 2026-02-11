@@ -132,22 +132,43 @@ serve(async (req) => {
       if (validation.valid) {
         method = 'one_click';
         try {
-          const controller = new AbortController();
-          const timeout = setTimeout(() => controller.abort(), 10000); // 10s timeout
+          // Follow redirects manually with hop validation (max 3)
+          let currentUrl = subscription.unsubscribe_url;
+          let response: Response | null = null;
+          const MAX_REDIRECTS = 3;
 
-          const response = await fetch(subscription.unsubscribe_url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: 'List-Unsubscribe=One-Click-Unsubscribe',
-            signal: controller.signal,
-            redirect: 'follow', // allow up to browser default redirects
-          });
-          clearTimeout(timeout);
+          for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
+            const hopValidation = validateUnsubscribeUrl(currentUrl, subscription.sender_domain);
+            if (!hopValidation.valid) {
+              throw new Error(`Redirect hop ${hop} blocked: ${hopValidation.reason}`);
+            }
 
-          responseStatus = response.status;
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 10000);
+
+            response = await fetch(currentUrl, {
+              method: hop === 0 ? 'POST' : 'GET', // POST only on first request
+              headers: hop === 0 ? { 'Content-Type': 'application/x-www-form-urlencoded' } : {},
+              body: hop === 0 ? 'List-Unsubscribe=One-Click-Unsubscribe' : undefined,
+              signal: controller.signal,
+              redirect: 'manual',
+            });
+            clearTimeout(timeout);
+
+            // If redirect, follow manually
+            if ([301, 302, 303, 307, 308].includes(response.status)) {
+              const location = response.headers.get('location');
+              if (!location) break;
+              currentUrl = new URL(location, currentUrl).toString();
+              continue;
+            }
+            break; // non-redirect response
+          }
+
+          responseStatus = response?.status;
 
           // ─── Guardrail 2: Only mark success on clear 2xx ───────────
-          if (response.ok) {
+          if (response?.ok) {
             result = 'success';
           } else {
             result = 'failed';

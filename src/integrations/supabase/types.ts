@@ -2473,6 +2473,20 @@ export type Database = {
         Args: { p_user_id: string }
         Returns: boolean
       }
+      increment_subscription_count: {
+        Args: {
+          p_add_count: number
+          p_has_one_click?: boolean
+          p_last_seen: string
+          p_sender_email: string
+          p_service_id?: string
+          p_subject?: string
+          p_unsub_mailto?: string
+          p_unsub_url?: string
+          p_user_id: string
+        }
+        Returns: undefined
+      }
       is_authorized_agent: { Args: { user_uuid: string }; Returns: boolean }
       is_org_admin: {
         Args: { org_id: string; user_uuid: string }
