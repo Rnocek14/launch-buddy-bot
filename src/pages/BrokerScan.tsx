@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Shield, ShieldAlert, ShieldCheck, Loader2, AlertCircle, ArrowLeft, RefreshCw, Crown } from "lucide-react";
+import { getBrokerResultState } from "@/lib/brokerResultState";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -277,16 +278,12 @@ export default function BrokerScan() {
 
   const progress = scan ? (scan.scanned_count / scan.total_brokers) * 100 : 0;
   
-  // Use v2 statuses for filtering - separate exposed from possible
-  const exposedResults = results.filter(r => r.status_v2 === 'found' || (!r.status_v2 && r.status === 'found'));
-  const possibleResults = results.filter(r => r.status_v2 === 'possible_match');
-  const cleanResults = results.filter(r => r.status_v2 === 'not_found' || r.status === 'clean');
+  // Use shared helper for consistent status logic across dashboard + detail
+  const exposedResults = results.filter(r => getBrokerResultState({ status: r.status, status_v2: r.status_v2, opted_out_at: null }) === 'found');
+  const possibleResults = results.filter(r => getBrokerResultState({ status: r.status, status_v2: r.status_v2, opted_out_at: null }) === 'possible');
+  const cleanResults = results.filter(r => getBrokerResultState({ status: r.status, status_v2: r.status_v2, opted_out_at: null }) === 'clear');
   const optedOutResults = results.filter(r => r.status === 'opted_out');
-  const issueResults = results.filter(r => 
-    r.status_v2 === 'blocked' || r.status_v2 === 'rate_limited' || r.status_v2 === 'provider_error' ||
-    r.status_v2 === 'timeout' || r.status_v2 === 'parse_failed' || r.status_v2 === 'request_failed' ||
-    r.status_v2 === 'unknown' || (!r.status_v2 && r.status === 'error')
-  );
+  const issueResults = results.filter(r => getBrokerResultState({ status: r.status, status_v2: r.status_v2, opted_out_at: null }) === 'error');
   
   // Combined for UI sections
   const foundResults = [...exposedResults, ...possibleResults];

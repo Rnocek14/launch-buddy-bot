@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
@@ -17,6 +17,11 @@ import {
   ExternalLink,
   UserSearch,
 } from "lucide-react";
+import { getBrokerResultState, brokerResultPriority, type BrokerResultState } from "@/lib/brokerResultState";
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
 
 interface ExposedBroker {
   id: string;
@@ -34,7 +39,46 @@ interface ExposedBroker {
     relatives?: string[];
   } | null;
   opted_out_at: string | null;
+  state: BrokerResultState; // derived
 }
+
+// ---------------------------------------------------------------------------
+// Sub-components for consistent layout
+// ---------------------------------------------------------------------------
+
+function SectionHeader({ badge, cta }: { badge?: React.ReactNode; cta?: React.ReactNode }) {
+  return (
+    <div className="flex items-center justify-between">
+      <div className="flex items-center gap-2">
+        <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+          Data Broker Exposure
+        </h2>
+        {badge}
+      </div>
+      {cta}
+    </div>
+  );
+}
+
+function SectionIcon({ children, className }: { children: React.ReactNode; className?: string }) {
+  return <div className={`p-3 rounded-xl shrink-0 ${className}`}>{children}</div>;
+}
+
+// ---------------------------------------------------------------------------
+// Data type icons
+// ---------------------------------------------------------------------------
+
+function getDataTypes(b: ExposedBroker) {
+  const types: { icon: typeof MapPin; label: string }[] = [];
+  if (b.extracted_data?.addresses?.length) types.push({ icon: MapPin, label: "Address" });
+  if (b.extracted_data?.phone_numbers?.length) types.push({ icon: Phone, label: "Phone" });
+  if (b.extracted_data?.relatives?.length) types.push({ icon: Users, label: "Relatives" });
+  return types;
+}
+
+// ---------------------------------------------------------------------------
+// Main component
+// ---------------------------------------------------------------------------
 
 export function BrokerExposureSection() {
   const navigate = useNavigate();
@@ -42,27 +86,38 @@ export function BrokerExposureSection() {
   const [brokers, setBrokers] = useState<ExposedBroker[]>([]);
   const [scanCompleted, setScanCompleted] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
+  const [sessionReady, setSessionReady] = useState(false);
 
+  // Subscribe to auth state so we re-load when the user logs in after mount
   useEffect(() => {
-    loadBrokerResults();
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSessionReady(!!session);
+    });
+    // Also check immediately
+    supabase.auth.getSession().then(({ data: { session } }) => setSessionReady(!!session));
+    return () => subscription.unsubscribe();
   }, []);
 
-  async function loadBrokerResults() {
+  // Re-load data whenever session becomes ready
+  useEffect(() => {
+    if (sessionReady) {
+      loadBrokerResults();
+    }
+  }, [sessionReady]);
+
+  const loadBrokerResults = useCallback(async () => {
+    setLoading(true);
     try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
+      const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
 
-      // Check subscription tier via edge function
+      // Entitlements via server-authoritative edge function
       let tierValue = "free";
       try {
-        const { data: subData } = await supabase.functions.invoke(
-          "check-subscription"
-        );
+        const { data: subData } = await supabase.functions.invoke("check-subscription");
         tierValue = subData?.tier || "free";
       } catch {
-        // fallback to free
+        // fallback
       }
       setIsComplete(tierValue === "complete");
 
@@ -77,50 +132,47 @@ export function BrokerExposureSection() {
 
       if (!scanData || scanData.status !== "completed") {
         setScanCompleted(false);
-        setLoading(false);
         return;
       }
 
       setScanCompleted(true);
 
-      // Get all results with broker details — exposed + possible first
+      // Get results — filter by user only (schema has no scan_id FK on results)
       const { data: results } = await supabase
         .from("broker_scan_results")
-        .select(
-          `
+        .select(`
           id, status, status_v2, confidence, extracted_data, opted_out_at,
           data_brokers!broker_scan_results_broker_id_fkey (
             name, slug, website, opt_out_url, opt_out_difficulty
           )
-        `
-        )
+        `)
         .eq("user_id", session.user.id)
         .order("confidence", { ascending: false });
 
       if (results) {
-        const mapped: ExposedBroker[] = results.map((r: any) => ({
-          id: r.id,
-          broker_name: r.data_brokers?.name || "Unknown",
-          broker_slug: r.data_brokers?.slug || "",
-          broker_website: r.data_brokers?.website || "",
-          opt_out_url: r.data_brokers?.opt_out_url,
-          opt_out_difficulty: r.data_brokers?.opt_out_difficulty,
-          status: r.status,
-          status_v2: r.status_v2,
-          confidence: r.confidence,
-          extracted_data: r.extracted_data,
-          opted_out_at: r.opted_out_at,
-        }));
+        const mapped: ExposedBroker[] = results.map((r: any) => {
+          const state = getBrokerResultState({
+            status: r.status,
+            status_v2: r.status_v2,
+            opted_out_at: r.opted_out_at,
+          });
+          return {
+            id: r.id,
+            broker_name: r.data_brokers?.name || "Unknown",
+            broker_slug: r.data_brokers?.slug || "",
+            broker_website: r.data_brokers?.website || "",
+            opt_out_url: r.data_brokers?.opt_out_url,
+            opt_out_difficulty: r.data_brokers?.opt_out_difficulty,
+            status: r.status,
+            status_v2: r.status_v2,
+            confidence: r.confidence,
+            extracted_data: r.extracted_data,
+            opted_out_at: r.opted_out_at,
+            state,
+          };
+        });
 
-        // Sort: exposed first, then possible, then opted out
-        const priority = (b: ExposedBroker) => {
-          if (b.opted_out_at) return 3;
-          if (b.status_v2 === "found" || b.status === "found") return 0;
-          if (b.status_v2 === "possible_match") return 1;
-          return 2;
-        };
-        mapped.sort((a, b) => priority(a) - priority(b));
-
+        mapped.sort((a, b) => brokerResultPriority(a.state) - brokerResultPriority(b.state));
         setBrokers(mapped);
       }
     } catch (err) {
@@ -128,137 +180,162 @@ export function BrokerExposureSection() {
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
 
-  if (loading) {
-    return (
-      <Card>
-        <CardContent className="p-6 flex items-center justify-center">
-          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-        </CardContent>
-      </Card>
-    );
-  }
+  // -----------------------------------------------------------------------
+  // Handle "Started removal" tracking
+  // -----------------------------------------------------------------------
+  const handleRemoveClick = async (broker: ExposedBroker) => {
+    // Open the opt-out URL
+    if (broker.opt_out_url) {
+      window.open(broker.opt_out_url, "_blank", "noopener,noreferrer");
+    }
 
-  // Not on Complete plan — show upgrade CTA
-  if (!isComplete) {
-    return (
-      <Card className="border-accent/20 bg-gradient-to-br from-card to-accent/5">
-        <CardContent className="p-6">
-          <div className="flex items-start gap-4">
-            <div className="p-3 rounded-xl bg-accent/10 shrink-0">
-              <UserSearch className="h-6 w-6 text-accent" />
-            </div>
-            <div className="flex-1 space-y-1">
-              <div className="flex items-center gap-2">
-                <h3 className="font-semibold text-lg">Data Broker Exposure</h3>
-                <Badge className="bg-accent text-accent-foreground text-xs">
-                  COMPLETE
-                </Badge>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Check if data brokers like Spokeo or Whitepages are publicly
-                listing your name, address, and phone number.
-              </p>
-            </div>
-            <Button
-              onClick={() => navigate("/subscribe?tier=complete")}
-              className="bg-gradient-to-r from-accent to-primary shrink-0"
-            >
-              <Crown className="h-4 w-4 mr-2" />
-              Unlock
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
+    // Optimistically mark removal started in the DB
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
 
-  // Complete plan but no scan yet
-  if (!scanCompleted) {
-    return (
-      <Card className="border-primary/20">
-        <CardContent className="p-6">
-          <div className="flex items-start gap-4">
-            <div className="p-3 rounded-xl bg-primary/10 shrink-0">
-              <UserSearch className="h-6 w-6 text-primary" />
-            </div>
-            <div className="flex-1 space-y-1">
-              <h3 className="font-semibold text-lg">Data Broker Exposure</h3>
-              <p className="text-sm text-muted-foreground">
-                You haven't run a broker check yet. See if your personal
-                information is listed on 20+ data broker sites.
-              </p>
-            </div>
-            <Button onClick={() => navigate("/broker-scan")} className="shrink-0">
-              Run Check
-              <ArrowRight className="h-4 w-4 ml-2" />
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
+      await supabase
+        .from("broker_scan_results")
+        .update({ opted_out_at: new Date().toISOString() } as any)
+        .eq("id", broker.id)
+        .eq("user_id", session.user.id);
 
-  // Scan completed — show results inline
-  const exposed = brokers.filter(
-    (b) =>
-      !b.opted_out_at &&
-      (b.status_v2 === "found" || (!b.status_v2 && b.status === "found"))
-  );
-  const possible = brokers.filter(
-    (b) => !b.opted_out_at && b.status_v2 === "possible_match"
-  );
-  const optedOut = brokers.filter((b) => !!b.opted_out_at);
-  const actionNeeded = [...exposed, ...possible];
-
-  const getDataTypes = (b: ExposedBroker) => {
-    const types: { icon: typeof MapPin; label: string }[] = [];
-    if (b.extracted_data?.addresses?.length)
-      types.push({ icon: MapPin, label: "Address" });
-    if (b.extracted_data?.phone_numbers?.length)
-      types.push({ icon: Phone, label: "Phone" });
-    if (b.extracted_data?.relatives?.length)
-      types.push({ icon: Users, label: "Relatives" });
-    return types;
+      // Update local state
+      setBrokers((prev) =>
+        prev.map((b) =>
+          b.id === broker.id ? { ...b, opted_out_at: new Date().toISOString(), state: "opted_out" as BrokerResultState } : b
+        )
+      );
+    } catch {
+      // non-critical
+    }
   };
 
+  // -----------------------------------------------------------------------
+  // Loading state
+  // -----------------------------------------------------------------------
+  if (loading) {
+    return (
+      <div className="space-y-3">
+        <SectionHeader />
+        <Card>
+          <CardContent className="p-6 flex items-center justify-center">
+            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // -----------------------------------------------------------------------
+  // Not on Complete plan — upgrade CTA (consistent layout)
+  // -----------------------------------------------------------------------
+  if (!isComplete) {
+    return (
+      <div className="space-y-3">
+        <SectionHeader
+          badge={
+            <Badge className="bg-accent text-accent-foreground text-xs">COMPLETE</Badge>
+          }
+        />
+        <Card className="border-accent/20 bg-gradient-to-br from-card to-accent/5">
+          <CardContent className="p-5">
+            <div className="flex items-start gap-4">
+              <SectionIcon className="bg-accent/10">
+                <UserSearch className="h-6 w-6 text-accent" />
+              </SectionIcon>
+              <div className="flex-1 space-y-1">
+                <p className="text-sm text-muted-foreground">
+                  Check if data brokers like Spokeo or Whitepages are publicly
+                  listing your name, address, and phone number.
+                </p>
+              </div>
+              <Button
+                onClick={() => navigate("/subscribe?tier=complete")}
+                className="bg-gradient-to-r from-accent to-primary shrink-0"
+              >
+                <Crown className="h-4 w-4 mr-2" />
+                Unlock
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // -----------------------------------------------------------------------
+  // Complete plan but no scan yet
+  // -----------------------------------------------------------------------
+  if (!scanCompleted) {
+    return (
+      <div className="space-y-3">
+        <SectionHeader />
+        <Card className="border-primary/20">
+          <CardContent className="p-5">
+            <div className="flex items-start gap-4">
+              <SectionIcon className="bg-primary/10">
+                <UserSearch className="h-6 w-6 text-primary" />
+              </SectionIcon>
+              <div className="flex-1 space-y-1">
+                <p className="text-sm text-muted-foreground">
+                  You haven't run a broker check yet. See if your personal
+                  information is listed on 20+ data broker sites.
+                </p>
+              </div>
+              <Button onClick={() => navigate("/broker-scan")} className="shrink-0">
+                Run Check
+                <ArrowRight className="h-4 w-4 ml-2" />
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // -----------------------------------------------------------------------
+  // Scan completed — show results inline
+  // -----------------------------------------------------------------------
+  const actionNeeded = brokers.filter((b) => b.state === "found" || b.state === "possible");
+  const optedOut = brokers.filter((b) => b.state === "opted_out");
+
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-            Data Broker Exposure
-          </h2>
-          {actionNeeded.length > 0 && (
+    <div className="space-y-3">
+      <SectionHeader
+        badge={
+          actionNeeded.length > 0 ? (
             <Badge variant="destructive" className="text-xs">
               {actionNeeded.length} require action
             </Badge>
-          )}
-        </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => navigate("/broker-scan")}
-          className="text-xs text-muted-foreground"
-        >
-          Manage Broker Exposure
-          <ArrowRight className="h-3 w-3 ml-1" />
-        </Button>
-      </div>
+          ) : undefined
+        }
+        cta={
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate("/broker-scan")}
+            className="text-xs text-muted-foreground"
+          >
+            Manage Broker Exposure
+            <ArrowRight className="h-3 w-3 ml-1" />
+          </Button>
+        }
+      />
 
       {/* No exposures — great news */}
       {actionNeeded.length === 0 && optedOut.length === 0 && (
         <Card className="border-green-500/30 bg-green-500/5">
           <CardContent className="p-5 flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-green-500/10 shrink-0">
+            <SectionIcon className="bg-green-500/10">
               <ShieldCheck className="h-6 w-6 text-green-600 dark:text-green-400" />
-            </div>
+            </SectionIcon>
             <div className="flex-1">
               <h3 className="font-semibold">No broker listings found</h3>
               <p className="text-sm text-muted-foreground">
-                Great news — we didn't find your information on any of the
-                brokers we checked.
+                Great news — we didn't find your information on any of the brokers we checked.
               </p>
             </div>
           </CardContent>
@@ -269,9 +346,9 @@ export function BrokerExposureSection() {
       {actionNeeded.length === 0 && optedOut.length > 0 && (
         <Card className="border-green-500/30 bg-green-500/5">
           <CardContent className="p-5 flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-green-500/10 shrink-0">
+            <SectionIcon className="bg-green-500/10">
               <ShieldCheck className="h-6 w-6 text-green-600 dark:text-green-400" />
-            </div>
+            </SectionIcon>
             <div className="flex-1">
               <h3 className="font-semibold">All removals requested</h3>
               <p className="text-sm text-muted-foreground">
@@ -287,9 +364,7 @@ export function BrokerExposureSection() {
       {actionNeeded.length > 0 && (
         <div className="space-y-3">
           {actionNeeded.map((broker) => {
-            const isExposed =
-              broker.status_v2 === "found" ||
-              (!broker.status_v2 && broker.status === "found");
+            const isExposed = broker.state === "found";
             const dataTypes = getDataTypes(broker);
 
             return (
@@ -303,12 +378,9 @@ export function BrokerExposureSection() {
               >
                 <CardContent className="p-4">
                   <div className="flex items-center gap-4">
-                    {/* Status icon */}
                     <div
                       className={`p-2 rounded-lg shrink-0 ${
-                        isExposed
-                          ? "bg-destructive/10"
-                          : "bg-amber-500/10"
+                        isExposed ? "bg-destructive/10" : "bg-amber-500/10"
                       }`}
                     >
                       {isExposed ? (
@@ -318,7 +390,6 @@ export function BrokerExposureSection() {
                       )}
                     </div>
 
-                    {/* Broker info */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <h4 className="font-medium">{broker.broker_name}</h4>
@@ -333,8 +404,7 @@ export function BrokerExposureSection() {
                           {isExposed ? "Exposed" : "Possible"}
                         </Badge>
                       </div>
-                      {/* Data types found */}
-                      {dataTypes.length > 0 && (
+                      {dataTypes.length > 0 ? (
                         <div className="flex items-center gap-3 mt-1">
                           {dataTypes.map(({ icon: Icon, label }) => (
                             <span
@@ -346,31 +416,28 @@ export function BrokerExposureSection() {
                             </span>
                           ))}
                         </div>
-                      )}
-                      {dataTypes.length === 0 && (
+                      ) : (
                         <p className="text-xs text-muted-foreground mt-1">
                           {broker.broker_website}
                         </p>
                       )}
                     </div>
 
-                    {/* Action */}
+                    {/* Action — Remove with subtext */}
                     {broker.opt_out_url ? (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="shrink-0"
-                        asChild
-                      >
-                        <a
-                          href={broker.opt_out_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
+                      <div className="shrink-0 text-center">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleRemoveClick(broker)}
                         >
                           Remove
                           <ExternalLink className="h-3 w-3 ml-1" />
-                        </a>
-                      </Button>
+                        </Button>
+                        <p className="text-[10px] text-muted-foreground mt-1">
+                          Opens opt-out page
+                        </p>
+                      </div>
                     ) : (
                       <Button
                         variant="outline"
@@ -388,7 +455,6 @@ export function BrokerExposureSection() {
             );
           })}
 
-          {/* Link to full view */}
           <div className="text-center pt-1">
             <Button
               variant="link"
@@ -402,7 +468,7 @@ export function BrokerExposureSection() {
         </div>
       )}
 
-      {/* Show opted-out count if there are some */}
+      {/* Opted-out count */}
       {optedOut.length > 0 && actionNeeded.length > 0 && (
         <p className="text-xs text-muted-foreground text-center">
           ✓ Already removed from {optedOut.length} broker
