@@ -95,6 +95,7 @@ export type Database = {
           http_status: number | null
           id: string
           match_confidence: number | null
+          opt_out_started_at: string | null
           opted_out_at: string | null
           profile_url: string | null
           scanned_at: string | null
@@ -122,6 +123,7 @@ export type Database = {
           http_status?: number | null
           id?: string
           match_confidence?: number | null
+          opt_out_started_at?: string | null
           opted_out_at?: string | null
           profile_url?: string | null
           scanned_at?: string | null
@@ -149,6 +151,7 @@ export type Database = {
           http_status?: number | null
           id?: string
           match_confidence?: number | null
+          opt_out_started_at?: string | null
           opted_out_at?: string | null
           profile_url?: string | null
           scanned_at?: string | null

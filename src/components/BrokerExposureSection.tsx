@@ -39,6 +39,7 @@ interface ExposedBroker {
     relatives?: string[];
   } | null;
   opted_out_at: string | null;
+  opt_out_started_at: string | null;
   state: BrokerResultState; // derived
 }
 
@@ -92,6 +93,13 @@ export function BrokerExposureSection() {
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSessionReady(!!session);
+      // Clear stale data on sign-out
+      if (!session) {
+        setBrokers([]);
+        setScanCompleted(false);
+        setIsComplete(false);
+        setLoading(false);
+      }
     });
     // Also check immediately
     supabase.auth.getSession().then(({ data: { session } }) => setSessionReady(!!session));
@@ -141,7 +149,7 @@ export function BrokerExposureSection() {
       const { data: results } = await supabase
         .from("broker_scan_results")
         .select(`
-          id, status, status_v2, confidence, extracted_data, opted_out_at,
+          id, status, status_v2, confidence, extracted_data, opted_out_at, opt_out_started_at,
           data_brokers!broker_scan_results_broker_id_fkey (
             name, slug, website, opt_out_url, opt_out_difficulty
           )
@@ -155,6 +163,7 @@ export function BrokerExposureSection() {
             status: r.status,
             status_v2: r.status_v2,
             opted_out_at: r.opted_out_at,
+            opt_out_started_at: r.opt_out_started_at,
           });
           return {
             id: r.id,
@@ -168,6 +177,7 @@ export function BrokerExposureSection() {
             confidence: r.confidence,
             extracted_data: r.extracted_data,
             opted_out_at: r.opted_out_at,
+            opt_out_started_at: r.opt_out_started_at,
             state,
           };
         });
@@ -191,21 +201,21 @@ export function BrokerExposureSection() {
       window.open(broker.opt_out_url, "_blank", "noopener,noreferrer");
     }
 
-    // Optimistically mark removal started in the DB
+    // Optimistically mark removal started in the DB (NOT opted_out_at — that's for confirmed removal)
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
 
       await supabase
         .from("broker_scan_results")
-        .update({ opted_out_at: new Date().toISOString() } as any)
+        .update({ opt_out_started_at: new Date().toISOString() } as any)
         .eq("id", broker.id)
         .eq("user_id", session.user.id);
 
       // Update local state
       setBrokers((prev) =>
         prev.map((b) =>
-          b.id === broker.id ? { ...b, opted_out_at: new Date().toISOString(), state: "opted_out" as BrokerResultState } : b
+          b.id === broker.id ? { ...b, opt_out_started_at: new Date().toISOString(), state: "removal_started" as BrokerResultState } : b
         )
       );
     } catch {
@@ -301,6 +311,7 @@ export function BrokerExposureSection() {
   // -----------------------------------------------------------------------
   const actionNeeded = brokers.filter((b) => b.state === "found" || b.state === "possible");
   const optedOut = brokers.filter((b) => b.state === "opted_out");
+  const removalStarted = brokers.filter((b) => b.state === "removal_started");
 
   return (
     <div className="space-y-3">
@@ -468,10 +479,18 @@ export function BrokerExposureSection() {
         </div>
       )}
 
-      {/* Opted-out count */}
-      {optedOut.length > 0 && actionNeeded.length > 0 && (
+      {/* Removal started count */}
+      {removalStarted.length > 0 && (
         <p className="text-xs text-muted-foreground text-center">
-          ✓ Already removed from {optedOut.length} broker
+          ⏳ Removal started for {removalStarted.length} broker
+          {removalStarted.length !== 1 ? "s" : ""}
+        </p>
+      )}
+
+      {/* Opted-out count */}
+      {optedOut.length > 0 && (
+        <p className="text-xs text-muted-foreground text-center">
+          ✓ Confirmed removed from {optedOut.length} broker
           {optedOut.length !== 1 ? "s" : ""}
         </p>
       )}

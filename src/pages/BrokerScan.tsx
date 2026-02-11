@@ -123,18 +123,18 @@ export default function BrokerScan() {
       return;
     }
 
-    // Check subscription
-    const { data: subscription } = await supabase
-      .from('subscriptions')
-      .select('tier, status')
-      .eq('user_id', session.user.id)
-      .maybeSingle();
-
-    const tier = subscription?.tier || 'free';
-    setCurrentTier(tier as 'free' | 'pro' | 'complete');
-    setIsComplete(tier === 'complete');
+    // Use server-authoritative entitlements (same as dashboard)
+    let tierValue = "free";
+    try {
+      const { data: subData } = await supabase.functions.invoke("check-subscription");
+      tierValue = subData?.tier || "free";
+    } catch {
+      // fallback
+    }
+    setCurrentTier(tierValue as 'free' | 'pro' | 'complete');
+    setIsComplete(tierValue === 'complete');
     
-    if (tier === 'complete') {
+    if (tierValue === 'complete') {
       await loadScanData();
     }
     setLoading(false);
@@ -279,11 +279,11 @@ export default function BrokerScan() {
   const progress = scan ? (scan.scanned_count / scan.total_brokers) * 100 : 0;
   
   // Use shared helper for consistent status logic across dashboard + detail
-  const exposedResults = results.filter(r => getBrokerResultState({ status: r.status, status_v2: r.status_v2, opted_out_at: null }) === 'found');
-  const possibleResults = results.filter(r => getBrokerResultState({ status: r.status, status_v2: r.status_v2, opted_out_at: null }) === 'possible');
-  const cleanResults = results.filter(r => getBrokerResultState({ status: r.status, status_v2: r.status_v2, opted_out_at: null }) === 'clear');
-  const optedOutResults = results.filter(r => r.status === 'opted_out');
-  const issueResults = results.filter(r => getBrokerResultState({ status: r.status, status_v2: r.status_v2, opted_out_at: null }) === 'error');
+  const exposedResults = results.filter(r => getBrokerResultState({ status: r.status, status_v2: r.status_v2, opted_out_at: r.status === 'opted_out' ? 'legacy' : null }) === 'found');
+  const possibleResults = results.filter(r => getBrokerResultState({ status: r.status, status_v2: r.status_v2, opted_out_at: r.status === 'opted_out' ? 'legacy' : null }) === 'possible');
+  const cleanResults = results.filter(r => getBrokerResultState({ status: r.status, status_v2: r.status_v2, opted_out_at: r.status === 'opted_out' ? 'legacy' : null }) === 'clear');
+  const optedOutResults = results.filter(r => getBrokerResultState({ status: r.status, status_v2: r.status_v2, opted_out_at: r.status === 'opted_out' ? 'legacy' : null }) === 'opted_out');
+  const issueResults = results.filter(r => getBrokerResultState({ status: r.status, status_v2: r.status_v2, opted_out_at: r.status === 'opted_out' ? 'legacy' : null }) === 'error');
   
   // Combined for UI sections
   const foundResults = [...exposedResults, ...possibleResults];
