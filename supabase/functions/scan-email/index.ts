@@ -526,41 +526,22 @@ async function processConnection(connection: any, user: any, maxResults: number,
 
       const lastSeenIso = sub.lastSeen ? new Date(sub.lastSeen).toISOString() : new Date().toISOString();
 
-      // Upsert baseline row (ensures it exists, sets first_seen_at on insert only)
-      const { error: subError } = await supabaseAdmin
-        .from('email_subscriptions')
-        .upsert({
-          user_id: user.id,
-          connection_id: connection.id,
-          sender_domain: sub.senderDomain,
-          sender_email: sub.senderEmail,
-          sender_name: sub.senderName,
-          subject_sample: sub.subjectSample?.substring(0, 500),
-          unsubscribe_url: sub.unsubscribeUrl?.substring(0, 2000),
-          unsubscribe_mailto: sub.unsubscribeMailto?.substring(0, 500),
-          has_one_click: sub.hasOneClick,
-          last_seen_at: lastSeenIso,
-          email_count: sub.count,
-          service_id: matchedService?.id || null,
-        }, {
-          onConflict: 'user_id,sender_email',
-          ignoreDuplicates: true, // only insert if new
-        });
-
-      // For existing rows: accumulate email_count and advance last_seen_at monotonically
-      if (!subError) {
-        await supabaseAdmin.rpc('increment_subscription_count', {
-          p_user_id: user.id,
-          p_sender_email: sub.senderEmail,
-          p_add_count: sub.count,
-          p_last_seen: lastSeenIso,
-          p_subject: sub.subjectSample?.substring(0, 500) ?? null,
-          p_unsub_url: sub.unsubscribeUrl?.substring(0, 2000) ?? null,
-          p_unsub_mailto: sub.unsubscribeMailto?.substring(0, 500) ?? null,
-          p_has_one_click: sub.hasOneClick,
-          p_service_id: matchedService?.id ?? null,
-        });
-      }
+      // Single atomic RPC: INSERT ... ON CONFLICT DO UPDATE
+      // Handles both first insert and subsequent accumulation in one call
+      const { error: subError } = await supabaseAdmin.rpc('increment_subscription_count', {
+        p_user_id: user.id,
+        p_sender_email: sub.senderEmail,
+        p_add_count: sub.count,
+        p_last_seen: lastSeenIso,
+        p_subject: sub.subjectSample?.substring(0, 500) ?? null,
+        p_unsub_url: sub.unsubscribeUrl?.substring(0, 2000) ?? null,
+        p_unsub_mailto: sub.unsubscribeMailto?.substring(0, 500) ?? null,
+        p_has_one_click: sub.hasOneClick,
+        p_service_id: matchedService?.id ?? null,
+        p_connection_id: connection.id,
+        p_sender_domain: sub.senderDomain,
+        p_sender_name: sub.senderName,
+      });
 
       if (subError) {
         console.error(`Failed to upsert subscription for ${senderEmail}:`, subError.message);
