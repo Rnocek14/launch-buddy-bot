@@ -97,6 +97,46 @@ export async function probeSecurityTxt(domain: string, timeoutMs = PROBE_TIMEOUT
   return null;
 }
 
+// Parse a sitemap XML string and extract privacy-relevant <loc> URLs
+function extractPrivacyLocsFromXml(xml: string, out: Set<string>) {
+  const locs = [...xml.matchAll(/<loc>\s*([^<]+)\s*<\/loc>/gi)]
+    .map((m) => m[1])
+    .slice(0, SITEMAP_MAX_LOCS);
+  
+  for (const loc of locs) {
+    if (PRIVACY_RE.test(loc)) {
+      out.add(sanitizeForLog(loc));
+      if (out.size >= SITEMAP_MAX_LOCS) break;
+    }
+  }
+}
+
+// Fetch and parse a specific sitemap URL (for robots.txt-discovered sitemaps)
+export async function probeSitemapUrl(sitemapUrl: string, timeoutMs = PROBE_TIMEOUT_MS): Promise<string[]> {
+  const out = new Set<string>();
+  try {
+    const r = await fetch(sitemapUrl, {
+      method: 'GET',
+      redirect: 'follow',
+      signal: AbortSignal.timeout(timeoutMs),
+      headers: { 'User-Agent': UA, 'Accept': 'application/xml,text/xml,*/*' },
+    });
+    if (!r.ok) return [];
+
+    let xml = '';
+    if (sitemapUrl.endsWith('.gz')) {
+      const ab = await r.arrayBuffer();
+      xml = await gunzipToText(ab);
+    } else {
+      const text = await r.text();
+      xml = normalizeXml(text);
+    }
+
+    extractPrivacyLocsFromXml(xml, out);
+  } catch {}
+  return [...out];
+}
+
 // sitemap.xml (and gzip variant). Returns privacy-ish URLs (deduped, sanitized).
 export async function probeSitemap(domain: string, timeoutMs = PROBE_TIMEOUT_MS): Promise<string[]> {
   const out = new Set<string>();
@@ -115,24 +155,13 @@ export async function probeSitemap(domain: string, timeoutMs = PROBE_TIMEOUT_MS)
       let xml = '';
       if (path.endsWith('.gz')) {
         const ab = await r.arrayBuffer();
-        // Size guard applied in gunzipToText
         xml = await gunzipToText(ab);
       } else {
         const text = await r.text();
         xml = normalizeXml(text);
       }
 
-      // Extract <loc>…</loc> quickly (no heavy XML deps) with cap
-      const locs = [...xml.matchAll(/<loc>\s*([^<]+)\s*<\/loc>/gi)]
-        .map((m) => m[1])
-        .slice(0, SITEMAP_MAX_LOCS);
-      
-      for (const loc of locs) {
-        if (PRIVACY_RE.test(loc)) {
-          out.add(sanitizeForLog(loc));
-          if (out.size >= SITEMAP_MAX_LOCS) break;
-        }
-      }
+      extractPrivacyLocsFromXml(xml, out);
     } catch {}
   }
 
@@ -149,7 +178,7 @@ const VENDORS = [
   { key: 'securiti',   re: /securiti\.(ai|app)|privacy-central\.securiti/i,                     prefill: true  },
   { key: 'trustarc',   re: /trustarc\.com|consent\.trustarc|privacycentral\.trustarc/i,        prefill: false },
   { key: 'cookiebot',  re: /cookiebot\.(com|consentcdn)|consent\.cookiebot/i,                   prefill: false },
-  { key: 'transcend',  re: /transcend\.(io|build)|privacy\.(transcend)/i,                       prefill: true  },
+  { key: 'transcend',  re: /transcend\.(io|build)|privacy\.(transcend)|data-transcend/i,        prefill: true  },
   { key: 'ketch',      re: /ketch\.com|global-privacy-control|app\.ketch\./i,                  prefill: true  },
   { key: 'osano',      re: /osano\.com|cmp\.osano/i,                                           prefill: false },
   { key: 'cookieyes',  re: /cookieyes\.com|consent\.cookieyes/i,                                prefill: false },
@@ -215,7 +244,7 @@ export async function probeRobotsTxt(domain: string, timeoutMs = PROBE_TIMEOUT_M
 
 // -------------------- Smart Content Window --------------------
 // Replaces naive 8KB truncation with targeted extraction:
-// First 3KB + keyword-matched sections + last 2KB
+// First 3KB + keyword-matched sections (deduplicated) + last 2KB
 const CONTACT_KEYWORDS = [
   'contact us', 'data protection officer', 'dpo@', 'privacy@', 'gdpr@', 'ccpa@',
   'exercise your rights', 'deletion request', 'data subject', 'your rights',
@@ -230,24 +259,39 @@ export function extractSmartContentWindow(text: string, maxSize = 10000): string
   const last = text.slice(-2000);
   const budget = maxSize - first.length - last.length; // ~5KB for keyword sections
 
-  // Find paragraphs/sections containing contact-related keywords
+  // Collect (start, end) ranges around keywords, then merge overlapping intervals
   const lower = text.toLowerCase();
-  const sections: string[] = [];
-  let used = 0;
+  const ranges: [number, number][] = [];
 
   for (const kw of CONTACT_KEYWORDS) {
     let idx = lower.indexOf(kw);
-    while (idx !== -1 && used < budget) {
-      // Extract a window around the keyword (300 chars before, 500 chars after)
+    while (idx !== -1) {
       const start = Math.max(0, idx - 300);
       const end = Math.min(text.length, idx + kw.length + 500);
-      const chunk = text.slice(start, end);
-      if (used + chunk.length <= budget) {
-        sections.push(chunk);
-        used += chunk.length;
-      }
+      ranges.push([start, end]);
       idx = lower.indexOf(kw, idx + kw.length + 500);
     }
+  }
+
+  // Sort by start, then merge overlapping intervals
+  ranges.sort((a, b) => a[0] - b[0]);
+  const merged: [number, number][] = [];
+  for (const [s, e] of ranges) {
+    if (merged.length > 0 && s <= merged[merged.length - 1][1]) {
+      merged[merged.length - 1][1] = Math.max(merged[merged.length - 1][1], e);
+    } else {
+      merged.push([s, e]);
+    }
+  }
+
+  // Extract merged chunks within budget
+  const sections: string[] = [];
+  let used = 0;
+  for (const [s, e] of merged) {
+    const chunk = text.slice(s, e);
+    if (used + chunk.length > budget) break;
+    sections.push(chunk);
+    used += chunk.length;
   }
 
   return [first, '...', ...sections, '...', last].join('\n');
@@ -261,7 +305,7 @@ const PRIVACY_SIGNALS = [
   'personal information', 'we collect', 'delete your', 'erasure',
 ];
 
-const OFFICIAL_SUBDOMAINS = ['privacy', 'legal', 'help', 'support', 'policies', 'terms'];
+const OFFICIAL_SUBDOMAINS = ['privacy', 'legal', 'help', 'support', 'policies'];
 
 export function isOfficialDomain(candidateHost: string, targetDomain: string): boolean {
   const normCandidate = candidateHost.replace(/^www\./i, '').toLowerCase();
@@ -275,17 +319,31 @@ export function isOfficialDomain(candidateHost: string, targetDomain: string): b
     if (normCandidate === `${sub}.${normTarget}`) return true;
   }
 
-  // Allow same registrable domain (simple check: last 2 segments match)
-  const candidateParts = normCandidate.split('.');
-  const targetParts = normTarget.split('.');
-  if (candidateParts.length >= 2 && targetParts.length >= 2) {
-    const cReg = candidateParts.slice(-2).join('.');
-    const tReg = targetParts.slice(-2).join('.');
-    if (cReg === tReg) return true;
-  }
+  // Strict: candidate must end with `.${normTarget}` (any subdomain of the target)
+  // This is safe because normTarget itself is the full domain (e.g., "example.co.uk")
+  // so "blog.example.co.uk".endsWith(".example.co.uk") = true (correct)
+  // but "evil.co.uk".endsWith(".example.co.uk") = false (correct)
+  if (normCandidate.endsWith(`.${normTarget}`)) return true;
 
   return false;
 }
+
+// Privacy-like URL path patterns (multilingual)
+const STRONG_PRIVACY_PATHS = /\/(privacy|datenschutz|privacidad|confidentialite|informativa-privacy|privacidade|プライバシー)([-_]?(policy|notice|statement|richtlinie|politica|politique))?\/?$/i;
+
+// Multilingual privacy signals for content validation
+const I18N_PRIVACY_SIGNALS = [
+  // German
+  'datenschutzerkl\u00e4rung', 'personenbezogene daten', 'datenschutzbeauftragter', 'ihre rechte', 'dsgvo',
+  // Spanish
+  'pol\u00edtica de privacidad', 'datos personales', 'protección de datos', 'sus derechos',
+  // French
+  'politique de confidentialit\u00e9', 'donn\u00e9es personnelles', 'protection des donn\u00e9es', 'vos droits',
+  // Italian
+  'informativa sulla privacy', 'dati personali', 'protezione dei dati', 'diritti',
+  // Portuguese
+  'pol\u00edtica de privacidade', 'dados pessoais', 'proteção de dados',
+];
 
 export function validatePolicyUrl(url: string, targetDomain: string, content?: string): { valid: boolean; reason?: string } {
   try {
@@ -304,9 +362,19 @@ export function validatePolicyUrl(url: string, targetDomain: string, content?: s
     // If we have content, check for privacy signals
     if (content) {
       const lower = content.toLowerCase();
-      const signalCount = PRIVACY_SIGNALS.filter(s => lower.includes(s)).length;
-      if (signalCount < 2) {
-        return { valid: false, reason: `Only ${signalCount} privacy signals (need ≥2)` };
+      
+      // Count English signals
+      const enSignalCount = PRIVACY_SIGNALS.filter(s => lower.includes(s)).length;
+      // Count i18n signals
+      const i18nSignalCount = I18N_PRIVACY_SIGNALS.filter(s => lower.includes(s)).length;
+      const totalSignals = enSignalCount + i18nSignalCount;
+      
+      // Strong URL path + 1 signal = valid (looser threshold for well-named URLs)
+      const hasStrongPath = STRONG_PRIVACY_PATHS.test(parsed.pathname);
+      const minSignals = hasStrongPath ? 1 : 2;
+      
+      if (totalSignals < minSignals) {
+        return { valid: false, reason: `Only ${totalSignals} privacy signals (need ≥${minSignals})` };
       }
 
       // Reject "terms" mislabeled as privacy

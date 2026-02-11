@@ -24,6 +24,17 @@ Deno.test('extractSmartContentWindow: includes last 2KB', () => {
   if (!result.includes('end_marker')) throw new Error('Expected last 2KB to be included');
 });
 
+Deno.test('extractSmartContentWindow: deduplicates overlapping keyword regions', () => {
+  const padding = 'z '.repeat(3000);
+  // Two keywords very close together — should merge into one region, not duplicate
+  const middle = 'Contact our data protection officer at dpo@example.com to exercise your rights under GDPR.';
+  const text = padding + middle + padding;
+  const result = extractSmartContentWindow(text, 10000);
+  // Count how many times the middle section appears (should be 1, not 2+)
+  const count = result.split('data protection officer').length - 1;
+  if (count > 1) throw new Error(`Expected 1 occurrence of keyword region, got ${count} (dedup failed)`);
+});
+
 Deno.test('isOfficialDomain: same domain', () => {
   if (!isOfficialDomain('example.com', 'example.com')) throw new Error('Same domain should match');
 });
@@ -41,8 +52,24 @@ Deno.test('isOfficialDomain: different domain rejected', () => {
   if (isOfficialDomain('evil.com', 'example.com')) throw new Error('Different domain should not match');
 });
 
-Deno.test('isOfficialDomain: same registrable domain', () => {
-  if (!isOfficialDomain('blog.example.com', 'example.com')) throw new Error('Same registrable domain should match');
+Deno.test('isOfficialDomain: same registrable domain (subdomain)', () => {
+  if (!isOfficialDomain('blog.example.com', 'example.com')) throw new Error('Subdomain of target should match');
+});
+
+Deno.test('isOfficialDomain: co.uk TLD not confused as same domain', () => {
+  // evil.co.uk should NOT match example.co.uk — they share "co.uk" but are different registrable domains
+  if (isOfficialDomain('evil.co.uk', 'example.co.uk')) throw new Error('Different .co.uk domains should not match');
+});
+
+Deno.test('isOfficialDomain: legitimate subdomain of co.uk domain', () => {
+  if (!isOfficialDomain('privacy.example.co.uk', 'example.co.uk')) throw new Error('Subdomain of .co.uk domain should match');
+});
+
+Deno.test('isOfficialDomain: terms subdomain removed from allowlist', () => {
+  // terms.example.com should still match because it's a subdomain of example.com
+  // but the allowlist no longer specifically includes 'terms'
+  // It still matches via the endsWith check, which is correct
+  if (!isOfficialDomain('terms.example.com', 'example.com')) throw new Error('Subdomain should still match via endsWith');
 });
 
 Deno.test('validatePolicyUrl: valid privacy policy', () => {
@@ -71,4 +98,30 @@ Deno.test('validatePolicyUrl: rejects low-signal content', () => {
   const content = 'Welcome to our website. Buy amazing products. Shop now. Free shipping available.';
   const r = validatePolicyUrl('https://example.com/privacy', 'example.com', content);
   if (r.valid) throw new Error('Should reject content with no privacy signals');
+});
+
+Deno.test('validatePolicyUrl: strong URL path + 1 signal = valid', () => {
+  // Only 1 English signal, but URL path is /privacy → should accept
+  const content = 'This page describes our approach to personal data.';
+  const r = validatePolicyUrl('https://example.com/privacy', 'example.com', content);
+  if (!r.valid) throw new Error(`Strong URL + 1 signal should be valid, got: ${r.reason}`);
+});
+
+Deno.test('validatePolicyUrl: German privacy page accepted', () => {
+  const content = 'Datenschutzerklärung. Wir verarbeiten personenbezogene Daten gemäß DSGVO.';
+  const r = validatePolicyUrl('https://example.de/datenschutz', 'example.de', content);
+  if (!r.valid) throw new Error(`German privacy page should be valid, got: ${r.reason}`);
+});
+
+Deno.test('validatePolicyUrl: Spanish privacy page accepted', () => {
+  const content = 'Política de privacidad. Tratamos sus datos personales conforme a la ley.';
+  const r = validatePolicyUrl('https://example.es/privacidad', 'example.es', content);
+  if (!r.valid) throw new Error(`Spanish privacy page should be valid, got: ${r.reason}`);
+});
+
+Deno.test('validatePolicyUrl: non-privacy URL needs ≥2 signals', () => {
+  // URL is /legal (not a strong privacy path), only 1 signal
+  const content = 'This page contains information about personal data.';
+  const r = validatePolicyUrl('https://example.com/legal', 'example.com', content);
+  if (r.valid) throw new Error('Non-privacy URL with only 1 signal should be rejected');
 });
