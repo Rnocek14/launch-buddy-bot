@@ -183,7 +183,7 @@ export function PrivacySnapshot() {
       return `${b.name} (${label})`;
     });
     // Use actual queried result count, not found_count which may include other statuses
-    const remaining = Math.max(0, data.brokers.found - brokers.length);
+    const remaining = Math.max(0, data.brokers.exposedResultCount - shown.length);
     if (remaining > 0) shown.push(`+${remaining} more`);
     return shown.join(", ");
   };
