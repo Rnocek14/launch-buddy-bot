@@ -44,6 +44,7 @@ import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 import { PullToRefreshIndicator } from "@/components/PullToRefreshIndicator";
 import { ExtensionPrompt } from "@/components/ExtensionPrompt";
 import { BrokerScanCard } from "@/components/BrokerScanCard";
+import { BrokerExposureSection } from "@/components/BrokerExposureSection";
 import { PrivacySnapshot } from "@/components/PrivacySnapshot";
 import { ScoreHistoryChart } from "@/components/ScoreHistoryChart";
 import { ReferralChallengePanel } from "@/components/ReferralChallengePanel";
@@ -1075,6 +1076,9 @@ export default function Dashboard() {
           <>
             {/* Privacy Snapshot — unified view of all scan results */}
             <PrivacySnapshot />
+
+            {/* Broker Exposure — inline, always visible */}
+            <BrokerExposureSection />
 
             {/* Scan Results Banner */}
             {scanResultsBanner && !bannerDismissed && (
