@@ -671,13 +671,14 @@ async function trySimpleFetch(
   html?: string;
   vendor?: VendorDetection | null;
   confidenceScore?: number;
+  policy_source?: string;
 } | null> {
   const attemptedUrls: string[] = [];
   const failedUrls: Map<string, number> = new Map();
   const startTime = Date.now();
   let attemptTimeouts = 0;
   let bestScore = -Infinity;
-  let bestResult: { content: string; url: string; discoveredUrls?: string[]; policy_type?: string; html?: string; vendor?: VendorDetection | null; confidenceScore?: number } | null = null;
+  let bestResult: { content: string; url: string; discoveredUrls?: string[]; policy_type?: string; html?: string; vendor?: VendorDetection | null; confidenceScore?: number; policy_source?: string } | null = null;
   
   // Phase 1.1 Refinement: Budget timer to prevent runaway discovery
   const budgetOk = () => (Date.now() - startTime) < DOMAIN_BUDGET_MS;
@@ -729,7 +730,8 @@ async function trySimpleFetch(
             policy_type: 'pdf',
             attemptTimeouts,
             bestScore: 30,
-            failedUrls
+            failedUrls,
+            policy_source: 'direct_fetch',
           };
         }
         
@@ -768,7 +770,8 @@ async function trySimpleFetch(
                   policy_type: 'pdf',
                   attemptTimeouts,
                   bestScore: 30,
-                  failedUrls
+                  failedUrls,
+                  policy_source: `footer_link`,
                 };
               }
               
@@ -776,6 +779,7 @@ async function trySimpleFetch(
               const result = await trySimpleFetch([link.url], domain, attemptTimeoutMs, earlyStopScore);
               if (result) {
                 result.discoveredUrls = scoredLinks.slice(0, 10).map(l => l.url);
+                if (!result.policy_source) result.policy_source = `${link.location}_link`;
                 return result;
               }
             }
@@ -811,7 +815,7 @@ async function trySimpleFetch(
             // Track best result for early stopping
             if (policyCheck.score > bestScore) {
               bestScore = policyCheck.score;
-              bestResult = { content, url, discoveredUrls: attemptedUrls };
+              bestResult = { content, url, discoveredUrls: attemptedUrls, policy_source: 'direct_fetch' };
               
               // Early stop if score is high enough
               if (policyCheck.score >= earlyStopScore) {
@@ -826,7 +830,7 @@ async function trySimpleFetch(
             if (policyCheck.score >= 20 && policyCheck.score > bestScore) {
               console.log(`[Phase 1] ⚠️  Borderline score, will consider it: ${sanitizeForLog(url)}`);
               bestScore = policyCheck.score;
-              bestResult = { content, url, discoveredUrls: attemptedUrls };
+              bestResult = { content, url, discoveredUrls: attemptedUrls, policy_source: 'direct_fetch' };
             }
           }
         } else {
@@ -974,6 +978,8 @@ serve(async (req) => {
     attempt_timeouts: 0,
     build_sha: Deno.env.get('GITHUB_SHA') ?? null,
     build_ver: Deno.env.get('APP_VERSION') ?? 'dev',
+    // Phase 2.1: Structured provenance metadata
+    status_map: null as null | Record<string, any>,
   };
 
   // Counted fetch wrapper — tracks actual HTTP requests
@@ -1304,14 +1310,31 @@ serve(async (req) => {
 
     const { content: privacyContent, url: successUrl, policy_type } = result;
 
+    // Phase 2.1: Classify policy_source if not already set by trySimpleFetch
+    const classifyPolicySource = (url: string, fallbackSource?: string): string => {
+      if (fallbackSource && fallbackSource !== 'direct_fetch') return fallbackSource;
+      if (privacy_url && url === privacy_url) return 'user_provided';
+      if (service.privacy_form_url && url === service.privacy_form_url) return 'catalog';
+      if (sitemapUrls.some(su => urlKey(su) === urlKey(url))) return 'sitemap';
+      const urlPath = new URL(url).pathname;
+      // Tier 1 paths
+      const t1Paths = ['/privacy', '/privacy-policy', '/legal/privacy', '/privacy-notice', '/privacy-center'];
+      if (t1Paths.some(p => urlPath === p || urlPath === p + '/')) return 'tier1_guess';
+      return 'tier2_guess';
+    };
+    const policySource = methodUsed === 'browserless' ? 'browserless' : classifyPolicySource(successUrl, result.policy_source);
+
     // Policy URL validator: reject junk even if "discovered"
+    let validatorResult = 'accepted';
+    let validatorSignalsCount: number | null = null;
     if (policy_type !== 'pdf') {
       const policyValidation = validatePolicyUrl(successUrl, service.domain, privacyContent);
       if (!policyValidation.valid) {
+        validatorResult = policyValidation.reason || 'rejected';
         console.warn(`[Policy Validator] Rejected ${sanitizeForLog(successUrl)}: ${policyValidation.reason}`);
         throw new Error(`Unable to find privacy policy. Discovered URL was rejected: ${policyValidation.reason}. Please provide a direct URL.`);
       }
-      console.log(`[Policy Validator] ✓ Accepted ${sanitizeForLog(successUrl)}`);
+      console.log(`[Policy Validator] ✓ Accepted ${sanitizeForLog(successUrl)} (source: ${policySource})`);
     }
 
     // Phase 1.2: Detect vendor and calculate confidence (with feature flags)
@@ -1356,6 +1379,7 @@ serve(async (req) => {
       metrics.urls_considered_top5 = top5Candidates.length;
       metrics.hit_in_top5 = p5.hit_in_top5;
       metrics.urls_fetched = realFetchCount;
+      metrics.status_map = { policy_source: policySource, validator_result: 'skipped_pdf' };
       metricsEmitted = true;
 
       return new Response(
@@ -1381,7 +1405,8 @@ serve(async (req) => {
             selectors: vendorHint.selectors,
             request_types: vendorHint.request_types ?? []
           },
-          message: 'Privacy policy is a PDF. Please review manually for contact information.'
+          message: 'Privacy policy is a PDF. Please review manually for contact information.',
+          discovery_metadata: { policy_source: policySource, validator_result: 'skipped_pdf' },
         }),
         { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -1731,6 +1756,11 @@ Extract all relevant contact methods for data deletion requests.`;
     metrics.urls_considered_top5 = top5Candidates.length;
     metrics.hit_in_top5 = p5.hit_in_top5;
     metrics.urls_fetched = realFetchCount;
+    metrics.status_map = {
+      policy_source: policySource,
+      validator_result: validatorResult,
+      has_strong_path: /\/(privacy|datenschutz|privacidad|confidentialite)([-_]?(policy|notice|statement))?\/?$/i.test(new URL(successUrl).pathname),
+    };
     metricsEmitted = true;
     
     return new Response(
@@ -1761,7 +1791,12 @@ Extract all relevant contact methods for data deletion requests.`;
         },
         ...(securityTxtContact && {
           security_contact: securityTxtContact.contact
-        })
+        }),
+        // Phase 2.1: Provenance metadata for debugging
+        discovery_metadata: {
+          policy_source: policySource,
+          validator_result: validatorResult,
+        },
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
