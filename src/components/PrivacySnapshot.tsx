@@ -25,7 +25,9 @@ interface SnapshotData {
     clean: number;
     total: number;
     lastScan: string | null;
+    scanStarted: string | null;
     topBrokers: Array<{ name: string; status: string }>;
+    exposedResultCount: number;
     scanStatus: string | null;
   };
   breaches: {
@@ -52,7 +54,10 @@ export function PrivacySnapshot() {
       const {
         data: { session },
       } = await supabase.auth.getSession();
-      if (!session) return;
+      if (!session) {
+        setLoading(false);
+        return;
+      }
 
       const userId = session.user.id;
 
@@ -60,11 +65,11 @@ export function PrivacySnapshot() {
         await Promise.all([
           supabase
             .from("user_services")
-            .select("service_id, first_discovered_at", { count: "exact" })
+            .select("first_discovered_at", { count: "exact" })
             .eq("user_id", userId),
           supabase
             .from("broker_scans")
-            .select("completed_at, found_count, clean_count, total_brokers, status")
+            .select("created_at, completed_at, found_count, clean_count, total_brokers, status")
             .eq("user_id", userId)
             .order("created_at", { ascending: false })
             .limit(1),
@@ -91,18 +96,23 @@ export function PrivacySnapshot() {
       const brokerScan = brokerScanRes.data?.[0];
       const exposureScan = exposureRes.data?.[0];
       const lastScanDate = profileRes.data?.last_email_scan_date;
+      const services = servicesRes.data ?? [];
+      const serviceCount = servicesRes.count ?? services.length;
 
       // Count new services since last scan
       let newCount = 0;
-      if (lastScanDate && servicesRes.data) {
-        newCount = servicesRes.data.filter(
+      if (lastScanDate && services.length > 0) {
+        newCount = services.filter(
           (s: any) => s.first_discovered_at && new Date(s.first_discovered_at) > new Date(lastScanDate)
         ).length;
       }
 
+      const brokerResults = brokerResultsRes.data ?? [];
+      const exposedCount = brokerResults.length;
+
       setData({
         accounts: {
-          count: servicesRes.count || 0,
+          count: serviceCount,
           newCount,
           lastScan: lastScanDate || null,
         },
@@ -111,10 +121,12 @@ export function PrivacySnapshot() {
           clean: brokerScan?.clean_count || 0,
           total: brokerScan?.total_brokers || 0,
           lastScan: brokerScan?.completed_at || null,
-          topBrokers: (brokerResultsRes.data || []).map((r: any) => ({
+          scanStarted: brokerScan?.created_at || null,
+          topBrokers: brokerResults.map((r: any) => ({
             name: r.data_brokers?.name || "Unknown",
             status: r.status_v2 || "unknown",
           })),
+          exposedResultCount: exposedCount,
           scanStatus: brokerScan?.status || null,
         },
         breaches: {
@@ -170,7 +182,8 @@ export function PrivacySnapshot() {
       const label = b.status === "possible_match" ? "possible" : "exposed";
       return `${b.name} (${label})`;
     });
-    const remaining = data.brokers.found - shown.length;
+    // Use actual queried result count, not found_count which may include other statuses
+    const remaining = Math.max(0, data.brokers.found - brokers.length);
     if (remaining > 0) shown.push(`+${remaining} more`);
     return shown.join(", ");
   };
@@ -234,7 +247,7 @@ export function PrivacySnapshot() {
       metric: data.brokers.found,
       metricLabel: data.brokers.found === 1 ? "broker has your data" : "brokers have your data",
       severity: brokerSeverity,
-      lastScan: formatDate(data.brokers.lastScan),
+      lastScan: formatDate(data.brokers.lastScan) || (brokerSeverity === "running" ? "In progress" : null),
       details: brokerDetails,
       action: () => navigate("/broker-scan"),
       actionLabel: brokerActionLabel,
