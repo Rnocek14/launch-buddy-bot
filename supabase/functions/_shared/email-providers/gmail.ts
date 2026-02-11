@@ -10,20 +10,37 @@ function parseListUnsubscribe(header: string): { url?: string; mailto?: string }
   const result: { url?: string; mailto?: string } = {};
   if (!header) return result;
   
+  // First try bracketed format: <https://...>, <mailto:...>
   const parts = header.split(',').map(p => p.trim());
   for (const part of parts) {
     const match = part.match(/^<(.+)>$/);
-    if (!match) continue;
-    const value = match[1];
-    if (value.startsWith('https://')) {
-      result.url = value;
-    } else if (value.startsWith('http://')) {
-      // Only use http as fallback if no https found
-      if (!result.url) result.url = value;
-    } else if (value.startsWith('mailto:')) {
-      result.mailto = value;
+    if (match) {
+      const value = match[1];
+      if (value.startsWith('https://')) {
+        result.url = value;
+      } else if (value.startsWith('http://')) {
+        if (!result.url) result.url = value;
+      } else if (value.startsWith('mailto:')) {
+        result.mailto = value;
+      }
     }
   }
+
+  // Fallback: scan for unbracketed URLs if nothing found
+  if (!result.url) {
+    const urlMatch = header.match(/https?:\/\/\S+/);
+    if (urlMatch) result.url = urlMatch[0].replace(/[>,\s]+$/, '');
+  }
+  if (!result.mailto) {
+    const mailtoMatch = header.match(/mailto:\S+/);
+    if (mailtoMatch) result.mailto = mailtoMatch[0].replace(/[>,\s]+$/, '');
+  }
+
+  // Only keep https URLs
+  if (result.url && !result.url.startsWith('https://')) {
+    result.url = undefined;
+  }
+
   return result;
 }
 
