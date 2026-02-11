@@ -55,46 +55,46 @@ All colors MUST be HSL.
   }
 
   .dark {
-    --background: 240 10% 3.9%;
-    --foreground: 0 0% 98%;
+    --background: 240 10% 4%;
+    --foreground: 0 0% 95%;
 
-    --card: 240 8% 8%;
-    --card-foreground: 0 0% 98%;
+    --card: 240 8% 10%;
+    --card-foreground: 0 0% 95%;
 
-    --popover: 240 8% 8%;
-    --popover-foreground: 0 0% 98%;
+    --popover: 240 8% 10%;
+    --popover-foreground: 0 0% 95%;
 
     /* Privacy purple-blue in dark mode */
     --primary: 270 95% 70%;
-    --primary-foreground: 240 10% 3.9%;
+    --primary-foreground: 240 10% 4%;
 
-    --secondary: 240 8% 15%;
-    --secondary-foreground: 0 0% 98%;
+    --secondary: 240 8% 18%;
+    --secondary-foreground: 0 0% 95%;
 
-    --muted: 240 8% 15%;
-    --muted-foreground: 240 5% 65%;
+    --muted: 240 6% 18%;
+    --muted-foreground: 240 5% 72%;
 
     --accent: 270 95% 70%;
-    --accent-foreground: 240 10% 3.9%;
+    --accent-foreground: 240 10% 4%;
 
-    --destructive: 0 62.8% 30.6%;
+    --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 240 8% 15%;
-    --input: 240 8% 15%;
+    --border: 240 6% 22%;
+    --input: 240 6% 20%;
     --ring: 270 95% 70%;
     
     /* Dark mode gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(240 89% 23%), hsl(270 95% 70%));
-    --gradient-subtle: linear-gradient(180deg, hsl(240 10% 3.9%), hsl(240 8% 8%));
+    --gradient-primary: linear-gradient(135deg, hsl(240 89% 30%), hsl(270 95% 70%));
+    --gradient-subtle: linear-gradient(180deg, hsl(240 10% 4%), hsl(240 8% 10%));
     
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-background: 240 6% 8%;
+    --sidebar-foreground: 240 5% 90%;
     --sidebar-primary: 270 95% 70%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-accent: 240 5% 18%;
+    --sidebar-accent-foreground: 240 5% 90%;
+    --sidebar-border: 240 6% 20%;
     --sidebar-ring: 270 95% 70%;
   }
 }
