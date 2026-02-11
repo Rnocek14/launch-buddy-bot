@@ -14,6 +14,7 @@ import {
   extractSmartContentWindow,
   validatePolicyUrl,
   isOfficialDomain,
+  isSoft404,
 } from '../_shared/probes.ts';
 import { detectLanguage, rankByLocale } from '../_shared/lang.ts';
 import { getSitemapCache, setSitemapCache } from '../_shared/cache.ts';
@@ -719,13 +720,25 @@ async function trySimpleFetch(
       }
 
       if (pageResponse.ok) {
+        // Verify final URL domain after redirects
+        const finalUrl = pageResponse.url || url;
+        if (finalUrl !== url) {
+          try {
+            if (!isOfficialDomain(new URL(finalUrl).hostname, domain)) {
+              console.warn(`[Phase 1] Redirect landed on different domain: ${sanitizeForLog(finalUrl)} (expected ${domain})`);
+              failedUrls.set(url, 302);
+              continue;
+            }
+          } catch {}
+        }
+
         // Phase 1.1 Refinement #5: Check for PDF early
         const contentType = pageResponse.headers.get('content-type') || '';
         if (contentType.toLowerCase().includes('application/pdf')) {
           console.log(`[Phase 1] ✓ Found PDF policy: ${sanitizeForLog(url)}`);
           return {
             content: '',
-            url,
+            url: finalUrl,
             discoveredUrls: attemptedUrls,
             policy_type: 'pdf',
             attemptTimeouts,
@@ -736,6 +749,13 @@ async function trySimpleFetch(
         }
         
         const html = await pageResponse.text();
+
+        // Soft-404 detection: reject pages returning 200 but showing "not found" content
+        if (isSoft404(html)) {
+          console.warn(`[Phase 1] Soft-404 detected: ${sanitizeForLog(url)}`);
+          failedUrls.set(url, 404);
+          continue;
+        }
         
         // If this is the homepage or a generic page, extract and score privacy links
         if (url.includes(domain) && !url.match(/privacy|legal|terms|dsar|data-request/i)) {
@@ -923,6 +943,11 @@ async function tryBrowserlessFetch(urlsToTry: string[], browserlessApiKey: strin
         const content = extractSmartContentWindow(strippedText, 10000);
         
         if (content.length > 200) {
+          // Soft-404 check for Browserless results too
+          if (isSoft404(html)) {
+            console.warn(`[Phase 2] Soft-404 detected via Browserless: ${url}`);
+            continue;
+          }
           console.log(`[Phase 2] Successfully fetched via Browserless: ${url} (${content.length} chars)`);
           return { content, url };
         }
