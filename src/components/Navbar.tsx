@@ -1,10 +1,17 @@
-import { Shield, ScanSearch, Settings, Menu, X, CreditCard, HelpCircle, BarChart3 } from "lucide-react";
+import { Shield, ScanSearch, Settings, Menu, CreditCard, HelpCircle, BarChart3, LogOut, User, ChevronDown } from "lucide-react";
 import { ThemeToggle } from "./ThemeToggle";
 import { Button } from "./ui/button";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState, useRef } from "react";
 import { Sheet, SheetContent, SheetTrigger } from "./ui/sheet";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "./ui/dropdown-menu";
 
 const scrollToSection = (id: string) => {
   const element = document.getElementById(id);
@@ -34,7 +41,7 @@ export const Navbar = () => {
       .eq("user_id", userId)
       .eq("role", "admin")
       .maybeSingle();
-    if (userIdRef.current !== userId) return; // ignore stale response
+    if (userIdRef.current !== userId) return;
     if (error) {
       setIsAdmin(false);
       return;
@@ -71,6 +78,11 @@ export const Navbar = () => {
 
   const closeMobileMenu = () => setMobileMenuOpen(false);
 
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    navigate("/");
+  };
+
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 border-b border-border/40 bg-background/80 backdrop-blur-lg">
       <div className="container max-w-6xl">
@@ -89,66 +101,85 @@ export const Navbar = () => {
           
           {/* Desktop Menu */}
           <div className="hidden lg:flex items-center gap-4">
-            <Button 
-              variant="ghost" 
-              onClick={() => scrollToSection("features")}
-            >
-              Features
-            </Button>
-            <Button 
-              variant="ghost" 
-              onClick={() => scrollToSection("pricing")}
-            >
-              Pricing
-            </Button>
-            <Button 
-              variant="ghost" 
-              onClick={() => scrollToSection("faq")}
-            >
-              FAQ
-            </Button>
+            {/* Landing page links — only when logged out */}
+            {!user && (
+              <>
+                <Button variant="ghost" onClick={() => scrollToSection("features")}>
+                  Features
+                </Button>
+                <Button variant="ghost" onClick={() => scrollToSection("pricing")}>
+                  Pricing
+                </Button>
+                <Button variant="ghost" onClick={() => scrollToSection("faq")}>
+                  FAQ
+                </Button>
+              </>
+            )}
 
+            {/* Logged-in nav */}
             {user && (
               <>
                 <Link to="/dashboard">
                   <Button variant="ghost" className="gap-2">
                     <ScanSearch className="w-4 h-4" />
-                    <span>Dashboard</span>
+                    Dashboard
                   </Button>
                 </Link>
-                <Link to="/billing">
-                  <Button variant="ghost" className="gap-2">
-                    <CreditCard className="w-4 h-4" />
-                    <span>Billing</span>
-                  </Button>
-                </Link>
-                <Link to="/settings">
-                  <Button variant="ghost" className="gap-2">
-                    <Settings className="w-4 h-4" />
-                    <span>Settings</span>
-                  </Button>
-                </Link>
-                {isAdmin && (
-                  <Link to="/admin-analytics">
-                    <Button variant="ghost" className="gap-2">
-                      <BarChart3 className="w-4 h-4" />
-                      <span>Analytics</span>
+
+                {/* User dropdown for secondary pages */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className="gap-1">
+                      <User className="w-4 h-4" />
+                      <span className="max-w-[120px] truncate text-sm">
+                        {user.email?.split("@")[0] || "Account"}
+                      </span>
+                      <ChevronDown className="w-3 h-3 opacity-50" />
                     </Button>
-                  </Link>
-                )}
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    <DropdownMenuItem asChild>
+                      <Link to="/billing" className="flex items-center gap-2 cursor-pointer">
+                        <CreditCard className="w-4 h-4" />
+                        Billing
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link to="/settings" className="flex items-center gap-2 cursor-pointer">
+                        <Settings className="w-4 h-4" />
+                        Settings
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link to="/help" className="flex items-center gap-2 cursor-pointer">
+                        <HelpCircle className="w-4 h-4" />
+                        Help
+                      </Link>
+                    </DropdownMenuItem>
+                    {isAdmin && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem asChild>
+                          <Link to="/admin-analytics" className="flex items-center gap-2 cursor-pointer">
+                            <BarChart3 className="w-4 h-4" />
+                            Analytics
+                          </Link>
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={handleSignOut} className="flex items-center gap-2 cursor-pointer text-destructive focus:text-destructive">
+                      <LogOut className="w-4 h-4" />
+                      Sign out
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </>
             )}
             
             <ThemeToggle />
             
-            {user ? (
-              <Link to="/dashboard">
-                <Button className="bg-primary hover:bg-primary/90 gap-2">
-                  <ScanSearch className="w-4 h-4" />
-                  Scanner
-                </Button>
-              </Link>
-            ) : (
+            {!user && (
               <Link to="/auth">
                 <Button className="bg-primary hover:bg-primary/90">
                   Get Started
@@ -168,40 +199,23 @@ export const Navbar = () => {
               </SheetTrigger>
               <SheetContent side="right" className="w-[300px]">
                 <div className="flex flex-col gap-4 mt-8">
-                  <Button 
-                    variant="ghost" 
-                    className="justify-start"
-                    onClick={() => {
-                      scrollToSection("features");
-                      closeMobileMenu();
-                    }}
-                  >
-                    Features
-                  </Button>
-                  <Button 
-                    variant="ghost" 
-                    className="justify-start"
-                    onClick={() => {
-                      scrollToSection("pricing");
-                      closeMobileMenu();
-                    }}
-                  >
-                    Pricing
-                  </Button>
-                  <Button 
-                    variant="ghost" 
-                    className="justify-start"
-                    onClick={() => {
-                      scrollToSection("faq");
-                      closeMobileMenu();
-                    }}
-                  >
-                    FAQ
-                  </Button>
-
-                    {user && (
+                  {/* Landing links — only when logged out */}
+                  {!user && (
                     <>
-                      <div className="border-t border-border my-2" />
+                      <Button variant="ghost" className="justify-start" onClick={() => { scrollToSection("features"); closeMobileMenu(); }}>
+                        Features
+                      </Button>
+                      <Button variant="ghost" className="justify-start" onClick={() => { scrollToSection("pricing"); closeMobileMenu(); }}>
+                        Pricing
+                      </Button>
+                      <Button variant="ghost" className="justify-start" onClick={() => { scrollToSection("faq"); closeMobileMenu(); }}>
+                        FAQ
+                      </Button>
+                    </>
+                  )}
+
+                  {user && (
+                    <>
                       <Link to="/dashboard" onClick={closeMobileMenu}>
                         <Button variant="ghost" className="w-full justify-start gap-2">
                           <ScanSearch className="w-4 h-4" />
@@ -240,12 +254,10 @@ export const Navbar = () => {
                   <div className="border-t border-border my-2" />
                   
                   {user ? (
-                    <Link to="/dashboard" onClick={closeMobileMenu}>
-                      <Button className="w-full bg-primary hover:bg-primary/90 gap-2">
-                        <ScanSearch className="w-4 h-4" />
-                        Go to Scanner
-                      </Button>
-                    </Link>
+                    <Button variant="ghost" className="w-full justify-start gap-2 text-destructive" onClick={() => { handleSignOut(); closeMobileMenu(); }}>
+                      <LogOut className="w-4 h-4" />
+                      Sign out
+                    </Button>
                   ) : (
                     <Link to="/auth" onClick={closeMobileMenu}>
                       <Button className="w-full bg-primary hover:bg-primary/90">
