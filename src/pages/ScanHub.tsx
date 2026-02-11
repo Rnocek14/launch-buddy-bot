@@ -7,6 +7,7 @@ import { Navbar } from "@/components/Navbar";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
 import { supabase } from "@/integrations/supabase/client";
 import { Mail, Shield, UserSearch, CheckCircle, ArrowRight, Loader2, RefreshCw } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 interface ScanCardData {
   lastRun: string | null;
@@ -25,7 +26,10 @@ const ERRORED: ScanCardData = { lastRun: null, metric: 0, error: true };
 
 export default function ScanHub() {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [loading, setLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [rescanning, setRescanning] = useState(false);
   const [status, setStatus] = useState<ScanStatus>({
     inbox: EMPTY,
     peopleSearch: EMPTY,
@@ -39,6 +43,15 @@ export default function ScanHub() {
         navigate("/auth");
         return;
       }
+
+      // Check admin role
+      const { data: adminRole } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", session.user.id)
+        .eq("role", "admin")
+        .maybeSingle();
+      setIsAdmin(!!adminRole);
 
       const [servicesRes, brokerRes, exposureRes, profileRes] = await Promise.allSettled([
         supabase
@@ -87,6 +100,33 @@ export default function ScanHub() {
     }
   }, [navigate]);
 
+  const handleRescan = useCallback(async (scanType: 'broker' | 'exposure') => {
+    setRescanning(true);
+    try {
+      if (scanType === 'broker') {
+        const { data, error } = await supabase.functions.invoke('scan-brokers', {
+          method: 'POST',
+          body: {},
+        });
+        if (error || data?.error) {
+          toast({
+            variant: "destructive",
+            title: "Rescan failed",
+            description: data?.error || error?.message || "Failed to start rescan",
+          });
+        } else {
+          toast({ title: "Rescan complete", description: `Found exposures on ${data.scan?.found_count || 0} brokers.` });
+          await loadStatus();
+        }
+      }
+    } catch (err) {
+      console.error("Rescan error:", err);
+      toast({ variant: "destructive", title: "Error", description: "Something went wrong" });
+    } finally {
+      setRescanning(false);
+    }
+  }, [loadStatus, toast]);
+
   useEffect(() => {
     loadStatus();
   }, [loadStatus]);
@@ -133,6 +173,7 @@ export default function ScanHub() {
       actionLabel: status.peopleSearch.lastRun ? "View Results" : "Run Check",
       done: !!status.peopleSearch.lastRun,
       error: status.peopleSearch.error,
+      rescanAction: isAdmin && status.peopleSearch.lastRun ? () => handleRescan('broker') : undefined,
     },
     {
       icon: Shield,
@@ -227,15 +268,29 @@ export default function ScanHub() {
                       Try again
                     </Button>
                   ) : (
-                    <Button
-                      onClick={scan.action}
-                      variant={scan.done ? "outline" : "default"}
-                      size="lg"
-                      className="shrink-0 self-center min-h-[44px]"
-                    >
-                      {scan.actionLabel}
-                      <ArrowRight className="w-4 h-4 ml-1" />
-                    </Button>
+                    <div className="flex flex-col gap-2 shrink-0 self-center">
+                      <Button
+                        onClick={scan.action}
+                        variant={scan.done ? "outline" : "default"}
+                        size="lg"
+                        className="min-h-[44px]"
+                      >
+                        {scan.actionLabel}
+                        <ArrowRight className="w-4 h-4 ml-1" />
+                      </Button>
+                      {scan.rescanAction && (
+                        <Button
+                          onClick={scan.rescanAction}
+                          variant="ghost"
+                          size="sm"
+                          disabled={rescanning}
+                          className="text-xs"
+                        >
+                          <RefreshCw className={`w-3 h-3 mr-1 ${rescanning ? 'animate-spin' : ''}`} />
+                          {rescanning ? 'Rescanning...' : 'Rescan'}
+                        </Button>
+                      )}
+                    </div>
                   )}
                 </div>
               </CardContent>
