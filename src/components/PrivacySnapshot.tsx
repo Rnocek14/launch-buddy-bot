@@ -179,7 +179,10 @@ export function PrivacySnapshot() {
     const brokers = data.brokers.topBrokers;
     if (brokers.length === 0) return null;
     const shown = brokers.slice(0, 3).map((b) => {
-      const label = b.status === "possible_match" ? "possible" : "exposed";
+      const label =
+        b.status === "possible_match" ? "possible"
+        : b.status === "found" ? "exposed"
+        : "unverified";
       return `${b.name} (${label})`;
     });
     // Use actual queried result count, not found_count which may include other statuses
@@ -202,7 +205,7 @@ export function PrivacySnapshot() {
   // --- Broker details ---
   const brokerDetails = (() => {
     if (brokerSeverity === "running") return "Scan in progress…";
-    if (data.brokers.found > 0) return formatTopBrokers() || "Exposures found";
+    if (data.brokers.found > 0) return formatTopBrokers() || "Exposures found — view full results";
     if (data.brokers.lastScan) return `No broker listings found across ${data.brokers.total} checked`;
     return "Check if your info appears on data broker sites";
   })();
