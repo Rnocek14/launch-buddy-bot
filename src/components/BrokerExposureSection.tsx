@@ -140,7 +140,7 @@ export function BrokerExposureSection() {
       // Get latest scan
       const { data: scanData } = await supabase
         .from("broker_scans")
-        .select("id, status, completed_at")
+        .select("id, status, completed_at, created_at")
         .eq("user_id", session.user.id)
         .order("created_at", { ascending: false })
         .limit(1)
@@ -152,7 +152,7 @@ export function BrokerExposureSection() {
       }
 
       setScanCompleted(true);
-      setLastCheckedAt(scanData.completed_at);
+      setLastCheckedAt(scanData.completed_at ?? scanData.created_at);
 
       // Get results — filter by user only (schema has no scan_id FK on results)
       const { data: results } = await supabase
