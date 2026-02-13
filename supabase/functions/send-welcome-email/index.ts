@@ -68,7 +68,11 @@ const handler = async (req: Request): Promise<Response> => {
 
     if (!token) {
       console.error("Failed to obtain email preference token for:", email);
-      // Still send the email but without unsubscribe links rather than failing entirely
+      // Non-transactional email without unsubscribe controls = compliance risk. Abort.
+      return new Response(
+        JSON.stringify({ error: "Cannot send: missing unsubscribe token" }),
+        { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
     }
 
     const appBaseUrl = Deno.env.get("APP_BASE_URL") || "https://launch-buddy-bot.lovable.app";
