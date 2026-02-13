@@ -104,3 +104,6 @@ verify_jwt = false
 
 [functions.execute-unsubscribe]
 verify_jwt = true
+
+[functions.delete-user-account]
+verify_jwt = false

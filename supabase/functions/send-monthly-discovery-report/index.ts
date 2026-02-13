@@ -36,6 +36,33 @@ serve(async (req) => {
     for (const profile of profiles || []) {
       if (!profile.email) continue;
 
+      // Check email preferences — skip if unsubscribed or "never"
+      const { data: prefs } = await supabase
+        .from("email_preferences")
+        .select("token, unsubscribed, email_frequency")
+        .eq("email", profile.email)
+        .maybeSingle();
+
+      if (prefs?.unsubscribed || prefs?.email_frequency === "never") {
+        console.log(`Skipping ${profile.email} — unsubscribed or frequency=never`);
+        continue;
+      }
+
+      // Lazy-create preference row if missing
+      let prefToken = prefs?.token;
+      if (!prefToken) {
+        const { data: newPref } = await supabase
+          .from("email_preferences")
+          .insert({ email: profile.email })
+          .select("token")
+          .single();
+        prefToken = newPref?.token || "";
+      }
+
+      const appBaseUrl = Deno.env.get("APP_BASE_URL") || "https://launch-buddy-bot.lovable.app";
+      const unsubscribeUrl = `${appBaseUrl}/unsubscribe?token=${prefToken}`;
+      const preferencesUrl = `${appBaseUrl}/preferences?token=${prefToken}`;
+
       // Get new discoveries from last 30 days
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
@@ -142,7 +169,10 @@ serve(async (req) => {
 
           <div style="margin-top: 20px; color: #9ca3af; font-size: 12px; text-align: center;">
             <p>Footprint Finder - Privacy Protection on Autopilot</p>
-            <p><a href="https://footprintfinder.com/preferences" style="color: #9ca3af;">Email Preferences</a></p>
+            <p>
+              <a href="${preferencesUrl}" style="color: #9ca3af;">Email Preferences</a> | 
+              <a href="${unsubscribeUrl}" style="color: #9ca3af;">Unsubscribe</a>
+            </p>
           </div>
         </div>
       `;
