@@ -279,11 +279,18 @@ export default function BrokerScan() {
   const progress = scan ? (scan.scanned_count / scan.total_brokers) * 100 : 0;
   
   // Use shared helper for consistent status logic across dashboard + detail
-  const exposedResults = results.filter(r => getBrokerResultState({ status: r.status, status_v2: r.status_v2, opted_out_at: r.status === 'opted_out' ? 'legacy' : null }) === 'found');
-  const possibleResults = results.filter(r => getBrokerResultState({ status: r.status, status_v2: r.status_v2, opted_out_at: r.status === 'opted_out' ? 'legacy' : null }) === 'possible');
-  const cleanResults = results.filter(r => getBrokerResultState({ status: r.status, status_v2: r.status_v2, opted_out_at: r.status === 'opted_out' ? 'legacy' : null }) === 'clear');
-  const optedOutResults = results.filter(r => getBrokerResultState({ status: r.status, status_v2: r.status_v2, opted_out_at: r.status === 'opted_out' ? 'legacy' : null }) === 'opted_out');
-  const issueResults = results.filter(r => getBrokerResultState({ status: r.status, status_v2: r.status_v2, opted_out_at: r.status === 'opted_out' ? 'legacy' : null }) === 'error');
+  const deriveState = (r: ScanResult) => getBrokerResultState({
+    status: r.status,
+    status_v2: r.status_v2,
+    opted_out_at: (r as any).opted_out_at ?? null,
+    opt_out_started_at: (r as any).opt_out_started_at ?? null,
+  });
+  const exposedResults = results.filter(r => deriveState(r) === 'found');
+  const possibleResults = results.filter(r => deriveState(r) === 'possible');
+  const cleanResults = results.filter(r => deriveState(r) === 'clear');
+  const optedOutResults = results.filter(r => deriveState(r) === 'opted_out');
+  const removalStartedResults = results.filter(r => deriveState(r) === 'removal_started');
+  const issueResults = results.filter(r => deriveState(r) === 'error');
   
   // Combined for UI sections
   const foundResults = [...exposedResults, ...possibleResults];
