@@ -146,29 +146,29 @@ export default function Settings() {
 
   const handleDeleteAccount = async () => {
     setDeletingAccount(true);
+    let shouldClose = true;
+
     try {
       const { data, error } = await supabase.functions.invoke("delete-user-account");
       if (error) throw error;
 
       if (!data?.success) {
-        // Auth user was NOT deleted — keep dialog open for retry
+        shouldClose = false;
         toast({
           title: "Deletion failed",
           description: data?.error || "Account deletion failed. Please try again or contact support.",
           variant: "destructive",
         });
-        setDeletingAccount(false);
         return;
       }
 
-      // Auth user is deleted server-side, sign out locally
       await supabase.auth.signOut();
 
-      const requestRef = new Date().toISOString().slice(0, 19).replace(/[-:T]/g, "");
+      const ref = data?.request_ref || "";
       if (data?.errors?.length > 0) {
         toast({
           title: "Account deleted",
-          description: `Account removed. Some data cleanup may require support review. Ref: ${requestRef}`,
+          description: `Account removed. Some data cleanup may require support review.${ref ? ` Ref: ${ref}` : ""}`,
         });
       } else if (data?.warnings?.length > 0) {
         toast({ title: "Account deleted", description: "Your account has been permanently removed." });
@@ -177,10 +177,11 @@ export default function Settings() {
       }
       navigate("/");
     } catch (err: any) {
+      shouldClose = false;
       toast({ title: "Deletion failed", description: err.message || "An error occurred. Please try again or contact support.", variant: "destructive" });
     } finally {
       setDeletingAccount(false);
-      setShowDeleteAccount(false);
+      if (shouldClose) setShowDeleteAccount(false);
     }
   };
 
