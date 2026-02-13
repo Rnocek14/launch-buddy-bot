@@ -206,11 +206,14 @@ export function BrokerExposureSection() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
 
-      await supabase
-        .from("broker_scan_results")
-        .update({ opt_out_started_at: new Date().toISOString() } as any)
-        .eq("id", broker.id)
-        .eq("user_id", session.user.id);
+      // Only set opt_out_started_at if not already started and not already confirmed
+      if (!broker.opt_out_started_at && !broker.opted_out_at) {
+        await supabase
+          .from("broker_scan_results")
+          .update({ opt_out_started_at: new Date().toISOString() } as any)
+          .eq("id", broker.id)
+          .eq("user_id", session.user.id);
+      }
 
       // Update local state
       setBrokers((prev) =>
@@ -434,7 +437,7 @@ export function BrokerExposureSection() {
                       )}
                     </div>
 
-                    {/* Action — Remove with subtext */}
+                    {/* Action — Remove / Continue removal */}
                     {broker.opt_out_url ? (
                       <div className="shrink-0 text-center">
                         <Button
@@ -442,11 +445,11 @@ export function BrokerExposureSection() {
                           size="sm"
                           onClick={() => handleRemoveClick(broker)}
                         >
-                          Remove
+                          {broker.state === "removal_started" ? "Continue" : "Remove"}
                           <ExternalLink className="h-3 w-3 ml-1" />
                         </Button>
                         <p className="text-[10px] text-muted-foreground mt-1">
-                          Opens opt-out page
+                          {broker.state === "removal_started" ? "Removal started" : "Opens opt-out page"}
                         </p>
                       </div>
                     ) : (

@@ -9,8 +9,11 @@ export function getBrokerResultState(result: {
   opted_out_at?: string | null;
   opt_out_started_at?: string | null;
 }): BrokerResultState {
-  if (result.opted_out_at) return "opted_out";
+  // Confirmed removal (timestamp or legacy status)
+  if (result.opted_out_at || result.status === "opted_out") return "opted_out";
+  // User clicked "Remove" but not yet confirmed
   if (result.opt_out_started_at) return "removal_started";
+  // Active states from status_v2, falling back to legacy status
   if (result.status_v2 === "found" || (!result.status_v2 && result.status === "found")) return "found";
   if (result.status_v2 === "possible_match") return "possible";
   if (result.status_v2 === "not_found" || result.status === "clean") return "clear";
