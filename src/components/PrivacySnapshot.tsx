@@ -94,19 +94,36 @@ export function PrivacySnapshot() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<SnapshotData | null>(null);
+  const [error, setError] = useState(false);
+  const [authReady, setAuthReady] = useState(false);
   const [brokerExpanded, setBrokerExpanded] = useState(false);
   const [inlineBrokers, setInlineBrokers] = useState<InlineBroker[]>([]);
   const [brokersLoading, setBrokersLoading] = useState(false);
   const [lastCheckedAt, setLastCheckedAt] = useState<string | null>(null);
   const autoExpandedRef = useRef(false);
+  const inFlightRef = useRef(false);
 
+  // Listen for auth readiness so we never show fallback before session hydrates
   useEffect(() => {
-    loadSnapshot();
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setAuthReady(true);
+      if (session) loadSnapshot();
+    });
+    // Also check immediately in case session is already hydrated
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setAuthReady(true);
+      if (session) loadSnapshot();
+      else setLoading(false);
+    });
+    return () => subscription.unsubscribe();
   }, []);
 
   // Auto-expand is deferred until broker details are loaded (see below)
 
-  async function loadSnapshot() {
+  const loadSnapshot = useCallback(async () => {
+    if (inFlightRef.current) return;
+    inFlightRef.current = true;
+    setError(false);
     try {
       const {
         data: { session },
@@ -116,23 +133,26 @@ export function PrivacySnapshot() {
         return;
       }
 
-      const { data: snapshot, error } = await supabase.rpc(
+      const { data: snapshot, error: rpcError } = await supabase.rpc(
         "get_privacy_snapshot" as any,
         { p_user_id: session.user.id }
       );
 
-      if (error) {
-        console.error("Error loading privacy snapshot:", error);
+      if (rpcError) {
+        console.error("Error loading privacy snapshot:", rpcError);
+        setError(true);
         return;
       }
 
       setData(snapshot as unknown as SnapshotData);
     } catch (err) {
       console.error("Error loading privacy snapshot:", err);
+      setError(true);
     } finally {
       setLoading(false);
+      inFlightRef.current = false;
     }
-  }
+  }, []);
 
   // Load inline broker details — always load on mount if a scan exists, auto-expand only if action needed
   const loadBrokerDetails = useCallback(async (forceReload = false) => {
@@ -255,7 +275,7 @@ export function PrivacySnapshot() {
     }
   };
 
-  if (loading) {
+  if (loading || !authReady) {
     return (
       <div className="space-y-4">
         <div className="flex items-center justify-between">
@@ -276,7 +296,7 @@ export function PrivacySnapshot() {
     );
   }
 
-  if (!data) {
+  if (!data || error) {
     return (
       <div className="space-y-4">
         <div className="flex items-center justify-between">
@@ -300,8 +320,8 @@ export function PrivacySnapshot() {
                 <Button variant="outline" size="sm" onClick={() => loadSnapshot()}>
                   Retry
                 </Button>
-                <Button variant="outline" size="sm" onClick={() => navigate("/scan-hub")}>
-                  Open Scan Hub
+                <Button variant="outline" size="sm" onClick={() => navigate("/dashboard")}>
+                  Open Dashboard
                 </Button>
               </div>
             </div>
