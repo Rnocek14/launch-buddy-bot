@@ -9,7 +9,7 @@ import { AddIdentifierDialog } from "@/components/AddIdentifierDialog";
 import { EmailConnectButton } from "@/components/EmailConnectButton";
 import { useToast } from "@/hooks/use-toast";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Loader2, Mail, Phone, User, Plus, Trash2, Star, HelpCircle, Bell } from "lucide-react";
+import { Loader2, Mail, Phone, User, Plus, Trash2, Star, HelpCircle, Bell, Download, UserX, ExternalLink } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import {
@@ -49,6 +49,9 @@ export default function Settings() {
   const [deleting, setDeleting] = useState(false);
   const [emailPrefs, setEmailPrefs] = useState<EmailPrefs | null>(null);
   const [prefsLoading, setPrefsSaving] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [showDeleteAccount, setShowDeleteAccount] = useState(false);
+  const [deletingAccount, setDeletingAccount] = useState(false);
 
   useEffect(() => {
     checkAuth();
@@ -101,6 +104,67 @@ export default function Settings() {
       toast({ title: "Error", description: err.message || "Failed to save preferences", variant: "destructive" });
     } finally {
       setPrefsSaving(false);
+    }
+  };
+
+  const handleExportData = async () => {
+    setExporting(true);
+    try {
+      const [identifiersRes, servicesRes, deletionRes, prefsRes] = await Promise.all([
+        supabase.from("user_identifiers").select("*"),
+        supabase.from("user_services").select("*"),
+        supabase.from("deletion_requests").select("*"),
+        supabase.from("email_preferences").select("*").eq("email", user?.email || ""),
+      ]);
+      const exportData = {
+        exported_at: new Date().toISOString(),
+        account_email: user?.email,
+        identifiers: identifiersRes.data || [],
+        services: servicesRes.data || [],
+        deletion_requests: deletionRes.data || [],
+        email_preferences: prefsRes.data || [],
+      };
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `footprint-finder-export-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast({ title: "Export complete", description: "Your data has been downloaded." });
+    } catch (err: any) {
+      toast({ title: "Export failed", description: err.message, variant: "destructive" });
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    setDeletingAccount(true);
+    try {
+      // Delete user data from all tables
+      await Promise.all([
+        supabase.from("user_identifiers").delete().eq("user_id", user.id),
+        supabase.from("deletion_requests").delete().eq("user_id", user.id),
+        supabase.from("email_connections").delete().eq("user_id", user.id),
+        supabase.from("email_subscriptions").delete().eq("user_id", user.id),
+        supabase.from("broker_scan_results").delete().eq("user_id", user.id),
+        supabase.from("broker_scans").delete().eq("user_id", user.id),
+        supabase.from("exposure_findings").delete().eq("user_id", user.id),
+        supabase.from("exposure_scans").delete().eq("user_id", user.id),
+      ]);
+      if (user?.email) {
+        await supabase.from("email_preferences").delete().eq("email", user.email);
+      }
+      // Sign out (actual auth.users deletion requires admin/service role)
+      await supabase.auth.signOut();
+      toast({ title: "Account deleted", description: "Your data has been removed. You've been signed out." });
+      navigate("/");
+    } catch (err: any) {
+      toast({ title: "Deletion failed", description: err.message, variant: "destructive" });
+    } finally {
+      setDeletingAccount(false);
+      setShowDeleteAccount(false);
     }
   };
 
@@ -361,8 +425,33 @@ export default function Settings() {
                 Connect Gmail or Outlook to send deletion requests from your own account for better success rates
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-4">
               <EmailConnectButton />
+              <div className="border-t pt-4">
+                <p className="text-sm text-muted-foreground mb-2">
+                  To fully revoke access, visit your{" "}
+                  <a
+                    href="https://myaccount.google.com/permissions"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary underline underline-offset-4 hover:text-primary/80 inline-flex items-center gap-1"
+                  >
+                    Google Account Permissions
+                    <ExternalLink className="h-3 w-3" />
+                  </a>{" "}
+                  or{" "}
+                  <a
+                    href="https://account.live.com/consent/Manage"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary underline underline-offset-4 hover:text-primary/80 inline-flex items-center gap-1"
+                  >
+                    Microsoft App Permissions
+                    <ExternalLink className="h-3 w-3" />
+                  </a>{" "}
+                  page to remove Footprint Finder.
+                </p>
+              </div>
             </CardContent>
           </Card>
 
@@ -422,6 +511,51 @@ export default function Settings() {
               <CardDescription>Your account email: {user?.email}</CardDescription>
             </CardHeader>
           </Card>
+
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Download className="h-5 w-5 text-primary" />
+                <CardTitle>Export My Data</CardTitle>
+              </div>
+              <CardDescription>
+                Download a copy of all your stored data as a JSON file
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button variant="outline" onClick={handleExportData} disabled={exporting}>
+                {exporting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Preparing export…
+                  </>
+                ) : (
+                  <>
+                    <Download className="mr-2 h-4 w-4" />
+                    Export as JSON
+                  </>
+                )}
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="border-destructive/30">
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <UserX className="h-5 w-5 text-destructive" />
+                <CardTitle className="text-destructive">Delete My Account</CardTitle>
+              </div>
+              <CardDescription>
+                Permanently delete your account, scan results, identifiers, and all stored data. This action cannot be undone.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button variant="destructive" onClick={() => setShowDeleteAccount(true)}>
+                <UserX className="mr-2 h-4 w-4" />
+                Delete My Account
+              </Button>
+            </CardContent>
+          </Card>
         </div>
       </div>
 
@@ -449,6 +583,34 @@ export default function Settings() {
                 </>
               ) : (
                 "Delete"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={showDeleteAccount} onOpenChange={setShowDeleteAccount}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-destructive">Delete Your Account</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete all your data including scan results, identifiers, deletion requests, and email connections. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deletingAccount}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteAccount}
+              disabled={deletingAccount}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deletingAccount ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Deleting…
+                </>
+              ) : (
+                "Yes, Delete Everything"
               )}
             </AlertDialogAction>
           </AlertDialogFooter>
