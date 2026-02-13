@@ -114,7 +114,7 @@ export default function Settings() {
         supabase.from("user_identifiers").select("*"),
         supabase.from("user_services").select("*"),
         supabase.from("deletion_requests").select("*"),
-        supabase.from("email_preferences").select("*").eq("email", user?.email || ""),
+        supabase.from("email_preferences").select("email_frequency, unsubscribed").eq("email", user?.email || ""),
       ]);
       const exportData = {
         exported_at: new Date().toISOString(),
@@ -142,26 +142,23 @@ export default function Settings() {
   const handleDeleteAccount = async () => {
     setDeletingAccount(true);
     try {
-      // Delete user data from all tables
-      await Promise.all([
-        supabase.from("user_identifiers").delete().eq("user_id", user.id),
-        supabase.from("deletion_requests").delete().eq("user_id", user.id),
-        supabase.from("email_connections").delete().eq("user_id", user.id),
-        supabase.from("email_subscriptions").delete().eq("user_id", user.id),
-        supabase.from("broker_scan_results").delete().eq("user_id", user.id),
-        supabase.from("broker_scans").delete().eq("user_id", user.id),
-        supabase.from("exposure_findings").delete().eq("user_id", user.id),
-        supabase.from("exposure_scans").delete().eq("user_id", user.id),
-      ]);
-      if (user?.email) {
-        await supabase.from("email_preferences").delete().eq("email", user.email);
+      const { data, error } = await supabase.functions.invoke("delete-user-account");
+      if (error) throw error;
+
+      if (data?.partial) {
+        toast({
+          title: "Partial deletion",
+          description: "Some data could not be removed. Contact support for full removal.",
+          variant: "destructive",
+        });
       }
-      // Sign out (actual auth.users deletion requires admin/service role)
+
+      // Auth user is now deleted server-side, sign out locally
       await supabase.auth.signOut();
-      toast({ title: "Account deleted", description: "Your data has been removed. You've been signed out." });
+      toast({ title: "Account deleted", description: "Your account and all stored data have been permanently removed." });
       navigate("/");
     } catch (err: any) {
-      toast({ title: "Deletion failed", description: err.message, variant: "destructive" });
+      toast({ title: "Deletion failed", description: err.message || "An error occurred. Please try again or contact support.", variant: "destructive" });
     } finally {
       setDeletingAccount(false);
       setShowDeleteAccount(false);
@@ -427,6 +424,7 @@ export default function Settings() {
             </CardHeader>
             <CardContent className="space-y-4">
               <EmailConnectButton />
+              <p className="text-sm text-muted-foreground">Disconnecting here stops scanning. To fully revoke Google/Microsoft permissions, use the links below.</p>
               <div className="border-t pt-4">
                 <p className="text-sm text-muted-foreground mb-2">
                   To fully revoke access, visit your{" "}
@@ -546,7 +544,7 @@ export default function Settings() {
                 <CardTitle className="text-destructive">Delete My Account</CardTitle>
               </div>
               <CardDescription>
-                Permanently delete your account, scan results, identifiers, and all stored data. This action cannot be undone.
+                Permanently delete your account, authentication credentials, scan results, identifiers, and all stored data. This action cannot be undone.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -594,7 +592,7 @@ export default function Settings() {
           <AlertDialogHeader>
             <AlertDialogTitle className="text-destructive">Delete Your Account</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete all your data including scan results, identifiers, deletion requests, and email connections. This action cannot be undone.
+              This will permanently delete your authentication account and all stored data including scan results, identifiers, deletion requests, and email connections. You will not be able to sign back in. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

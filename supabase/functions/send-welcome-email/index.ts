@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { Resend } from "https://esm.sh/resend@4.0.0";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.0";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
@@ -39,6 +40,34 @@ const handler = async (req: Request): Promise<Response> => {
     // Validate and parse request body
     const body = await req.json();
     const { email } = emailSchema.parse(body);
+
+    // Lazy-create email_preferences row so token exists for unsubscribe
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+
+    const { data: existingPref } = await supabase
+      .from("email_preferences")
+      .select("token")
+      .eq("email", email)
+      .maybeSingle();
+
+    let token: string;
+    if (existingPref) {
+      token = existingPref.token;
+    } else {
+      const { data: newPref } = await supabase
+        .from("email_preferences")
+        .insert({ email })
+        .select("token")
+        .single();
+      token = newPref?.token || "";
+    }
+
+    const appBaseUrl = Deno.env.get("APP_BASE_URL") || "https://launch-buddy-bot.lovable.app";
+    const unsubscribeUrl = `${appBaseUrl}/unsubscribe?token=${token}`;
+    const preferencesUrl = `${appBaseUrl}/preferences?token=${token}`;
 
     console.log("Sending welcome email to:", email);
 
@@ -155,12 +184,12 @@ const handler = async (req: Request): Promise<Response> => {
               <p style="margin-top: 30px;">We're building this with <strong>privacy-first principles</strong>:</p>
               
               <div style="text-align: center; margin: 20px 0;">
-                <span class="privacy-badge">✓ No Data Collection</span>
-                <span class="privacy-badge">✓ Local Processing</span>
-                <span class="privacy-badge">✓ Open Source</span>
+                <span class="privacy-badge">✓ Secure Server-Side Scanning</span>
+                <span class="privacy-badge">✓ Read-Only OAuth Access</span>
+                <span class="privacy-badge">✓ No Email Content Stored</span>
               </div>
               
-              <p>Your data never leaves your device. We can't see it, we don't store it, and we'll never sell it.</p>
+              <p>Your email content is never stored. We only read metadata (headers, sender info) via secure OAuth, and you can revoke access at any time.</p>
               
               <p style="margin-top: 30px;"><strong>What's next?</strong></p>
               <ul>
@@ -178,8 +207,9 @@ const handler = async (req: Request): Promise<Response> => {
             
             <div class="footer">
               <p>You're receiving this because you joined the Footprint Finder waitlist.</p>
-              <p style="color: #999; font-size: 12px; margin-top: 10px;">
-                We respect your inbox. No spam, ever. Just important updates about your privacy tools.
+              <p style="margin-top: 10px;">
+                <a href="${preferencesUrl}" style="color: #667eea; text-decoration: none;">Manage preferences</a> | 
+                <a href="${unsubscribeUrl}" style="color: #667eea; text-decoration: none;">Unsubscribe</a>
               </p>
             </div>
           </body>
