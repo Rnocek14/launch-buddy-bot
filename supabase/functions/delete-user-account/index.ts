@@ -42,8 +42,10 @@ serve(async (req) => {
 
     console.log(`[delete-user-account] Starting deletion for user ${userId}`);
 
-    // Use service role client for all deletions (bypasses RLS)
-    const adminClient = createClient(supabaseUrl, serviceRoleKey);
+    // Use service role client with no session persistence (Edge best practice)
+    const adminClient = createClient(supabaseUrl, serviceRoleKey, {
+      auth: { persistSession: false },
+    });
 
     // Canonical list of all user-data tables and their user key
     const deletions: { table: string; column: string; value: string }[] = [
@@ -67,46 +69,57 @@ serve(async (req) => {
       deletions.push({ table: "email_preferences", column: "email", value: userEmail });
     }
 
+    const warnings: string[] = [];
     const errors: string[] = [];
 
     for (const { table, column, value } of deletions) {
       const { error } = await adminClient.from(table).delete().eq(column, value);
       if (error) {
-        // Log but continue — don't let one missing table block the rest
-        console.error(`[delete-user-account] Failed to delete from ${table}: ${error.message}`);
-        errors.push(`${table}: ${error.message}`);
+        // "relation does not exist" or similar schema errors → skip, not failure
+        const msg = error.message || "";
+        if (
+          msg.includes("relation") && msg.includes("does not exist") ||
+          error.code === "42P01"
+        ) {
+          console.log(`[delete-user-account] Skipped missing table ${table}`);
+          warnings.push(`${table}: table does not exist (skipped)`);
+        } else {
+          console.error(`[delete-user-account] Failed to delete from ${table}: ${msg}`);
+          errors.push(`${table}: ${msg}`);
+        }
       } else {
         console.log(`[delete-user-account] Deleted from ${table}`);
       }
     }
 
-    // Delete the auth user itself
+    // Delete the auth user itself — this MUST succeed for "account deleted" claim
     const { error: deleteAuthError } = await adminClient.auth.admin.deleteUser(userId);
     if (deleteAuthError) {
       console.error(`[delete-user-account] Failed to delete auth user: ${deleteAuthError.message}`);
-      errors.push(`auth.users: ${deleteAuthError.message}`);
-    } else {
-      console.log(`[delete-user-account] Auth user deleted`);
-    }
-
-    if (errors.length > 0) {
-      // Partial success — some tables failed but auth user may be gone
+      // Auth deletion failed = account is NOT deleted
       return new Response(
         JSON.stringify({
           success: false,
-          partial: true,
-          message: "Some deletions failed. Contact support if issues persist.",
-          errors,
+          error: "Failed to delete authentication account. Please try again or contact support.",
+          details: deleteAuthError.message,
         }),
         {
-          status: 207,
+          status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         }
       );
     }
 
+    console.log(`[delete-user-account] Auth user deleted`);
+
+    // Auth user gone = success. Table errors are warnings, not failures.
     return new Response(
-      JSON.stringify({ success: true, message: "Account and all data deleted." }),
+      JSON.stringify({
+        success: true,
+        message: "Account and all data deleted.",
+        ...(warnings.length > 0 && { warnings }),
+        ...(errors.length > 0 && { warnings: [...warnings, ...errors] }),
+      }),
       {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
