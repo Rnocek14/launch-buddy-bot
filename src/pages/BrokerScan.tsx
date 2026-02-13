@@ -57,6 +57,8 @@ interface ScanResult {
   match_confidence?: number;
   extracted_data?: ExtractedData | null;
   scanned_at?: string;
+  opted_out_at?: string | null;
+  opt_out_started_at?: string | null;
   broker: Broker;
 }
 interface Scan {
@@ -282,8 +284,8 @@ export default function BrokerScan() {
   const deriveState = (r: ScanResult) => getBrokerResultState({
     status: r.status,
     status_v2: r.status_v2,
-    opted_out_at: (r as any).opted_out_at ?? null,
-    opt_out_started_at: (r as any).opt_out_started_at ?? null,
+    opted_out_at: r.opted_out_at ?? null,
+    opt_out_started_at: r.opt_out_started_at ?? null,
   });
   const exposedResults = results.filter(r => deriveState(r) === 'found');
   const possibleResults = results.filter(r => deriveState(r) === 'possible');

@@ -212,7 +212,9 @@ export function BrokerExposureSection() {
           .from("broker_scan_results")
           .update({ opt_out_started_at: new Date().toISOString() } as any)
           .eq("id", broker.id)
-          .eq("user_id", session.user.id);
+          .eq("user_id", session.user.id)
+          .is("opt_out_started_at", null)
+          .is("opted_out_at", null);
       }
 
       // Update local state
