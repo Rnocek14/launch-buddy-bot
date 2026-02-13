@@ -66,6 +66,11 @@ const handler = async (req: Request): Promise<Response> => {
       token = newPref?.token || "";
     }
 
+    if (!token) {
+      console.error("Failed to obtain email preference token for:", email);
+      // Still send the email but without unsubscribe links rather than failing entirely
+    }
+
     const appBaseUrl = Deno.env.get("APP_BASE_URL") || "https://launch-buddy-bot.lovable.app";
     const unsubscribeUrl = `${appBaseUrl}/unsubscribe?token=${token}`;
     const preferencesUrl = `${appBaseUrl}/preferences?token=${token}`;

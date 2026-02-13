@@ -54,9 +54,14 @@ serve(async (req) => {
         const { data: newPref } = await supabase
           .from("email_preferences")
           .upsert({ email: profile.email }, { onConflict: "email" })
-          .select("token")
+          .select("token, email_frequency, unsubscribed")
           .single();
         prefToken = newPref?.token || "";
+        // Re-check prefs after upsert — user may have opted out via another path
+        if (newPref?.unsubscribed || newPref?.email_frequency === "never") {
+          console.log(`Skipping ${profile.email} — opted out after preference row created`);
+          continue;
+        }
       }
 
       const appBaseUrl = Deno.env.get("APP_BASE_URL") || "https://launch-buddy-bot.lovable.app";

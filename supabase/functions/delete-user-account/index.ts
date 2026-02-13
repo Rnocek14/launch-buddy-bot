@@ -75,12 +75,12 @@ serve(async (req) => {
     for (const { table, column, value } of deletions) {
       const { error } = await adminClient.from(table).delete().eq(column, value);
       if (error) {
-        // "relation does not exist" or similar schema errors → skip, not failure
         const msg = error.message || "";
-        if (
-          msg.includes("relation") && msg.includes("does not exist") ||
-          error.code === "42P01"
-        ) {
+        const isMissingTable =
+          error.code === "42P01" ||
+          (msg.includes("relation") && msg.includes("does not exist"));
+
+        if (isMissingTable) {
           console.log(`[delete-user-account] Skipped missing table ${table}`);
           warnings.push(`${table}: table does not exist (skipped)`);
         } else {
@@ -96,7 +96,6 @@ serve(async (req) => {
     const { error: deleteAuthError } = await adminClient.auth.admin.deleteUser(userId);
     if (deleteAuthError) {
       console.error(`[delete-user-account] Failed to delete auth user: ${deleteAuthError.message}`);
-      // Auth deletion failed = account is NOT deleted
       return new Response(
         JSON.stringify({
           success: false,
@@ -112,13 +111,12 @@ serve(async (req) => {
 
     console.log(`[delete-user-account] Auth user deleted`);
 
-    // Auth user gone = success. Table errors are warnings, not failures.
     return new Response(
       JSON.stringify({
         success: true,
         message: "Account and all data deleted.",
-        ...(warnings.length > 0 && { warnings }),
-        ...(errors.length > 0 && { warnings: [...warnings, ...errors] }),
+        warnings,
+        errors,
       }),
       {
         status: 200,
