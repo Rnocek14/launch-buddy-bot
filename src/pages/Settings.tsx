@@ -108,9 +108,13 @@ export default function Settings() {
   };
 
   const handleExportData = async () => {
+    if (!user?.id) {
+      toast({ title: "Error", description: "Not authenticated", variant: "destructive" });
+      return;
+    }
     setExporting(true);
     try {
-      const userId = user?.id;
+      const userId = user.id;
       const [identifiersRes, servicesRes, deletionRes, prefsRes] = await Promise.all([
         supabase.from("user_identifiers").select("*").eq("user_id", userId),
         supabase.from("user_services").select("*").eq("user_id", userId),
