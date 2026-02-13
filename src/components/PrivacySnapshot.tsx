@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,7 +13,19 @@ import {
   AlertTriangle,
   CheckCircle,
   Shield,
+  ChevronDown,
+  ChevronUp,
+  ExternalLink,
+  MapPin,
+  Phone,
+  Users,
 } from "lucide-react";
+import { getBrokerResultState, brokerResultPriority, type BrokerResultState } from "@/lib/brokerResultState";
+import { formatDistanceToNow } from "date-fns";
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
 
 interface TopBroker {
   name: string;
@@ -44,16 +56,58 @@ interface SnapshotData {
   overall_risk: string;
 }
 
+interface InlineBroker {
+  id: string;
+  broker_name: string;
+  opt_out_url: string | null;
+  broker_website: string;
+  state: BrokerResultState;
+  extracted_data: {
+    addresses?: string[];
+    phone_numbers?: string[];
+    relatives?: string[];
+  } | null;
+  opt_out_started_at: string | null;
+  opted_out_at: string | null;
+}
+
 type Severity = "danger" | "warn" | "ok" | "empty" | "running";
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function getDataTypes(b: InlineBroker) {
+  const types: { icon: typeof MapPin; label: string }[] = [];
+  if (b.extracted_data?.addresses?.length) types.push({ icon: MapPin, label: "Address" });
+  if (b.extracted_data?.phone_numbers?.length) types.push({ icon: Phone, label: "Phone" });
+  if (b.extracted_data?.relatives?.length) types.push({ icon: Users, label: "Relatives" });
+  return types;
+}
+
+// ---------------------------------------------------------------------------
+// Main component
+// ---------------------------------------------------------------------------
 
 export function PrivacySnapshot() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<SnapshotData | null>(null);
+  const [brokerExpanded, setBrokerExpanded] = useState(false);
+  const [inlineBrokers, setInlineBrokers] = useState<InlineBroker[]>([]);
+  const [brokersLoading, setBrokersLoading] = useState(false);
+  const [lastCheckedAt, setLastCheckedAt] = useState<string | null>(null);
 
   useEffect(() => {
     loadSnapshot();
   }, []);
+
+  // Auto-expand when there are actionable broker results
+  useEffect(() => {
+    if (data && data.brokers.found > 0) {
+      setBrokerExpanded(true);
+    }
+  }, [data]);
 
   async function loadSnapshot() {
     try {
@@ -82,6 +136,103 @@ export function PrivacySnapshot() {
       setLoading(false);
     }
   }
+
+  // Load inline broker details when expanded
+  const loadBrokerDetails = useCallback(async () => {
+    if (inlineBrokers.length > 0) return; // already loaded
+    setBrokersLoading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      // Get latest scan timestamp
+      const { data: scanData } = await supabase
+        .from("broker_scans")
+        .select("completed_at, created_at")
+        .eq("user_id", session.user.id)
+        .eq("status", "completed")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (scanData) {
+        setLastCheckedAt(scanData.completed_at ?? scanData.created_at);
+      }
+
+      const { data: results } = await supabase
+        .from("broker_scan_results")
+        .select(`
+          id, status, status_v2, confidence, extracted_data, opted_out_at, opt_out_started_at,
+          data_brokers!broker_scan_results_broker_id_fkey (
+            name, slug, website, opt_out_url
+          )
+        `)
+        .eq("user_id", session.user.id)
+        .order("confidence", { ascending: false });
+
+      if (results) {
+        const mapped: InlineBroker[] = results.map((r: any) => ({
+          id: r.id,
+          broker_name: r.data_brokers?.name || "Unknown",
+          opt_out_url: r.data_brokers?.opt_out_url,
+          broker_website: r.data_brokers?.website || "",
+          state: getBrokerResultState({
+            status: r.status,
+            status_v2: r.status_v2,
+            opted_out_at: r.opted_out_at,
+            opt_out_started_at: r.opt_out_started_at,
+          }),
+          extracted_data: r.extracted_data,
+          opt_out_started_at: r.opt_out_started_at,
+          opted_out_at: r.opted_out_at,
+        }));
+        mapped.sort((a, b) => brokerResultPriority(a.state) - brokerResultPriority(b.state));
+        setInlineBrokers(mapped);
+      }
+    } catch (err) {
+      console.error("Error loading broker details:", err);
+    } finally {
+      setBrokersLoading(false);
+    }
+  }, [inlineBrokers.length]);
+
+  useEffect(() => {
+    if (brokerExpanded && inlineBrokers.length === 0) {
+      loadBrokerDetails();
+    }
+  }, [brokerExpanded, loadBrokerDetails]);
+
+  // Handle removal click
+  const handleRemoveClick = async (broker: InlineBroker) => {
+    if (broker.opt_out_url) {
+      window.open(broker.opt_out_url, "_blank", "noopener,noreferrer");
+    }
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      if (!broker.opt_out_started_at && !broker.opted_out_at) {
+        await supabase
+          .from("broker_scan_results")
+          .update({ opt_out_started_at: new Date().toISOString() } as any)
+          .eq("id", broker.id)
+          .eq("user_id", session.user.id)
+          .is("opt_out_started_at", null)
+          .is("opted_out_at", null);
+      }
+
+      setInlineBrokers((prev) =>
+        prev.map((b) =>
+          b.id === broker.id
+            ? { ...b, opt_out_started_at: new Date().toISOString(), state: "removal_started" as BrokerResultState }
+            : b
+        )
+      );
+    } catch {
+      // non-critical
+    }
+  };
 
   if (loading) {
     return (
@@ -191,7 +342,8 @@ export function PrivacySnapshot() {
     return "ok";
   })();
 
-  const tiles = [
+  // Non-broker tiles (accounts + breaches)
+  const sideTiles = [
     {
       key: "accounts",
       icon: Mail,
@@ -206,18 +358,6 @@ export function PrivacySnapshot() {
           ? document.getElementById("services-grid")?.scrollIntoView({ behavior: "smooth" })
           : navigate("/settings"),
       actionLabel: data.accounts.count > 0 ? "View accounts" : "Connect email",
-    },
-    {
-      key: "brokers",
-      icon: UserSearch,
-      title: "Broker Exposure",
-      metric: data.brokers.found,
-      metricLabel: data.brokers.found === 1 ? "broker has your data" : "brokers have your data",
-      severity: brokerSeverity,
-      lastScan: formatDate(data.brokers.last_scan) || (brokerSeverity === "running" ? `In progress${data.brokers.scan_started ? ` • started ${formatDate(data.brokers.scan_started)}` : ""}` : null),
-      details: brokerDetails,
-      action: () => navigate("/broker-scan"),
-      actionLabel: brokerActionLabel,
     },
     {
       key: "breaches",
@@ -281,6 +421,13 @@ export function PrivacySnapshot() {
   };
 
   const RiskIcon = risk.Icon;
+  const brokerStyle = severityStyles[brokerSeverity];
+  const isRunningBroker = brokerSeverity === "running";
+
+  // Inline broker breakdown
+  const actionNeeded = inlineBrokers.filter((b) => b.state === "found" || b.state === "possible");
+  const removalStarted = inlineBrokers.filter((b) => b.state === "removal_started");
+  const optedOut = inlineBrokers.filter((b) => b.state === "opted_out");
 
   return (
     <div className="space-y-4">
@@ -298,9 +445,209 @@ export function PrivacySnapshot() {
         </Badge>
       </div>
 
-      {/* Tiles */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {tiles.map((tile) => {
+      {/* Broker Exposure — full-width expandable card */}
+      <Card className={`transition-all ${brokerStyle.border}`}>
+        <CardContent className="p-5 space-y-4">
+          {/* Header row */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className={`p-2 rounded-lg ${brokerStyle.iconBg}`}>
+                {isRunningBroker ? (
+                  <Loader2 className={`w-5 h-5 ${brokerStyle.iconColor} animate-spin`} />
+                ) : (
+                  <UserSearch className={`w-5 h-5 ${brokerStyle.iconColor}`} />
+                )}
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold text-foreground">Broker Exposure</span>
+                  {data.brokers.found > 0 && (
+                    <Badge variant="destructive" className="text-xs">
+                      {data.brokers.found} found
+                    </Badge>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 mt-0.5">
+                  {lastCheckedAt ? (
+                    <span className="text-[11px] text-muted-foreground">
+                      Checked {formatDistanceToNow(new Date(lastCheckedAt), { addSuffix: true })}
+                    </span>
+                  ) : data.brokers.last_scan ? (
+                    <Badge variant="secondary" className="text-[10px]">
+                      {formatDate(data.brokers.last_scan)}
+                    </Badge>
+                  ) : (
+                    <span className="text-[11px] text-muted-foreground">Never scanned</span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              {data.brokers.last_scan && data.brokers.found > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setBrokerExpanded(!brokerExpanded)}
+                  className="text-xs text-muted-foreground"
+                >
+                  {brokerExpanded ? "Collapse" : "Expand"}
+                  {brokerExpanded ? (
+                    <ChevronUp className="w-3.5 h-3.5 ml-1" />
+                  ) : (
+                    <ChevronDown className="w-3.5 h-3.5 ml-1" />
+                  )}
+                </Button>
+              )}
+              <Button
+                onClick={() => navigate("/broker-scan")}
+                variant={brokerSeverity === "danger" ? "default" : "outline"}
+                size="sm"
+              >
+                {brokerActionLabel}
+                <ArrowRight className="w-3.5 h-3.5 ml-1" />
+              </Button>
+            </div>
+          </div>
+
+          {/* Summary line */}
+          {!brokerExpanded && (
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              {brokerDetails}
+            </p>
+          )}
+
+          {/* Expanded inline broker results */}
+          {brokerExpanded && (
+            <div className="space-y-3 pt-1 border-t border-border">
+              {brokersLoading ? (
+                <div className="flex items-center justify-center py-4">
+                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                </div>
+              ) : (
+                <>
+                  {/* No exposures */}
+                  {actionNeeded.length === 0 && optedOut.length === 0 && inlineBrokers.length > 0 && (
+                    <div className="flex items-center gap-3 p-3 rounded-lg bg-green-500/5 border border-green-500/20">
+                      <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400 shrink-0" />
+                      <div>
+                        <p className="text-sm font-medium">No broker listings found</p>
+                        <p className="text-xs text-muted-foreground">
+                          Your info wasn't found on any of the brokers we checked.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* All opted out */}
+                  {actionNeeded.length === 0 && optedOut.length > 0 && (
+                    <div className="flex items-center gap-3 p-3 rounded-lg bg-green-500/5 border border-green-500/20">
+                      <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400 shrink-0" />
+                      <div>
+                        <p className="text-sm font-medium">All removals requested</p>
+                        <p className="text-xs text-muted-foreground">
+                          Removal requested from {optedOut.length} broker{optedOut.length !== 1 ? "s" : ""}.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Actionable brokers */}
+                  {actionNeeded.slice(0, 5).map((broker) => {
+                    const isExposed = broker.state === "found";
+                    const dataTypes = getDataTypes(broker);
+
+                    return (
+                      <div
+                        key={broker.id}
+                        className={`flex items-center gap-3 p-3 rounded-lg border ${
+                          isExposed
+                            ? "border-destructive/20 bg-destructive/5"
+                            : "border-amber-500/20 bg-amber-500/5"
+                        }`}
+                      >
+                        <div className={`p-1.5 rounded-md shrink-0 ${isExposed ? "bg-destructive/10" : "bg-amber-500/10"}`}>
+                          {isExposed ? (
+                            <ShieldAlert className="h-4 w-4 text-destructive" />
+                          ) : (
+                            <Shield className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                          )}
+                        </div>
+
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-sm">{broker.broker_name}</span>
+                            <Badge
+                              variant="outline"
+                              className={`text-[10px] ${
+                                isExposed
+                                  ? "bg-destructive/10 text-destructive border-destructive/30"
+                                  : "bg-amber-500/10 text-amber-600 border-amber-500/30"
+                              }`}
+                            >
+                              {isExposed ? "Exposed" : "Possible"}
+                            </Badge>
+                          </div>
+                          {dataTypes.length > 0 && (
+                            <div className="flex items-center gap-2 mt-0.5">
+                              {dataTypes.map(({ icon: Icon, label }) => (
+                                <span key={label} className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                                  <Icon className="h-2.5 w-2.5" />
+                                  {label}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        {broker.opt_out_url && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="shrink-0 text-xs h-8"
+                            onClick={() => handleRemoveClick(broker)}
+                          >
+                            {broker.state === "removal_started" ? "Continue removal" : "Remove"}
+                            <ExternalLink className="h-3 w-3 ml-1" />
+                          </Button>
+                        )}
+                      </div>
+                    );
+                  })}
+
+                  {/* Status summaries */}
+                  {(removalStarted.length > 0 || optedOut.length > 0) && actionNeeded.length > 0 && (
+                    <div className="flex items-center gap-4 text-xs text-muted-foreground pt-1">
+                      {removalStarted.length > 0 && (
+                        <span>⏳ Removal started for {removalStarted.length}</span>
+                      )}
+                      {optedOut.length > 0 && (
+                        <span>✓ Removed from {optedOut.length}</span>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Link to full page */}
+                  {actionNeeded.length > 5 && (
+                    <Button
+                      variant="link"
+                      size="sm"
+                      onClick={() => navigate("/broker-scan")}
+                      className="text-primary text-xs px-0"
+                    >
+                      View all {actionNeeded.length} broker results →
+                    </Button>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Account + Breach tiles */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {sideTiles.map((tile) => {
           const style = severityStyles[tile.severity];
           const TileIcon = tile.icon;
           const isRunning = tile.severity === "running";
