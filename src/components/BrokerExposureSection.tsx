@@ -18,6 +18,7 @@ import {
   UserSearch,
 } from "lucide-react";
 import { getBrokerResultState, brokerResultPriority, type BrokerResultState } from "@/lib/brokerResultState";
+import { formatDistanceToNow } from "date-fns";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -47,7 +48,7 @@ interface ExposedBroker {
 // Sub-components for consistent layout
 // ---------------------------------------------------------------------------
 
-function SectionHeader({ badge, cta }: { badge?: React.ReactNode; cta?: React.ReactNode }) {
+function SectionHeader({ badge, cta, lastChecked }: { badge?: React.ReactNode; cta?: React.ReactNode; lastChecked?: string | null }) {
   return (
     <div className="flex items-center justify-between">
       <div className="flex items-center gap-2">
@@ -55,6 +56,11 @@ function SectionHeader({ badge, cta }: { badge?: React.ReactNode; cta?: React.Re
           Data Broker Exposure
         </h2>
         {badge}
+        {lastChecked && (
+          <span className="text-[10px] text-muted-foreground/60">
+            Checked {formatDistanceToNow(new Date(lastChecked), { addSuffix: true })}
+          </span>
+        )}
       </div>
       {cta}
     </div>
@@ -88,6 +94,7 @@ export function BrokerExposureSection() {
   const [scanCompleted, setScanCompleted] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
   const [sessionReady, setSessionReady] = useState(false);
+  const [lastCheckedAt, setLastCheckedAt] = useState<string | null>(null);
 
   // Subscribe to auth state so we re-load when the user logs in after mount
   useEffect(() => {
@@ -98,6 +105,7 @@ export function BrokerExposureSection() {
         setBrokers([]);
         setScanCompleted(false);
         setIsComplete(false);
+        setLastCheckedAt(null);
         setLoading(false);
       }
     });
@@ -144,6 +152,7 @@ export function BrokerExposureSection() {
       }
 
       setScanCompleted(true);
+      setLastCheckedAt(scanData.completed_at);
 
       // Get results — filter by user only (schema has no scan_id FK on results)
       const { data: results } = await supabase
@@ -321,6 +330,7 @@ export function BrokerExposureSection() {
   return (
     <div className="space-y-3">
       <SectionHeader
+        lastChecked={lastCheckedAt}
         badge={
           actionNeeded.length > 0 ? (
             <Badge variant="destructive" className="text-xs">
