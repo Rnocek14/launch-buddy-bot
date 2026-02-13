@@ -47,7 +47,7 @@ export default function Help() {
         <Tabs defaultValue="getting-started" className="mb-16">
           <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4 mb-8">
             <TabsTrigger value="getting-started">Getting Started</TabsTrigger>
-            <TabsTrigger value="videos">Video Tutorials</TabsTrigger>
+            <TabsTrigger value="videos">Guides</TabsTrigger>
             <TabsTrigger value="troubleshooting">Troubleshooting</TabsTrigger>
             <TabsTrigger value="faq">FAQs</TabsTrigger>
           </TabsList>
@@ -137,30 +137,30 @@ export default function Help() {
 
           <TabsContent value="videos" className="space-y-6">
             <section>
-              <h2 className="text-3xl font-bold mb-6">Video Tutorials</h2>
+              <h2 className="text-3xl font-bold mb-2">Guides</h2>
+              <p className="text-muted-foreground mb-6">Step-by-step walkthroughs for common tasks. Video tutorials coming soon.</p>
               <div className="grid md:grid-cols-2 gap-6">
                 {[
-                  { title: "Getting Started", duration: "3:45", description: "Complete walkthrough of account setup and first scan" },
-                  { title: "Gmail Connection", duration: "2:20", description: "How to securely connect your Gmail account" },
-                  { title: "Sending Deletion Requests", duration: "4:10", description: "Step-by-step guide to requesting data deletion" },
-                  { title: "Understanding Your Risk Score", duration: "3:00", description: "What your privacy risk score means" }
-                ].map((video, i) => (
+                  { title: "Getting Started", icon: UserCheck, steps: ["Sign in with Google", "Connect your Gmail via Settings → Email Integration", "Run your first scan from the Dashboard", "Review discovered services and take action"] },
+                  { title: "Connecting Gmail", icon: Mail, steps: ["Go to Settings → Email Integration", "Click 'Connect Gmail Account'", "Grant the requested OAuth permissions", "Your inbox will be scanned for service registrations"] },
+                  { title: "Sending Deletion Requests", icon: Trash2, steps: ["Open a service from your Dashboard", "Click 'Request Deletion'", "Review the pre-filled GDPR/CCPA template", "Send via connected email or copy the template"] },
+                  { title: "Understanding Your Risk Score", icon: Shield, steps: ["Your score reflects total exposure across services", "High-risk services (data brokers, breaches) weigh more", "Completing deletions lowers your score over time", "Check the Dashboard snapshot for a summary"] },
+                ].map((guide, i) => (
                   <Card key={i} className="hover:border-primary/50 transition-colors">
                     <CardHeader>
-                      <div className="aspect-video bg-muted rounded-md flex items-center justify-center mb-4">
-                        <PlayCircle className="h-12 w-12 text-muted-foreground" />
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                          <guide.icon className="h-5 w-5 text-primary" />
+                        </div>
+                        <CardTitle className="text-lg">{guide.title}</CardTitle>
                       </div>
-                      <CardTitle className="flex items-center justify-between">
-                        <span>{video.title}</span>
-                        <Badge variant="secondary">{video.duration}</Badge>
-                      </CardTitle>
-                      <CardDescription>{video.description}</CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <Button className="w-full">
-                        <PlayCircle className="h-4 w-4 mr-2" />
-                        Watch Tutorial
-                      </Button>
+                      <ol className="list-decimal pl-5 space-y-1.5 text-sm text-muted-foreground">
+                        {guide.steps.map((step, j) => (
+                          <li key={j}>{step}</li>
+                        ))}
+                      </ol>
                     </CardContent>
                   </Card>
                 ))}
