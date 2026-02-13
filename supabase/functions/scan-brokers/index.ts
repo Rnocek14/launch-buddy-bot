@@ -1465,6 +1465,7 @@ Deno.serve(async (req) => {
           extracted_data,
           scanned_at,
           opted_out_at,
+          opt_out_started_at,
           broker:data_brokers(
             id,
             name,
