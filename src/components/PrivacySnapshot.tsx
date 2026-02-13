@@ -102,12 +102,7 @@ export function PrivacySnapshot() {
     loadSnapshot();
   }, []);
 
-  // Auto-expand when there are actionable broker results
-  useEffect(() => {
-    if (data && data.brokers.found > 0) {
-      setBrokerExpanded(true);
-    }
-  }, [data]);
+  // Auto-expand is deferred until broker details are loaded (see below)
 
   async function loadSnapshot() {
     try {
@@ -137,9 +132,9 @@ export function PrivacySnapshot() {
     }
   }
 
-  // Load inline broker details when expanded
-  const loadBrokerDetails = useCallback(async () => {
-    if (inlineBrokers.length > 0) return; // already loaded
+  // Load inline broker details — always load on mount if a scan exists, auto-expand only if action needed
+  const loadBrokerDetails = useCallback(async (forceReload = false) => {
+    if (inlineBrokers.length > 0 && !forceReload) return;
     setBrokersLoading(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -188,6 +183,12 @@ export function PrivacySnapshot() {
         }));
         mapped.sort((a, b) => brokerResultPriority(a.state) - brokerResultPriority(b.state));
         setInlineBrokers(mapped);
+
+        // Auto-expand only if there are actionable results or scan is running
+        const hasAction = mapped.some((b) => b.state === "found" || b.state === "possible");
+        if (hasAction) {
+          setBrokerExpanded(true);
+        }
       }
     } catch (err) {
       console.error("Error loading broker details:", err);
@@ -196,13 +197,21 @@ export function PrivacySnapshot() {
     }
   }, [inlineBrokers.length]);
 
+  // Load broker details eagerly when snapshot indicates a scan has been run
+  useEffect(() => {
+    if (data && data.brokers.last_scan) {
+      loadBrokerDetails();
+    }
+  }, [data]);
+
+  // Also load when user manually expands
   useEffect(() => {
     if (brokerExpanded && inlineBrokers.length === 0) {
       loadBrokerDetails();
     }
   }, [brokerExpanded, loadBrokerDetails]);
 
-  // Handle removal click
+  // Handle removal click — only update local state if DB update succeeded
   const handleRemoveClick = async (broker: InlineBroker) => {
     if (broker.opt_out_url) {
       window.open(broker.opt_out_url, "_blank", "noopener,noreferrer");
@@ -213,15 +222,23 @@ export function PrivacySnapshot() {
       if (!session) return;
 
       if (!broker.opt_out_started_at && !broker.opted_out_at) {
-        await supabase
+        const { data: updated, error } = await supabase
           .from("broker_scan_results")
           .update({ opt_out_started_at: new Date().toISOString() } as any)
           .eq("id", broker.id)
           .eq("user_id", session.user.id)
           .is("opt_out_started_at", null)
-          .is("opted_out_at", null);
+          .is("opted_out_at", null)
+          .select();
+
+        if (error || !updated || updated.length === 0) {
+          // Guard matched 0 rows — resync from DB
+          loadBrokerDetails(true);
+          return;
+        }
       }
 
+      // Only optimistically update if DB write succeeded
       setInlineBrokers((prev) =>
         prev.map((b) =>
           b.id === broker.id
@@ -230,7 +247,7 @@ export function PrivacySnapshot() {
         )
       );
     } catch {
-      // non-critical
+      loadBrokerDetails(true);
     }
   };
 
@@ -461,9 +478,9 @@ export function PrivacySnapshot() {
               <div>
                 <div className="flex items-center gap-2">
                   <span className="font-semibold text-foreground">Broker Exposure</span>
-                  {data.brokers.found > 0 && (
+                  {(inlineBrokers.length > 0 ? actionNeeded.length : data.brokers.found) > 0 && (
                     <Badge variant="destructive" className="text-xs">
-                      {data.brokers.found} found
+                      {inlineBrokers.length > 0 ? actionNeeded.length : data.brokers.found} require action
                     </Badge>
                   )}
                 </div>

@@ -27,19 +27,20 @@ interface SimplifiedServiceCardProps {
 }
 
 // Category accent colors — subtle left-border only
+// Category accent colors — subtle left-border, neutral tones for sensitive categories
 const categoryAccents: Record<string, string> = {
-  Finance: "border-l-red-500/60",
-  Banking: "border-l-red-500/60",
-  Healthcare: "border-l-red-500/60",
-  Government: "border-l-red-500/60",
-  "Social Media": "border-l-blue-500/60",
-  Social: "border-l-blue-500/60",
-  Shopping: "border-l-purple-500/60",
-  Streaming: "border-l-pink-500/60",
-  Gaming: "border-l-orange-500/60",
-  Productivity: "border-l-green-500/60",
-  Travel: "border-l-indigo-500/60",
-  News: "border-l-cyan-500/60",
+  Finance: "border-l-slate-500/50",
+  Banking: "border-l-slate-500/50",
+  Healthcare: "border-l-slate-500/50",
+  Government: "border-l-stone-500/50",
+  "Social Media": "border-l-blue-500/40",
+  Social: "border-l-blue-500/40",
+  Shopping: "border-l-purple-500/40",
+  Streaming: "border-l-pink-500/40",
+  Gaming: "border-l-orange-500/40",
+  Productivity: "border-l-green-500/40",
+  Travel: "border-l-indigo-500/40",
+  News: "border-l-cyan-500/40",
 };
 
 function getActivitySignal(discoveredAt: string): { label: string; isInactive: boolean } {
@@ -50,10 +51,10 @@ function getActivitySignal(discoveredAt: string): { label: string; isInactive: b
   const months = Math.floor(days / 30.44);
   const years = Math.floor(days / 365.25);
 
-  if (years >= 3) return { label: `Inactive ${years}y+`, isInactive: true };
-  if (years >= 1) return { label: `${years} year${years !== 1 ? "s" : ""} ago`, isInactive: years >= 2 };
-  if (months >= 1) return { label: `${months} month${months !== 1 ? "s" : ""} ago`, isInactive: false };
-  return { label: "Recent", isInactive: false };
+  if (years >= 3) return { label: `Found ${years}y+ ago`, isInactive: true };
+  if (years >= 1) return { label: `Found ${years}y ago`, isInactive: years >= 2 };
+  if (months >= 1) return { label: `Found ${months}mo ago`, isInactive: false };
+  return { label: "Recently found", isInactive: false };
 }
 
 function getFaviconUrl(domain: string): string {
