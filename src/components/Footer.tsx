@@ -20,7 +20,7 @@ export const Footer = () => {
           </div>
           
           <p className="text-sm text-muted-foreground">
-            © 2025 Footprint Finder. Built with privacy in mind.
+            © 2026 Footprint Finder. Built with privacy in mind.
           </p>
         </div>
       </div>

@@ -9,7 +9,9 @@ import { AddIdentifierDialog } from "@/components/AddIdentifierDialog";
 import { EmailConnectButton } from "@/components/EmailConnectButton";
 import { useToast } from "@/hooks/use-toast";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Loader2, Mail, Phone, User, Plus, Trash2, Star, HelpCircle } from "lucide-react";
+import { Loader2, Mail, Phone, User, Plus, Trash2, Star, HelpCircle, Bell } from "lucide-react";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -30,6 +32,12 @@ interface Identifier {
   verified: boolean;
 }
 
+interface EmailPrefs {
+  email_frequency: string;
+  unsubscribed: boolean;
+  token: string;
+}
+
 export default function Settings() {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -39,6 +47,8 @@ export default function Settings() {
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [emailPrefs, setEmailPrefs] = useState<EmailPrefs | null>(null);
+  const [prefsLoading, setPrefsSaving] = useState(false);
 
   useEffect(() => {
     checkAuth();
@@ -52,7 +62,46 @@ export default function Settings() {
     }
     setUser(session.user);
     await fetchIdentifiers();
+    await fetchEmailPrefs(session.user.email);
     setLoading(false);
+  };
+
+  const fetchEmailPrefs = async (email: string | undefined) => {
+    if (!email) return;
+    const { data } = await supabase
+      .from("email_preferences")
+      .select("email_frequency, unsubscribed, token")
+      .eq("email", email)
+      .maybeSingle();
+    if (data) setEmailPrefs(data as EmailPrefs);
+  };
+
+  const handleSaveEmailPrefs = async (frequency: string) => {
+    if (!user?.email) return;
+    setPrefsSaving(true);
+    try {
+      if (emailPrefs?.token) {
+        const { error } = await supabase.functions.invoke("update-email-preferences", {
+          body: { token: emailPrefs.token, email_frequency: frequency, unsubscribed: frequency === "never" },
+        });
+        if (error) throw error;
+      } else {
+        // No preference row yet — insert one
+        const { data: inserted, error } = await supabase
+          .from("email_preferences")
+          .insert({ email: user.email, email_frequency: frequency, unsubscribed: frequency === "never" })
+          .select("email_frequency, unsubscribed, token")
+          .single();
+        if (error) throw error;
+        if (inserted) setEmailPrefs(inserted as EmailPrefs);
+      }
+      setEmailPrefs((prev) => prev ? { ...prev, email_frequency: frequency, unsubscribed: frequency === "never" } : prev);
+      toast({ title: "Preferences saved", description: "Your email notification preferences have been updated." });
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message || "Failed to save preferences", variant: "destructive" });
+    } finally {
+      setPrefsSaving(false);
+    }
   };
 
   const fetchIdentifiers = async () => {
@@ -314,6 +363,56 @@ export default function Settings() {
             </CardHeader>
             <CardContent>
               <EmailConnectButton />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Bell className="h-5 w-5 text-primary" />
+                <CardTitle>Email Notifications</CardTitle>
+              </div>
+              <CardDescription>
+                Choose how often you'd like to receive updates about your privacy status
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <RadioGroup
+                value={emailPrefs?.email_frequency || "weekly"}
+                onValueChange={handleSaveEmailPrefs}
+                disabled={prefsLoading}
+              >
+                <div className="flex items-center space-x-2 p-3 rounded-md hover:bg-accent/50 cursor-pointer">
+                  <RadioGroupItem value="weekly" id="pref-weekly" />
+                  <Label htmlFor="pref-weekly" className="flex-1 cursor-pointer">
+                    <div className="font-medium">Weekly Updates</div>
+                    <div className="text-sm text-muted-foreground">Regular progress updates on your privacy cleanup</div>
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2 p-3 rounded-md hover:bg-accent/50 cursor-pointer">
+                  <RadioGroupItem value="monthly" id="pref-monthly" />
+                  <Label htmlFor="pref-monthly" className="flex-1 cursor-pointer">
+                    <div className="font-medium">Monthly Summary</div>
+                    <div className="text-sm text-muted-foreground">Get the highlights once a month</div>
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2 p-3 rounded-md hover:bg-accent/50 cursor-pointer">
+                  <RadioGroupItem value="never" id="pref-never" />
+                  <Label htmlFor="pref-never" className="flex-1 cursor-pointer">
+                    <div className="font-medium">No Emails</div>
+                    <div className="text-sm text-muted-foreground">Unsubscribe from all marketing and notification emails</div>
+                  </Label>
+                </div>
+              </RadioGroup>
+              {prefsLoading && (
+                <div className="flex items-center gap-2 mt-3 text-sm text-muted-foreground">
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  Saving...
+                </div>
+              )}
+              <p className="text-xs text-muted-foreground mt-4">
+                Important security and account emails will always be sent regardless of this setting.
+              </p>
             </CardContent>
           </Card>
 
