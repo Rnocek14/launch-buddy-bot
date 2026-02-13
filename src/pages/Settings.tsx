@@ -151,22 +151,24 @@ export default function Settings() {
       if (error) throw error;
 
       if (!data?.success) {
-        // Auth user was NOT deleted — do not sign out
+        // Auth user was NOT deleted — keep dialog open for retry
         toast({
           title: "Deletion failed",
           description: data?.error || "Account deletion failed. Please try again or contact support.",
           variant: "destructive",
         });
+        setDeletingAccount(false);
         return;
       }
 
       // Auth user is deleted server-side, sign out locally
       await supabase.auth.signOut();
 
+      const requestRef = new Date().toISOString().slice(0, 19).replace(/[-:T]/g, "");
       if (data?.errors?.length > 0) {
         toast({
           title: "Account deleted",
-          description: "Account removed. Some data cleanup may require support review.",
+          description: `Account removed. Some data cleanup may require support review. Ref: ${requestRef}`,
         });
       } else if (data?.warnings?.length > 0) {
         toast({ title: "Account deleted", description: "Your account has been permanently removed." });
