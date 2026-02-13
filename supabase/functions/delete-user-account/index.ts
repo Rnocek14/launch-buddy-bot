@@ -39,8 +39,9 @@ serve(async (req) => {
 
     const userId = user.id;
     const userEmail = user.email;
+    const requestRef = crypto.randomUUID().slice(0, 8);
 
-    console.log(`[delete-user-account] Starting deletion for user ${userId}`);
+    console.log(`[delete-user-account] ref=${requestRef} Starting deletion for user ${userId}`);
 
     // Use service role client with no session persistence (Edge best practice)
     const adminClient = createClient(supabaseUrl, serviceRoleKey, {
@@ -109,12 +110,13 @@ serve(async (req) => {
       );
     }
 
-    console.log(`[delete-user-account] Auth user deleted`);
+    console.log(`[delete-user-account] ref=${requestRef} Auth user deleted`);
 
     return new Response(
       JSON.stringify({
         success: true,
         message: "Account and all data deleted.",
+        request_ref: requestRef,
         warnings,
         errors,
       }),
