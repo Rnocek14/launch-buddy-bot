@@ -122,7 +122,22 @@ export function PrivacySnapshot() {
       );
 
       if (rpcError) {
-        console.error("Error loading privacy snapshot:", rpcError);
+        console.error("Error loading privacy snapshot:", rpcError.message, rpcError.code, rpcError.details);
+        // If it's an auth error, try refreshing the session once
+        if (rpcError.message?.includes('not authorized') || rpcError.code === 'PGRST301') {
+          console.warn("Auth mismatch on snapshot RPC — attempting session refresh");
+          const { data: refreshData } = await supabase.auth.refreshSession();
+          if (refreshData?.session) {
+            const { data: retrySnapshot, error: retryError } = await supabase.rpc(
+              "get_privacy_snapshot" as any,
+              { p_user_id: refreshData.session.user.id }
+            );
+            if (!retryError && retrySnapshot) {
+              setData(retrySnapshot as unknown as SnapshotData);
+              return;
+            }
+          }
+        }
         toast.error("Couldn't load snapshot");
         setError(true);
         return;
