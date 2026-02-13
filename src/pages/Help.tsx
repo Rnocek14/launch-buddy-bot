@@ -313,7 +313,7 @@ export default function Help() {
                     <span className="font-semibold text-left">How does Footprint Finder protect my privacy?</span>
                   </AccordionTrigger>
                   <AccordionContent className="text-muted-foreground pt-4">
-                    All scanning happens locally on your device. We never see, store, or transmit your email data or browsing history. Our app simply helps you visualize patterns—you stay in full control of your information.
+                    All scanning happens securely on our servers via OAuth 2.0. We only read email headers (sender and subject) — never email content or attachments. Your data is encrypted in transit and at rest. You can disconnect your email and delete your data at any time.
                   </AccordionContent>
                 </AccordionItem>
 
