@@ -110,10 +110,11 @@ export default function Settings() {
   const handleExportData = async () => {
     setExporting(true);
     try {
+      const userId = user?.id;
       const [identifiersRes, servicesRes, deletionRes, prefsRes] = await Promise.all([
-        supabase.from("user_identifiers").select("*"),
-        supabase.from("user_services").select("*"),
-        supabase.from("deletion_requests").select("*"),
+        supabase.from("user_identifiers").select("*").eq("user_id", userId),
+        supabase.from("user_services").select("*").eq("user_id", userId),
+        supabase.from("deletion_requests").select("*").eq("user_id", userId),
         supabase.from("email_preferences").select("email_frequency, unsubscribed").eq("email", user?.email || ""),
       ]);
       const exportData = {
@@ -145,17 +146,21 @@ export default function Settings() {
       const { data, error } = await supabase.functions.invoke("delete-user-account");
       if (error) throw error;
 
-      if (data?.partial) {
-        toast({
-          title: "Partial deletion",
-          description: "Some data could not be removed. Contact support for full removal.",
-          variant: "destructive",
-        });
+      if (!data?.success) {
+        throw new Error(data?.error || "Account deletion failed. Please try again or contact support.");
       }
 
       // Auth user is now deleted server-side, sign out locally
       await supabase.auth.signOut();
-      toast({ title: "Account deleted", description: "Your account and all stored data have been permanently removed." });
+
+      if (data?.warnings?.length > 0) {
+        toast({
+          title: "Account deleted",
+          description: "Account removed. Some cleanup steps may need support review.",
+        });
+      } else {
+        toast({ title: "Account deleted", description: "Your account and all stored data have been permanently removed." });
+      }
       navigate("/");
     } catch (err: any) {
       toast({ title: "Deletion failed", description: err.message || "An error occurred. Please try again or contact support.", variant: "destructive" });

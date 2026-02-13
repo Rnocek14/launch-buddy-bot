@@ -48,12 +48,12 @@ serve(async (req) => {
         continue;
       }
 
-      // Lazy-create preference row if missing
+      // Idempotent upsert to ensure token always exists
       let prefToken = prefs?.token;
       if (!prefToken) {
         const { data: newPref } = await supabase
           .from("email_preferences")
-          .insert({ email: profile.email })
+          .upsert({ email: profile.email }, { onConflict: "email" })
           .select("token")
           .single();
         prefToken = newPref?.token || "";

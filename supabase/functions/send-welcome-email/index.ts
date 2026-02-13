@@ -57,9 +57,10 @@ const handler = async (req: Request): Promise<Response> => {
     if (existingPref) {
       token = existingPref.token;
     } else {
+      // Idempotent upsert to avoid race conditions
       const { data: newPref } = await supabase
         .from("email_preferences")
-        .insert({ email })
+        .upsert({ email }, { onConflict: "email" })
         .select("token")
         .single();
       token = newPref?.token || "";
