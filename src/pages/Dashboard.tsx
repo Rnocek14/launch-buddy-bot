@@ -1073,35 +1073,10 @@ export default function Dashboard() {
           />
         ) : (
           <>
-            {/* Privacy Snapshot — unified view of all scan results + broker exposure */}
+            {/* Privacy Snapshot — ALWAYS first, the anchor of the dashboard */}
             <PrivacySnapshot />
 
-            {/* Scan Results Banner */}
-            {scanResultsBanner && !bannerDismissed && (
-              <ScanResultsBanner
-                scannedEmails={scanResultsBanner.scannedEmails}
-                totalServices={scanResultsBanner.totalServices}
-                newServices={scanResultsBanner.newServices}
-                messagesScanned={scanResultsBanner.messagesScanned}
-                onViewNew={() => {
-                  setFilterMode('new');
-                  setSearchQuery("");
-                  setSelectedCategory("all");
-                  setSelectedContactStatus("all");
-                  document.getElementById("services-grid")?.scrollIntoView({ behavior: "smooth" });
-                }}
-                onViewAll={() => {
-                  setFilterMode('all');
-                  setSearchQuery("");
-                  setSelectedCategory("all");
-                  setSelectedContactStatus("all");
-                  document.getElementById("services-grid")?.scrollIntoView({ behavior: "smooth" });
-                }}
-                onDismiss={() => setBannerDismissed(true)}
-              />
-            )}
-
-            {/* Scan Progress (only while scanning) */}
+            {/* Scan Progress (only while scanning) — shown right after snapshot */}
             {scanning && scanProgress && (
               <Card className="overflow-hidden border-primary/20">
                 <CardContent className="pt-6">
@@ -1132,6 +1107,31 @@ export default function Dashboard() {
                   </div>
                 </CardContent>
               </Card>
+            )}
+
+            {/* Scan Results Banner — status message, below snapshot */}
+            {scanResultsBanner && !bannerDismissed && !scanning && (
+              <ScanResultsBanner
+                scannedEmails={scanResultsBanner.scannedEmails}
+                totalServices={scanResultsBanner.totalServices}
+                newServices={scanResultsBanner.newServices}
+                messagesScanned={scanResultsBanner.messagesScanned}
+                onViewNew={() => {
+                  setFilterMode('new');
+                  setSearchQuery("");
+                  setSelectedCategory("all");
+                  setSelectedContactStatus("all");
+                  document.getElementById("services-grid")?.scrollIntoView({ behavior: "smooth" });
+                }}
+                onViewAll={() => {
+                  setFilterMode('all');
+                  setSearchQuery("");
+                  setSelectedCategory("all");
+                  setSelectedContactStatus("all");
+                  document.getElementById("services-grid")?.scrollIntoView({ behavior: "smooth" });
+                }}
+                onDismiss={() => setBannerDismissed(true)}
+              />
             )}
 
             {/* Last Scan Results (compact) */}

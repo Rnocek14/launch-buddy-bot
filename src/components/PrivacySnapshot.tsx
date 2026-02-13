@@ -257,12 +257,18 @@ export function PrivacySnapshot() {
 
   if (loading) {
     return (
-      <div className="space-y-3">
-        <div className="h-12 rounded-lg bg-muted animate-pulse" />
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {[1, 2, 3].map((i) => (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="h-5 w-32 bg-muted animate-pulse rounded" />
+          <div className="h-6 w-20 bg-muted animate-pulse rounded-full" />
+        </div>
+        <Card className="animate-pulse">
+          <CardContent className="p-6 h-[120px]" />
+        </Card>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {[1, 2].map((i) => (
             <Card key={i} className="animate-pulse">
-              <CardContent className="p-5 h-[160px]" />
+              <CardContent className="p-6 h-[180px]" />
             </Card>
           ))}
         </div>
@@ -270,7 +276,40 @@ export function PrivacySnapshot() {
     );
   }
 
-  if (!data) return null;
+  if (!data) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+            Privacy Snapshot
+          </h2>
+        </div>
+        <Card className="border-border">
+          <CardContent className="p-6">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-muted">
+                <AlertTriangle className="w-5 h-5 text-muted-foreground" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-foreground">Exposure summary unavailable</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  We couldn't load your privacy overview. Try refreshing or run a scan.
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={() => loadSnapshot()}>
+                  Retry
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => navigate("/scan-hub")}>
+                  Open Scan Hub
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   const formatDate = (d: string | null) => {
     if (!d) return null;
@@ -468,7 +507,7 @@ export function PrivacySnapshot() {
 
       {/* Broker Exposure — full-width expandable card */}
       <Card className={`transition-all ${brokerStyle.border}`}>
-        <CardContent className="p-5 space-y-4">
+        <CardContent className="p-6 space-y-4">
           {/* Header row */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -676,28 +715,29 @@ export function PrivacySnapshot() {
           return (
             <Card
               key={tile.key}
-              className={`transition-all hover:shadow-md ${style.border}`}
+              className={`transition-all hover:shadow-md cursor-pointer ${style.border}`}
+              onClick={tile.action}
             >
-              <CardContent className="p-5 space-y-3">
+              <CardContent className="p-6 space-y-4">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className={`p-2 rounded-lg ${style.iconBg}`}>
+                  <div className="flex items-center gap-3">
+                    <div className={`p-2.5 rounded-xl ${style.iconBg}`}>
                       {isRunning ? (
-                        <Loader2 className={`w-4 h-4 ${style.iconColor} animate-spin`} />
+                        <Loader2 className={`w-5 h-5 ${style.iconColor} animate-spin`} />
                       ) : (
-                        <TileIcon className={`w-4 h-4 ${style.iconColor}`} />
+                        <TileIcon className={`w-5 h-5 ${style.iconColor}`} />
                       )}
                     </div>
-                    <span className="font-medium text-sm text-foreground">
+                    <span className="font-semibold text-foreground">
                       {tile.title}
                     </span>
                   </div>
                   {tile.lastScan ? (
-                    <Badge variant="secondary" className="text-[10px]">
-                      {tile.lastScan}
-                    </Badge>
+                    <span className="text-[11px] text-muted-foreground">
+                      Checked {tile.lastScan}
+                    </span>
                   ) : (
-                    <span className="text-[10px] text-muted-foreground">Never scanned</span>
+                    <span className="text-[11px] text-muted-foreground">Never scanned</span>
                   )}
                 </div>
 
@@ -708,10 +748,10 @@ export function PrivacySnapshot() {
                     </span>
                   ) : (
                     <>
-                      <span className={`text-2xl font-bold ${style.metricColor}`}>
+                      <span className={`text-3xl font-bold ${style.metricColor}`}>
                         {tile.metric}
                       </span>
-                      <span className="text-sm text-muted-foreground ml-1.5">
+                      <span className="text-sm text-muted-foreground ml-2">
                         {tile.metricLabel}
                       </span>
                     </>
@@ -723,7 +763,7 @@ export function PrivacySnapshot() {
                 </p>
 
                 <Button
-                  onClick={tile.action}
+                  onClick={(e) => { e.stopPropagation(); tile.action(); }}
                   variant={tile.severity === "danger" ? "default" : "outline"}
                   size="sm"
                   className="w-full"
