@@ -103,23 +103,6 @@ export function PrivacySnapshot() {
   const autoExpandedRef = useRef(false);
   const inFlightRef = useRef(false);
 
-  // Listen for auth readiness so we never show fallback before session hydrates
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setAuthReady(true);
-      if (session) loadSnapshot();
-    });
-    // Also check immediately in case session is already hydrated
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setAuthReady(true);
-      if (session) loadSnapshot();
-      else setLoading(false);
-    });
-    return () => subscription.unsubscribe();
-  }, []);
-
-  // Auto-expand is deferred until broker details are loaded (see below)
-
   const loadSnapshot = useCallback(async () => {
     if (inFlightRef.current) return;
     inFlightRef.current = true;
@@ -153,6 +136,21 @@ export function PrivacySnapshot() {
       inFlightRef.current = false;
     }
   }, []);
+
+  // Listen for auth readiness so we never show fallback before session hydrates
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setAuthReady(true);
+      if (session) loadSnapshot();
+    });
+    // Also check immediately in case session is already hydrated
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setAuthReady(true);
+      if (session) loadSnapshot();
+      else setLoading(false);
+    });
+    return () => subscription.unsubscribe();
+  }, [loadSnapshot]);
 
   // Load inline broker details — always load on mount if a scan exists, auto-expand only if action needed
   const loadBrokerDetails = useCallback(async (forceReload = false) => {
@@ -296,7 +294,7 @@ export function PrivacySnapshot() {
     );
   }
 
-  if (!data || error) {
+  if (authReady && (!data || error)) {
     return (
       <div className="space-y-4">
         <div className="flex items-center justify-between">
@@ -311,17 +309,17 @@ export function PrivacySnapshot() {
                 <AlertTriangle className="w-5 h-5 text-muted-foreground" />
               </div>
               <div className="flex-1">
-                <p className="text-sm font-medium text-foreground">Exposure summary unavailable</p>
+                <p className="text-sm font-medium text-foreground">Couldn't load your exposure summary</p>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  We couldn't load your privacy overview. Try refreshing or run a scan.
+                  Try again or start a new scan to check your privacy.
                 </p>
               </div>
               <div className="flex items-center gap-2">
                 <Button variant="outline" size="sm" onClick={() => loadSnapshot()}>
                   Retry
                 </Button>
-                <Button variant="outline" size="sm" onClick={() => navigate("/dashboard")}>
-                  Open Dashboard
+                <Button variant="outline" size="sm" onClick={() => navigate("/broker-scan")}>
+                  Go to Scan
                 </Button>
               </div>
             </div>
