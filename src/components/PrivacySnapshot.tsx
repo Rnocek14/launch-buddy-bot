@@ -123,6 +123,7 @@ export function PrivacySnapshot() {
 
       if (rpcError) {
         console.error("Error loading privacy snapshot:", rpcError);
+        toast.error("Couldn't load snapshot");
         setError(true);
         return;
       }
@@ -319,7 +320,7 @@ export function PrivacySnapshot() {
                   Retry
                 </Button>
                 <Button variant="outline" size="sm" onClick={() => navigate("/broker-scan")}>
-                  Go to Scan
+                  Go to Broker Scan
                 </Button>
               </div>
             </div>
