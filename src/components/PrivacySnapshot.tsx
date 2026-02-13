@@ -1,9 +1,10 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import {
   Mail,
   ShieldAlert,
@@ -97,6 +98,7 @@ export function PrivacySnapshot() {
   const [inlineBrokers, setInlineBrokers] = useState<InlineBroker[]>([]);
   const [brokersLoading, setBrokersLoading] = useState(false);
   const [lastCheckedAt, setLastCheckedAt] = useState<string | null>(null);
+  const autoExpandedRef = useRef(false);
 
   useEffect(() => {
     loadSnapshot();
@@ -184,10 +186,11 @@ export function PrivacySnapshot() {
         mapped.sort((a, b) => brokerResultPriority(a.state) - brokerResultPriority(b.state));
         setInlineBrokers(mapped);
 
-        // Auto-expand only if there are actionable results or scan is running
+        // Auto-expand only once per view if there are actionable results
         const hasAction = mapped.some((b) => b.state === "found" || b.state === "possible");
-        if (hasAction) {
+        if (hasAction && !autoExpandedRef.current) {
           setBrokerExpanded(true);
+          autoExpandedRef.current = true;
         }
       }
     } catch (err) {
@@ -246,6 +249,7 @@ export function PrivacySnapshot() {
             : b
         )
       );
+      toast.success("Removal started", { description: `${broker.broker_name} — updated just now` });
     } catch {
       loadBrokerDetails(true);
     }
