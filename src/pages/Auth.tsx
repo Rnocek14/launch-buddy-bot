@@ -316,6 +316,34 @@ export default function Auth() {
                     required
                   />
                 </div>
+                <div className="flex justify-end">
+                  <Button
+                    type="button"
+                    variant="link"
+                    className="px-0 h-auto text-xs text-muted-foreground"
+                    disabled={loading}
+                    onClick={async () => {
+                      if (!loginEmail) {
+                        toast({ title: "Enter your email", description: "Type your email above, then click reset." });
+                        return;
+                      }
+                      try {
+                        setLoading(true);
+                        const { error } = await supabase.auth.resetPasswordForEmail(loginEmail, {
+                          redirectTo: `${window.location.origin}/reset-password`,
+                        });
+                        if (error) throw error;
+                        toast({ title: "Password reset sent", description: "Check your inbox for a password reset link." });
+                      } catch (err: any) {
+                        toast({ title: "Could not send reset email", description: err?.message || "Please try again.", variant: "destructive" });
+                      } finally {
+                        setLoading(false);
+                      }
+                    }}
+                  >
+                    Forgot password?
+                  </Button>
+                </div>
                 <Button type="submit" className="w-full" disabled={loading}>
                   {loading ? (
                     <>
