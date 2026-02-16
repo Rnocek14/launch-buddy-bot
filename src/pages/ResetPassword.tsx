@@ -32,21 +32,22 @@ export default function ResetPassword() {
   useEffect(() => {
     (async () => {
       try {
-        if (hash.type !== "recovery") {
-          setSessionError(true);
-          return;
-        }
-        if (hash.access_token && hash.refresh_token) {
+        if (hash.type === "recovery" && hash.access_token && hash.refresh_token) {
           const { error } = await supabase.auth.setSession({
             access_token: hash.access_token,
             refresh_token: hash.refresh_token,
           });
           if (error) throw error;
           setSessionReady(true);
-          // Strip tokens from URL
           window.history.replaceState(null, "", window.location.pathname);
         } else {
-          setSessionError(true);
+          // Fallback: Supabase may have auto-hydrated the session (e.g. code exchange flow)
+          const { data } = await supabase.auth.getSession();
+          if (data?.session) {
+            setSessionReady(true);
+          } else {
+            setSessionError(true);
+          }
         }
       } catch (e: any) {
         setSessionError(true);
