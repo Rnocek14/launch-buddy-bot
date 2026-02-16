@@ -20,6 +20,7 @@ export default function Auth() {
   const location = useLocation();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
   
   // Login state
   const [loginEmail, setLoginEmail] = useState("");
@@ -321,14 +322,14 @@ export default function Auth() {
                     type="button"
                     variant="link"
                     className="px-0 h-auto text-xs text-muted-foreground"
-                    disabled={loading}
+                    disabled={resetLoading || loading}
                     onClick={async () => {
                       if (!loginEmail) {
                         toast({ title: "Enter your email", description: "Type your email above, then click reset." });
                         return;
                       }
                       try {
-                        setLoading(true);
+                        setResetLoading(true);
                         const { error } = await supabase.auth.resetPasswordForEmail(loginEmail, {
                           redirectTo: `${window.location.origin}/reset-password`,
                         });
@@ -337,7 +338,7 @@ export default function Auth() {
                       } catch (err: any) {
                         toast({ title: "Could not send reset email", description: err?.message || "Please try again.", variant: "destructive" });
                       } finally {
-                        setLoading(false);
+                        setResetLoading(false);
                       }
                     }}
                   >
