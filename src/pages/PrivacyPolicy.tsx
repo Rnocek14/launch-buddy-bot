@@ -101,10 +101,12 @@ const PrivacyPolicy = () => {
                   When you connect your Gmail account, we request the following permissions:
                 </p>
                 <ul className="list-disc pl-6 space-y-2">
-                  <li><strong>gmail.readonly</strong> - Read-only access to scan emails for service identification</li>
-                  <li><strong>gmail.send</strong> - Send deletion request emails on your behalf</li>
+                  <li><strong>gmail.readonly</strong> - Read-only access to scan email metadata (sender addresses) for service identification</li>
                   <li><strong>userinfo.email</strong> and <strong>userinfo.profile</strong> - Basic account information</li>
                 </ul>
+                <p className="text-sm text-muted-foreground mt-2">
+                  We do not request permission to send emails from your Gmail account. All deletion request emails are sent via our own email service (Resend), not through your Gmail.
+                </p>
               </div>
 
               <div>
@@ -112,7 +114,7 @@ const PrivacyPolicy = () => {
                 <ul className="list-disc pl-6 space-y-2">
                   <li>Scan email metadata (sender addresses) to identify online services you use</li>
                   <li>Extract domain names from email senders to match against our service catalog</li>
-                  <li>Send deletion requests to services on your behalf (when you authorize)</li>
+                  <li>Detect unsubscribe headers to enable one-click unsubscribe where available</li>
                   <li>Track which services have been discovered from which email account</li>
                 </ul>
               </div>
