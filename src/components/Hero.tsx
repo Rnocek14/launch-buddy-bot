@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Shield, Lock, AlertTriangle, Search, Zap, Target } from "lucide-react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "./ui/accordion";
+import { trackEvent } from "@/lib/analytics";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -36,8 +37,15 @@ export const Hero = () => {
       return;
     }
 
+    trackEvent("hero_cta_click");
     navigate(`/free-scan?email=${encodeURIComponent(email.trim())}`);
   };
+
+  const handleFaqToggle = useCallback((value: string) => {
+    if (value) {
+      trackEvent("hero_faq_opened", { question: value });
+    }
+  }, []);
 
   return (
     <section className="relative min-h-screen flex items-center justify-center px-4 py-20 overflow-hidden">
@@ -85,7 +93,7 @@ export const Hero = () => {
                   onChange={(e) => { setEmail(e.target.value); setError(""); }}
                   className="flex-1 h-14 text-lg px-5 bg-background border-border"
                 />
-                <Button type="submit" size="lg" className="gap-2 h-14 text-lg px-8 bg-primary hover:bg-primary/90 whitespace-nowrap cta-shimmer">
+                <Button type="submit" size="lg" className="relative overflow-hidden gap-2 h-14 text-lg px-8 bg-primary hover:bg-primary/90 whitespace-nowrap cta-shimmer focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
                   <Search className="w-5 h-5" />
                   Run Free Scan
                 </Button>
@@ -151,7 +159,7 @@ export const Hero = () => {
 
         {/* Mini FAQ */}
         <div className="mt-16 max-w-2xl mx-auto">
-          <Accordion type="single" collapsible className="w-full">
+          <Accordion type="single" collapsible className="w-full" onValueChange={handleFaqToggle}>
             <AccordionItem value="emails" className="border-border">
               <AccordionTrigger className="text-sm text-foreground hover:no-underline">
                 Do you read my emails?
