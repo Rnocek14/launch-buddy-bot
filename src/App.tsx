@@ -38,6 +38,7 @@ import ExposureScan from "./pages/ExposureScan";
 import { Navigate } from "react-router-dom";
 import Extension from "./pages/Extension";
 import ResetPassword from "./pages/ResetPassword";
+import EmailSubscriptions from "./pages/EmailSubscriptions";
 
 const queryClient = new QueryClient();
 
@@ -80,6 +81,7 @@ const App = () => (
               <Route path="/exposure-scan" element={<ExposureScan />} />
               <Route path="/extension" element={<Extension />} />
               <Route path="/reset-password" element={<ResetPassword />} />
+              <Route path="/email-subscriptions" element={<EmailSubscriptions />} />
               <Route path="/scan" element={<Navigate to="/dashboard" replace />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />

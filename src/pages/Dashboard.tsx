@@ -1154,7 +1154,20 @@ export default function Dashboard() {
               </div>
             )}
 
-            {/* Collapsible Insights Section */}
+            {/* Email Subscriptions shortcut */}
+            {services.length > 0 && (
+              <Card className="cursor-pointer hover:border-primary/40 transition-colors" onClick={() => navigate('/email-subscriptions')}>
+                <CardContent className="flex items-center gap-3 p-4">
+                  <Bell className="h-5 w-5 text-primary flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium">Manage Email Subscriptions</p>
+                    <p className="text-xs text-muted-foreground">View detected mailing lists and unsubscribe</p>
+                  </div>
+                  <ExternalLink className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                </CardContent>
+              </Card>
+            )}
+
             {(riskData || monthlyStats || services.length > 0) && (
               <details className="group">
                 <summary className="flex items-center gap-2 cursor-pointer list-none py-3 px-4 rounded-lg bg-muted/50 border border-border hover:bg-muted transition-colors">
