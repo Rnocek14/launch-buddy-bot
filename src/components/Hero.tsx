@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
-import { Shield, Zap, Target, Lock, AlertTriangle, Search } from "lucide-react";
+import { Shield, Lock, AlertTriangle, Search, Zap, Target } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { supabase } from "@/integrations/supabase/client";
+import { HeroScanAnimation } from "./HeroScanAnimation";
 
 export const Hero = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -46,84 +47,94 @@ export const Hero = () => {
       <div className="absolute top-20 left-10 w-72 h-72 bg-accent/10 rounded-full blur-3xl animate-pulse" />
       <div className="absolute bottom-20 right-10 w-96 h-96 bg-primary/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
       
-      <div className="container relative z-10 max-w-5xl text-center">
-        {/* Icon badge */}
-        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 mb-8">
-          <Shield className="w-4 h-4 text-emerald-700 dark:text-emerald-400" />
-          <span className="text-sm font-medium text-emerald-700 dark:text-emerald-400">No login required · Takes 10 seconds</span>
-        </div>
+      <div className="container relative z-10 max-w-6xl">
+        <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+          {/* Left: Copy */}
+          <div className="text-center lg:text-left">
+            {/* Badge */}
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-destructive/10 border border-destructive/20 mb-8">
+              <AlertTriangle className="w-4 h-4 text-destructive" />
+              <span className="text-sm font-medium text-destructive">Your data is being sold right now</span>
+            </div>
 
-        <h1 className="text-5xl md:text-7xl font-bold mb-6 bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-          See What's Exposed
-          <br />
-          <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-            About You Online
-          </span>
-        </h1>
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold mb-6 leading-tight">
+              <span className="text-foreground">You have more</span>
+              <br />
+              <span className="text-foreground">online accounts</span>
+              <br />
+              <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                than you think.
+              </span>
+            </h1>
 
-        <p className="text-xl md:text-2xl text-muted-foreground mb-10 max-w-3xl mx-auto leading-relaxed">
-          Enter your email to get an instant exposure report. No signup, no inbox access — just results.
-        </p>
-
-        {/* Email scan form — the main CTA */}
-        <form onSubmit={handleScan} className="max-w-lg mx-auto mb-4">
-          <div className="flex flex-col sm:flex-row gap-3">
-            <Input
-              type="email"
-              placeholder="your@email.com"
-              value={email}
-              onChange={(e) => { setEmail(e.target.value); setError(""); }}
-              className="flex-1 h-14 text-lg px-5 bg-background border-border"
-            />
-            <Button type="submit" size="lg" className="gap-2 h-14 text-lg px-8 bg-primary hover:bg-primary/90">
-              <Search className="w-5 h-5" />
-              Run Free Scan
-            </Button>
-          </div>
-          {error && (
-            <p className="text-sm text-destructive flex items-center justify-center gap-2 mt-3">
-              <AlertTriangle className="w-4 h-4" />
-              {error}
+            <p className="text-lg sm:text-xl text-muted-foreground mb-8 max-w-lg mx-auto lg:mx-0 leading-relaxed">
+              Enter your email. In 60 seconds, we'll show you every service that has your data — and help you delete the ones you don't need.
             </p>
-          )}
-        </form>
 
-        <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground mb-12">
-          <Lock className="w-3 h-3" />
-          <span>We don't store or share your email · No inbox access</span>
-        </div>
+            {/* Email scan form */}
+            <form onSubmit={handleScan} className="max-w-lg mx-auto lg:mx-0 mb-4">
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Input
+                  type="email"
+                  placeholder="your@email.com"
+                  value={email}
+                  onChange={(e) => { setEmail(e.target.value); setError(""); }}
+                  className="flex-1 h-14 text-lg px-5 bg-background border-border"
+                />
+                <Button type="submit" size="lg" className="gap-2 h-14 text-lg px-8 bg-primary hover:bg-primary/90 whitespace-nowrap">
+                  <Search className="w-5 h-5" />
+                  Run Free Scan
+                </Button>
+              </div>
+              {error && (
+                <p className="text-sm text-destructive flex items-center gap-2 mt-3 justify-center lg:justify-start">
+                  <AlertTriangle className="w-4 h-4" />
+                  {error}
+                </p>
+              )}
+            </form>
 
-        <div className="flex flex-wrap justify-center gap-4 mb-12">
-          {isLoggedIn ? (
-            <Link to="/dashboard" className="text-sm text-primary hover:underline">
-              Go to Dashboard →
-            </Link>
-          ) : (
-            <Link to="/auth" className="text-sm text-muted-foreground hover:text-primary">
-              Already have an account? Sign in →
-            </Link>
-          )}
-          <span className="text-muted-foreground">|</span>
-          <Link to="/enterprise" className="text-sm text-muted-foreground hover:text-primary">
-            Enterprise solutions →
-          </Link>
-        </div>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground mb-8 justify-center lg:justify-start">
+              <Lock className="w-3 h-3" />
+              <span>No login required · No inbox access · Takes 10 seconds</span>
+            </div>
 
-        {/* Social Proof */}
-        <div className="flex flex-col items-center gap-6">
-          <div className="flex flex-wrap justify-center gap-8 text-sm">
-            <div className="flex items-center gap-2">
-              <Shield className="w-5 h-5 text-primary" />
-              <span className="text-muted-foreground">169+ Services Tracked</span>
+            <div className="flex flex-wrap gap-4 mb-6 justify-center lg:justify-start">
+              {isLoggedIn ? (
+                <Link to="/dashboard" className="text-sm text-primary hover:underline">
+                  Go to Dashboard →
+                </Link>
+              ) : (
+                <Link to="/auth" className="text-sm text-muted-foreground hover:text-primary">
+                  Already have an account? Sign in →
+                </Link>
+              )}
+              <span className="text-muted-foreground hidden sm:inline">|</span>
+              <Link to="/enterprise" className="text-sm text-muted-foreground hover:text-primary">
+                Enterprise solutions →
+              </Link>
             </div>
-            <div className="flex items-center gap-2">
-              <Zap className="w-5 h-5 text-primary" />
-              <span className="text-muted-foreground">20 Data Brokers Checked</span>
+
+            {/* Social Proof */}
+            <div className="flex flex-wrap gap-6 text-sm justify-center lg:justify-start">
+              <div className="flex items-center gap-2">
+                <Shield className="w-4 h-4 text-primary" />
+                <span className="text-muted-foreground">169+ Services Tracked</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Zap className="w-4 h-4 text-primary" />
+                <span className="text-muted-foreground">20 Data Brokers</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Target className="w-4 h-4 text-primary" />
+                <span className="text-muted-foreground">GDPR / CCPA</span>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Target className="w-5 h-5 text-primary" />
-              <span className="text-muted-foreground">GDPR / CCPA Compliant</span>
-            </div>
+          </div>
+
+          {/* Right: Animated scan preview */}
+          <div className="hidden md:flex justify-center lg:justify-end">
+            <HeroScanAnimation />
           </div>
         </div>
       </div>
