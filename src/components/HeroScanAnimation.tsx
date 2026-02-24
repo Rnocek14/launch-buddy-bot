@@ -22,7 +22,6 @@ export const HeroScanAnimation = () => {
 
   const timeoutsRef = useRef<number[]>([]);
   const intervalsRef = useRef<number[]>([]);
-  const runningRef = useRef(false);
 
   const clearAll = () => {
     timeoutsRef.current.forEach((id) => clearTimeout(id));
@@ -32,9 +31,6 @@ export const HeroScanAnimation = () => {
   };
 
   useEffect(() => {
-    if (runningRef.current) return;
-    runningRef.current = true;
-
     const run = () => {
       clearAll();
 
@@ -86,7 +82,6 @@ export const HeroScanAnimation = () => {
 
     return () => {
       clearAll();
-      runningRef.current = false;
     };
   }, []);
 
@@ -120,7 +115,7 @@ export const HeroScanAnimation = () => {
                 <Search className="w-10 h-10 text-primary" />
                 <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-primary animate-ping" />
               </div>
-              <p className="text-sm font-medium text-foreground">Checking known services…</p>
+              <p className="text-sm font-medium text-foreground">Matching service signatures…</p>
               <div className="flex gap-1">
                 {[0, 1, 2].map((i) => (
                   <div
@@ -145,7 +140,7 @@ export const HeroScanAnimation = () => {
                 />
               </div>
               <p className="text-xs text-muted-foreground">
-                {Math.round(scanProgress * 12).toLocaleString()} records checked
+                {Math.round(scanProgress * 12).toLocaleString()} signals checked
               </p>
             </div>
           )}
@@ -189,7 +184,7 @@ export const HeroScanAnimation = () => {
                 <div className="w-2 h-2 rounded-full bg-destructive" />
                 <span className="text-xs font-medium text-destructive">12 worth reviewing</span>
               </div>
-              <p className="text-[10px] text-muted-foreground">Demo complete</p>
+              <p className="text-[10px] text-muted-foreground">Preview complete · ~60s in production</p>
             </div>
           )}
         </div>

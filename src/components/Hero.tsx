@@ -96,7 +96,7 @@ export const Hero = () => {
 
             <div className="flex items-center gap-2 text-xs text-muted-foreground mb-8 justify-center lg:justify-start">
               <Lock className="w-3 h-3" />
-              <span>No login required · Read-only · No content stored</span>
+              <span>Email-only scan · No inbox access · No content stored</span>
             </div>
 
             <div className="flex flex-wrap gap-4 mb-6 justify-center lg:justify-start">
@@ -135,7 +135,7 @@ export const Hero = () => {
           {/* Mobile-only trust cue (animation hidden on mobile) */}
           <div className="flex md:hidden justify-center">
             <p className="text-xs text-muted-foreground border border-border rounded-full px-4 py-2">
-              ✓ Read-only · No content stored · 1,200+ scans run
+              ✓ Email-only · No inbox access · No content stored
             </p>
           </div>
 
