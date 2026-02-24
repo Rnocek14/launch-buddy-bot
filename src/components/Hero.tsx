@@ -45,7 +45,7 @@ export const Hero = () => {
     if (value) {
       trackEvent("hero_faq_opened", { question: value });
     }
-  }, []);
+  }, [trackEvent]);
 
   return (
     <section className="relative min-h-screen flex items-center justify-center px-4 py-20 overflow-hidden">
@@ -160,7 +160,7 @@ export const Hero = () => {
         {/* Mini FAQ */}
         <div className="mt-16 max-w-2xl mx-auto">
           <Accordion type="single" collapsible className="w-full" onValueChange={handleFaqToggle}>
-            <AccordionItem value="emails" className="border-border">
+            <AccordionItem value="emails_read" className="border-border">
               <AccordionTrigger className="text-sm text-foreground hover:no-underline">
                 Do you read my emails?
               </AccordionTrigger>
@@ -168,7 +168,7 @@ export const Hero = () => {
                 <strong>Free scan:</strong> uses only your email address — <strong>no inbox access</strong>. <strong>Optional deeper discovery:</strong> uses <strong>read-only access</strong> to scan <strong>sender metadata</strong> (who emailed you), <strong>never email content</strong>.
               </AccordionContent>
             </AccordionItem>
-            <AccordionItem value="data" className="border-border">
+            <AccordionItem value="data_stored" className="border-border">
               <AccordionTrigger className="text-sm text-foreground hover:no-underline">
                 What data do you store?
               </AccordionTrigger>
@@ -176,7 +176,7 @@ export const Hero = () => {
                 We store the <strong>services discovered</strong> for your account so you can view them in your dashboard. We do <strong>not</strong> store email content or passwords.
               </AccordionContent>
             </AccordionItem>
-            <AccordionItem value="different" className="border-border">
+            <AccordionItem value="data_brokers" className="border-border">
               <AccordionTrigger className="text-sm text-foreground hover:no-underline">
                 How is this different from data broker removal?
               </AccordionTrigger>
