@@ -72,7 +72,7 @@ export const Hero = () => {
               Enter your email. In 60 seconds, we'll show you every service that has your data — and help you delete the ones you don't need.
             </p>
             <p className="text-sm text-muted-foreground/70 mb-8 max-w-lg mx-auto lg:mx-0 italic">
-              Most people discover 30–80 forgotten accounts.
+              People often discover dozens of forgotten accounts.
             </p>
 
             {/* Email scan form */}
@@ -85,7 +85,7 @@ export const Hero = () => {
                   onChange={(e) => { setEmail(e.target.value); setError(""); }}
                   className="flex-1 h-14 text-lg px-5 bg-background border-border"
                 />
-                <Button type="submit" size="lg" className="gap-2 h-14 text-lg px-8 bg-primary hover:bg-primary/90 whitespace-nowrap animate-[shimmer_6s_ease-in-out_infinite]">
+                <Button type="submit" size="lg" className="gap-2 h-14 text-lg px-8 bg-primary hover:bg-primary/90 whitespace-nowrap cta-shimmer">
                   <Search className="w-5 h-5" />
                   Run Free Scan
                 </Button>
@@ -157,7 +157,7 @@ export const Hero = () => {
                 Do you read my emails?
               </AccordionTrigger>
               <AccordionContent className="text-sm text-muted-foreground">
-                No. The free scan uses only your email address — no inbox access at all. If you later choose the deeper discovery, it uses read-only access to scan sender metadata (who emailed you), never email content.
+                <strong>Free scan:</strong> uses only your email address — <strong>no inbox access</strong>. <strong>Optional deeper discovery:</strong> uses <strong>read-only access</strong> to scan <strong>sender metadata</strong> (who emailed you), <strong>never email content</strong>.
               </AccordionContent>
             </AccordionItem>
             <AccordionItem value="data" className="border-border">
@@ -165,7 +165,7 @@ export const Hero = () => {
                 What data do you store?
               </AccordionTrigger>
               <AccordionContent className="text-sm text-muted-foreground">
-                We store the list of services we discover linked to your email. We never store email content, passwords, or personal messages. You can delete your account and all data at any time.
+                We store the <strong>services discovered</strong> for your account so you can view them in your dashboard. We do <strong>not</strong> store email content or passwords.
               </AccordionContent>
             </AccordionItem>
             <AccordionItem value="different" className="border-border">
@@ -173,7 +173,7 @@ export const Hero = () => {
                 How is this different from data broker removal?
               </AccordionTrigger>
               <AccordionContent className="text-sm text-muted-foreground">
-                Data broker removal services focus on people-search sites. We go further — we find every online account tied to your email (SaaS, social, shopping, etc.) and help you delete the ones you no longer use, plus check data brokers too.
+                Data broker removal focuses on people-search/data broker sites. We focus on <strong>account discovery</strong> first — finding services tied to your email — and then guiding cleanup.
               </AccordionContent>
             </AccordionItem>
           </Accordion>
