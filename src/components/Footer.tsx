@@ -16,7 +16,6 @@ export const Footer = () => {
             <a href="/help" className="hover:text-foreground transition-colors">Help Center</a>
             <a href="/status" className="hover:text-foreground transition-colors">Status</a>
             <a href="mailto:support@footprintfinder.app" className="hover:text-foreground transition-colors">Contact</a>
-            <a href="/admin" className="hover:text-foreground transition-colors">Admin</a>
           </div>
           
           <p className="text-sm text-muted-foreground">
