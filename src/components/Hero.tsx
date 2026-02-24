@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Shield, Lock, AlertTriangle, Search, Zap, Target } from "lucide-react";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "./ui/accordion";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -67,8 +68,11 @@ export const Hero = () => {
               </span>
             </h1>
 
-            <p className="text-lg sm:text-xl text-muted-foreground mb-8 max-w-lg mx-auto lg:mx-0 leading-relaxed">
+            <p className="text-lg sm:text-xl text-muted-foreground mb-2 max-w-lg mx-auto lg:mx-0 leading-relaxed">
               Enter your email. In 60 seconds, we'll show you every service that has your data — and help you delete the ones you don't need.
+            </p>
+            <p className="text-sm text-muted-foreground/70 mb-8 max-w-lg mx-auto lg:mx-0 italic">
+              Most people discover 30–80 forgotten accounts.
             </p>
 
             {/* Email scan form */}
@@ -81,7 +85,7 @@ export const Hero = () => {
                   onChange={(e) => { setEmail(e.target.value); setError(""); }}
                   className="flex-1 h-14 text-lg px-5 bg-background border-border"
                 />
-                <Button type="submit" size="lg" className="gap-2 h-14 text-lg px-8 bg-primary hover:bg-primary/90 whitespace-nowrap">
+                <Button type="submit" size="lg" className="gap-2 h-14 text-lg px-8 bg-primary hover:bg-primary/90 whitespace-nowrap animate-[shimmer_6s_ease-in-out_infinite]">
                   <Search className="w-5 h-5" />
                   Run Free Scan
                 </Button>
@@ -143,6 +147,36 @@ export const Hero = () => {
           <div className="hidden md:flex justify-center lg:justify-end">
             <HeroScanAnimation />
           </div>
+        </div>
+
+        {/* Mini FAQ */}
+        <div className="mt-16 max-w-2xl mx-auto">
+          <Accordion type="single" collapsible className="w-full">
+            <AccordionItem value="emails" className="border-border">
+              <AccordionTrigger className="text-sm text-foreground hover:no-underline">
+                Do you read my emails?
+              </AccordionTrigger>
+              <AccordionContent className="text-sm text-muted-foreground">
+                No. The free scan uses only your email address — no inbox access at all. If you later choose the deeper discovery, it uses read-only access to scan sender metadata (who emailed you), never email content.
+              </AccordionContent>
+            </AccordionItem>
+            <AccordionItem value="data" className="border-border">
+              <AccordionTrigger className="text-sm text-foreground hover:no-underline">
+                What data do you store?
+              </AccordionTrigger>
+              <AccordionContent className="text-sm text-muted-foreground">
+                We store the list of services we discover linked to your email. We never store email content, passwords, or personal messages. You can delete your account and all data at any time.
+              </AccordionContent>
+            </AccordionItem>
+            <AccordionItem value="different" className="border-border">
+              <AccordionTrigger className="text-sm text-foreground hover:no-underline">
+                How is this different from data broker removal?
+              </AccordionTrigger>
+              <AccordionContent className="text-sm text-muted-foreground">
+                Data broker removal services focus on people-search sites. We go further — we find every online account tied to your email (SaaS, social, shopping, etc.) and help you delete the ones you no longer use, plus check data brokers too.
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
         </div>
       </div>
     </section>
