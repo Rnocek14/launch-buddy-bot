@@ -1,4 +1,4 @@
-import { Shield, AlertTriangle, AlertCircle, CheckCircle } from "lucide-react";
+import { Shield, AlertTriangle, AlertCircle, CheckCircle, Search } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
@@ -40,15 +40,30 @@ export function BreachResults({ breaches, criticalCount, highCount, error }: Bre
 
   if (breaches.length === 0) {
     return (
-      <Card className="border-emerald-300/50 bg-emerald-50/50 dark:bg-emerald-950/20">
-        <CardContent className="p-6 text-center">
-          <CheckCircle className="w-8 h-8 text-emerald-500 mx-auto mb-3" />
-          <h3 className="text-lg font-semibold mb-1">No Known Breaches Found</h3>
-          <p className="text-sm text-muted-foreground">
-            Your email wasn't found in any known data breaches. But breaches are only part of your footprint.
-          </p>
-        </CardContent>
-      </Card>
+      <div className="space-y-4">
+        <Card className="border-emerald-300/50 bg-emerald-50/50 dark:bg-emerald-950/20">
+          <CardContent className="p-6 text-center">
+            <CheckCircle className="w-8 h-8 text-emerald-500 mx-auto mb-3" />
+            <h3 className="text-lg font-semibold mb-1">No Known Breaches Found</h3>
+            <p className="text-sm text-muted-foreground">
+              Your email wasn't found in any <em>publicly reported</em> data breaches.
+            </p>
+          </CardContent>
+        </Card>
+        <Card className="border-primary/20 bg-primary/5">
+          <CardContent className="p-5 flex items-start gap-3">
+            <Search className="w-5 h-5 text-primary mt-0.5 shrink-0" />
+            <div>
+              <p className="font-medium text-sm">No breaches doesn't mean no exposure</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Breach databases only cover publicly leaked data. Most of your digital footprint — 
+                newsletters, free trials, old accounts — isn't tracked by any breach database. 
+                A secure inbox scan reveals the full picture.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     );
   }
 
@@ -70,12 +85,14 @@ export function BreachResults({ breaches, criticalCount, highCount, error }: Bre
             </div>
             <div>
               <h3 className="text-2xl font-bold">
-                {breaches.length} Data Breach{breaches.length !== 1 ? "es" : ""} Found
+                {breaches.length} Known Breach{breaches.length !== 1 ? "es" : ""} Found
               </h3>
               <p className="text-sm text-muted-foreground">
                 {criticalCount > 0 && <span className="text-red-600 dark:text-red-400 font-medium">{criticalCount} critical</span>}
                 {criticalCount > 0 && highCount > 0 && " · "}
                 {highCount > 0 && <span className="text-orange-600 dark:text-orange-400 font-medium">{highCount} high severity</span>}
+                {(criticalCount > 0 || highCount > 0) && " · "}
+                <span className="italic">from public databases only</span>
               </p>
             </div>
           </div>
@@ -116,6 +133,22 @@ export function BreachResults({ breaches, criticalCount, highCount, error }: Bre
           </p>
         )}
       </div>
+
+      {/* Deeper scan callout */}
+      <Card className="border-primary/20 bg-primary/5">
+        <CardContent className="p-5 flex items-start gap-3">
+          <Search className="w-5 h-5 text-primary mt-0.5 shrink-0" />
+          <div>
+            <p className="font-medium text-sm">
+              These are only <em>publicly reported</em> breaches
+            </p>
+            <p className="text-sm text-muted-foreground mt-1">
+              A deeper inbox scan typically uncovers 3–5× more services holding your data — 
+              including accounts that were never breached but still store your personal information.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
