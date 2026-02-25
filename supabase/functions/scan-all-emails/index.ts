@@ -17,8 +17,8 @@ serve(async (req) => {
 
   try {
     const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      throw new Error('Missing authorization header');
+    if (!authHeader?.startsWith('Bearer ')) {
+      throw new Error('Unauthorized');
     }
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
@@ -29,10 +29,12 @@ serve(async (req) => {
       },
     });
 
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) {
+    const token = authHeader.replace('Bearer ', '');
+    const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
+    if (claimsError || !claimsData?.claims) {
       throw new Error('Unauthorized');
     }
+    const user = { id: claimsData.claims.sub as string };
 
     console.log(`Scanning all emails for user: ${user.id}`);
 
