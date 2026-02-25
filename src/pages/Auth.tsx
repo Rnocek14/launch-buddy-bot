@@ -17,12 +17,20 @@ const passwordSchema = z.string().min(6, "Password must be at least 6 characters
 
 const PUBLISHED_APP_URL = "https://footprintfinder.co";
 
-const getOAuthRedirectUrl = () => {
-  // When on custom domain or production, redirect there
+const OAUTH_POPUP_QUERY_KEY = "oauth_popup";
+
+const getOAuthRedirectUrl = (usePopupCallback = false) => {
+  // In Lovable preview iframe flow, return to /auth so popup can notify opener
+  if (usePopupCallback) {
+    return `${window.location.origin}/auth?${OAUTH_POPUP_QUERY_KEY}=1`;
+  }
+
+  // On custom domain, keep redirects on production domain
   if (isOnCustomDomain()) {
     return `${PUBLISHED_APP_URL}/dashboard`;
   }
-  // When on Lovable preview, redirect back to the preview origin
+
+  // On Lovable preview, redirect back to the preview origin
   return `${window.location.origin}/dashboard`;
 };
 
@@ -57,18 +65,50 @@ export default function Auth() {
   const [signupFullName, setSignupFullName] = useState("");
 
   useEffect(() => {
+    const urlParams = new URLSearchParams(location.search);
+    const isOAuthPopupCallback = urlParams.get(OAUTH_POPUP_QUERY_KEY) === "1";
+
+    const completePopupFlow = async (session: Awaited<ReturnType<typeof supabase.auth.getSession>>["data"]["session"]) => {
+      if (!session || !window.opener || !isOAuthPopupCallback) return;
+
+      window.opener.postMessage(
+        {
+          type: "oauth-complete",
+          access_token: session.access_token,
+          refresh_token: session.refresh_token,
+        },
+        window.location.origin
+      );
+
+      window.close();
+    };
+
     let isMounted = true;
 
     const checkUser = async () => {
       const { data } = await supabase.auth.getSession();
-      if (!isMounted) return;
-      if (data.session) navigate("/dashboard", { replace: true });
+      if (!isMounted || !data.session) return;
+
+      if (isOAuthPopupCallback) {
+        await completePopupFlow(data.session);
+        return;
+      }
+
+      navigate("/dashboard", { replace: true });
     };
 
     checkUser();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!session) return;
+
+      if (isOAuthPopupCallback && (event === "SIGNED_IN" || event === "TOKEN_REFRESHED")) {
+        await completePopupFlow(session);
+        return;
+      }
+
       if (location.pathname.startsWith("/auth") && event === "SIGNED_IN") {
         navigate("/dashboard", { replace: true });
       }
@@ -78,7 +118,39 @@ export default function Auth() {
       isMounted = false;
       subscription.unsubscribe();
     };
-  }, [navigate]);
+  }, [location.pathname, location.search, navigate]);
+
+  useEffect(() => {
+    if (!isInIframe()) return;
+
+    const handleOAuthMessage = async (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) return;
+      if (event.data?.type !== "oauth-complete") return;
+
+      const accessToken = event.data?.access_token;
+      const refreshToken = event.data?.refresh_token;
+      if (!accessToken || !refreshToken) return;
+
+      const { error } = await supabase.auth.setSession({
+        access_token: accessToken,
+        refresh_token: refreshToken,
+      });
+
+      if (error) {
+        toast({
+          title: "Sign-in sync failed",
+          description: error.message,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      navigate("/dashboard", { replace: true });
+    };
+
+    window.addEventListener("message", handleOAuthMessage);
+    return () => window.removeEventListener("message", handleOAuthMessage);
+  }, [navigate, toast]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -125,36 +197,61 @@ export default function Auth() {
     }
   };
 
-  const handleGoogleSignIn = async () => {
+  const startOAuthSignIn = async ({
+    provider,
+    title,
+    allowedHosts,
+    scopes,
+  }: {
+    provider: "google" | "azure";
+    title: string;
+    allowedHosts: string[];
+    scopes?: string;
+  }) => {
     setLoading(true);
+
     try {
-      const needsManualRedirect = isOnCustomDomain() || isInIframe();
-      
+      const insideIframe = isInIframe();
+      const needsManualRedirect = isOnCustomDomain() || insideIframe;
+
       const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
+        provider,
         options: {
-          redirectTo: getOAuthRedirectUrl(),
+          redirectTo: getOAuthRedirectUrl(insideIframe),
           skipBrowserRedirect: needsManualRedirect,
+          ...(scopes ? { scopes } : {}),
         },
       });
+
       if (error) throw error;
-      
-      if (needsManualRedirect && data?.url) {
-        if (isInIframe()) {
-          // Open in new tab to avoid iframe cookie issues
-          window.open(data.url, '_blank');
-        } else {
-          const oauthUrl = new URL(data.url);
-          const allowedHosts = ["accounts.google.com", "gqxkeezkajkiyjpnjgkx.supabase.co"];
-          if (!allowedHosts.some(host => oauthUrl.hostname === host)) {
-            throw new Error("Invalid OAuth redirect URL");
-          }
-          window.location.href = data.url;
-        }
+
+      if (!needsManualRedirect || !data?.url) return;
+
+      const oauthUrl = new URL(data.url);
+      if (!allowedHosts.some((host) => oauthUrl.hostname === host)) {
+        throw new Error("Invalid OAuth redirect URL");
       }
+
+      if (insideIframe) {
+        const popup = window.open(data.url, "oauth-popup", "width=520,height=700");
+
+        if (!popup) {
+          throw new Error("Popup was blocked. Please allow popups and try again.");
+        }
+
+        toast({
+          title: "Complete sign-in",
+          description: "Finish authentication in the popup window.",
+        });
+
+        setLoading(false);
+        return;
+      }
+
+      window.location.href = data.url;
     } catch (error: any) {
       toast({
-        title: "Google Sign-In Failed",
+        title: `${title} Failed`,
         description: error.message,
         variant: "destructive",
       });
@@ -162,41 +259,21 @@ export default function Auth() {
     }
   };
 
+  const handleGoogleSignIn = async () => {
+    await startOAuthSignIn({
+      provider: "google",
+      title: "Google Sign-In",
+      allowedHosts: ["accounts.google.com", "gqxkeezkajkiyjpnjgkx.supabase.co"],
+    });
+  };
+
   const handleOutlookSignIn = async () => {
-    setLoading(true);
-    try {
-      const needsManualRedirect = isOnCustomDomain() || isInIframe();
-      
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'azure',
-        options: {
-          scopes: 'openid email profile',
-          redirectTo: getOAuthRedirectUrl(),
-          skipBrowserRedirect: needsManualRedirect,
-        },
-      });
-      if (error) throw error;
-      
-      if (needsManualRedirect && data?.url) {
-        if (isInIframe()) {
-          window.open(data.url, '_blank');
-        } else {
-          const oauthUrl = new URL(data.url);
-          const allowedHosts = ["login.microsoftonline.com", "gqxkeezkajkiyjpnjgkx.supabase.co"];
-          if (!allowedHosts.some(host => oauthUrl.hostname === host)) {
-            throw new Error("Invalid OAuth redirect URL");
-          }
-          window.location.href = data.url;
-        }
-      }
-    } catch (error: any) {
-      toast({
-        title: "Outlook Sign-In Failed",
-        description: error.message,
-        variant: "destructive",
-      });
-      setLoading(false);
-    }
+    await startOAuthSignIn({
+      provider: "azure",
+      title: "Outlook Sign-In",
+      allowedHosts: ["login.microsoftonline.com", "gqxkeezkajkiyjpnjgkx.supabase.co"],
+      scopes: "openid email profile",
+    });
   };
 
   const handleSignup = async (e: React.FormEvent) => {
