@@ -107,3 +107,6 @@ verify_jwt = true
 
 [functions.delete-user-account]
 verify_jwt = true
+
+[functions.free-breach-check]
+verify_jwt = false
