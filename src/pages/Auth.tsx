@@ -15,12 +15,15 @@ import { trackConversion } from "@/lib/analytics";
 const emailSchema = z.string().email("Invalid email address");
 const passwordSchema = z.string().min(6, "Password must be at least 6 characters");
 
-const PUBLISHED_APP_URL = "https://launch-buddy-bot.lovable.app";
+const PUBLISHED_APP_URL = "https://footprintfinder.co";
 
 const getOAuthRedirectUrl = () => {
-  const isLovablePreview = window.location.hostname.includes("lovableproject.com");
-  const baseUrl = isLovablePreview ? PUBLISHED_APP_URL : window.location.origin;
-  return `${baseUrl}/auth`;
+  return `${PUBLISHED_APP_URL}/dashboard`;
+};
+
+const isOnCustomDomain = () => {
+  return !window.location.hostname.includes("lovable.app") &&
+    !window.location.hostname.includes("lovableproject.com");
 };
 
 export default function Auth() {
@@ -52,7 +55,6 @@ export default function Auth() {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (!session) return;
-      // Only redirect if we're still on the auth page
       if (location.pathname.startsWith("/auth") && event === "SIGNED_IN") {
         navigate("/dashboard", { replace: true });
       }
@@ -67,7 +69,6 @@ export default function Auth() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validate inputs
     try {
       emailSchema.parse(loginEmail);
       passwordSchema.parse(loginPassword);
@@ -113,14 +114,30 @@ export default function Auth() {
   const handleGoogleSignIn = async () => {
     setLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: getOAuthRedirectUrl(),
-        },
-      });
-
-      if (error) throw error;
+      if (isOnCustomDomain()) {
+        const { data, error } = await supabase.auth.signInWithOAuth({
+          provider: 'google',
+          options: {
+            redirectTo: getOAuthRedirectUrl(),
+            skipBrowserRedirect: true,
+          },
+        });
+        if (error) throw error;
+        if (data?.url) {
+          const oauthUrl = new URL(data.url);
+          const allowedHosts = ["accounts.google.com", "gqxkeezkajkiyjpnjgkx.supabase.co"];
+          if (!allowedHosts.some(host => oauthUrl.hostname === host)) {
+            throw new Error("Invalid OAuth redirect URL");
+          }
+          window.location.href = data.url;
+        }
+      } else {
+        const { error } = await supabase.auth.signInWithOAuth({
+          provider: 'google',
+          options: { redirectTo: getOAuthRedirectUrl() },
+        });
+        if (error) throw error;
+      }
     } catch (error: any) {
       toast({
         title: "Google Sign-In Failed",
@@ -134,15 +151,34 @@ export default function Auth() {
   const handleOutlookSignIn = async () => {
     setLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'azure',
-        options: {
-          scopes: 'openid email profile',
-          redirectTo: getOAuthRedirectUrl(),
-        },
-      });
-
-      if (error) throw error;
+      if (isOnCustomDomain()) {
+        const { data, error } = await supabase.auth.signInWithOAuth({
+          provider: 'azure',
+          options: {
+            scopes: 'openid email profile',
+            redirectTo: getOAuthRedirectUrl(),
+            skipBrowserRedirect: true,
+          },
+        });
+        if (error) throw error;
+        if (data?.url) {
+          const oauthUrl = new URL(data.url);
+          const allowedHosts = ["login.microsoftonline.com", "gqxkeezkajkiyjpnjgkx.supabase.co"];
+          if (!allowedHosts.some(host => oauthUrl.hostname === host)) {
+            throw new Error("Invalid OAuth redirect URL");
+          }
+          window.location.href = data.url;
+        }
+      } else {
+        const { error } = await supabase.auth.signInWithOAuth({
+          provider: 'azure',
+          options: {
+            scopes: 'openid email profile',
+            redirectTo: getOAuthRedirectUrl(),
+          },
+        });
+        if (error) throw error;
+      }
     } catch (error: any) {
       toast({
         title: "Outlook Sign-In Failed",
@@ -156,7 +192,6 @@ export default function Auth() {
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validate inputs
     try {
       emailSchema.parse(signupEmail);
       passwordSchema.parse(signupPassword);
@@ -185,7 +220,7 @@ export default function Auth() {
         email: signupEmail,
         password: signupPassword,
         options: {
-          emailRedirectTo: `${window.location.origin}/dashboard`,
+          emailRedirectTo: `${PUBLISHED_APP_URL}/dashboard`,
           data: {
             full_name: signupFullName,
           },
@@ -199,7 +234,6 @@ export default function Auth() {
         throw error;
       }
 
-      // Track successful signup
       if (data.user) {
         trackConversion(TRACKING_EVENTS.USER_SIGNUP, data.user.id, {
           email: signupEmail,
@@ -334,7 +368,7 @@ export default function Auth() {
                       try {
                         setResetLoading(true);
                         const { error } = await supabase.auth.resetPasswordForEmail(loginEmail, {
-                          redirectTo: `${window.location.origin}/reset-password`,
+                          redirectTo: `${PUBLISHED_APP_URL}/reset-password`,
                         });
                         if (error) throw error;
                         toast({ title: "Password reset sent", description: "Check your inbox for a password reset link." });
