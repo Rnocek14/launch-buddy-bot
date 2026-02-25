@@ -84,16 +84,21 @@ export default function PrivacyContactDiscovery() {
 
       if (error) throw error;
 
-      if (data.contacts_found === 0) {
+      if (data.contacts_found === 0 && !data.already_known) {
         toast({
           title: "No contacts found",
           description: `Could not find privacy contacts for ${data.service}. The privacy policy may not be publicly accessible.`,
           variant: "destructive",
         });
+      } else if (data.contacts_found === 0 && data.already_known > 0) {
+        toast({
+          title: "Already up to date",
+          description: `Found ${data.already_known} contact(s) for ${data.service}, but they're already in the catalog.`,
+        });
       } else {
         toast({
           title: "Success",
-          description: `Found ${data.contacts_found} contact method(s) for ${data.service}`,
+          description: `Found ${data.contacts_found} new contact method(s) for ${data.service}`,
         });
       }
 

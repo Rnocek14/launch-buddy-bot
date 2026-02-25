@@ -127,6 +127,13 @@ export const ContactDiscoveryDialog = ({
             description: `Found ${data.contacts.length} contact method(s) for ${service.name}`,
           });
         }
+      } else if (data?.already_known > 0) {
+        toast({
+          title: "Already up to date",
+          description: `Found ${data.already_known} contact(s) for ${service.name}, but they're already saved.`,
+        });
+        // Refresh to show existing contacts
+        setContacts([]);
       } else {
         setError(`No privacy contacts found for ${service.name}. The privacy policy may not be accessible or doesn't list contact methods.`);
       }
