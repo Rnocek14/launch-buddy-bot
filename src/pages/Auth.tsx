@@ -15,6 +15,14 @@ import { trackConversion } from "@/lib/analytics";
 const emailSchema = z.string().email("Invalid email address");
 const passwordSchema = z.string().min(6, "Password must be at least 6 characters");
 
+const PUBLISHED_APP_URL = "https://launch-buddy-bot.lovable.app";
+
+const getOAuthRedirectUrl = () => {
+  const isLovablePreview = window.location.hostname.includes("lovableproject.com");
+  const baseUrl = isLovablePreview ? PUBLISHED_APP_URL : window.location.origin;
+  return `${baseUrl}/auth`;
+};
+
 export default function Auth() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -108,8 +116,7 @@ export default function Auth() {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          scopes: 'openid email profile',
-          redirectTo: `${window.location.origin}/dashboard`,
+          redirectTo: getOAuthRedirectUrl(),
         },
       });
 
@@ -130,8 +137,8 @@ export default function Auth() {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'azure',
         options: {
-          scopes: 'openid email profile offline_access https://graph.microsoft.com/Mail.Read',
-          redirectTo: `${window.location.origin}/dashboard`,
+          scopes: 'openid email profile',
+          redirectTo: getOAuthRedirectUrl(),
         },
       });
 
