@@ -1,13 +1,16 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Shield, Mail, AlertTriangle, CheckCircle, ArrowRight, Lock, Zap, Eye, Search, Info } from "lucide-react";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Link } from "react-router-dom";
+import { Mail, AlertTriangle, Lock, Zap, Shield, Search, Eye } from "lucide-react";
+import { BreachResults } from "@/components/free-scan/BreachResults";
+import { FootprintEstimate } from "@/components/free-scan/FootprintEstimate";
+import { UpgradeCTA } from "@/components/free-scan/UpgradeCTA";
+import { supabase } from "@/integrations/supabase/client";
+import { trackEvent } from "@/lib/analytics";
 
 // Deterministic hash from email string
 function emailHash(email: string): number {
@@ -19,7 +22,7 @@ function emailHash(email: string): number {
   return hash >>> 0;
 }
 
-const getExposurePreview = (email: string) => {
+function getFootprintEstimate(email: string) {
   const domain = email.split("@")[1]?.toLowerCase() || "";
   const hash = emailHash(email);
   const variation = hash % 20;
@@ -44,16 +47,97 @@ const getExposurePreview = (email: string) => {
     ],
     dataBrokers,
   };
-};
+}
+
+interface BreachData {
+  name: string;
+  title: string;
+  domain: string;
+  breachDate: string;
+  dataClasses: string[];
+  isVerified: boolean;
+  severity: "critical" | "high" | "medium" | "low";
+}
+
+interface ScanResults {
+  breaches: BreachData[];
+  breachCount: number;
+  criticalCount: number;
+  highCount: number;
+  breachError: string | null;
+  estimate: ReturnType<typeof getFootprintEstimate>;
+}
 
 export default function FreeScan() {
   const [searchParams] = useSearchParams();
   const [email, setEmail] = useState("");
   const [isScanning, setIsScanning] = useState(false);
-  const [results, setResults] = useState<ReturnType<typeof getExposurePreview> | null>(null);
+  const [scanPhase, setScanPhase] = useState("");
+  const [results, setResults] = useState<ScanResults | null>(null);
   const [error, setError] = useState("");
 
-  // Auto-scan if email passed via query param (from Hero)
+  const runScan = useCallback(async (scanEmail: string) => {
+    setIsScanning(true);
+    setError("");
+    trackEvent("scan_started", { source: "free_scan" });
+
+    // Phase 1: Breach check
+    setScanPhase("Checking breach databases...");
+    let breachData = { breaches: [] as BreachData[], breachCount: 0, criticalCount: 0, highCount: 0, error: null as string | null };
+
+    try {
+      const { data, error: fnError } = await supabase.functions.invoke("free-breach-check", {
+        body: { email: scanEmail },
+      });
+
+      if (fnError) {
+        console.warn("Breach check failed:", fnError);
+        breachData.error = "Could not check breaches right now";
+      } else if (data?.error) {
+        breachData.error = data.error;
+      } else {
+        breachData = {
+          breaches: data.breaches || [],
+          breachCount: data.breachCount || 0,
+          criticalCount: data.criticalCount || 0,
+          highCount: data.highCount || 0,
+          error: null,
+        };
+      }
+    } catch (err) {
+      console.warn("Breach check error:", err);
+      breachData.error = "Breach check unavailable";
+    }
+
+    // Phase 2: Footprint estimate
+    setScanPhase("Analyzing digital footprint...");
+    await new Promise((resolve) => setTimeout(resolve, 1200));
+    const estimate = getFootprintEstimate(scanEmail);
+
+    setScanPhase("Generating report...");
+    await new Promise((resolve) => setTimeout(resolve, 600));
+
+    setResults({
+      breaches: breachData.breaches,
+      breachCount: breachData.breachCount,
+      criticalCount: breachData.criticalCount,
+      highCount: breachData.highCount,
+      breachError: breachData.error,
+      estimate,
+    });
+
+    trackEvent("scan_completed", {
+      source: "free_scan",
+      breach_count: breachData.breachCount,
+      critical_count: breachData.criticalCount,
+      estimated_services: estimate.estimatedServices,
+    });
+
+    setIsScanning(false);
+    setScanPhase("");
+  }, []);
+
+  // Auto-scan if email passed via query param
   useEffect(() => {
     const emailParam = searchParams.get("email");
     if (emailParam && emailParam.includes("@") && !results) {
@@ -62,14 +146,6 @@ export default function FreeScan() {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  const runScan = async (scanEmail: string) => {
-    setIsScanning(true);
-    setError("");
-    await new Promise(resolve => setTimeout(resolve, 2500));
-    setResults(getExposurePreview(scanEmail));
-    setIsScanning(false);
-  };
 
   const handleScan = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -97,13 +173,13 @@ export default function FreeScan() {
             </h1>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
               {results
-                ? "Here's what we found based on your email — and what's likely hiding deeper."
-                : "Get an instant preview of your digital footprint. No signup required."}
+                ? "Real breaches and estimated exposure — here's what we found."
+                : "Check breach databases and estimate your digital footprint. No signup required."}
             </p>
           </div>
 
-          {/* Scan Form — show when no results or scanning */}
-          {!results && (
+          {/* Scan Form */}
+          {!results && !isScanning && (
             <Card className="max-w-xl mx-auto mb-12">
               <CardHeader className="text-center">
                 <CardTitle className="flex items-center justify-center gap-2">
@@ -111,7 +187,7 @@ export default function FreeScan() {
                   Enter Your Email
                 </CardTitle>
                 <CardDescription>
-                  We'll estimate how many services likely have your data
+                  We'll check real breach databases and estimate your footprint
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -123,20 +199,10 @@ export default function FreeScan() {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       className="flex-1"
-                      disabled={isScanning}
                     />
-                    <Button type="submit" disabled={isScanning} className="gap-2">
-                      {isScanning ? (
-                        <>
-                          <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
-                          Analyzing...
-                        </>
-                      ) : (
-                        <>
-                          <Search className="w-4 h-4" />
-                          Check Exposure
-                        </>
-                      )}
+                    <Button type="submit" className="gap-2">
+                      <Search className="w-4 h-4" />
+                      Check Exposure
                     </Button>
                   </div>
                   {error && (
@@ -156,132 +222,41 @@ export default function FreeScan() {
           )}
 
           {/* Scanning state */}
-          {isScanning && results === null && (
+          {isScanning && (
             <div className="text-center py-16">
               <div className="w-16 h-16 border-4 border-primary/30 border-t-primary rounded-full animate-spin mx-auto mb-6" />
-              <p className="text-lg text-muted-foreground">Checking public exposure sources...</p>
+              <p className="text-lg text-muted-foreground">{scanPhase}</p>
               <p className="text-sm text-muted-foreground mt-2">Breach databases · Data brokers · Public records</p>
             </div>
           )}
 
           {/* Results */}
           {results && (
-            <div className="space-y-8 animate-fade-in">
-              {/* Summary Card */}
-              <Card className="border-primary/30 bg-primary/5">
-                <CardContent className="p-8">
-                  <div className="flex flex-col md:flex-row items-center gap-6">
-                    <div className="w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center">
-                      <Shield className="w-12 h-12 text-primary" />
-                    </div>
-                    <div className="text-center md:text-left flex-1">
-                      <div className="flex items-center gap-2 justify-center md:justify-start mb-2">
-                        <h2 className="text-3xl font-bold">
-                          Typically {Math.round(Math.max(10, results.estimatedServices - 10) / 5) * 5}–{Math.round((results.estimatedServices + 10) / 5) * 5} Accounts
-                        </h2>
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Info className="w-4 h-4 text-muted-foreground cursor-help shrink-0" />
-                            </TooltipTrigger>
-                            <TooltipContent className="max-w-xs">
-                              <p>This preview is based on provider-level patterns. Connect Gmail to see your exact accounts.</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      </div>
-                      <p className="text-muted-foreground mb-2">
-                        Emails from this provider are commonly linked to this many services, based on public data trends.
-                      </p>
-                      {results.dataBrokers > 0 && (
-                        <p className="text-sm font-medium text-destructive/80">
-                          + {results.dataBrokers} data brokers may list your personal information
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+            <div className="space-y-10 animate-fade-in">
+              {/* Layer 1: Real Breaches */}
+              <section>
+                <h2 className="text-lg font-semibold text-muted-foreground mb-4">Breach History</h2>
+                <BreachResults
+                  breaches={results.breaches}
+                  criticalCount={results.criticalCount}
+                  highCount={results.highCount}
+                  error={results.breachError}
+                />
+              </section>
 
-              {/* Typical Categories */}
-              <h3 className="text-lg font-semibold text-muted-foreground">Where accounts often show up</h3>
-              <div className="grid md:grid-cols-2 gap-4">
-                {results.categories.map((category, index) => (
-                  <Card key={index} className="hover:border-primary/50 transition-colors">
-                    <CardContent className="p-4 flex items-center justify-between">
-                      <div>
-                        <p className="font-medium">{category.name}</p>
-                        <p className="text-sm text-muted-foreground">~{category.count} services</p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
+              {/* Layer 2: Footprint Estimate */}
+              <section>
+                <FootprintEstimate
+                  categories={results.estimate.categories}
+                  dataBrokers={results.estimate.dataBrokers}
+                  estimatedServices={results.estimate.estimatedServices}
+                />
+              </section>
 
-              {/* === TENSION SECTION === */}
-              <Card className="border-amber-300/50 bg-amber-50/50 dark:bg-amber-950/20 dark:border-amber-700/30">
-                <CardContent className="p-8 text-center">
-                  <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-amber-100 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 mb-4">
-                    <AlertTriangle className="w-4 h-4 text-amber-700 dark:text-amber-400" />
-                    <span className="text-sm font-medium text-amber-800 dark:text-amber-300">This is only what's publicly visible</span>
-                  </div>
-                  <h3 className="text-xl font-bold mb-3">
-                    Breach databases only show what was compromised
-                  </h3>
-                  <p className="text-muted-foreground max-w-xl mx-auto">
-                    They don't show newsletters, free trials, old signups, or accounts you forgot about.
-                    Your real footprint lives in your inbox. A secure inbox scan finds the exact services holding your data.
-                  </p>
-                </CardContent>
-              </Card>
-
-              {/* === OAUTH UPGRADE CTA === */}
-              <Card className="bg-gradient-to-r from-primary/10 to-accent/10 border-primary/30">
-                <CardContent className="p-8 text-center">
-                  <h3 className="text-2xl font-bold mb-2">
-                    Find Your Hidden Accounts
-                  </h3>
-                  <p className="text-muted-foreground mb-6 max-w-lg mx-auto">
-                    Run a secure inbox scan to discover exactly which services have your data — then delete what you don't need.
-                  </p>
-
-                  <Link to="/auth">
-                    <Button size="lg" className="gap-2 mb-6">
-                      <Shield className="w-5 h-5" />
-                      Run Secure Inbox Scan
-                      <ArrowRight className="w-4 h-4" />
-                    </Button>
-                  </Link>
-
-                  {/* Trust bullets */}
-                  <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-muted-foreground">
-                    <div className="flex items-center gap-2">
-                      <CheckCircle className="w-4 h-4 text-emerald-500" />
-                      <span>Read-only access</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <CheckCircle className="w-4 h-4 text-emerald-500" />
-                      <span>We scan sender metadata only</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <CheckCircle className="w-4 h-4 text-emerald-500" />
-                      <span>No email content stored</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <CheckCircle className="w-4 h-4 text-emerald-500" />
-                      <span>Disconnect anytime</span>
-                    </div>
-                  </div>
-
-                  <div className="mt-4">
-                    <Link to="/demo">
-                      <Button variant="ghost" size="sm" className="text-muted-foreground">
-                        View demo first
-                      </Button>
-                    </Link>
-                  </div>
-                </CardContent>
-              </Card>
+              {/* Layer 3: Upgrade CTA */}
+              <section>
+                <UpgradeCTA hasBreaches={results.breachCount > 0} />
+              </section>
 
               {/* Try Again */}
               <div className="text-center">
@@ -306,16 +281,16 @@ export default function FreeScan() {
                   <Lock className="w-8 h-8 text-primary mx-auto mb-4" />
                   <h3 className="font-semibold mb-2">Privacy First</h3>
                   <p className="text-sm text-muted-foreground">
-                    Your email is never stored or shared. This preview uses statistical analysis.
+                    Your email is checked against breach databases but never stored or shared.
                   </p>
                 </CardContent>
               </Card>
               <Card className="text-center">
                 <CardContent className="p-6">
                   <Zap className="w-8 h-8 text-accent mx-auto mb-4" />
-                  <h3 className="font-semibold mb-2">Instant Results</h3>
+                  <h3 className="font-semibold mb-2">Real Data</h3>
                   <p className="text-sm text-muted-foreground">
-                    Get your exposure estimate in seconds. Full scan available with free signup.
+                    See actual breaches from verified databases plus estimated account exposure.
                   </p>
                 </CardContent>
               </Card>
