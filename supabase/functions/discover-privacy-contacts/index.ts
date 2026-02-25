@@ -51,7 +51,7 @@ const EARLY_STOP_CONFIDENCE = Math.min(100, Math.max(30, int(Deno.env.get('EARLY
 
 // Phase 1.4: Tier-2 retries
 const ENABLE_T2 = bool(Deno.env.get('ENABLE_T2'));
-const T2_RETRY_ON = new Set(['bot_protection', 'captcha']);
+const T2_RETRY_ON = new Set(['bot_protection', 'captcha', 'POLICY_NOT_FOUND', 'NETWORK_ERROR']);
 
 // Phase 1.3: Slow-domain overrides parser
 const parseOverrides = (raw?: string) => {
@@ -707,15 +707,39 @@ async function trySimpleFetch(
         });
         usedCache = true;
       } else {
-        const fetchPromise = fetch(url, {
-          headers: {
-            'User-Agent': USER_AGENT,
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-            'Accept-Language': 'en-US,en;q=0.9',
-          },
-          redirect: 'follow',
-          signal: AbortSignal.timeout(15000)
-        });
+        const fetchWithH2Fallback = async (fetchUrl: string): Promise<Response> => {
+          try {
+            return await fetch(fetchUrl, {
+              headers: {
+                'User-Agent': USER_AGENT,
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                'Accept-Language': 'en-US,en;q=0.9',
+              },
+              redirect: 'follow',
+              signal: AbortSignal.timeout(15000)
+            });
+          } catch (fetchErr) {
+            const errMsg = fetchErr instanceof Error ? fetchErr.message : String(fetchErr);
+            // Retry with HTTP/1.1 on h2 stream errors
+            if (errMsg.includes('http2 error') || errMsg.includes('stream error') || errMsg.includes('GOAWAY')) {
+              console.log(`[Phase 1] H2 error, retrying with HTTP/1.1: ${sanitizeForLog(fetchUrl)}`);
+              return await fetch(fetchUrl, {
+                headers: {
+                  'User-Agent': USER_AGENT,
+                  'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                  'Accept-Language': 'en-US,en;q=0.9',
+                  'Connection': 'keep-alive',
+                },
+                redirect: 'follow',
+                signal: AbortSignal.timeout(15000),
+                // @ts-ignore — Deno supports this to force HTTP/1.1
+                client: undefined,
+              });
+            }
+            throw fetchErr;
+          }
+        };
+        const fetchPromise = fetchWithH2Fallback(url);
         pageResponse = await withAttemptTimeout(fetchPromise, attemptTimeoutMs);
       }
 
@@ -910,49 +934,108 @@ async function trySimpleFetch(
 // Remove duplicate withAttemptTimeout declaration
 
 // Phase 2: Browserless.io fallback for JavaScript-heavy sites
-async function tryBrowserlessFetch(urlsToTry: string[], browserlessApiKey: string): Promise<{ content: string; url: string } | null> {
+async function tryBrowserlessFetch(urlsToTry: string[], browserlessApiKey: string, domain?: string): Promise<{ content: string; url: string } | null> {
   console.log('[Phase 2] Falling back to Browserless.io for JavaScript rendering...');
   
   for (const url of urlsToTry) {
     console.log(`[Phase 2] Trying Browserless: ${url}`);
     
     try {
-      const response = await fetch(`https://production-sfo.browserless.io/content?token=${browserlessApiKey}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Cache-Control': 'no-cache',
-        },
-        body: JSON.stringify({
-          url: url,
-          waitForTimeout: 3000,
-        }),
-        signal: AbortSignal.timeout(45000) // 45s timeout for Browserless
-      });
+      // Try the newer /content endpoint first, fall back to /scrape
+      const endpoints = [
+        'https://production-sfo.browserless.io/content',
+        'https://chrome.browserless.io/content',
+      ];
+      
+      let lastError = '';
+      for (const endpoint of endpoints) {
+        try {
+          const response = await fetch(`${endpoint}?token=${browserlessApiKey}`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Cache-Control': 'no-cache',
+            },
+            body: JSON.stringify({
+              url: url,
+              waitForTimeout: 5000,
+              gotoOptions: {
+                waitUntil: 'networkidle2',
+                timeout: 30000,
+              },
+              rejectResourceTypes: ['image', 'media', 'font'],
+            }),
+            signal: AbortSignal.timeout(45000)
+          });
 
-      if (response.ok) {
-        const html = await response.text();
-        
-        // Strip HTML for AI processing — use smart content window
-        const strippedText = html
-          .replace(/<script[^>]*>.*?<\/script>/gis, '')
-          .replace(/<style[^>]*>.*?<\/style>/gis, '')
-          .replace(/<[^>]+>/g, ' ')
-          .replace(/\s+/g, ' ')
-          .trim();
-        const content = extractSmartContentWindow(strippedText, 10000);
-        
-        if (content.length > 200) {
-          // Soft-404 check for Browserless results too
-          if (isSoft404(html)) {
-            console.warn(`[Phase 2] Soft-404 detected via Browserless: ${url}`);
+          if (response.ok) {
+            const html = await response.text();
+            
+            // Try link extraction from Browserless HTML too (it has rendered JS)
+            if (domain && html.length > 500) {
+              const scoredLinks = extractAndScorePrivacyLinks(html, domain, url);
+              if (scoredLinks.length > 0 && scoredLinks[0].score >= 25) {
+                console.log(`[Phase 2] Found privacy links in Browserless HTML, trying top link: ${scoredLinks[0].url}`);
+                // Try fetching the discovered privacy link directly 
+                try {
+                  const linkResp = await fetch(scoredLinks[0].url, {
+                    headers: { 'User-Agent': USER_AGENT, 'Accept': 'text/html' },
+                    redirect: 'follow',
+                    signal: AbortSignal.timeout(10000),
+                  });
+                  if (linkResp.ok) {
+                    const linkHtml = await linkResp.text();
+                    if (!isSoft404(linkHtml)) {
+                      const linkText = linkHtml
+                        .replace(/<script[^>]*>.*?<\/script>/gis, '')
+                        .replace(/<style[^>]*>.*?<\/style>/gis, '')
+                        .replace(/<[^>]+>/g, ' ')
+                        .replace(/\s+/g, ' ')
+                        .trim();
+                      const linkContent = extractSmartContentWindow(linkText, 10000);
+                      if (linkContent.length > 200) {
+                        console.log(`[Phase 2] ✓ Fetched privacy page via Browserless link discovery: ${scoredLinks[0].url}`);
+                        return { content: linkContent, url: scoredLinks[0].url };
+                      }
+                    }
+                  }
+                } catch {}
+              }
+            }
+            
+            // Strip HTML for AI processing — use smart content window
+            const strippedText = html
+              .replace(/<script[^>]*>.*?<\/script>/gis, '')
+              .replace(/<style[^>]*>.*?<\/style>/gis, '')
+              .replace(/<[^>]+>/g, ' ')
+              .replace(/\s+/g, ' ')
+              .trim();
+            const content = extractSmartContentWindow(strippedText, 10000);
+            
+            if (content.length > 200) {
+              if (isSoft404(html)) {
+                console.warn(`[Phase 2] Soft-404 detected via Browserless: ${url}`);
+                break; // Try next URL, not next endpoint
+              }
+              console.log(`[Phase 2] Successfully fetched via Browserless: ${url} (${content.length} chars)`);
+              return { content, url };
+            }
+          } else {
+            lastError = `${endpoint} returned ${response.status}`;
+            console.warn(`[Phase 2] Browserless endpoint failed for ${url}: ${response.status} (${endpoint})`);
+            // Try next endpoint
             continue;
           }
-          console.log(`[Phase 2] Successfully fetched via Browserless: ${url} (${content.length} chars)`);
-          return { content, url };
+          break; // If we got here, the endpoint worked (even if content was short)
+        } catch (endpointError) {
+          lastError = endpointError instanceof Error ? endpointError.message : String(endpointError);
+          console.warn(`[Phase 2] Browserless endpoint error (${endpoint}):`, lastError);
+          continue; // Try next endpoint
         }
-      } else {
-        console.warn(`[Phase 2] Browserless failed for ${url}: ${response.status}`);
+      }
+      
+      if (lastError) {
+        console.warn(`[Phase 2] All Browserless endpoints failed for ${url}: ${lastError}`);
       }
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
@@ -1218,6 +1301,15 @@ serve(async (req) => {
       `https://${d}/help/privacy`,
       `https://${d}/support/privacy`,
       `https://${d}/about/privacy`,
+      `https://${d}/policies/privacy`,
+      `https://${d}/policies/privacy-policy`,
+      `https://${d}/trust/privacy`,
+      `https://${d}/en/privacy-policy`,
+      `https://${d}/en/privacy`,
+      `https://${d}/info/privacy`,
+      `https://${d}/us/privacy`,
+      `https://${d}/company/privacy`,
+      `https://${d}/security/privacy`,
     ];
 
     // Deduplicate www/non-www upfront
@@ -1314,7 +1406,7 @@ serve(async (req) => {
         timestamp: new Date().toISOString(),
       }));
       
-      const browserlessResult = await tryBrowserlessFetch(urlsForBrowserless, browserlessApiKey);
+      const browserlessResult = await tryBrowserlessFetch(urlsForBrowserless, browserlessApiKey, service.domain);
       realFetchCount += urlsForBrowserless.length; // Each browserless URL = 1 fetch
       
       if (browserlessResult) {

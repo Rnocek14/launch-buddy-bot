@@ -324,7 +324,21 @@ const PRIVACY_SIGNALS = [
   'personal information', 'we collect', 'delete your', 'erasure',
 ];
 
-const OFFICIAL_SUBDOMAINS = ['privacy', 'legal', 'help', 'support', 'policies'];
+const OFFICIAL_SUBDOMAINS = ['privacy', 'legal', 'help', 'support', 'policies', 'explore', 'my', 'account', 'app', 'www2', 'secure', 'trust', 'info', 'docs'];
+
+// Extract the eTLD+1 (effective top-level domain + 1) for comparison.
+// Handles common multi-part TLDs (.co.uk, .com.au, etc.)
+function getBaseDomain(hostname: string): string {
+  const parts = hostname.toLowerCase().replace(/^www\./i, '').split('.');
+  // Handle two-part TLDs like co.uk, com.au, co.jp, org.uk, etc.
+  const multiPartTLDs = ['co.uk', 'com.au', 'co.jp', 'co.nz', 'com.br', 'co.kr', 'co.in', 'org.uk', 'com.mx', 'com.sg', 'co.za'];
+  const lastTwo = parts.slice(-2).join('.');
+  if (multiPartTLDs.includes(lastTwo) && parts.length >= 3) {
+    return parts.slice(-3).join('.');
+  }
+  // Standard: last 2 parts
+  return parts.length >= 2 ? parts.slice(-2).join('.') : hostname;
+}
 
 export function isOfficialDomain(candidateHost: string, targetDomain: string): boolean {
   const normCandidate = candidateHost.replace(/^www\./i, '').toLowerCase();
@@ -338,11 +352,14 @@ export function isOfficialDomain(candidateHost: string, targetDomain: string): b
     if (normCandidate === `${sub}.${normTarget}`) return true;
   }
 
-  // Strict: candidate must end with `.${normTarget}` (any subdomain of the target)
-  // This is safe because normTarget itself is the full domain (e.g., "example.co.uk")
-  // so "blog.example.co.uk".endsWith(".example.co.uk") = true (correct)
-  // but "evil.co.uk".endsWith(".example.co.uk") = false (correct)
+  // Strict subdomain: candidate must end with `.${normTarget}`
   if (normCandidate.endsWith(`.${normTarget}`)) return true;
+
+  // eTLD+1 match: allow redirects between sibling domains with same base
+  // e.g., explore.zoom.us → zoom.us, policies.google.com → google.com
+  const candidateBase = getBaseDomain(normCandidate);
+  const targetBase = getBaseDomain(normTarget);
+  if (candidateBase === targetBase) return true;
 
   return false;
 }
