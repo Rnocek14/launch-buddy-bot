@@ -81,6 +81,36 @@ Sincerely,
 {{currentDate}}`,
   },
   {
+    id: "ccpa-do-not-sell",
+    name: "CCPA Section 1798.120 - Do Not Sell My Data",
+    jurisdiction: "ccpa",
+    subject: "Do Not Sell My Personal Information - CCPA Request",
+    body: `To Whom It May Concern,
+
+I am a California resident and I am writing to exercise my right to opt out of the sale of my personal information under the California Consumer Privacy Act (CCPA), Section 1798.120.
+
+My details:
+- Full Name: {{fullName}}
+- Email: {{email}}
+{{#if address}}- Address: {{address}}{{/if}}
+{{#if profileUrl}}- Profile URL on your site: {{profileUrl}}{{/if}}
+
+I hereby direct {{serviceName}} to:
+1. Stop selling my personal information to third parties immediately
+2. Notify any third parties to whom you have sold my data in the last 12 months
+3. Confirm this opt-out to me within 15 business days
+
+Under CCPA Section 1798.120, you are prohibited from discriminating against me for exercising this right. This includes denying goods or services, charging different prices, or providing a different level of quality.
+
+If you need to verify my identity, please let me know what information you require.
+
+Thank you for your prompt attention to this matter.
+
+Sincerely,
+{{fullName}}
+{{currentDate}}`,
+  },
+  {
     id: "general-optout",
     name: "General Opt-Out Request",
     jurisdiction: "general",

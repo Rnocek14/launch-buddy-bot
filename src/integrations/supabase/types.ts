@@ -1893,6 +1893,50 @@ export type Database = {
         }
         Relationships: []
       }
+      service_action_log: {
+        Row: {
+          action: string
+          created_at: string
+          id: string
+          method: string | null
+          notes: string | null
+          previous_action: string | null
+          service_id: string
+          template_used: string | null
+          user_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          id?: string
+          method?: string | null
+          notes?: string | null
+          previous_action?: string | null
+          service_id: string
+          template_used?: string | null
+          user_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          id?: string
+          method?: string | null
+          notes?: string | null
+          previous_action?: string | null
+          service_id?: string
+          template_used?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_action_log_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "service_catalog"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       service_catalog: {
         Row: {
           category: string | null
@@ -2299,6 +2343,8 @@ export type Database = {
           first_seen_date: string | null
           last_scanned_at: string
           marked_for_deletion: boolean | null
+          privacy_action: string | null
+          privacy_action_at: string | null
           reappeared_at: string | null
           service_id: string
           user_id: string
@@ -2313,6 +2359,8 @@ export type Database = {
           first_seen_date?: string | null
           last_scanned_at?: string
           marked_for_deletion?: boolean | null
+          privacy_action?: string | null
+          privacy_action_at?: string | null
           reappeared_at?: string | null
           service_id: string
           user_id: string
@@ -2327,6 +2375,8 @@ export type Database = {
           first_seen_date?: string | null
           last_scanned_at?: string
           marked_for_deletion?: boolean | null
+          privacy_action?: string | null
+          privacy_action_at?: string | null
           reappeared_at?: string | null
           service_id?: string
           user_id?: string

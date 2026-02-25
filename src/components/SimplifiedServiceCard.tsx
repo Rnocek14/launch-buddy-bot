@@ -4,6 +4,9 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Checkbox } from "@/components/ui/checkbox";
 import { CheckCircle, Clock, AlertTriangle } from "lucide-react";
+import { ServiceActionButtons } from "./ServiceActionButtons";
+
+type PrivacyAction = "keep" | "delete" | "do_not_sell" | null;
 
 interface Service {
   id: string;
@@ -15,11 +18,13 @@ interface Service {
   contact_status?: "verified" | "ai_discovered" | "needs_discovery";
   domain: string;
   deletion_requested_at?: string;
+  privacy_action?: PrivacyAction;
 }
 
 interface SimplifiedServiceCardProps {
   service: Service;
   onRequestDeletion: (service: Service) => void;
+  onRequestDoNotSell?: (service: Service) => void;
   getServiceInitials: (name: string) => string;
   bulkMode?: boolean;
   isSelected?: boolean;
@@ -27,7 +32,6 @@ interface SimplifiedServiceCardProps {
 }
 
 // Category accent colors — subtle left-border only
-// Category accent colors — subtle left-border, neutral tones for sensitive categories
 const categoryAccents: Record<string, string> = {
   Finance: "border-l-slate-500/50",
   Banking: "border-l-slate-500/50",
@@ -66,12 +70,16 @@ function getFaviconUrl(domain: string): string {
 export function SimplifiedServiceCard({
   service,
   onRequestDeletion,
+  onRequestDoNotSell,
   getServiceInitials,
   bulkMode = false,
   isSelected = false,
   onToggleSelection,
 }: SimplifiedServiceCardProps) {
   const [faviconError, setFaviconError] = useState(false);
+  const [currentAction, setCurrentAction] = useState<PrivacyAction>(
+    service.privacy_action || (service.deletion_requested_at ? "delete" : null)
+  );
   const hasDeletion = !!service.deletion_requested_at;
   const activity = getActivitySignal(service.discovered_at);
   const accentClass = categoryAccents[service.category] || "border-l-border";
@@ -82,6 +90,10 @@ export function SimplifiedServiceCard({
       className={`group relative overflow-hidden transition-all duration-200 border-l-[3px] ${accentClass} ${
         isSelected
           ? "border-primary bg-primary/5 shadow-md"
+          : currentAction === "keep"
+          ? "border-green-500/20 bg-green-500/5"
+          : currentAction === "do_not_sell"
+          ? "border-amber-500/20 bg-amber-500/5"
           : "hover:border-primary/30 hover:shadow-lg"
       }`}
     >
@@ -139,7 +151,7 @@ export function SimplifiedServiceCard({
             </div>
 
             {/* Inactive chip */}
-            {activity.isInactive && !hasDeletion && (
+            {activity.isInactive && !hasDeletion && currentAction !== "keep" && (
               <Badge
                 variant="outline"
                 className="text-[10px] px-2 py-0.5 bg-amber-500/5 text-amber-600 dark:text-amber-400 border-amber-500/20"
@@ -150,22 +162,29 @@ export function SimplifiedServiceCard({
             )}
           </div>
 
-          {/* Action */}
-          {hasDeletion ? (
+          {/* Action buttons — Keep / Delete / Don't Sell */}
+          {hasDeletion && currentAction === "delete" ? (
             <div className="flex items-center gap-1.5 text-green-600 dark:text-green-400 text-xs font-medium">
               <CheckCircle className="w-4 h-4" />
               Deletion sent
             </div>
           ) : (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onRequestDeletion(service);
+            <ServiceActionButtons
+              serviceId={service.id}
+              serviceName={service.name}
+              currentAction={currentAction}
+              onActionChange={setCurrentAction}
+              onRequestDeletion={() => onRequestDeletion(service)}
+              onRequestDoNotSell={() => {
+                if (onRequestDoNotSell) {
+                  onRequestDoNotSell(service);
+                } else {
+                  // Fallback: use deletion flow with CCPA template
+                  onRequestDeletion(service);
+                }
               }}
-              className="text-xs text-primary hover:text-primary/80 hover:underline transition-colors py-2 px-3 min-h-[44px] -mx-3 flex items-center"
-            >
-              Delete this account →
-            </button>
+              compact
+            />
           )}
         </div>
       </CardContent>
