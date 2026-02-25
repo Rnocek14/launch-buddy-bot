@@ -18,12 +18,26 @@ const passwordSchema = z.string().min(6, "Password must be at least 6 characters
 const PUBLISHED_APP_URL = "https://footprintfinder.co";
 
 const getOAuthRedirectUrl = () => {
-  return `${PUBLISHED_APP_URL}/dashboard`;
+  // When on custom domain or production, redirect there
+  if (isOnCustomDomain()) {
+    return `${PUBLISHED_APP_URL}/dashboard`;
+  }
+  // When on Lovable preview, redirect back to the preview origin
+  return `${window.location.origin}/dashboard`;
 };
 
 const isOnCustomDomain = () => {
   return !window.location.hostname.includes("lovable.app") &&
-    !window.location.hostname.includes("lovableproject.com");
+    !window.location.hostname.includes("lovableproject.com") &&
+    !window.location.hostname.includes("localhost");
+};
+
+const isInIframe = () => {
+  try {
+    return window.self !== window.top;
+  } catch {
+    return true;
+  }
 };
 
 export default function Auth() {
@@ -114,16 +128,22 @@ export default function Auth() {
   const handleGoogleSignIn = async () => {
     setLoading(true);
     try {
-      if (isOnCustomDomain()) {
-        const { data, error } = await supabase.auth.signInWithOAuth({
-          provider: 'google',
-          options: {
-            redirectTo: getOAuthRedirectUrl(),
-            skipBrowserRedirect: true,
-          },
-        });
-        if (error) throw error;
-        if (data?.url) {
+      const needsManualRedirect = isOnCustomDomain() || isInIframe();
+      
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: getOAuthRedirectUrl(),
+          skipBrowserRedirect: needsManualRedirect,
+        },
+      });
+      if (error) throw error;
+      
+      if (needsManualRedirect && data?.url) {
+        if (isInIframe()) {
+          // Open in new tab to avoid iframe cookie issues
+          window.open(data.url, '_blank');
+        } else {
           const oauthUrl = new URL(data.url);
           const allowedHosts = ["accounts.google.com", "gqxkeezkajkiyjpnjgkx.supabase.co"];
           if (!allowedHosts.some(host => oauthUrl.hostname === host)) {
@@ -131,12 +151,6 @@ export default function Auth() {
           }
           window.location.href = data.url;
         }
-      } else {
-        const { error } = await supabase.auth.signInWithOAuth({
-          provider: 'google',
-          options: { redirectTo: getOAuthRedirectUrl() },
-        });
-        if (error) throw error;
       }
     } catch (error: any) {
       toast({
@@ -151,17 +165,22 @@ export default function Auth() {
   const handleOutlookSignIn = async () => {
     setLoading(true);
     try {
-      if (isOnCustomDomain()) {
-        const { data, error } = await supabase.auth.signInWithOAuth({
-          provider: 'azure',
-          options: {
-            scopes: 'openid email profile',
-            redirectTo: getOAuthRedirectUrl(),
-            skipBrowserRedirect: true,
-          },
-        });
-        if (error) throw error;
-        if (data?.url) {
+      const needsManualRedirect = isOnCustomDomain() || isInIframe();
+      
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'azure',
+        options: {
+          scopes: 'openid email profile',
+          redirectTo: getOAuthRedirectUrl(),
+          skipBrowserRedirect: needsManualRedirect,
+        },
+      });
+      if (error) throw error;
+      
+      if (needsManualRedirect && data?.url) {
+        if (isInIframe()) {
+          window.open(data.url, '_blank');
+        } else {
           const oauthUrl = new URL(data.url);
           const allowedHosts = ["login.microsoftonline.com", "gqxkeezkajkiyjpnjgkx.supabase.co"];
           if (!allowedHosts.some(host => oauthUrl.hostname === host)) {
@@ -169,15 +188,6 @@ export default function Auth() {
           }
           window.location.href = data.url;
         }
-      } else {
-        const { error } = await supabase.auth.signInWithOAuth({
-          provider: 'azure',
-          options: {
-            scopes: 'openid email profile',
-            redirectTo: getOAuthRedirectUrl(),
-          },
-        });
-        if (error) throw error;
       }
     } catch (error: any) {
       toast({
