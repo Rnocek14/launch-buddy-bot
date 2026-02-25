@@ -73,7 +73,7 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.scan-all-emails]
-verify_jwt = true
+verify_jwt = false
 
 [functions.check-subscription]
 verify_jwt = true
