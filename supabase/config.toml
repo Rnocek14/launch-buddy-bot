@@ -19,7 +19,7 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.calculate-risk-score]
-verify_jwt = true
+verify_jwt = false
 
 [functions.send-deletion-request]
 verify_jwt = true
