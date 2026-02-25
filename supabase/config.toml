@@ -1,13 +1,13 @@
 project_id = "gqxkeezkajkiyjpnjgkx"
 
 [functions.discover-privacy-contacts]
-verify_jwt = true
+verify_jwt = false
 
 [functions.validate-email-contact]
-verify_jwt = true
+verify_jwt = false
 
 [functions.bulk-discover-contacts]
-verify_jwt = true
+verify_jwt = false
 
 [functions.send-welcome-email]
 verify_jwt = false
