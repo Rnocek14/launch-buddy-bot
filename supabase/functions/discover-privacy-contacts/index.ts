@@ -1854,7 +1854,8 @@ Extract all relevant contact methods for data deletion requests.`;
         source_url: successUrl,
       }));
 
-    console.log(`[Dedup] ${validContacts.length} → ${contactsToInsert.length} after deduplication`);
+    const totalFoundBeforeDedup = finalContacts.length;
+    console.log(`[Dedup] ${totalFoundBeforeDedup} → ${contactsToInsert.length} after deduplication`);
 
     // Store findings in database
     const { data: insertedContacts, error: insertError } = await supabase
@@ -1905,6 +1906,8 @@ Extract all relevant contact methods for data deletion requests.`;
         success: true,
         service: service.name,
         contacts_found: insertedContacts.length,
+        contacts_found_total: totalFoundBeforeDedup,
+        already_known: totalFoundBeforeDedup - insertedContacts.length,
         contacts: insertedContacts,
         method_used: METHOD_USED,
         policy_type: policy_type || 'html',
