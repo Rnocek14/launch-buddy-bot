@@ -1099,7 +1099,7 @@ serve(async (req) => {
 
   try {
     const authHeader = req.headers.get('authorization');
-    if (!authHeader) {
+    if (!authHeader?.startsWith('Bearer ')) {
       throw new Error('No authorization header');
     }
 
@@ -1109,11 +1109,12 @@ serve(async (req) => {
       { global: { headers: { Authorization: authHeader } } }
     );
 
-    const { data: { user: authenticatedUser }, error: userError } = await supabase.auth.getUser();
-    if (userError || !authenticatedUser) {
+    const token = authHeader.replace('Bearer ', '');
+    const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
+    if (claimsError || !claimsData?.claims) {
       throw new Error('Authentication failed');
     }
-    user = authenticatedUser;
+    user = { id: claimsData.claims.sub as string } as any;
 
     const requestBody = await req.json();
     service_id = requestBody.service_id;
