@@ -958,14 +958,14 @@ async function tryBrowserlessFetch(urlsToTry: string[], browserlessApiKey: strin
             },
             body: JSON.stringify({
               url: url,
-              waitForTimeout: 5000,
+              waitForTimeout: 3000,
               gotoOptions: {
                 waitUntil: 'networkidle2',
-                timeout: 30000,
+                timeout: 15000,
               },
               rejectResourceTypes: ['image', 'media', 'font'],
             }),
-            signal: AbortSignal.timeout(45000)
+            signal: AbortSignal.timeout(20000)
           });
 
           if (response.ok) {
@@ -1380,10 +1380,30 @@ serve(async (req) => {
     // Identify URLs that need JavaScript (marked with 999 code)
     const jsNeededUrls = urlsToTry.filter(url => result?.failedUrls?.get(url) === 999);
     
+    // Check if ALL Phase 1 URLs failed with network errors (status 0) — domain is blocking
+    const failedUrlEntries = result?.failedUrls ? Array.from(result.failedUrls.entries()) : [];
+    const networkErrorCount = failedUrlEntries.filter(([_, status]) => status === 0).length;
+    const totalAttempted = failedUrlEntries.length;
+    const allNetworkErrors = totalAttempted > 5 && networkErrorCount / totalAttempted >= 0.8;
+    
+    // Global elapsed time check — don't start Browserless if we're already past 45s
+    const elapsedMs = Date.now() - startTime;
+    const GLOBAL_BUDGET_MS = 50000; // 50s max for entire function
+    const globalBudgetExceeded = elapsedMs > GLOBAL_BUDGET_MS;
+    
+    if (allNetworkErrors) {
+      console.warn(`[Phase 2] Skipping Browserless — ${networkErrorCount}/${totalAttempted} URLs had network errors (domain blocks all requests)`);
+    }
+    if (globalBudgetExceeded) {
+      console.warn(`[Phase 2] Skipping Browserless — global budget exceeded (${elapsedMs}ms > ${GLOBAL_BUDGET_MS}ms)`);
+    }
+    
     // Decide if we should use Browserless
     const shouldUseBrowserless = (
       (!result?.content || jsNeededUrls.length > 0 || domainHint?.requires_js) && 
-      browserlessApiKey
+      browserlessApiKey &&
+      !allNetworkErrors &&
+      !globalBudgetExceeded
     );
     
     if (shouldUseBrowserless) {
