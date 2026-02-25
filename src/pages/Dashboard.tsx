@@ -50,6 +50,7 @@ import { ReferralChallengePanel } from "@/components/ReferralChallengePanel";
 import { SimplifiedServiceCard } from "@/components/SimplifiedServiceCard";
 import { CleanUpWizard } from "@/components/CleanUpWizard";
 import { ServiceCard } from "@/components/ServiceCard";
+import { PrivacyScoreGauge } from "@/components/PrivacyScoreGauge";
 
 interface Service {
   id: string;
@@ -61,6 +62,8 @@ interface Service {
   contact_status?: 'verified' | 'ai_discovered' | 'needs_discovery';
   domain: string;
   discovery_source?: 'email' | 'extension' | 'manual';
+  privacy_action?: 'keep' | 'delete' | 'do_not_sell' | null;
+  deletion_requested_at?: string;
 }
 
 interface ScanStats {
@@ -235,6 +238,8 @@ export default function Dashboard() {
       .select(`
         service_id,
         discovered_at,
+        deletion_requested_at,
+        privacy_action,
         service_catalog (
           id,
           name,
@@ -293,7 +298,9 @@ export default function Dashboard() {
       discovered_at: item.discovered_at,
       contact_status: contactStatusMap.get(item.service_catalog.id) || 'needs_discovery',
       domain: item.service_catalog.domain || '',
-      discovery_source: item.discovery_source || 'email'
+      discovery_source: item.discovery_source || 'email',
+      privacy_action: item.privacy_action || null,
+      deletion_requested_at: item.deletion_requested_at || null,
     }));
 
     setServices(mapped);
@@ -584,6 +591,20 @@ export default function Dashboard() {
   const handleDeletionSuccess = () => {
     // Refresh services to update contact status badges
     fetchServices();
+  };
+
+  const handleRequestDoNotSell = (service: Service) => {
+    if (!isAuthorized) {
+      toast({
+        title: "Authorization Required",
+        description: "You need to complete the authorization wizard first.",
+      });
+      navigate("/authorize");
+      return;
+    }
+    // Open the deletion dialog — it already supports CCPA templates
+    setSelectedService(service);
+    setDeletionDialogOpen(true);
   };
 
   const handleQuickDiscovery = (service: Service) => {
@@ -1073,7 +1094,17 @@ export default function Dashboard() {
           />
         ) : (
           <>
-            {/* Privacy Snapshot — ALWAYS first, the anchor of the dashboard */}
+            {/* Privacy Score Gauge — hero element */}
+            {riskData && (
+              <PrivacyScoreGauge
+                riskScore={riskData.riskScore}
+                riskLevel={riskData.riskLevel}
+                serviceCount={services.length}
+                onShare={() => setShareDialogOpen(true)}
+              />
+            )}
+
+            {/* Privacy Snapshot — operational overview */}
             <PrivacySnapshot />
 
             {/* Scan Progress (only while scanning) — shown right after snapshot */}
@@ -1474,6 +1505,7 @@ export default function Dashboard() {
                     key={service.id}
                     service={service}
                     onRequestDeletion={handleRequestDeletion}
+                    onRequestDoNotSell={handleRequestDoNotSell}
                     getServiceInitials={getServiceInitials}
                     bulkMode={bulkMode}
                     isSelected={selectedServices.has(service.id)}
