@@ -2096,7 +2096,7 @@ Extract all relevant contact methods for data deletion requests.`;
         suggested_action: structuredError.suggested_action,
         details: {
           urls_attempted: urlsToTry.length,
-          service_domain: supabase ? service_id : null
+          service_domain: metrics.domain || service_id || null
         }
       }),
       { 
