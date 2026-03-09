@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Navbar } from "@/components/Navbar";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -38,6 +39,8 @@ export default function EmailSubscriptions() {
   const [search, setSearch] = useState("");
   const [unsubStates, setUnsubStates] = useState<Record<string, UnsubState>>({});
   const [redirectUrls, setRedirectUrls] = useState<Record<string, string>>({});
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [batchLoading, setBatchLoading] = useState(false);
 
   useEffect(() => {
     loadSubscriptions();
@@ -105,6 +108,65 @@ export default function EmailSubscriptions() {
     }
   }
 
+  function toggleSelect(id: string) {
+    setSelected(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAll(subs: EmailSubscription[]) {
+    const allSelected = subs.every(s => selected.has(s.id));
+    if (allSelected) {
+      setSelected(prev => {
+        const next = new Set(prev);
+        subs.forEach(s => next.delete(s.id));
+        return next;
+      });
+    } else {
+      setSelected(prev => {
+        const next = new Set(prev);
+        subs.forEach(s => next.add(s.id));
+        return next;
+      });
+    }
+  }
+
+  async function handleBatchUnsubscribe() {
+    const toProcess = active.filter(s => selected.has(s.id) && (s.unsubscribe_url || s.unsubscribe_mailto));
+    if (toProcess.length === 0) return;
+    setBatchLoading(true);
+
+    for (const sub of toProcess) {
+      setSubState(sub.id, "loading");
+      try {
+        const { data, error } = await supabase.functions.invoke("execute-unsubscribe", {
+          body: { subscriptionId: sub.id, confirm: true },
+        });
+        if (error) throw error;
+
+        if (data.success) {
+          setSubState(sub.id, "success");
+          setSubscriptions(prev =>
+            prev.map(s => s.id === sub.id ? { ...s, status: "unsubscribed" } : s)
+          );
+        } else if (data.redirectUrl) {
+          setSubState(sub.id, "redirect");
+          setRedirectUrls(prev => ({ ...prev, [sub.id]: data.redirectUrl }));
+        } else {
+          setSubState(sub.id, "failed");
+        }
+      } catch {
+        setSubState(sub.id, "failed");
+      }
+    }
+
+    setBatchLoading(false);
+    setSelected(new Set());
+    toast({ title: "Batch complete", description: `Processed ${toProcess.length} subscriptions.` });
+  }
+
   const filtered = subscriptions.filter(s => {
     const q = search.toLowerCase();
     return (
@@ -164,9 +226,31 @@ export default function EmailSubscriptions() {
           <div className="space-y-6">
             {active.length > 0 && (
               <section>
-                <h2 className="text-sm font-medium text-muted-foreground mb-3 uppercase tracking-wide">
-                  Active ({active.length})
-                </h2>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-3">
+                    <Checkbox
+                      checked={active.every(s => selected.has(s.id))}
+                      onCheckedChange={() => toggleSelectAll(active)}
+                    />
+                    <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+                      Active ({active.length})
+                    </h2>
+                  </div>
+                  {selected.size > 0 && (
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      disabled={batchLoading}
+                      onClick={handleBatchUnsubscribe}
+                    >
+                      {batchLoading ? (
+                        <><Loader2 className="h-3 w-3 mr-1 animate-spin" /> Processing...</>
+                      ) : (
+                        <><MailX className="h-3 w-3 mr-1" /> Unsubscribe ({selected.size})</>
+                      )}
+                    </Button>
+                  )}
+                </div>
                 <div className="space-y-2">
                   {active.map(sub => (
                     <SubscriptionRow
@@ -176,6 +260,8 @@ export default function EmailSubscriptions() {
                       redirectUrl={redirectUrls[sub.id]}
                       onUnsubscribe={() => handleUnsubscribe(sub)}
                       onCancel={() => setSubState(sub.id, "idle")}
+                      selected={selected.has(sub.id)}
+                      onToggleSelect={() => toggleSelect(sub.id)}
                     />
                   ))}
                 </div>
@@ -213,18 +299,25 @@ function SubscriptionRow({
   redirectUrl,
   onUnsubscribe,
   onCancel,
+  selected,
+  onToggleSelect,
 }: {
   sub: EmailSubscription;
   state: UnsubState;
   redirectUrl?: string;
   onUnsubscribe: () => void;
   onCancel: () => void;
+  selected?: boolean;
+  onToggleSelect?: () => void;
 }) {
   const canUnsubscribe = sub.unsubscribe_url || sub.unsubscribe_mailto;
 
   return (
     <Card className="overflow-hidden">
       <CardContent className="flex items-center gap-4 p-4">
+        {onToggleSelect && state !== "success" && sub.status !== "unsubscribed" && (
+          <Checkbox checked={selected} onCheckedChange={onToggleSelect} />
+        )}
         <div className="flex-shrink-0 h-10 w-10 rounded-full bg-muted flex items-center justify-center">
           <Mail className="h-5 w-5 text-muted-foreground" />
         </div>
