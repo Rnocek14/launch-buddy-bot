@@ -54,7 +54,8 @@ interface DiscoveryResult {
 }
 
 const MAX_PER_RUN = 20;
-const BATCH_SIZE = 3;
+const BATCH_SIZE = 1; // Sequential to avoid OpenAI 429 / worker limit errors
+const BATCH_DELAY_MS = 1500; // Delay between calls to respect rate limits
 
 export function CleanUpWizard({
   open,
@@ -232,6 +233,11 @@ export function CleanUpWizard({
           return { ...r, status: val.isPdf ? "manual" : "not_found" };
         })
       );
+
+      // Delay between batches to avoid rate limits (429/546 errors)
+      if (i + BATCH_SIZE < toDiscover.length && !cancelRef.current) {
+        await new Promise((resolve) => setTimeout(resolve, BATCH_DELAY_MS));
+      }
     }
 
     setIsDiscovering(false);
