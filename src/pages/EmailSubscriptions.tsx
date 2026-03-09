@@ -226,9 +226,31 @@ export default function EmailSubscriptions() {
           <div className="space-y-6">
             {active.length > 0 && (
               <section>
-                <h2 className="text-sm font-medium text-muted-foreground mb-3 uppercase tracking-wide">
-                  Active ({active.length})
-                </h2>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-3">
+                    <Checkbox
+                      checked={active.every(s => selected.has(s.id))}
+                      onCheckedChange={() => toggleSelectAll(active)}
+                    />
+                    <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+                      Active ({active.length})
+                    </h2>
+                  </div>
+                  {selected.size > 0 && (
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      disabled={batchLoading}
+                      onClick={handleBatchUnsubscribe}
+                    >
+                      {batchLoading ? (
+                        <><Loader2 className="h-3 w-3 mr-1 animate-spin" /> Processing...</>
+                      ) : (
+                        <><MailX className="h-3 w-3 mr-1" /> Unsubscribe ({selected.size})</>
+                      )}
+                    </Button>
+                  )}
+                </div>
                 <div className="space-y-2">
                   {active.map(sub => (
                     <SubscriptionRow
@@ -238,6 +260,8 @@ export default function EmailSubscriptions() {
                       redirectUrl={redirectUrls[sub.id]}
                       onUnsubscribe={() => handleUnsubscribe(sub)}
                       onCancel={() => setSubState(sub.id, "idle")}
+                      selected={selected.has(sub.id)}
+                      onToggleSelect={() => toggleSelect(sub.id)}
                     />
                   ))}
                 </div>
