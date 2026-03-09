@@ -249,7 +249,7 @@ export function RiskScoreCard({
         <div className="grid grid-cols-2 gap-3 pt-2 border-t border-border">
           <div className="text-center">
             <div className="text-2xl font-bold text-foreground">
-              {factors.avgAccountAge.toFixed(1)}
+              {(factors.avgAccountAge ?? 0).toFixed(1)}
             </div>
             <div className="text-xs text-muted-foreground">Avg Account Age (years)</div>
           </div>
