@@ -160,7 +160,7 @@ export const Navbar = () => {
                       <>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem asChild>
-                          <Link to="/admin-analytics" className="flex items-center gap-2 cursor-pointer">
+                          <Link to="/admin/analytics" className="flex items-center gap-2 cursor-pointer">
                             <BarChart3 className="w-4 h-4" />
                             Analytics
                           </Link>
