@@ -266,13 +266,17 @@ export default function Help() {
                     <li><strong>Right to data portability:</strong> Request data in a machine-readable format</li>
                   </ul>
                   <div className="flex gap-3 pt-4">
-                    <Button variant="outline" size="sm">
-                      <FileText className="h-4 w-4 mr-2" />
-                      Privacy Policy
+                    <Button variant="outline" size="sm" asChild>
+                      <Link to="/privacy">
+                        <FileText className="h-4 w-4 mr-2" />
+                        Privacy Policy
+                      </Link>
                     </Button>
-                    <Button variant="outline" size="sm">
-                      <FileText className="h-4 w-4 mr-2" />
-                      Terms of Service
+                    <Button variant="outline" size="sm" asChild>
+                      <Link to="/terms">
+                        <FileText className="h-4 w-4 mr-2" />
+                        Terms of Service
+                      </Link>
                     </Button>
                   </div>
                 </CardContent>
