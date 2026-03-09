@@ -292,7 +292,9 @@ export default function Help() {
                     <div>
                       <h3 className="font-semibold mb-1">Email Support</h3>
                       <p className="text-muted-foreground mb-2">We typically respond within 24 hours</p>
-                      <Button variant="outline" size="sm">Contact Support</Button>
+                      <Button variant="outline" size="sm" asChild>
+                        <a href="mailto:support@footprintfinder.co">Contact Support</a>
+                      </Button>
                     </div>
                   </div>
                   <div className="flex items-start gap-4">
