@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -266,13 +267,17 @@ export default function Help() {
                     <li><strong>Right to data portability:</strong> Request data in a machine-readable format</li>
                   </ul>
                   <div className="flex gap-3 pt-4">
-                    <Button variant="outline" size="sm">
-                      <FileText className="h-4 w-4 mr-2" />
-                      Privacy Policy
+                    <Button variant="outline" size="sm" asChild>
+                      <Link to="/privacy">
+                        <FileText className="h-4 w-4 mr-2" />
+                        Privacy Policy
+                      </Link>
                     </Button>
-                    <Button variant="outline" size="sm">
-                      <FileText className="h-4 w-4 mr-2" />
-                      Terms of Service
+                    <Button variant="outline" size="sm" asChild>
+                      <Link to="/terms">
+                        <FileText className="h-4 w-4 mr-2" />
+                        Terms of Service
+                      </Link>
                     </Button>
                   </div>
                 </CardContent>
@@ -288,7 +293,9 @@ export default function Help() {
                     <div>
                       <h3 className="font-semibold mb-1">Email Support</h3>
                       <p className="text-muted-foreground mb-2">We typically respond within 24 hours</p>
-                      <Button variant="outline" size="sm">Contact Support</Button>
+                      <Button variant="outline" size="sm" asChild>
+                        <a href="mailto:support@footprintfinder.co">Contact Support</a>
+                      </Button>
                     </div>
                   </div>
                   <div className="flex items-start gap-4">
@@ -296,7 +303,11 @@ export default function Help() {
                     <div>
                       <h3 className="font-semibold mb-1">FAQ</h3>
                       <p className="text-muted-foreground mb-2">Browse frequently asked questions</p>
-                      <Button variant="outline" size="sm">View FAQs</Button>
+                      <Button variant="outline" size="sm" onClick={() => {
+                        const tabsList = document.querySelector('[data-state="active"][value="troubleshooting"]')?.closest('[role="tablist"]');
+                        const faqTab = document.querySelector('[value="faq"]') as HTMLButtonElement;
+                        if (faqTab) faqTab.click();
+                      }}>View FAQs</Button>
                     </div>
                   </div>
                 </CardContent>

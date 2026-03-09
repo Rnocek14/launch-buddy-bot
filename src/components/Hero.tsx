@@ -45,7 +45,7 @@ export const Hero = () => {
     if (value) {
       trackEvent("hero_faq_opened", { question: value });
     }
-  }, [trackEvent]);
+  }, []);
 
   return (
     <section className="relative min-h-screen flex items-center justify-center px-4 py-20 overflow-hidden">
