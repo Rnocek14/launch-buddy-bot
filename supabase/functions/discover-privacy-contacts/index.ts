@@ -789,13 +789,26 @@ async function trySimpleFetch(
         usedCache = true;
       } else {
         const fetchWithH2Fallback = async (fetchUrl: string): Promise<Response> => {
+          // More realistic browser headers to pass WAF checks
+          const browserHeaders: Record<string, string> = {
+            'User-Agent': USER_AGENT,
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Accept-Encoding': 'gzip, deflate, br',
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache',
+            'Sec-Ch-Ua': '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"',
+            'Sec-Ch-Ua-Mobile': '?0',
+            'Sec-Ch-Ua-Platform': '"macOS"',
+            'Sec-Fetch-Dest': 'document',
+            'Sec-Fetch-Mode': 'navigate',
+            'Sec-Fetch-Site': 'none',
+            'Sec-Fetch-User': '?1',
+            'Upgrade-Insecure-Requests': '1',
+          };
           try {
             return await fetch(fetchUrl, {
-              headers: {
-                'User-Agent': USER_AGENT,
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                'Accept-Language': 'en-US,en;q=0.9',
-              },
+              headers: browserHeaders,
               redirect: 'follow',
               signal: AbortSignal.timeout(15000)
             });
@@ -806,9 +819,7 @@ async function trySimpleFetch(
               console.log(`[Phase 1] H2 error, retrying with HTTP/1.1: ${sanitizeForLog(fetchUrl)}`);
               return await fetch(fetchUrl, {
                 headers: {
-                  'User-Agent': USER_AGENT,
-                  'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                  'Accept-Language': 'en-US,en;q=0.9',
+                  ...browserHeaders,
                   'Connection': 'keep-alive',
                 },
                 redirect: 'follow',
