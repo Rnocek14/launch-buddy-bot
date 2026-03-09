@@ -92,9 +92,90 @@ interface StructuredError {
 }
 
 // Phase 1.1: Constants
-const USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+// Rotate user agents to reduce bot detection fingerprinting
+const USER_AGENTS = [
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15',
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:125.0) Gecko/20100101 Firefox/125.0',
+];
+const USER_AGENT = USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)];
 const STRIP_PARAMS = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'gclid', 'fbclid', 'ref', 'ref_src', 'referrer'];
 const REDACT_PARAMS = ['email', 'e', 'user', 'token', 'auth', 'code', 'sid', 'session', 'uid'];
+
+// Curated privacy contacts for domains that consistently block automated discovery
+const CURATED_CONTACTS: Record<string, Array<{ contact_type: string; value: string; confidence: string; reasoning: string }>> = {
+  'bestbuy.com': [
+    { contact_type: 'form', value: 'https://www.bestbuy.com/site/privacy-policy/data-request/pcmcat778300050498.c', confidence: 'high', reasoning: 'Best Buy official DSAR form from privacy policy' },
+    { contact_type: 'email', value: 'privacy@bestbuy.com', confidence: 'high', reasoning: 'Best Buy privacy team email' },
+  ],
+  'spectrum.com': [
+    { contact_type: 'form', value: 'https://www.spectrum.com/policies/your-privacy-rights-opt-out', confidence: 'high', reasoning: 'Spectrum official privacy rights form' },
+    { contact_type: 'email', value: 'Privacy@charter.com', confidence: 'high', reasoning: 'Charter/Spectrum privacy team email' },
+  ],
+  'walmart.com': [
+    { contact_type: 'form', value: 'https://corporate.walmart.com/privacy-security/walmart-privacy-notice/data-request', confidence: 'high', reasoning: 'Walmart official data request form' },
+    { contact_type: 'email', value: 'privacy@walmart.com', confidence: 'high', reasoning: 'Walmart privacy team email' },
+  ],
+  'target.com': [
+    { contact_type: 'form', value: 'https://www.target.com/guest-privacy-rights', confidence: 'high', reasoning: 'Target official guest privacy rights form' },
+    { contact_type: 'email', value: 'privacy@target.com', confidence: 'high', reasoning: 'Target privacy team email' },
+  ],
+  'amazon.com': [
+    { contact_type: 'form', value: 'https://www.amazon.com/hz/privacy-central/data-requests/preview.html', confidence: 'high', reasoning: 'Amazon Privacy Central data request form' },
+  ],
+  'apple.com': [
+    { contact_type: 'form', value: 'https://privacy.apple.com/', confidence: 'high', reasoning: 'Apple Privacy Portal for data requests' },
+  ],
+  'google.com': [
+    { contact_type: 'form', value: 'https://myaccount.google.com/delete-services-or-account', confidence: 'high', reasoning: 'Google account deletion portal' },
+  ],
+  'facebook.com': [
+    { contact_type: 'form', value: 'https://www.facebook.com/help/delete_account', confidence: 'high', reasoning: 'Facebook account deletion page' },
+  ],
+  'meta.com': [
+    { contact_type: 'form', value: 'https://www.facebook.com/help/delete_account', confidence: 'high', reasoning: 'Meta/Facebook account deletion page' },
+  ],
+  'netflix.com': [
+    { contact_type: 'email', value: 'privacy@netflix.com', confidence: 'high', reasoning: 'Netflix privacy team email from privacy policy' },
+  ],
+  'hulu.com': [
+    { contact_type: 'email', value: 'privacy@hulu.com', confidence: 'high', reasoning: 'Hulu privacy team email' },
+  ],
+  'linkedin.com': [
+    { contact_type: 'form', value: 'https://www.linkedin.com/help/linkedin/ask/TSO-CLOSE-ACCOUNT', confidence: 'high', reasoning: 'LinkedIn account closure form' },
+  ],
+  'twitter.com': [
+    { contact_type: 'form', value: 'https://help.twitter.com/forms/privacy', confidence: 'high', reasoning: 'X/Twitter privacy request form' },
+  ],
+  'x.com': [
+    { contact_type: 'form', value: 'https://help.twitter.com/forms/privacy', confidence: 'high', reasoning: 'X/Twitter privacy request form' },
+  ],
+  'microsoft.com': [
+    { contact_type: 'form', value: 'https://www.microsoft.com/en-us/concern/privacy', confidence: 'high', reasoning: 'Microsoft privacy concern form' },
+  ],
+  'adobe.com': [
+    { contact_type: 'form', value: 'https://www.adobe.com/privacy/privacyrequest.html', confidence: 'high', reasoning: 'Adobe privacy request form' },
+  ],
+  'paypal.com': [
+    { contact_type: 'form', value: 'https://www.paypal.com/myaccount/privacy/privacyhub', confidence: 'high', reasoning: 'PayPal Privacy Hub for data requests' },
+  ],
+  'spotify.com': [
+    { contact_type: 'form', value: 'https://www.spotify.com/account/privacy/', confidence: 'high', reasoning: 'Spotify privacy settings page' },
+    { contact_type: 'email', value: 'privacy@spotify.com', confidence: 'high', reasoning: 'Spotify privacy team email' },
+  ],
+  'uber.com': [
+    { contact_type: 'form', value: 'https://privacy.uber.com/privacy/requests', confidence: 'high', reasoning: 'Uber privacy request portal' },
+  ],
+  'airbnb.com': [
+    { contact_type: 'form', value: 'https://www.airbnb.com/help/article/2273', confidence: 'high', reasoning: 'Airbnb data deletion help article with request process' },
+  ],
+  'doordash.com': [
+    { contact_type: 'form', value: 'https://help.doordash.com/s/privacy-requests', confidence: 'high', reasoning: 'DoorDash privacy requests form' },
+    { contact_type: 'email', value: 'privacy@doordash.com', confidence: 'high', reasoning: 'DoorDash privacy team email' },
+  ],
+};
 const MAX_REDIRECT_DEPTH = 1;
 const VALIDATION_TIMEOUT_MS = 5000;
 const FETCH_TIMEOUT_MS = 7000;
