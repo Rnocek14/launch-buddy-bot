@@ -335,7 +335,10 @@ async function smartValidateUrl(url: string, depth = 0): Promise<ValidateResult>
       redirect: 'manual', // Handle redirects manually
       headers: {
         'User-Agent': USER_AGENT,
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
         'Accept-Language': 'en-US,en;q=0.9',
+        'Sec-Fetch-Dest': 'document',
+        'Sec-Fetch-Mode': 'navigate',
       }
     });
 
