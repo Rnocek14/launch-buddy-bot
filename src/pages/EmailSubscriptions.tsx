@@ -108,6 +108,65 @@ export default function EmailSubscriptions() {
     }
   }
 
+  function toggleSelect(id: string) {
+    setSelected(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAll(subs: EmailSubscription[]) {
+    const allSelected = subs.every(s => selected.has(s.id));
+    if (allSelected) {
+      setSelected(prev => {
+        const next = new Set(prev);
+        subs.forEach(s => next.delete(s.id));
+        return next;
+      });
+    } else {
+      setSelected(prev => {
+        const next = new Set(prev);
+        subs.forEach(s => next.add(s.id));
+        return next;
+      });
+    }
+  }
+
+  async function handleBatchUnsubscribe() {
+    const toProcess = active.filter(s => selected.has(s.id) && (s.unsubscribe_url || s.unsubscribe_mailto));
+    if (toProcess.length === 0) return;
+    setBatchLoading(true);
+
+    for (const sub of toProcess) {
+      setSubState(sub.id, "loading");
+      try {
+        const { data, error } = await supabase.functions.invoke("execute-unsubscribe", {
+          body: { subscriptionId: sub.id, confirm: true },
+        });
+        if (error) throw error;
+
+        if (data.success) {
+          setSubState(sub.id, "success");
+          setSubscriptions(prev =>
+            prev.map(s => s.id === sub.id ? { ...s, status: "unsubscribed" } : s)
+          );
+        } else if (data.redirectUrl) {
+          setSubState(sub.id, "redirect");
+          setRedirectUrls(prev => ({ ...prev, [sub.id]: data.redirectUrl }));
+        } else {
+          setSubState(sub.id, "failed");
+        }
+      } catch {
+        setSubState(sub.id, "failed");
+      }
+    }
+
+    setBatchLoading(false);
+    setSelected(new Set());
+    toast({ title: "Batch complete", description: `Processed ${toProcess.length} subscriptions.` });
+  }
+
   const filtered = subscriptions.filter(s => {
     const q = search.toLowerCase();
     return (
