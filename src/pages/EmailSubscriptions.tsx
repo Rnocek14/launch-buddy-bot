@@ -38,6 +38,8 @@ export default function EmailSubscriptions() {
   const [search, setSearch] = useState("");
   const [unsubStates, setUnsubStates] = useState<Record<string, UnsubState>>({});
   const [redirectUrls, setRedirectUrls] = useState<Record<string, string>>({});
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [batchLoading, setBatchLoading] = useState(false);
 
   useEffect(() => {
     loadSubscriptions();
