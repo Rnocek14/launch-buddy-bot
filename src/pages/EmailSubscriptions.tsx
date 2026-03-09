@@ -299,12 +299,16 @@ function SubscriptionRow({
   redirectUrl,
   onUnsubscribe,
   onCancel,
+  selected,
+  onToggleSelect,
 }: {
   sub: EmailSubscription;
   state: UnsubState;
   redirectUrl?: string;
   onUnsubscribe: () => void;
   onCancel: () => void;
+  selected?: boolean;
+  onToggleSelect?: () => void;
 }) {
   const canUnsubscribe = sub.unsubscribe_url || sub.unsubscribe_mailto;
 
