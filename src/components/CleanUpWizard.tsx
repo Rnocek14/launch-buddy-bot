@@ -233,6 +233,11 @@ export function CleanUpWizard({
           return { ...r, status: val.isPdf ? "manual" : "not_found" };
         })
       );
+
+      // Delay between batches to avoid rate limits (429/546 errors)
+      if (i + BATCH_SIZE < toDiscover.length && !cancelRef.current) {
+        await new Promise((resolve) => setTimeout(resolve, BATCH_DELAY_MS));
+      }
     }
 
     setIsDiscovering(false);
