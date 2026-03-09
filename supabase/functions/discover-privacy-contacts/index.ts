@@ -46,11 +46,11 @@ const CACHE_SITEMAP = boolDefault(Deno.env.get('CACHE_SITEMAP'), true);
 
 // Phase 1.3: Tail latency guardrails
 const TAIL_P95_GOAL_MS = Math.min(8000, Math.max(3000, int(Deno.env.get('TAIL_P95_GOAL_MS'), 5000)));
-const ATTEMPT_TIMEOUT_MS = Math.min(10000, Math.max(1500, int(Deno.env.get('ATTEMPT_TIMEOUT_MS'), 4000)));
+const ATTEMPT_TIMEOUT_MS = Math.min(15000, Math.max(2000, int(Deno.env.get('ATTEMPT_TIMEOUT_MS'), 8000)));
 const EARLY_STOP_CONFIDENCE = Math.min(100, Math.max(30, int(Deno.env.get('EARLY_STOP_CONFIDENCE'), 70)));
 
 // Phase 1.4: Tier-2 retries
-const ENABLE_T2 = bool(Deno.env.get('ENABLE_T2'));
+const ENABLE_T2 = boolDefault(Deno.env.get('ENABLE_T2'), true); // Default ON — T2 retries for failed T1
 const T2_RETRY_ON = new Set(['bot_protection', 'captcha', 'POLICY_NOT_FOUND', 'NETWORK_ERROR']);
 
 // Phase 1.3: Slow-domain overrides parser
@@ -92,9 +92,90 @@ interface StructuredError {
 }
 
 // Phase 1.1: Constants
-const USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+// Rotate user agents to reduce bot detection fingerprinting
+const USER_AGENTS = [
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15',
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:125.0) Gecko/20100101 Firefox/125.0',
+];
+const USER_AGENT = USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)];
 const STRIP_PARAMS = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'gclid', 'fbclid', 'ref', 'ref_src', 'referrer'];
 const REDACT_PARAMS = ['email', 'e', 'user', 'token', 'auth', 'code', 'sid', 'session', 'uid'];
+
+// Curated privacy contacts for domains that consistently block automated discovery
+const CURATED_CONTACTS: Record<string, Array<{ contact_type: string; value: string; confidence: string; reasoning: string }>> = {
+  'bestbuy.com': [
+    { contact_type: 'form', value: 'https://www.bestbuy.com/site/privacy-policy/data-request/pcmcat778300050498.c', confidence: 'high', reasoning: 'Best Buy official DSAR form from privacy policy' },
+    { contact_type: 'email', value: 'privacy@bestbuy.com', confidence: 'high', reasoning: 'Best Buy privacy team email' },
+  ],
+  'spectrum.com': [
+    { contact_type: 'form', value: 'https://www.spectrum.com/policies/your-privacy-rights-opt-out', confidence: 'high', reasoning: 'Spectrum official privacy rights form' },
+    { contact_type: 'email', value: 'Privacy@charter.com', confidence: 'high', reasoning: 'Charter/Spectrum privacy team email' },
+  ],
+  'walmart.com': [
+    { contact_type: 'form', value: 'https://corporate.walmart.com/privacy-security/walmart-privacy-notice/data-request', confidence: 'high', reasoning: 'Walmart official data request form' },
+    { contact_type: 'email', value: 'privacy@walmart.com', confidence: 'high', reasoning: 'Walmart privacy team email' },
+  ],
+  'target.com': [
+    { contact_type: 'form', value: 'https://www.target.com/guest-privacy-rights', confidence: 'high', reasoning: 'Target official guest privacy rights form' },
+    { contact_type: 'email', value: 'privacy@target.com', confidence: 'high', reasoning: 'Target privacy team email' },
+  ],
+  'amazon.com': [
+    { contact_type: 'form', value: 'https://www.amazon.com/hz/privacy-central/data-requests/preview.html', confidence: 'high', reasoning: 'Amazon Privacy Central data request form' },
+  ],
+  'apple.com': [
+    { contact_type: 'form', value: 'https://privacy.apple.com/', confidence: 'high', reasoning: 'Apple Privacy Portal for data requests' },
+  ],
+  'google.com': [
+    { contact_type: 'form', value: 'https://myaccount.google.com/delete-services-or-account', confidence: 'high', reasoning: 'Google account deletion portal' },
+  ],
+  'facebook.com': [
+    { contact_type: 'form', value: 'https://www.facebook.com/help/delete_account', confidence: 'high', reasoning: 'Facebook account deletion page' },
+  ],
+  'meta.com': [
+    { contact_type: 'form', value: 'https://www.facebook.com/help/delete_account', confidence: 'high', reasoning: 'Meta/Facebook account deletion page' },
+  ],
+  'netflix.com': [
+    { contact_type: 'email', value: 'privacy@netflix.com', confidence: 'high', reasoning: 'Netflix privacy team email from privacy policy' },
+  ],
+  'hulu.com': [
+    { contact_type: 'email', value: 'privacy@hulu.com', confidence: 'high', reasoning: 'Hulu privacy team email' },
+  ],
+  'linkedin.com': [
+    { contact_type: 'form', value: 'https://www.linkedin.com/help/linkedin/ask/TSO-CLOSE-ACCOUNT', confidence: 'high', reasoning: 'LinkedIn account closure form' },
+  ],
+  'twitter.com': [
+    { contact_type: 'form', value: 'https://help.twitter.com/forms/privacy', confidence: 'high', reasoning: 'X/Twitter privacy request form' },
+  ],
+  'x.com': [
+    { contact_type: 'form', value: 'https://help.twitter.com/forms/privacy', confidence: 'high', reasoning: 'X/Twitter privacy request form' },
+  ],
+  'microsoft.com': [
+    { contact_type: 'form', value: 'https://www.microsoft.com/en-us/concern/privacy', confidence: 'high', reasoning: 'Microsoft privacy concern form' },
+  ],
+  'adobe.com': [
+    { contact_type: 'form', value: 'https://www.adobe.com/privacy/privacyrequest.html', confidence: 'high', reasoning: 'Adobe privacy request form' },
+  ],
+  'paypal.com': [
+    { contact_type: 'form', value: 'https://www.paypal.com/myaccount/privacy/privacyhub', confidence: 'high', reasoning: 'PayPal Privacy Hub for data requests' },
+  ],
+  'spotify.com': [
+    { contact_type: 'form', value: 'https://www.spotify.com/account/privacy/', confidence: 'high', reasoning: 'Spotify privacy settings page' },
+    { contact_type: 'email', value: 'privacy@spotify.com', confidence: 'high', reasoning: 'Spotify privacy team email' },
+  ],
+  'uber.com': [
+    { contact_type: 'form', value: 'https://privacy.uber.com/privacy/requests', confidence: 'high', reasoning: 'Uber privacy request portal' },
+  ],
+  'airbnb.com': [
+    { contact_type: 'form', value: 'https://www.airbnb.com/help/article/2273', confidence: 'high', reasoning: 'Airbnb data deletion help article with request process' },
+  ],
+  'doordash.com': [
+    { contact_type: 'form', value: 'https://help.doordash.com/s/privacy-requests', confidence: 'high', reasoning: 'DoorDash privacy requests form' },
+    { contact_type: 'email', value: 'privacy@doordash.com', confidence: 'high', reasoning: 'DoorDash privacy team email' },
+  ],
+};
 const MAX_REDIRECT_DEPTH = 1;
 const VALIDATION_TIMEOUT_MS = 5000;
 const FETCH_TIMEOUT_MS = 7000;
@@ -254,7 +335,10 @@ async function smartValidateUrl(url: string, depth = 0): Promise<ValidateResult>
       redirect: 'manual', // Handle redirects manually
       headers: {
         'User-Agent': USER_AGENT,
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
         'Accept-Language': 'en-US,en;q=0.9',
+        'Sec-Fetch-Dest': 'document',
+        'Sec-Fetch-Mode': 'navigate',
       }
     });
 
@@ -708,13 +792,26 @@ async function trySimpleFetch(
         usedCache = true;
       } else {
         const fetchWithH2Fallback = async (fetchUrl: string): Promise<Response> => {
+          // More realistic browser headers to pass WAF checks
+          const browserHeaders: Record<string, string> = {
+            'User-Agent': USER_AGENT,
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Accept-Encoding': 'gzip, deflate, br',
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache',
+            'Sec-Ch-Ua': '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"',
+            'Sec-Ch-Ua-Mobile': '?0',
+            'Sec-Ch-Ua-Platform': '"macOS"',
+            'Sec-Fetch-Dest': 'document',
+            'Sec-Fetch-Mode': 'navigate',
+            'Sec-Fetch-Site': 'none',
+            'Sec-Fetch-User': '?1',
+            'Upgrade-Insecure-Requests': '1',
+          };
           try {
             return await fetch(fetchUrl, {
-              headers: {
-                'User-Agent': USER_AGENT,
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                'Accept-Language': 'en-US,en;q=0.9',
-              },
+              headers: browserHeaders,
               redirect: 'follow',
               signal: AbortSignal.timeout(15000)
             });
@@ -725,9 +822,7 @@ async function trySimpleFetch(
               console.log(`[Phase 1] H2 error, retrying with HTTP/1.1: ${sanitizeForLog(fetchUrl)}`);
               return await fetch(fetchUrl, {
                 headers: {
-                  'User-Agent': USER_AGENT,
-                  'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                  'Accept-Language': 'en-US,en;q=0.9',
+                  ...browserHeaders,
                   'Connection': 'keep-alive',
                 },
                 redirect: 'follow',
@@ -1204,6 +1299,66 @@ serve(async (req) => {
       } else {
         console.log(`[Cache] Only PDF-based contacts cached — proceeding with fresh discovery`);
       }
+    }
+
+    // ── Curated fallback: use hardcoded contacts for domains that always block automated discovery ──
+    const curatedContacts = CURATED_CONTACTS[apexDomain];
+    if (curatedContacts && curatedContacts.length > 0) {
+      console.log(`[Curated] ✓ Found ${curatedContacts.length} curated contacts for ${apexDomain}`);
+
+      // Check for existing contacts to avoid duplicates
+      const { data: existingCurated } = await supabase
+        .from('privacy_contacts')
+        .select('contact_type, value')
+        .eq('service_id', service_id);
+
+      const existingCuratedSet = new Set(
+        (existingCurated || []).map((c: any) => `${c.contact_type}:${c.value.toLowerCase()}`)
+      );
+
+      const curatedToInsert = curatedContacts
+        .filter(c => !existingCuratedSet.has(`${c.contact_type}:${c.value.toLowerCase()}`))
+        .map(c => ({
+          service_id: service_id,
+          contact_type: c.contact_type,
+          value: c.value,
+          confidence: c.confidence,
+          reasoning: c.reasoning,
+          verified: false,
+          added_by: 'curated',
+          source_url: `https://${apexDomain}`,
+        }));
+
+      if (curatedToInsert.length > 0) {
+        await supabase.from('privacy_contacts').insert(curatedToInsert);
+        console.log(`[Curated] Inserted ${curatedToInsert.length} new curated contacts`);
+      }
+
+      // Return the curated contacts (including any previously existing ones)
+      const allCuratedResult = curatedContacts.map(c => ({
+        ...c,
+        service_id: service_id,
+        verified: false,
+        added_by: 'curated',
+        source_url: `https://${apexDomain}`,
+      }));
+
+      metrics.success = true;
+      metrics.method_used = 'curated';
+      metrics.cache_hit = false;
+      metrics.confidence = 'high';
+      metrics.time_ms = Date.now() - startTime;
+      metricsEmitted = true;
+
+      return new Response(JSON.stringify({
+        success: true,
+        service: service.name,
+        contacts_found: allCuratedResult.length,
+        contacts: allCuratedResult,
+        method_used: 'curated',
+        cache_hit: false,
+        confidence: 'high',
+      }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
     }
 
     // Phase 1.2/1.3: Try probes first (security.txt, robots.txt, sitemap with cache)
@@ -2051,24 +2206,25 @@ Extract all relevant contact methods for data deletion requests.`;
     metricsEmitted = true;
     
     // Phase 1.4: Enqueue to T2 on eligible failures (with quarantine check)
-    if (ENABLE_T2 && structuredError.error_code && T2_RETRY_ON.has(structuredError.error_code) && service_id && supabase) {
+    const t2Domain = metrics.domain || ''; // Use actual domain, not service_id UUID
+    if (ENABLE_T2 && structuredError.error_code && T2_RETRY_ON.has(structuredError.error_code) && t2Domain && supabase) {
       try {
         // Check if domain is quarantined before enqueuing
-        const quarantined = await isQuarantined(supabase, service_id.toLowerCase());
+        const quarantined = await isQuarantined(supabase, t2Domain.toLowerCase());
         if (quarantined) {
-          console.log(`[T2] Skipped (quarantined) → ${service_id}`);
+          console.log(`[T2] Skipped (quarantined) → ${t2Domain}`);
         } else {
-          const seedUrl = urlsToTry.length > 0 ? urlsToTry[0] : `https://${service_id}`;
+          const seedUrl = urlsToTry.length > 0 ? urlsToTry[0] : `https://${t2Domain}`;
           const requestId = crypto.randomUUID();
           await supabase.from('t2_retries').insert({
-            domain: service_id.toLowerCase(),
+            domain: t2Domain.toLowerCase(),
             seed_url: seedUrl,
             reason: structuredError.error_code,
             status: 'queued',
             next_run_at: new Date(Date.now() + 60_000).toISOString(), // +1min backoff
             request_id: requestId,
           });
-          console.log(`[T2][${requestId}] Queued → ${service_id} (${structuredError.error_code})`);
+          console.log(`[T2][${requestId}] Queued → ${t2Domain} (${structuredError.error_code})`);
         }
       } catch (t2Error) {
         console.warn('[T2] Failed to enqueue:', t2Error);
