@@ -50,7 +50,7 @@ const ATTEMPT_TIMEOUT_MS = Math.min(10000, Math.max(1500, int(Deno.env.get('ATTE
 const EARLY_STOP_CONFIDENCE = Math.min(100, Math.max(30, int(Deno.env.get('EARLY_STOP_CONFIDENCE'), 70)));
 
 // Phase 1.4: Tier-2 retries
-const ENABLE_T2 = bool(Deno.env.get('ENABLE_T2'));
+const ENABLE_T2 = boolDefault(Deno.env.get('ENABLE_T2'), true); // Default ON — T2 retries for failed T1
 const T2_RETRY_ON = new Set(['bot_protection', 'captcha', 'POLICY_NOT_FOUND', 'NETWORK_ERROR']);
 
 // Phase 1.3: Slow-domain overrides parser
