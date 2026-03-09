@@ -33,7 +33,7 @@ import FreeScan from "./pages/FreeScan";
 import Enterprise from "./pages/Enterprise";
 import Organization from "./pages/Organization";
 import Offboarding from "./pages/Offboarding";
-import { AuthorizationWizard } from "./components/AuthorizationWizard";
+import Authorize from "./pages/Authorize";
 import ExposureScan from "./pages/ExposureScan";
 import { Navigate } from "react-router-dom";
 import Extension from "./pages/Extension";
@@ -73,7 +73,7 @@ const App = () => (
               <Route path="/help" element={<Help />} />
               <Route path="/subscribe" element={<Subscribe />} />
               <Route path="/billing" element={<Billing />} />
-              <Route path="/authorize" element={<AuthorizationWizard />} />
+              <Route path="/authorize" element={<Authorize />} />
               <Route path="/results/:shareId" element={<PublicResult />} />
               <Route path="/broker-scan" element={<BrokerScan />} />
               <Route path="/organization" element={<Organization />} />

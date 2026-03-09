@@ -682,25 +682,16 @@ export default function Dashboard() {
 
   const handleConnectGmail = async () => {
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}/dashboard`,
-          scopes: 'openid email profile https://www.googleapis.com/auth/gmail.readonly',
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent'
-          }
-        }
+      const { data, error } = await supabase.functions.invoke('get-email-oauth-url', {
+        body: { provider: 'gmail' }
       });
 
-      if (error) {
-        const errorMsg = getErrorMessage(error);
-        toast({
-          title: errorMsg.title,
-          description: errorMsg.description,
-          variant: "destructive"
-        });
+      if (error) throw error;
+
+      if (data?.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error('No OAuth URL returned');
       }
     } catch (error: any) {
       const errorMsg = getErrorMessage(error);

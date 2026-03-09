@@ -308,7 +308,13 @@ export function StreamlinedOnboarding({ onComplete }: StreamlinedOnboardingProps
           </Button>
 
           <p className="text-xs text-center text-muted-foreground">
-            You can also skip this and connect Gmail later in Settings
+            <button 
+              onClick={onComplete}
+              className="underline hover:text-foreground transition-colors"
+            >
+              Skip for now
+            </button>
+            {" "}— you can connect Gmail later in Settings
           </p>
         </CardContent>
       </Card>
