@@ -54,7 +54,8 @@ interface DiscoveryResult {
 }
 
 const MAX_PER_RUN = 20;
-const BATCH_SIZE = 3;
+const BATCH_SIZE = 1; // Sequential to avoid OpenAI 429 / worker limit errors
+const BATCH_DELAY_MS = 1500; // Delay between calls to respect rate limits
 
 export function CleanUpWizard({
   open,
