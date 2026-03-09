@@ -697,14 +697,6 @@ export default function Dashboard() {
       const errorMsg = getErrorMessage(error);
       toast({
         title: errorMsg.title,
-          description: errorMsg.description,
-          variant: "destructive"
-        });
-      }
-    } catch (error: any) {
-      const errorMsg = getErrorMessage(error);
-      toast({
-        title: errorMsg.title,
         description: errorMsg.description,
         variant: "destructive"
       });
