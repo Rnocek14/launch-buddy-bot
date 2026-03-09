@@ -315,6 +315,9 @@ function SubscriptionRow({
   return (
     <Card className="overflow-hidden">
       <CardContent className="flex items-center gap-4 p-4">
+        {onToggleSelect && state !== "success" && sub.status !== "unsubscribed" && (
+          <Checkbox checked={selected} onCheckedChange={onToggleSelect} />
+        )}
         <div className="flex-shrink-0 h-10 w-10 rounded-full bg-muted flex items-center justify-center">
           <Mail className="h-5 w-5 text-muted-foreground" />
         </div>
