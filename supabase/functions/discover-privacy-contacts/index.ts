@@ -2203,24 +2203,25 @@ Extract all relevant contact methods for data deletion requests.`;
     metricsEmitted = true;
     
     // Phase 1.4: Enqueue to T2 on eligible failures (with quarantine check)
-    if (ENABLE_T2 && structuredError.error_code && T2_RETRY_ON.has(structuredError.error_code) && service_id && supabase) {
+    const t2Domain = metrics.domain || ''; // Use actual domain, not service_id UUID
+    if (ENABLE_T2 && structuredError.error_code && T2_RETRY_ON.has(structuredError.error_code) && t2Domain && supabase) {
       try {
         // Check if domain is quarantined before enqueuing
-        const quarantined = await isQuarantined(supabase, service_id.toLowerCase());
+        const quarantined = await isQuarantined(supabase, t2Domain.toLowerCase());
         if (quarantined) {
-          console.log(`[T2] Skipped (quarantined) → ${service_id}`);
+          console.log(`[T2] Skipped (quarantined) → ${t2Domain}`);
         } else {
-          const seedUrl = urlsToTry.length > 0 ? urlsToTry[0] : `https://${service_id}`;
+          const seedUrl = urlsToTry.length > 0 ? urlsToTry[0] : `https://${t2Domain}`;
           const requestId = crypto.randomUUID();
           await supabase.from('t2_retries').insert({
-            domain: service_id.toLowerCase(),
+            domain: t2Domain.toLowerCase(),
             seed_url: seedUrl,
             reason: structuredError.error_code,
             status: 'queued',
             next_run_at: new Date(Date.now() + 60_000).toISOString(), // +1min backoff
             request_id: requestId,
           });
-          console.log(`[T2][${requestId}] Queued → ${service_id} (${structuredError.error_code})`);
+          console.log(`[T2][${requestId}] Queued → ${t2Domain} (${structuredError.error_code})`);
         }
       } catch (t2Error) {
         console.warn('[T2] Failed to enqueue:', t2Error);
