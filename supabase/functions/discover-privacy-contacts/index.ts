@@ -1298,6 +1298,66 @@ serve(async (req) => {
       }
     }
 
+    // ── Curated fallback: use hardcoded contacts for domains that always block automated discovery ──
+    const curatedContacts = CURATED_CONTACTS[apexDomain];
+    if (curatedContacts && curatedContacts.length > 0) {
+      console.log(`[Curated] ✓ Found ${curatedContacts.length} curated contacts for ${apexDomain}`);
+
+      // Check for existing contacts to avoid duplicates
+      const { data: existingCurated } = await supabase
+        .from('privacy_contacts')
+        .select('contact_type, value')
+        .eq('service_id', service_id);
+
+      const existingCuratedSet = new Set(
+        (existingCurated || []).map((c: any) => `${c.contact_type}:${c.value.toLowerCase()}`)
+      );
+
+      const curatedToInsert = curatedContacts
+        .filter(c => !existingCuratedSet.has(`${c.contact_type}:${c.value.toLowerCase()}`))
+        .map(c => ({
+          service_id: service_id,
+          contact_type: c.contact_type,
+          value: c.value,
+          confidence: c.confidence,
+          reasoning: c.reasoning,
+          verified: false,
+          added_by: 'curated',
+          source_url: `https://${apexDomain}`,
+        }));
+
+      if (curatedToInsert.length > 0) {
+        await supabase.from('privacy_contacts').insert(curatedToInsert);
+        console.log(`[Curated] Inserted ${curatedToInsert.length} new curated contacts`);
+      }
+
+      // Return the curated contacts (including any previously existing ones)
+      const allCuratedResult = curatedContacts.map(c => ({
+        ...c,
+        service_id: service_id,
+        verified: false,
+        added_by: 'curated',
+        source_url: `https://${apexDomain}`,
+      }));
+
+      metrics.success = true;
+      metrics.method_used = 'curated';
+      metrics.cache_hit = false;
+      metrics.confidence = 'high';
+      metrics.time_ms = Date.now() - startTime;
+      metricsEmitted = true;
+
+      return new Response(JSON.stringify({
+        success: true,
+        service: service.name,
+        contacts_found: allCuratedResult.length,
+        contacts: allCuratedResult,
+        method_used: 'curated',
+        cache_hit: false,
+        confidence: 'high',
+      }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
+    }
+
     // Phase 1.2/1.3: Try probes first (security.txt, robots.txt, sitemap with cache)
     let securityTxtContact: { type: string; contact: string; url: string } | null = null;
     let sitemapUrls: string[] = [];
