@@ -144,13 +144,22 @@ export const ContactDiscoveryDialog = ({
       let showGuidedMode = true;
       
       try {
-        const errorData = err.context?.body || err.body;
+        // FunctionsHttpError.context is a Response object - must be read async
+        let errorData: any = null;
+        if (err.context && typeof err.context.json === 'function') {
+          errorData = await err.context.json();
+        } else if (err.body) {
+          errorData = err.body;
+        }
+        
+        console.log("Parsed error data:", errorData);
         
         if (errorData?.error_type) {
           switch (errorData.error_type) {
             case 'bot_protection':
               errorMessage = `${service.name} has security protections that prevent automated discovery. Many companies use anti-bot technology.`;
               break;
+            case 'no_policy_found':
             case 'privacy_policy_not_found':
               errorMessage = `We couldn't locate ${service.name}'s privacy policy. It may be at an unusual URL or require a login.`;
               break;
