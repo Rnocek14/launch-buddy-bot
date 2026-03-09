@@ -554,11 +554,20 @@ export default function Dashboard() {
       const levelVal = raw.riskLevel ?? raw.level ?? 'unknown';
       const factorsVal = raw.riskFactors ?? raw.factors;
       const insightsVal = raw.insights;
+      const defaultFactors = {
+        totalAccounts: 0,
+        oldAccountsCount: 0,
+        sensitiveAccountsCount: 0,
+        unmatchedDomainsCount: 0,
+        avgAccountAge: 0,
+      };
       setRiskData({
         ...raw,
         riskScore: typeof scoreVal === 'number' ? scoreVal : Number(scoreVal) || 0,
         riskLevel: typeof levelVal === 'string' ? levelVal : 'unknown',
-        riskFactors: Array.isArray(factorsVal) ? factorsVal : [],
+        riskFactors: factorsVal && typeof factorsVal === 'object' && !Array.isArray(factorsVal)
+          ? { ...defaultFactors, ...factorsVal }
+          : defaultFactors,
         insights: Array.isArray(insightsVal) ? insightsVal : (typeof insightsVal === 'string' ? insightsVal : ''),
       });
     } catch (error: any) {
