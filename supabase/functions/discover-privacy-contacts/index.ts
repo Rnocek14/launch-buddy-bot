@@ -46,7 +46,7 @@ const CACHE_SITEMAP = boolDefault(Deno.env.get('CACHE_SITEMAP'), true);
 
 // Phase 1.3: Tail latency guardrails
 const TAIL_P95_GOAL_MS = Math.min(8000, Math.max(3000, int(Deno.env.get('TAIL_P95_GOAL_MS'), 5000)));
-const ATTEMPT_TIMEOUT_MS = Math.min(10000, Math.max(1500, int(Deno.env.get('ATTEMPT_TIMEOUT_MS'), 4000)));
+const ATTEMPT_TIMEOUT_MS = Math.min(15000, Math.max(2000, int(Deno.env.get('ATTEMPT_TIMEOUT_MS'), 8000)));
 const EARLY_STOP_CONFIDENCE = Math.min(100, Math.max(30, int(Deno.env.get('EARLY_STOP_CONFIDENCE'), 70)));
 
 // Phase 1.4: Tier-2 retries
