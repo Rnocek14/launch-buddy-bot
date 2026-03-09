@@ -241,7 +241,7 @@ export const Navbar = () => {
                         </Button>
                       </Link>
                       {isAdmin && (
-                        <Link to="/admin-analytics" onClick={closeMobileMenu}>
+                        <Link to="/admin/analytics" onClick={closeMobileMenu}>
                           <Button variant="ghost" className="w-full justify-start gap-2">
                             <BarChart3 className="w-4 h-4" />
                             Analytics
