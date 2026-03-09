@@ -72,8 +72,8 @@ const App = () => (
               <Route path="/help" element={<Help />} />
               <Route path="/subscribe" element={<Subscribe />} />
               <Route path="/billing" element={<Billing />} />
-              <Route path="/authorize" element={<AuthorizationWizard />} />
-          epath="/results/:shareId" element={<PublicResult />} />
+              <Route path="/authorize" element={<Authorize />} />
+              <Route path="/results/:shareId" element={<PublicResult />} />
               <Route path="/broker-scan" element={<BrokerScan />} />
               <Route path="/organization" element={<Organization />} />
               <Route path="/offboarding" element={<Offboarding />} />
