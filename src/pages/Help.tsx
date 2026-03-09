@@ -302,7 +302,11 @@ export default function Help() {
                     <div>
                       <h3 className="font-semibold mb-1">FAQ</h3>
                       <p className="text-muted-foreground mb-2">Browse frequently asked questions</p>
-                      <Button variant="outline" size="sm">View FAQs</Button>
+                      <Button variant="outline" size="sm" onClick={() => {
+                        const tabsList = document.querySelector('[data-state="active"][value="troubleshooting"]')?.closest('[role="tablist"]');
+                        const faqTab = document.querySelector('[value="faq"]') as HTMLButtonElement;
+                        if (faqTab) faqTab.click();
+                      }}>View FAQs</Button>
                     </div>
                   </div>
                 </CardContent>
