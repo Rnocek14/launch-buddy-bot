@@ -1497,9 +1497,11 @@ export default function Dashboard() {
             ) : (
               <>
                 <p className="text-sm text-muted-foreground mb-4">
-                  You don't need to delete everything — start with accounts you no longer use.
+                  {viewTab === 'priority' 
+                    ? "🔥 These accounts have the highest risk — old, sensitive, or previously breached. Start here."
+                    : "You don't need to delete everything — start with accounts you no longer use."}
                 </p>
-                <div id="services-grid" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 {filteredServices.map(service => (
                   <SimplifiedServiceCard
                     key={service.id}
