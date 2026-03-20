@@ -16,7 +16,7 @@ serve(async (req) => {
     const redirectUri = 'https://gqxkeezkajkiyjpnjgkx.supabase.co/functions/v1/outlook-oauth-callback';
 
     const testState = 'test-user-id-12345';
-    const scope = 'openid email profile offline_access https://graph.microsoft.com/Mail.Read https://graph.microsoft.com/Mail.Send https://graph.microsoft.com/User.Read';
+    const scope = 'openid email profile offline_access https://graph.microsoft.com/Mail.Read https://graph.microsoft.com/User.Read';
     
     const oauthUrl = `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?` +
       `client_id=${encodeURIComponent(clientId || '')}&` +

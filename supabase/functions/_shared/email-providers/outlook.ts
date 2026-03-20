@@ -56,7 +56,6 @@ export class OutlookProvider implements EmailProvider {
   getOAuthUrl(userId: string): string {
     const scopes = [
       'https://graph.microsoft.com/Mail.Read',
-      'https://graph.microsoft.com/Mail.Send',
       'https://graph.microsoft.com/User.Read',
       'offline_access'
     ];
