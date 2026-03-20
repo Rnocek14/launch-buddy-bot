@@ -1301,14 +1301,14 @@ export default function Dashboard() {
         {/* Services Grid Section */}
           <div className="space-y-6">
             {/* View Tabs */}
-            <div className="flex items-center gap-2 border-b border-border">
+            <div className="flex items-center gap-2 border-b border-border" id="services-grid">
               <Button
                 variant={viewTab === 'all' ? 'default' : 'ghost'}
                 size="sm"
                 onClick={() => setViewTab('all')}
                 className="rounded-b-none"
               >
-                All Services
+                All Accounts
                 <Badge variant="secondary" className="ml-2">
                   {services.length}
                 </Badge>
@@ -1319,16 +1319,16 @@ export default function Dashboard() {
                 onClick={() => setViewTab('priority')}
                 className="rounded-b-none gap-2"
               >
-                <AlertCircle className="w-4 h-4" />
-                Priority
-                <Badge variant="secondary" className="ml-1">
+                <AlertTriangle className="w-4 h-4" />
+                Start Here
+                <Badge variant="destructive" className="ml-1">
                  {(() => {
                     const threeYearsAgo = new Date();
                     threeYearsAgo.setFullYear(threeYearsAgo.getFullYear() - 3);
                     const sensitiveCategories = ['Finance', 'Banking', 'Healthcare', 'Government'];
                     return services.filter((s: any) => {
                       const isOld = new Date(s.discovered_at) <= threeYearsAgo;
-                      const isReappeared = !!s.reappeared_at;
+                      const isReappeared = !!(s as any).reappeared_at;
                       const isSensitive = sensitiveCategories.includes(s.category);
                       return isOld || isReappeared || isSensitive;
                     }).length;
@@ -1336,14 +1336,14 @@ export default function Dashboard() {
                 </Badge>
               </Button>
               <Button
-                variant={viewTab === 'all' ? 'default' : 'ghost'}
+                variant={viewTab === 'new' ? 'default' : 'ghost'}
                 size="sm"
-                onClick={() => setViewTab('all')}
+                onClick={() => setViewTab('new')}
                 className="rounded-b-none"
               >
-                All
+                Recent
                 <Badge variant="secondary" className="ml-2">
-                  {services.length}
+                  {newServicesCount}
                 </Badge>
               </Button>
             </div>
