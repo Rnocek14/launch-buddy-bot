@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Shield, RefreshCw, LogOut, Loader2, ExternalLink, Search, Download, AlertCircle, Sparkles, Mail, Tag, TrendingUp, Trash2, CheckCircle, FileText, DollarSign, Package, Lock, Bell, Settings, HelpCircle, Calendar, Activity, Share2 } from "lucide-react";
+import { Shield, RefreshCw, LogOut, Loader2, ExternalLink, Search, Download, AlertCircle, Sparkles, Mail, Tag, TrendingUp, Trash2, CheckCircle, FileText, DollarSign, Package, Lock, Bell, Settings, HelpCircle, Calendar, Activity, Share2, AlertTriangle } from "lucide-react";
 import { RiskScoreCard } from "@/components/RiskScoreCard";
 import { ShareResultDialog } from "@/components/ShareResultDialog";
 import { useToast } from "@/hooks/use-toast";
@@ -1037,11 +1037,11 @@ export default function Dashboard() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <h1 className="text-2xl font-bold text-foreground">Your Online Accounts</h1>
+            <h1 className="text-2xl font-bold text-foreground">Exposure Dashboard</h1>
               <p className="text-sm text-muted-foreground mt-1">
                 {services.length > 0
-                  ? `${services.length} accounts found — review and clean up what you don't need.`
-                  : "Scan your connected inbox to find services storing your data."}
+                  ? `${services.length} accounts discovered — clean up what you don't need to reduce your exposure.`
+                  : "Scan your connected inbox to discover which services have your data."}
               </p>
             </div>
             <div className="flex items-center gap-3">
@@ -1301,14 +1301,14 @@ export default function Dashboard() {
         {/* Services Grid Section */}
           <div className="space-y-6">
             {/* View Tabs */}
-            <div className="flex items-center gap-2 border-b border-border">
+            <div className="flex items-center gap-2 border-b border-border" id="services-grid">
               <Button
                 variant={viewTab === 'all' ? 'default' : 'ghost'}
                 size="sm"
                 onClick={() => setViewTab('all')}
                 className="rounded-b-none"
               >
-                All Services
+                All Accounts
                 <Badge variant="secondary" className="ml-2">
                   {services.length}
                 </Badge>
@@ -1319,16 +1319,16 @@ export default function Dashboard() {
                 onClick={() => setViewTab('priority')}
                 className="rounded-b-none gap-2"
               >
-                <AlertCircle className="w-4 h-4" />
-                Priority
-                <Badge variant="secondary" className="ml-1">
+                <AlertTriangle className="w-4 h-4" />
+                Start Here
+                <Badge variant="destructive" className="ml-1">
                  {(() => {
                     const threeYearsAgo = new Date();
                     threeYearsAgo.setFullYear(threeYearsAgo.getFullYear() - 3);
                     const sensitiveCategories = ['Finance', 'Banking', 'Healthcare', 'Government'];
                     return services.filter((s: any) => {
                       const isOld = new Date(s.discovered_at) <= threeYearsAgo;
-                      const isReappeared = !!s.reappeared_at;
+                      const isReappeared = !!(s as any).reappeared_at;
                       const isSensitive = sensitiveCategories.includes(s.category);
                       return isOld || isReappeared || isSensitive;
                     }).length;
@@ -1336,14 +1336,14 @@ export default function Dashboard() {
                 </Badge>
               </Button>
               <Button
-                variant={viewTab === 'all' ? 'default' : 'ghost'}
+                variant={viewTab === 'new' ? 'default' : 'ghost'}
                 size="sm"
-                onClick={() => setViewTab('all')}
+                onClick={() => setViewTab('new')}
                 className="rounded-b-none"
               >
-                All
+                Recent
                 <Badge variant="secondary" className="ml-2">
-                  {services.length}
+                  {newServicesCount}
                 </Badge>
               </Button>
             </div>
@@ -1497,9 +1497,11 @@ export default function Dashboard() {
             ) : (
               <>
                 <p className="text-sm text-muted-foreground mb-4">
-                  You don't need to delete everything — start with accounts you no longer use.
+                  {viewTab === 'priority' 
+                    ? "🔥 These accounts have the highest risk — old, sensitive, or previously breached. Start here."
+                    : "You don't need to delete everything — start with accounts you no longer use."}
                 </p>
-                <div id="services-grid" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 {filteredServices.map(service => (
                   <SimplifiedServiceCard
                     key={service.id}
@@ -1633,22 +1635,40 @@ export default function Dashboard() {
           <ReferralChallengePanel />
         </div>
 
-        <div className="mt-8 p-4 bg-muted/50 rounded-lg text-sm text-muted-foreground">
-          <p className="flex items-start gap-2">
-            <Shield className="w-4 h-4 mt-0.5 flex-shrink-0" />
-            <span>
-              <strong>Privacy Notice:</strong> We scan your inbox with read-only access to identify account signup emails. 
-              Email content and subjects are never stored—only service names are saved to show you this list. 
-              You can revoke access anytime in your{" "}
-              <a 
-                href="https://myaccount.google.com/permissions" 
-                className="underline hover:text-foreground" 
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Google Account settings
-              </a>.
-            </span>
+        {/* Trust Strip — always visible */}
+        <div className="mt-8 p-5 bg-muted/50 rounded-xl border border-border text-sm text-muted-foreground space-y-3">
+          <div className="flex flex-wrap gap-x-6 gap-y-2">
+            {[
+              { icon: Shield, text: "We never read your email content" },
+              { icon: Lock, text: "Metadata only — subjects & senders" },
+              { icon: Shield, text: "Your data is encrypted at rest" },
+              { icon: CheckCircle, text: "Disconnect access anytime" },
+            ].map((item) => (
+              <div key={item.text} className="flex items-center gap-2">
+                <item.icon className="w-4 h-4 text-green-600 dark:text-green-400 flex-shrink-0" />
+                <span className="font-medium">{item.text}</span>
+              </div>
+            ))}
+          </div>
+          <p className="text-xs text-muted-foreground/70">
+            You can revoke access anytime in your{" "}
+            <a 
+              href="https://myaccount.google.com/permissions" 
+              className="underline hover:text-foreground" 
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Google Account settings
+            </a>{" "}
+            or{" "}
+            <a 
+              href="https://account.live.com/consent/Manage" 
+              className="underline hover:text-foreground" 
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Microsoft Account settings
+            </a>.
           </p>
         </div>
           </>
