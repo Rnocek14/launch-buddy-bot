@@ -106,7 +106,7 @@ export const ScanResultsBanner = ({
                 <AnimatedCounter target={displayHighRisk} />
               </p>
               <p className="text-xs text-muted-foreground font-medium">High Risk</p>
-              <p className="text-[10px] text-muted-foreground/70 hidden sm:block">Brokers, leaks, public data</p>
+              <p className="text-[10px] text-muted-foreground/70 hidden sm:block">Broker exposure, sensitive, or breached</p>
             </div>
             <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 text-center space-y-1">
               <Clock className="w-5 h-5 text-amber-600 dark:text-amber-400 mx-auto" />
@@ -114,7 +114,7 @@ export const ScanResultsBanner = ({
                 <AnimatedCounter target={displayInactive} />
               </p>
               <p className="text-xs text-muted-foreground font-medium">Inactive</p>
-              <p className="text-[10px] text-muted-foreground/70 hidden sm:block">Forgotten accounts</p>
+              <p className="text-[10px] text-muted-foreground/70 hidden sm:block">Old or unused — may still hold your data</p>
             </div>
             <div className="p-4 rounded-xl bg-green-500/10 border border-green-500/20 text-center space-y-1">
               <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400 mx-auto" />
@@ -122,7 +122,7 @@ export const ScanResultsBanner = ({
                 <AnimatedCounter target={displayActive} />
               </p>
               <p className="text-xs text-muted-foreground font-medium">Active</p>
-              <p className="text-[10px] text-muted-foreground/70 hidden sm:block">Still in use</p>
+              <p className="text-[10px] text-muted-foreground/70 hidden sm:block">Accounts you likely still use</p>
             </div>
           </div>
 
@@ -131,7 +131,7 @@ export const ScanResultsBanner = ({
             <p className="text-sm text-muted-foreground leading-relaxed">
               <span className="font-semibold text-foreground">Why this matters:</span>{" "}
               Every unused or exposed account increases your risk of data breaches, identity theft, and spam.
-              Removing what you don't need reduces your attack surface.
+              Cleaning up your accounts reduces your overall exposure.
             </p>
           </div>
 
@@ -166,10 +166,10 @@ export const ScanResultsBanner = ({
           {/* Trust strip */}
           <div className="flex flex-wrap gap-x-5 gap-y-1.5 text-xs text-muted-foreground pt-2 border-t border-border">
             {[
-              "We never read your emails",
-              "Metadata only — no content stored",
-              "Your data is encrypted",
-              "Disconnect anytime",
+              "We do not store your email content",
+              "We scan limited metadata to identify accounts",
+              "Your data is encrypted and never sold",
+              "Disconnect access at any time",
             ].map((item) => (
               <div key={item} className="flex items-center gap-1.5">
                 <Shield className="w-3 h-3 text-green-600 dark:text-green-400 flex-shrink-0" />

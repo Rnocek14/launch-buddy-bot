@@ -1639,10 +1639,10 @@ export default function Dashboard() {
         <div className="mt-8 p-5 bg-muted/50 rounded-xl border border-border text-sm text-muted-foreground space-y-3">
           <div className="flex flex-wrap gap-x-6 gap-y-2">
             {[
-              { icon: Shield, text: "We never read your email content" },
-              { icon: Lock, text: "Metadata only — subjects & senders" },
-              { icon: Shield, text: "Your data is encrypted at rest" },
-              { icon: CheckCircle, text: "Disconnect access anytime" },
+              { icon: Shield, text: "We do not store your email content" },
+              { icon: Lock, text: "We scan limited email metadata to identify accounts" },
+              { icon: Shield, text: "Your data is encrypted and never sold" },
+              { icon: CheckCircle, text: "You can disconnect access at any time" },
             ].map((item) => (
               <div key={item.text} className="flex items-center gap-2">
                 <item.icon className="w-4 h-4 text-green-600 dark:text-green-400 flex-shrink-0" />
