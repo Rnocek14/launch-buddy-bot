@@ -166,10 +166,10 @@ export const ScanResultsBanner = ({
           {/* Trust strip */}
           <div className="flex flex-wrap gap-x-5 gap-y-1.5 text-xs text-muted-foreground pt-2 border-t border-border">
             {[
-              "We never read your emails",
-              "Metadata only — no content stored",
-              "Your data is encrypted",
-              "Disconnect anytime",
+              "We do not store your email content",
+              "We scan limited metadata to identify accounts",
+              "Your data is encrypted and never sold",
+              "Disconnect access at any time",
             ].map((item) => (
               <div key={item} className="flex items-center gap-1.5">
                 <Shield className="w-3 h-3 text-green-600 dark:text-green-400 flex-shrink-0" />
