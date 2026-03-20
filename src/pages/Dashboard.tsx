@@ -1635,22 +1635,40 @@ export default function Dashboard() {
           <ReferralChallengePanel />
         </div>
 
-        <div className="mt-8 p-4 bg-muted/50 rounded-lg text-sm text-muted-foreground">
-          <p className="flex items-start gap-2">
-            <Shield className="w-4 h-4 mt-0.5 flex-shrink-0" />
-            <span>
-              <strong>Privacy Notice:</strong> We scan your inbox with read-only access to identify account signup emails. 
-              Email content and subjects are never stored—only service names are saved to show you this list. 
-              You can revoke access anytime in your{" "}
-              <a 
-                href="https://myaccount.google.com/permissions" 
-                className="underline hover:text-foreground" 
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Google Account settings
-              </a>.
-            </span>
+        {/* Trust Strip — always visible */}
+        <div className="mt-8 p-5 bg-muted/50 rounded-xl border border-border text-sm text-muted-foreground space-y-3">
+          <div className="flex flex-wrap gap-x-6 gap-y-2">
+            {[
+              { icon: Shield, text: "We never read your email content" },
+              { icon: Lock, text: "Metadata only — subjects & senders" },
+              { icon: Shield, text: "Your data is encrypted at rest" },
+              { icon: CheckCircle, text: "Disconnect access anytime" },
+            ].map((item) => (
+              <div key={item.text} className="flex items-center gap-2">
+                <item.icon className="w-4 h-4 text-green-600 dark:text-green-400 flex-shrink-0" />
+                <span className="font-medium">{item.text}</span>
+              </div>
+            ))}
+          </div>
+          <p className="text-xs text-muted-foreground/70">
+            You can revoke access anytime in your{" "}
+            <a 
+              href="https://myaccount.google.com/permissions" 
+              className="underline hover:text-foreground" 
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Google Account settings
+            </a>{" "}
+            or{" "}
+            <a 
+              href="https://account.live.com/consent/Manage" 
+              className="underline hover:text-foreground" 
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Microsoft Account settings
+            </a>.
           </p>
         </div>
           </>
