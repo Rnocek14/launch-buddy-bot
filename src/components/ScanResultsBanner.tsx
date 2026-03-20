@@ -131,7 +131,7 @@ export const ScanResultsBanner = ({
             <p className="text-sm text-muted-foreground leading-relaxed">
               <span className="font-semibold text-foreground">Why this matters:</span>{" "}
               Every unused or exposed account increases your risk of data breaches, identity theft, and spam.
-              Removing what you don't need reduces your attack surface.
+              Cleaning up your accounts reduces your overall exposure.
             </p>
           </div>
 
