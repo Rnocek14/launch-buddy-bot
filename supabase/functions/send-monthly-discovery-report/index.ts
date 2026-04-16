@@ -64,7 +64,7 @@ serve(async (req) => {
         }
       }
 
-      const appBaseUrl = Deno.env.get("APP_BASE_URL") || "https://launch-buddy-bot.lovable.app";
+      const appBaseUrl = Deno.env.get("APP_BASE_URL") || "https://footprintfinder.co";
       const unsubscribeUrl = `${appBaseUrl}/unsubscribe?token=${prefToken}`;
       const preferencesUrl = `${appBaseUrl}/preferences?token=${prefToken}`;
 
@@ -161,7 +161,7 @@ serve(async (req) => {
           ` : ''}
 
           <div style="margin: 30px 0; text-align: center;">
-            <a href="https://footprintfinder.com/dashboard" 
+            <a href="https://footprintfinder.co/dashboard" 
                style="background: #7c3aed; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
               Review New Discoveries →
             </a>
