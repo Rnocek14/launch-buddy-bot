@@ -66,12 +66,12 @@ export const Hero = () => {
               <span className="text-sm font-medium text-destructive">Your data is being sold right now</span>
             </div>
 
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold mb-6 leading-tight">
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-normal mb-6 leading-tight tracking-tight">
               <span className="text-foreground">You have more</span>
               <br />
               <span className="text-foreground">online accounts</span>
               <br />
-              <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+              <span className="text-accent">
                 than you think.
               </span>
             </h1>
