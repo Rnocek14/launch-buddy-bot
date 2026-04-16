@@ -181,7 +181,7 @@ export const Navbar = () => {
             
             {!user && (
               <Link to="/auth">
-                <Button className="bg-primary hover:bg-primary/90">
+                <Button className="bg-accent hover:bg-accent/90 text-accent-foreground">
                   Get Started
                 </Button>
               </Link>
@@ -260,7 +260,7 @@ export const Navbar = () => {
                     </Button>
                   ) : (
                     <Link to="/auth" onClick={closeMobileMenu}>
-                      <Button className="w-full bg-primary hover:bg-primary/90">
+                      <Button className="w-full bg-accent hover:bg-accent/90 text-accent-foreground">
                         Get Started
                       </Button>
                     </Link>

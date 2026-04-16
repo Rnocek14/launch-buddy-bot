@@ -66,12 +66,12 @@ export const Hero = () => {
               <span className="text-sm font-medium text-destructive">Your data is being sold right now</span>
             </div>
 
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold mb-6 leading-tight">
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-normal mb-6 leading-tight tracking-tight">
               <span className="text-foreground">You have more</span>
               <br />
               <span className="text-foreground">online accounts</span>
               <br />
-              <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+              <span className="text-accent">
                 than you think.
               </span>
             </h1>
@@ -93,7 +93,7 @@ export const Hero = () => {
                   onChange={(e) => { setEmail(e.target.value); setError(""); }}
                   className="flex-1 h-14 text-lg px-5 bg-background border-border"
                 />
-                <Button type="submit" size="lg" className="relative overflow-hidden gap-2 h-14 text-lg px-8 bg-primary hover:bg-primary/90 whitespace-nowrap cta-shimmer focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+                <Button type="submit" size="lg" className="relative overflow-hidden gap-2 h-14 text-lg px-8 bg-accent hover:bg-accent/90 text-accent-foreground whitespace-nowrap cta-shimmer focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
                   <Search className="w-5 h-5" />
                   Run Free Scan
                 </Button>
