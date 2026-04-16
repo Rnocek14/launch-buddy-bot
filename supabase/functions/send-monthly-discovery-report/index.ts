@@ -64,7 +64,7 @@ serve(async (req) => {
         }
       }
 
-      const appBaseUrl = Deno.env.get("APP_BASE_URL") || "https://launch-buddy-bot.lovable.app";
+      const appBaseUrl = Deno.env.get("APP_BASE_URL") || "https://footprintfinder.co";
       const unsubscribeUrl = `${appBaseUrl}/unsubscribe?token=${prefToken}`;
       const preferencesUrl = `${appBaseUrl}/preferences?token=${prefToken}`;
 
