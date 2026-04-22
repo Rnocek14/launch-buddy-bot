@@ -701,7 +701,7 @@ export function PrivacySnapshot() {
                             className="shrink-0 text-xs h-8"
                             onClick={() => handleRemoveClick(broker)}
                           >
-                            {broker.state === "removal_started" ? "Continue removal" : "Remove"}
+                            {broker.state === "removal_started" ? "Continue removal" : "Request removal"}
                             <ExternalLink className="h-3 w-3 ml-1" />
                           </Button>
                         )}

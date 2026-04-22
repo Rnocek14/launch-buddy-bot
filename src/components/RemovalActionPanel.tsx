@@ -113,7 +113,7 @@ export default function RemovalActionPanel({
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2">
             <FileText className="h-5 w-5" />
-            Remove from {finding.source_name}
+            Request removal from {finding.source_name}
           </SheetTitle>
           <SheetDescription>
             Follow the steps below to request removal of your information.
