@@ -274,6 +274,51 @@ function regexPrepassExtract(content: string, baseUrl: string, domain: string): 
   return findings.slice(0, 8); // Cap to prevent flooding
 }
 
+function contactFromSecurityTxt(rawContact: string, domain: string): ContactFinding | null {
+  const normalized = rawContact.trim();
+  if (!normalized) return null;
+
+  if (normalized.toLowerCase().startsWith('mailto:')) {
+    const email = normalized.replace(/^mailto:/i, '').trim().toLowerCase();
+    if (!email) return null;
+    return {
+      contact_type: 'email',
+      value: email,
+      confidence: 'medium',
+      reasoning: `security.txt published a contact for ${domain}.`,
+    };
+  }
+
+  if (/^https?:\/\//i.test(normalized)) {
+    return {
+      contact_type: 'form',
+      value: normalized,
+      confidence: 'medium',
+      reasoning: `security.txt published a contact URL for ${domain}.`,
+    };
+  }
+
+  if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized)) {
+    return {
+      contact_type: 'email',
+      value: normalized.toLowerCase(),
+      confidence: 'medium',
+      reasoning: `security.txt published a contact for ${domain}.`,
+    };
+  }
+
+  return null;
+}
+
+function mergeUniqueContacts<T extends { contact_type: string; value: string }>(contacts: T[]): T[] {
+  const map = new Map<string, T>();
+  for (const contact of contacts) {
+    const key = `${contact.contact_type}:${contact.value.toLowerCase()}`;
+    if (!map.has(key)) map.set(key, contact);
+  }
+  return Array.from(map.values());
+}
+
 
 // Phase 1.1: i18n keyword expansion
 const PRIVACY_KEYWORDS = {
