@@ -406,7 +406,7 @@ export default function BrokerScan() {
                       <Button 
                         variant="outline" 
                         size="sm"
-                        onClick={startScan}
+                        onClick={() => startScan()}
                         disabled={scanning || !!cooldownInfo}
                       >
                         <RefreshCw className={`h-4 w-4 mr-2 ${scanning ? 'animate-spin' : ''}`} />
@@ -424,7 +424,7 @@ export default function BrokerScan() {
               </CardHeader>
               <CardContent>
                 {!scan && (
-                  <Button onClick={startScan} disabled={scanning} className="w-full">
+                  <Button onClick={() => startScan()} disabled={scanning} className="w-full">
                     {scanning ? (
                       <>
                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
