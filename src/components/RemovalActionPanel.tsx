@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -56,8 +56,69 @@ export default function RemovalActionPanel({
   const [selectedTemplate, setSelectedTemplate] = useState(removalTemplates[0]);
   const [isCopied, setIsCopied] = useState(false);
   const [isMarking, setIsMarking] = useState(false);
+  const [dbBroker, setDbBroker] = useState<{
+    name: string;
+    slug: string;
+    opt_out_url: string | null;
+    opt_out_difficulty: string | null;
+    opt_out_time_estimate: string | null;
+    instructions: string | null;
+    requires_captcha: boolean | null;
+    requires_phone: boolean | null;
+    requires_id: boolean | null;
+  } | null>(null);
+  const [loadingBroker, setLoadingBroker] = useState(true);
 
-  const brokerGuide = getOptOutGuide(finding.source_name.toLowerCase().replace(/[^a-z]/g, ""));
+  const hardcodedGuide = getOptOutGuide(finding.source_name.toLowerCase().replace(/[^a-z]/g, ""));
+
+  // Fetch broker details from data_brokers table by fuzzy name match
+  useEffect(() => {
+    let cancelled = false;
+    const loadBroker = async () => {
+      const normalizedName = finding.source_name.toLowerCase().trim();
+      const slugCandidate = normalizedName.replace(/[^a-z0-9]/g, "");
+
+      const { data } = await supabase
+        .from("data_brokers")
+        .select("name,slug,opt_out_url,opt_out_difficulty,opt_out_time_estimate,instructions,requires_captcha,requires_phone,requires_id")
+        .eq("is_active", true)
+        .or(`slug.eq.${slugCandidate},name.ilike.${normalizedName}`)
+        .limit(1)
+        .maybeSingle();
+
+      if (cancelled) return;
+      setDbBroker(data ?? null);
+      setLoadingBroker(false);
+    };
+    void loadBroker();
+    return () => {
+      cancelled = true;
+    };
+  }, [finding.source_name]);
+
+  // Build a unified guide from DB > hardcoded > none
+  const brokerGuide = dbBroker
+    ? {
+        name: dbBroker.name,
+        slug: dbBroker.slug,
+        difficulty: (dbBroker.opt_out_difficulty ?? "medium") as "easy" | "medium" | "hard",
+        estimatedTime: dbBroker.opt_out_time_estimate ?? "5-10 minutes",
+        optOutUrl: dbBroker.opt_out_url ?? "",
+        requiresEmail: false,
+        requiresPhone: !!dbBroker.requires_phone,
+        requiresId: !!dbBroker.requires_id,
+        requiresCaptcha: !!dbBroker.requires_captcha,
+        steps: (dbBroker.instructions ?? "")
+          .split("\n")
+          .map((s) => s.trim())
+          .filter(Boolean),
+      }
+    : hardcodedGuide
+      ? { ...hardcodedGuide, requiresCaptcha: false }
+      : null;
+
+  // Prefer the DB opt-out URL when finding doesn't have one
+  const effectiveRemovalUrl = finding.removal_url || dbBroker?.opt_out_url || hardcodedGuide?.optOutUrl || null;
   
   const templateVariables: TemplateVariables = {
     fullName: userName,
