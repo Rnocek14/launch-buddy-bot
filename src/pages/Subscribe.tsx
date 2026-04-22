@@ -54,7 +54,7 @@ export default function Subscribe() {
         description: "Please sign in to upgrade",
         variant: "destructive",
       });
-      navigate(`/auth?redirect=/subscribe?tier=${selectedTier}&interval=${billingInterval}`);
+      navigate(`/auth?intent=signup&redirect=${encodeURIComponent(`/subscribe?tier=${selectedTier}&interval=${billingInterval}`)}`);
     }
   };
 
