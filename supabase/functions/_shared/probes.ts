@@ -395,22 +395,27 @@ export function validatePolicyUrl(url: string, targetDomain: string, content?: s
       return { valid: false, reason: 'PDF policy — requires manual review' };
     }
 
+    // Strong privacy path bypasses content signals entirely (e.g. /privacy, /datenschutz).
+    // Telemetry showed valid policies on JS-rendered sites (DoorDash, Reddit) were rejected
+    // because the static HTML lacked text signals despite the URL being canonical.
+    const hasStrongPath = STRONG_PRIVACY_PATHS.test(parsed.pathname);
+    if (hasStrongPath) {
+      return { valid: true };
+    }
+
     // If we have content, check for privacy signals
     if (content) {
       const lower = content.toLowerCase();
-      
+
       // Count English signals
       const enSignalCount = PRIVACY_SIGNALS.filter(s => lower.includes(s)).length;
       // Count i18n signals
       const i18nSignalCount = I18N_PRIVACY_SIGNALS.filter(s => lower.includes(s)).length;
       const totalSignals = enSignalCount + i18nSignalCount;
-      
-      // Strong URL path + 1 signal = valid (looser threshold for well-named URLs)
-      const hasStrongPath = STRONG_PRIVACY_PATHS.test(parsed.pathname);
-      const minSignals = hasStrongPath ? 1 : 2;
-      
-      if (totalSignals < minSignals) {
-        return { valid: false, reason: `Only ${totalSignals} privacy signals (need ≥${minSignals})` };
+
+      // Without strong path, require ≥2 signals
+      if (totalSignals < 2) {
+        return { valid: false, reason: `Only ${totalSignals} privacy signals (need ≥2)` };
       }
 
       // Reject "terms" mislabeled as privacy
