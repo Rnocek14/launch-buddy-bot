@@ -84,17 +84,16 @@ export const ScanResultsBanner = ({
               </Badge>
             </div>
             <h2 className="text-2xl sm:text-3xl font-bold text-foreground leading-tight" style={{ lineHeight: '1.1' }}>
-              We found{" "}
-              <AnimatedCounter target={totalServices} className="text-destructive" />
-              {" "}accounts linked to your email
+              <AnimatedCounter target={displayHighRisk} className="text-destructive" />
+              {" "}{displayHighRisk === 1 ? "account is" : "accounts are"} exposing your personal data
             </h2>
             <p className="text-muted-foreground text-sm sm:text-base max-w-xl">
-              Scanned{" "}
+              We found{" "}
+              <span className="font-semibold text-foreground">{totalServices} accounts</span> linked to your email across{" "}
               <span className="font-medium text-foreground">{messagesScanned.toLocaleString()}</span>
-              {" "}messages across{" "}
-              <span className="font-medium text-foreground">{scannedEmails.length}</span>
-              {" "}email account{scannedEmails.length > 1 ? "s" : ""}.
-              Some of these may expose your personal data.
+              {" "}messages — and{" "}
+              <span className="font-semibold text-destructive">{displayHighRisk}</span>
+              {" "}of them are leaking sensitive info right now.
             </p>
           </div>
 
@@ -127,11 +126,10 @@ export const ScanResultsBanner = ({
           </div>
 
           {/* Why this matters */}
-          <div className="p-4 rounded-lg bg-muted/50 border border-border">
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              <span className="font-semibold text-foreground">Why this matters:</span>{" "}
-              Every unused or exposed account increases your risk of data breaches, identity theft, and spam.
-              Cleaning up your accounts reduces your overall exposure.
+          <div className="p-4 rounded-lg bg-destructive/5 border border-destructive/20">
+            <p className="text-sm text-foreground leading-relaxed">
+              <span className="font-semibold text-destructive">Why this matters:</span>{" "}
+              Each exposed account is a door scammers and identity thieves can walk through. Old accounts often hold your address, phone number, and payment info — even if you forgot they existed.
             </p>
           </div>
 

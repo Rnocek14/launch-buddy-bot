@@ -63,33 +63,33 @@ export const Hero = () => {
             {/* Badge */}
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-destructive/10 border border-destructive/20 mb-8">
               <AlertTriangle className="w-4 h-4 text-destructive" />
-              <span className="text-sm font-medium text-destructive">Your exposure changes every week</span>
+              <span className="text-sm font-medium text-destructive">Your home address is probably public right now</span>
             </div>
 
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-normal mb-6 leading-tight tracking-tight">
-              <span className="text-foreground">Monitor your</span>
+              <span className="text-foreground">Your address.</span>
               <br />
-              <span className="text-foreground">digital exposure.</span>
+              <span className="text-foreground">Your phone. Your family.</span>
               <br />
               <span className="text-accent">
-                Every month.
+                All searchable online.
               </span>
             </h1>
 
             <p className="text-lg sm:text-xl text-muted-foreground mb-4 max-w-lg mx-auto lg:mx-0 leading-relaxed">
-              Your data leaks, gets resold, and reappears over time. We monitor your exposure — surfacing new breaches, broker listings, and forgotten accounts as they appear.
+              Data brokers publish your home address, phone number, age, and relatives' names — and sell them to anyone with $20. We find every site exposing you, and monitor as new ones appear.
             </p>
 
             {/* Concrete example */}
-            <div className="mb-6 max-w-lg mx-auto lg:mx-0 rounded-lg border border-border/60 bg-card/40 backdrop-blur px-4 py-3">
-              <p className="text-xs uppercase tracking-wide text-muted-foreground/70 mb-1">Here's what changed for one user last month</p>
+            <div className="mb-6 max-w-lg mx-auto lg:mx-0 rounded-lg border border-destructive/30 bg-destructive/5 backdrop-blur px-4 py-3">
+              <p className="text-xs uppercase tracking-wide text-destructive/80 mb-1 font-semibold">What we found for the average user last month</p>
               <p className="text-sm text-foreground/90">
-                <span className="text-destructive font-medium">2 new breaches detected</span> · <span className="text-destructive font-medium">1 broker re-listed your data</span> · <span className="text-accent font-medium">3 cleanups completed</span>
+                <span className="text-destructive font-semibold">Address on 47 broker sites</span> · <span className="text-destructive font-semibold">Email in 8 data leaks</span> · <span className="text-destructive font-semibold">Phone listed publicly</span>
               </p>
             </div>
 
             <p className="text-sm text-muted-foreground/70 mb-8 max-w-lg mx-auto lg:mx-0 italic">
-              Start with a free scan. We'll keep watching after.
+              Free scan in 30 seconds. No signup required to see your exposure.
             </p>
 
             {/* Email scan form */}
