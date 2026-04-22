@@ -263,7 +263,7 @@ export default function Subscribe() {
           </div>
 
           <Button
-            onClick={handleSubscribe}
+            onClick={handleSubscribeClick}
             disabled={loading}
             size="lg"
             className={`w-full text-lg h-14 ${
