@@ -24,9 +24,9 @@ const getPlans = (billingInterval: BillingInterval) => [
     name: "Pro",
     price: billingInterval === "year" ? "$79" : "$12.99",
     period: billingInterval === "year" ? "/year" : "/month",
-    description: "Unlimited deletions + deep discovery",
+    description: "Continuous monitoring + unlimited cleanup",
     features: [...PRO_FEATURES],
-    cta: "Upgrade to Pro",
+    cta: "Start Monitoring",
     ctaLink: `/subscribe?tier=pro&interval=${billingInterval}`,
     popular: true,
     icon: Star,
@@ -37,9 +37,9 @@ const getPlans = (billingInterval: BillingInterval) => [
     name: "Complete",
     price: billingInterval === "year" ? "$129" : "$19.99",
     period: billingInterval === "year" ? "/year" : "/month",
-    description: "Everything + data broker removal",
+    description: "Full monitoring + data broker removal",
     features: [...COMPLETE_FEATURES],
-    cta: "Get Complete",
+    cta: "Get Complete Protection",
     ctaLink: `/subscribe?tier=complete&interval=${billingInterval}`,
     popular: false,
     icon: Crown,
@@ -127,10 +127,10 @@ export const Pricing = () => {
 
         <div className="text-center mb-8">
           <h2 className="text-4xl md:text-5xl font-bold mb-4">
-            Simple, Transparent Pricing
+            Subscribe to Stay Protected
           </h2>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Choose the plan that fits your privacy needs. No hidden fees.
+            Your exposure changes every month. So does your protection. Cancel anytime.
           </p>
         </div>
 

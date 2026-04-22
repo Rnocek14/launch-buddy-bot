@@ -63,24 +63,24 @@ export const Hero = () => {
             {/* Badge */}
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-destructive/10 border border-destructive/20 mb-8">
               <AlertTriangle className="w-4 h-4 text-destructive" />
-              <span className="text-sm font-medium text-destructive">Your data is being sold right now</span>
+              <span className="text-sm font-medium text-destructive">Your exposure changes every week</span>
             </div>
 
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-normal mb-6 leading-tight tracking-tight">
-              <span className="text-foreground">You have more</span>
+              <span className="text-foreground">Monitor your</span>
               <br />
-              <span className="text-foreground">online accounts</span>
+              <span className="text-foreground">digital exposure.</span>
               <br />
               <span className="text-accent">
-                than you think.
+                Every month.
               </span>
             </h1>
 
             <p className="text-lg sm:text-xl text-muted-foreground mb-2 max-w-lg mx-auto lg:mx-0 leading-relaxed">
-              Enter your email. In 60 seconds, we'll show you every service that has your data — and help you delete the ones you don't need.
+              Your data leaks, gets resold, and reappears constantly. We scan continuously — surfacing new breaches, broker listings, and forgotten accounts so you can act before damage is done.
             </p>
             <p className="text-sm text-muted-foreground/70 mb-8 max-w-lg mx-auto lg:mx-0 italic">
-              People often discover dozens of forgotten accounts.
+              Start with a free scan. We'll keep watching after.
             </p>
 
             {/* Email scan form */}
@@ -95,7 +95,7 @@ export const Hero = () => {
                 />
                 <Button type="submit" size="lg" className="relative overflow-hidden gap-2 h-14 text-lg px-8 bg-accent hover:bg-accent/90 text-accent-foreground whitespace-nowrap cta-shimmer focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
                   <Search className="w-5 h-5" />
-                  Run Free Scan
+                  Check My Exposure
                 </Button>
               </div>
               {error && (

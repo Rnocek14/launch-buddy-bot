@@ -1,26 +1,26 @@
-import { Mail, Search, Send, Shield, Zap, Lock, CheckCircle, Globe, FileText } from "lucide-react";
+import { Radar, Bell, TrendingDown, Shield, Zap, Lock, CheckCircle, Globe, FileText } from "lucide-react";
 import { Card, CardContent } from "./ui/card";
 
 const keyFeatures = [
   {
-    icon: Mail,
-    title: "Automated Email Scanning",
-    description: "Connect your Gmail or Outlook account and let our AI scan your inbox to automatically discover services and platforms you've signed up for.",
-    highlights: ["OAuth 2.0 secure connection", "Never stores email content", "Instant results"],
+    icon: Radar,
+    title: "Continuous Exposure Monitoring",
+    description: "We don't scan once and disappear. Your data leaks evolve — new breaches, new broker listings, new accounts. We re-scan automatically every month.",
+    highlights: ["Monthly automated rescans", "Breach + broker + account tracking", "Diff detection across scans"],
     gradient: "from-primary/20 to-accent/20",
   },
   {
-    icon: Search,
-    title: "Privacy Contact Discovery",
-    description: "Automatically find privacy contacts, GDPR emails, and deletion request forms for each service you've used.",
-    highlights: ["AI-powered search", "200+ services supported", "Constantly updated"],
+    icon: Bell,
+    title: "Real-Time Change Alerts",
+    description: "When your exposure shifts, you know first. New breach? Broker re-lists you? Risk score jumps? We surface it with the exact action to take.",
+    highlights: ["Triggered email alerts", "'New since last scan' tagging", "Prioritized by severity"],
     gradient: "from-accent/20 to-primary/20",
   },
   {
-    icon: Send,
-    title: "Deletion Request Tracking",
-    description: "Send deletion requests with pre-filled templates and track their status in one unified dashboard.",
-    highlights: ["GDPR/CCPA compliant", "One-click sending", "Status monitoring"],
+    icon: TrendingDown,
+    title: "Guided Cleanup + Score Tracking",
+    description: "One-click deletion requests with legal templates. Watch your exposure score drop month over month — proof your privacy is actually improving.",
+    highlights: ["GDPR/CCPA compliant requests", "Score history & trendline", "Response tracking"],
     gradient: "from-primary/20 to-accent/20",
   },
 ];
@@ -64,11 +64,11 @@ export const Features = () => {
       <div className="container max-w-7xl">
         <div className="text-center mb-16 animate-fade-in">
           <h2 className="text-4xl md:text-5xl font-bold mb-4">
-            Everything You Need to
-            <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent"> Reclaim Privacy</span>
+            Privacy is
+            <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent"> Maintenance</span>, Not a One-Time Fix
           </h2>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Powerful automation that makes digital cleanup simple, secure, and actually doable.
+            Your data resurfaces constantly. We monitor it, alert you to change, and help you act fast.
           </p>
         </div>
 
