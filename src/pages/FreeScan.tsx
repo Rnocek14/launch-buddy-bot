@@ -12,6 +12,7 @@ import { UpgradeCTA } from "@/components/free-scan/UpgradeCTA";
 import { ParentScanUpsell } from "@/components/free-scan/ParentScanUpsell";
 import { supabase } from "@/integrations/supabase/client";
 import { trackEvent } from "@/lib/analytics";
+import { useSEO } from "@/hooks/useSEO";
 
 interface BreachData {
   name: string;

@@ -23,6 +23,7 @@ import { trackEvent } from "@/lib/analytics";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { PARENT_SCAN_FEATURES, STRIPE_PRICES } from "@/config/pricing";
+import { useSEO } from "@/hooks/useSEO";
 
 export default function Parents() {
   const navigate = useNavigate();
