@@ -39,6 +39,7 @@ import { Navigate } from "react-router-dom";
 import Extension from "./pages/Extension";
 import ResetPassword from "./pages/ResetPassword";
 import EmailSubscriptions from "./pages/EmailSubscriptions";
+import Parents from "./pages/Parents";
 
 const queryClient = new QueryClient();
 
@@ -54,6 +55,7 @@ const App = () => (
               <Route path="/" element={<Index />} />
               <Route path="/demo" element={<Demo />} />
               <Route path="/free-scan" element={<FreeScan />} />
+              <Route path="/parents" element={<Parents />} />
               <Route path="/enterprise" element={<Enterprise />} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/admin" element={<Admin />} />
