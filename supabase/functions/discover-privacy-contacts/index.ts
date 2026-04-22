@@ -20,6 +20,7 @@ import { detectLanguage, rankByLocale } from '../_shared/lang.ts';
 import { getSitemapCache, setSitemapCache } from '../_shared/cache.ts';
 import { getVendorHint, getDomainHint } from '../_shared/vendor_hints.ts';
 import { isQuarantined, addToQuarantine } from '../_shared/quarantine.ts';
+import { parseAIContactsResponse, validateAIContacts, type AIContactFinding } from '../_shared/discovery_ai.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -106,6 +107,13 @@ const REDACT_PARAMS = ['email', 'e', 'user', 'token', 'auth', 'code', 'sid', 'se
 
 // Curated privacy contacts for domains that consistently block automated discovery
 const CURATED_CONTACTS: Record<string, Array<{ contact_type: string; value: string; confidence: string; reasoning: string }>> = {
+  'vercel.com': [
+    { contact_type: 'form', value: 'https://datarequest.vercel.com/privacy', confidence: 'high', reasoning: 'Vercel public privacy request portal linked from the privacy policy.' },
+    { contact_type: 'email', value: 'privacy@vercel.com', confidence: 'high', reasoning: 'Vercel privacy contact published in the privacy policy.' },
+  ],
+  'airtable.com': [
+    { contact_type: 'email', value: 'privacy@airtable.com', confidence: 'high', reasoning: 'Airtable privacy contact published in the privacy policy.' },
+  ],
   'bestbuy.com': [
     { contact_type: 'form', value: 'https://www.bestbuy.com/site/privacy-policy/data-request/pcmcat778300050498.c', confidence: 'high', reasoning: 'Best Buy official DSAR form from privacy policy' },
     { contact_type: 'email', value: 'privacy@bestbuy.com', confidence: 'high', reasoning: 'Best Buy privacy team email' },
@@ -175,6 +183,15 @@ const CURATED_CONTACTS: Record<string, Array<{ contact_type: string; value: stri
     { contact_type: 'form', value: 'https://help.doordash.com/s/privacy-requests', confidence: 'high', reasoning: 'DoorDash privacy requests form' },
     { contact_type: 'email', value: 'privacy@doordash.com', confidence: 'high', reasoning: 'DoorDash privacy team email' },
   ],
+};
+const KNOWN_PRIVACY_URLS: Record<string, string[]> = {
+  'airbnb.com': ['https://www.airbnb.com/privacy'],
+  'airtable.com': ['https://www.airtable.com/company/privacy'],
+  'facebook.com': ['https://www.facebook.com/privacy/policy/'],
+  'google.com': ['https://policies.google.com/privacy'],
+  'grubhub.com': ['https://www.grubhub.com/privacy'],
+  'netflix.com': ['https://help.netflix.com/legal/privacy'],
+  'vercel.com': ['https://vercel.com/legal/privacy-policy'],
 };
 const MAX_REDIRECT_DEPTH = 1;
 const VALIDATION_TIMEOUT_MS = 2500; // Reduced from 5000ms to prevent CPU exhaustion
