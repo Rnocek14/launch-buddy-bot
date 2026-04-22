@@ -1620,9 +1620,10 @@ serve(async (req) => {
       });
     };
     
+    const knownPrivacyUrls = KNOWN_PRIVACY_URLS[apexDomain] ?? [];
     const candidateUrls = privacy_url 
       ? [privacy_url]
-      : dedupeUrls([...tier1, ...tier2]);
+      : dedupeUrls([...knownPrivacyUrls, ...tier1, ...tier2]);
     
     // Phase 1.3: Language detection — reuse homepage HTML to avoid double-fetch
     let langDetected = 'en';
@@ -1735,6 +1736,71 @@ serve(async (req) => {
         };
         methodUsed = 'browserless';
       }
+    }
+
+    const securityTxtFallback = securityTxtContact ? contactFromSecurityTxt(securityTxtContact.contact, service.domain) : null;
+
+    // If both phases failed, use security.txt as a last-resort actionable contact when available.
+    if ((!result || !result.content) && securityTxtFallback) {
+      console.warn(`[Fallback] Using security.txt contact for ${service.domain} after policy discovery failure`);
+
+      const { data: existingContacts } = await supabase
+        .from('privacy_contacts')
+        .select('contact_type, value')
+        .eq('service_id', service_id);
+
+      const existingSet = new Set((existingContacts || []).map((c: any) => `${c.contact_type}:${c.value.toLowerCase()}`));
+      const fallbackContacts = mergeUniqueContacts([securityTxtFallback]).filter(contact => {
+        const key = `${contact.contact_type}:${contact.value.toLowerCase()}`;
+        return !existingSet.has(key);
+      });
+
+      const insertedFallback = fallbackContacts.length > 0
+        ? await supabase.from('privacy_contacts').insert(
+            fallbackContacts.map(contact => ({
+              service_id,
+              contact_type: contact.contact_type,
+              value: contact.value,
+              confidence: contact.confidence,
+              reasoning: contact.reasoning,
+              verified: false,
+              added_by: 'security_txt_fallback',
+              source_url: securityTxtContact?.url ?? `https://${service.domain}/.well-known/security.txt`,
+            }))
+            .select()
+          )
+        : { data: [], error: null };
+
+      if (insertedFallback.error) throw insertedFallback.error;
+
+      metrics.success = true;
+      metrics.method_used = 'security_txt_fallback';
+      metrics.policy_type = 'security_txt';
+      metrics.confidence = securityTxtFallback.confidence;
+      metrics.cache_hit = cacheHit;
+      metrics.probe_used = 'security_txt';
+      metrics.urls_considered = urlsToTry.length;
+      metrics.urls_fetched = realFetchCount;
+      metrics.status_map = { fallback: 'security_txt', policy_source: 'security_txt' };
+      metricsEmitted = true;
+
+      return new Response(JSON.stringify({
+        success: true,
+        service: service.name,
+        contacts_found: (insertedFallback.data || []).length || 1,
+        contacts: (insertedFallback.data || []).length ? insertedFallback.data : [{
+          ...securityTxtFallback,
+          service_id,
+          verified: false,
+          added_by: 'security_txt_fallback',
+          source_url: securityTxtContact?.url ?? `https://${service.domain}/.well-known/security.txt`,
+        }],
+        method_used: 'security_txt_fallback',
+        confidence: securityTxtFallback.confidence,
+        privacy_policy_found: false,
+        security_contact: securityTxtContact?.contact,
+        discovery_metadata: { fallback: 'security_txt' },
+      }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
     }
 
     // If both phases failed, return error
