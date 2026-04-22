@@ -44,6 +44,12 @@ import BlogIndex from "./pages/BlogIndex";
 import BlogPost from "./pages/BlogPost";
 import RemoveBroker from "./pages/RemoveBroker";
 import RemoveBrokerIndex from "./pages/RemoveBrokerIndex";
+import Affiliates from "./pages/Affiliates";
+import { captureAffiliateRef } from "./lib/affiliateTracking";
+
+if (typeof window !== "undefined") {
+  captureAffiliateRef();
+}
 
 const queryClient = new QueryClient();
 
@@ -93,6 +99,7 @@ const App = () => (
               <Route path="/blog/:slug" element={<BlogPost />} />
               <Route path="/remove-from" element={<RemoveBrokerIndex />} />
               <Route path="/remove-from/:slug" element={<RemoveBroker />} />
+              <Route path="/affiliates" element={<Affiliates />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>

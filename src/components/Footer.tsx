@@ -15,6 +15,7 @@ export const Footer = () => {
             <a href="/parents" className="hover:text-foreground transition-colors">Parent Scan</a>
             <a href="/blog" className="hover:text-foreground transition-colors">Blog</a>
             <a href="/help" className="hover:text-foreground transition-colors">Help Center</a>
+            <a href="/affiliates" className="hover:text-foreground transition-colors">Affiliates</a>
             <a href="/privacy" className="hover:text-foreground transition-colors">Privacy Policy</a>
             <a href="/terms" className="hover:text-foreground transition-colors">Terms of Service</a>
             <a href="/status" className="hover:text-foreground transition-colors">Status</a>
