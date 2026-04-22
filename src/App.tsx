@@ -40,6 +40,8 @@ import Extension from "./pages/Extension";
 import ResetPassword from "./pages/ResetPassword";
 import EmailSubscriptions from "./pages/EmailSubscriptions";
 import Parents from "./pages/Parents";
+import BlogIndex from "./pages/BlogIndex";
+import BlogPost from "./pages/BlogPost";
 
 const queryClient = new QueryClient();
 
@@ -85,6 +87,8 @@ const App = () => (
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/email-subscriptions" element={<EmailSubscriptions />} />
               <Route path="/scan" element={<Navigate to="/dashboard" replace />} />
+              <Route path="/blog" element={<BlogIndex />} />
+              <Route path="/blog/:slug" element={<BlogPost />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
