@@ -177,8 +177,85 @@ const CURATED_CONTACTS: Record<string, Array<{ contact_type: string; value: stri
   ],
 };
 const MAX_REDIRECT_DEPTH = 1;
-const VALIDATION_TIMEOUT_MS = 5000;
+const VALIDATION_TIMEOUT_MS = 2500; // Reduced from 5000ms to prevent CPU exhaustion
 const FETCH_TIMEOUT_MS = 7000;
+
+/**
+ * Deterministic regex prepass: extracts privacy contacts from policy HTML/text.
+ * Resolves common cases (privacy@, dpo@, /dsar, /privacy-request) without LLM,
+ * and provides a fallback if the AI call fails or times out.
+ */
+function regexPrepassExtract(content: string, baseUrl: string, domain: string): ContactFinding[] {
+  const findings: ContactFinding[] = [];
+  const seen = new Set<string>();
+
+  // 1. Privacy-specific email addresses
+  const emailRegex = /\b([A-Z0-9._%+-]+)@([A-Z0-9.-]+\.[A-Z]{2,})\b/gi;
+  const privacyLocalParts = /^(privacy|dpo|gdpr|ccpa|data[-_.]?protection|datenschutz|privacidad|confidentialite|legal[-_.]?privacy|privacy[-_.]?officer|privacyoffice|dsar)$/i;
+  let m: RegExpExecArray | null;
+  while ((m = emailRegex.exec(content)) !== null) {
+    const local = m[1];
+    const host = m[2].toLowerCase();
+    const full = `${local}@${host}`.toLowerCase();
+    if (seen.has(`email:${full}`)) continue;
+    
+    const isPrivacyLocal = privacyLocalParts.test(local);
+    const matchesDomain = host === domain || host.endsWith(`.${domain}`) || domain.endsWith(`.${host}`);
+    
+    if (isPrivacyLocal) {
+      seen.add(`email:${full}`);
+      findings.push({
+        contact_type: 'email',
+        value: full,
+        confidence: matchesDomain ? 'high' : 'medium',
+        reasoning: `Regex prepass: privacy-specific email (${local}@) found in policy${matchesDomain ? ' matching service domain' : ''}.`,
+      });
+    }
+  }
+
+  // 2. DSAR / privacy request form URLs
+  const urlRegex = /https?:\/\/[^\s"'<>)]+/gi;
+  const privacyPathPattern = /(dsar|data[-_]?(request|deletion|subject)|privacy[-_]?(request|form|portal|center|rights|choices)|opt[-_]?out|delete[-_]?(my[-_]?)?data|do[-_]?not[-_]?sell|ccpa[-_]?request|gdpr[-_]?request|privacy\/.*\/(request|delete|form))/i;
+  while ((m = urlRegex.exec(content)) !== null) {
+    let url = m[0].replace(/[.,;:!?)\]]+$/, '');
+    if (seen.has(`form:${url.toLowerCase()}`)) continue;
+    if (!privacyPathPattern.test(url)) continue;
+    try {
+      const u = new URL(url);
+      const host = u.hostname.toLowerCase().replace(/^www\./, '');
+      const matchesDomain = host === domain || host.endsWith(`.${domain}`) || domain.endsWith(`.${host}`);
+      // Reject homepage / policy-only / generic contact pages
+      if (u.pathname === '/' || u.pathname === '') continue;
+      if (/^\/(privacy[-_]?policy|privacy|legal|terms)\/?$/i.test(u.pathname)) continue;
+      seen.add(`form:${url.toLowerCase()}`);
+      findings.push({
+        contact_type: 'form',
+        value: url,
+        confidence: matchesDomain ? 'high' : 'medium',
+        reasoning: `Regex prepass: privacy/data-request URL pattern matched in policy${matchesDomain ? ' on service domain' : ''}.`,
+      });
+    } catch { /* skip invalid URL */ }
+  }
+
+  // 3. mailto: links (likely DPO/privacy contacts adjacent to keywords)
+  const mailtoRegex = /mailto:([A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,})/gi;
+  while ((m = mailtoRegex.exec(content)) !== null) {
+    const email = m[1].toLowerCase();
+    if (seen.has(`email:${email}`)) continue;
+    const local = email.split('@')[0];
+    if (privacyLocalParts.test(local)) {
+      seen.add(`email:${email}`);
+      findings.push({
+        contact_type: 'email',
+        value: email,
+        confidence: 'high',
+        reasoning: 'Regex prepass: mailto: link with privacy-specific local part.',
+      });
+    }
+  }
+
+  return findings.slice(0, 8); // Cap to prevent flooding
+}
 
 
 // Phase 1.1: i18n keyword expansion
