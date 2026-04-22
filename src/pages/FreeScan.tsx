@@ -9,6 +9,7 @@ import { Mail, AlertTriangle, Lock, Zap, Shield, Search, Eye } from "lucide-reac
 import { BreachResults } from "@/components/free-scan/BreachResults";
 import { WhatWeChecked } from "@/components/free-scan/WhatWeChecked";
 import { UpgradeCTA } from "@/components/free-scan/UpgradeCTA";
+import { ParentScanUpsell } from "@/components/free-scan/ParentScanUpsell";
 import { supabase } from "@/integrations/supabase/client";
 import { trackEvent } from "@/lib/analytics";
 
@@ -210,6 +211,11 @@ export default function FreeScan() {
               {/* Layer 3: Upgrade CTA */}
               <section>
                 <UpgradeCTA hasBreaches={results.breachCount > 0} />
+              </section>
+
+              {/* Layer 4: Parent Scan upsell — emotional pivot at peak intent */}
+              <section>
+                <ParentScanUpsell exposureCount={results.breachCount} />
               </section>
 
               {/* Try Again */}
