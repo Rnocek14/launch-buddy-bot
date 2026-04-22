@@ -1,5 +1,5 @@
-import { useEffect, useRef } from "react";
-import { Heart, ArrowRight, Phone, Home, Users, ShieldCheck } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Heart, ArrowRight, Phone, Home, Users, ShieldCheck, AlertTriangle } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,24 +10,43 @@ interface ParentScanUpsellProps {
   exposureCount?: number;
 }
 
+/** Bucket exposure into tiers for analytics segmentation. */
+const getExposureBucket = (count: number): "none" | "low" | "medium" | "high" => {
+  if (count <= 0) return "none";
+  if (count < 10) return "low";
+  if (count <= 100) return "medium";
+  return "high";
+};
+
 /**
  * Post-scan upsell card for the $39 Parent Protection Scan.
  * Shown right after the user sees their own exposure — the highest-intent moment.
+ * Mounts with a short delay so the user absorbs their own exposure first.
  */
 export const ParentScanUpsell = ({ exposureCount }: ParentScanUpsellProps) => {
   const ref = useRef<HTMLDivElement | null>(null);
   const viewedRef = useRef(false);
+  const [visible, setVisible] = useState(false);
+
+  // Delay reveal by ~2.5s so users absorb their own exposure before we pivot to parents.
+  useEffect(() => {
+    const timer = setTimeout(() => setVisible(true), 2500);
+    return () => clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
-    if (!ref.current || viewedRef.current) return;
+    if (!visible || !ref.current || viewedRef.current) return;
+    const node = ref.current;
     const observer = new IntersectionObserver(
       (entries) => {
         for (const entry of entries) {
           if (entry.isIntersecting && !viewedRef.current) {
             viewedRef.current = true;
+            const count = exposureCount ?? 0;
             trackEvent("parent_scan_cta_view", {
               source: "free_scan_results",
-              exposure_count: exposureCount ?? 0,
+              exposure_count: count,
+              exposure_bucket: getExposureBucket(count),
             });
             observer.disconnect();
           }
@@ -35,28 +54,38 @@ export const ParentScanUpsell = ({ exposureCount }: ParentScanUpsellProps) => {
       },
       { threshold: 0.4 }
     );
-    observer.observe(ref.current);
+    observer.observe(node);
     return () => observer.disconnect();
-  }, [exposureCount]);
+  }, [exposureCount, visible]);
 
   const handleClick = () => {
+    const count = exposureCount ?? 0;
     trackEvent("parent_scan_cta_click", {
       source: "free_scan_results",
-      exposure_count: exposureCount ?? 0,
+      exposure_count: count,
+      exposure_bucket: getExposureBucket(count),
     });
   };
 
+  if (!visible) return null;
+
   return (
-    <Card ref={ref} className="border-accent/30 bg-gradient-to-br from-accent/5 via-background to-primary/5 overflow-hidden">
+    <Card
+      ref={ref}
+      className="border-destructive/30 bg-gradient-to-br from-destructive/5 via-background to-accent/5 overflow-hidden animate-fade-in shadow-lg"
+    >
       <CardContent className="p-6 sm:p-8">
+        {/* Risk alert ribbon — frames the card as a warning, not a promo */}
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-destructive/10 border border-destructive/30 mb-4">
+          <AlertTriangle className="w-3.5 h-3.5 text-destructive" />
+          <span className="text-xs font-semibold uppercase tracking-wide text-destructive">Risk Alert · Family Exposure</span>
+        </div>
+
         <div className="flex items-start gap-4 mb-5">
           <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-accent/15 border border-accent/30 flex items-center justify-center">
             <Heart className="w-6 h-6 text-accent" />
           </div>
           <div className="flex-1">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent/10 border border-accent/20 mb-2">
-              <span className="text-xs font-medium text-accent">Now think about your parents</span>
-            </div>
             <h3 className="text-xl sm:text-2xl font-bold text-foreground leading-tight">
               {exposureCount && exposureCount > 0
                 ? `You have ${exposureCount} exposures. Your parents are typically 2–3× more exposed — and far more targeted.`
