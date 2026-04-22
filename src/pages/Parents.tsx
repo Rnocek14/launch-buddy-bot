@@ -57,9 +57,14 @@ export default function Parents() {
       trackEvent("parent_scan_checkout_started", {
         has_email: parentEmail.includes("@"),
       });
+      const { getStoredAffiliateRef } = await import("@/lib/affiliateTracking");
+      const ref = getStoredAffiliateRef();
+      const body: Record<string, string> = {};
+      if (parentEmail.includes("@")) body.parentEmail = parentEmail;
+      if (ref?.code) body.affiliateCode = ref.code;
       const { data, error } = await supabase.functions.invoke(
         "create-parent-scan-payment",
-        { body: parentEmail.includes("@") ? { parentEmail } : {} }
+        { body }
       );
       if (error) throw error;
       if (data?.url) {

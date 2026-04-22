@@ -39,12 +39,27 @@ serve(async (req) => {
       }
     }
 
-    // Optional: parent's email passed from the form so we can prefill the report later.
+    // Optional: parent's email passed from the form, plus affiliate code from referral.
     let parentEmail: string | undefined;
+    let affiliateCode: string | undefined;
     try {
       const body = await req.json();
       if (body?.parentEmail && typeof body.parentEmail === "string") {
         parentEmail = body.parentEmail.slice(0, 320);
+      }
+      if (body?.affiliateCode && typeof body.affiliateCode === "string"
+          && /^[A-Z0-9]{4,16}$/.test(body.affiliateCode)) {
+        const svc = createClient(
+          Deno.env.get("SUPABASE_URL") ?? "",
+          Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+        );
+        const { data: aff } = await svc
+          .from("affiliates")
+          .select("code")
+          .eq("code", body.affiliateCode)
+          .eq("status", "approved")
+          .maybeSingle();
+        if (aff) affiliateCode = aff.code;
       }
     } catch {
       // No body — fine.
@@ -72,6 +87,7 @@ serve(async (req) => {
         product: "parent_protection_scan",
         supabase_user_id: supabaseUserId ?? "",
         parent_email: parentEmail ?? "",
+        ...(affiliateCode ? { affiliate_code: affiliateCode } : {}),
       },
     });
 

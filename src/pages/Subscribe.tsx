@@ -122,8 +122,10 @@ export default function Subscribe() {
         );
       }
 
+      const { getStoredAffiliateRef } = await import("@/lib/affiliateTracking");
+      const ref = getStoredAffiliateRef();
       const { data, error } = await supabase.functions.invoke("create-checkout-session", {
-        body: { priceId: priceForCheckout.id },
+        body: { priceId: priceForCheckout.id, ...(ref?.code ? { affiliateCode: ref.code } : {}) },
       });
 
       if (error) throw error;

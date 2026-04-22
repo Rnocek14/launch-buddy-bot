@@ -78,6 +78,72 @@ const handler = async (req: Request): Promise<Response> => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    // Helper: log an affiliate conversion when a Stripe object carries affiliate_code metadata
+    async function logAffiliateConversion(opts: {
+      affiliateCode: string;
+      conversionType: "subscription" | "one_time_purchase";
+      amountCents: number;
+      referredUserId?: string | null;
+      stripePaymentIntentId?: string | null;
+      metadata?: Record<string, unknown>;
+    }) {
+      try {
+        const { data: aff } = await supabase
+          .from("affiliates")
+          .select("id, commission_rate, total_clicks, total_signups, total_conversions, total_earnings_cents")
+          .eq("code", opts.affiliateCode)
+          .eq("status", "approved")
+          .maybeSingle();
+        if (!aff) {
+          console.warn(`[AFFILIATE] code not found or not approved: ${opts.affiliateCode}`);
+          return;
+        }
+        const rate = Number(aff.commission_rate) || 0.4;
+        const commissionCents = Math.round(opts.amountCents * rate);
+
+        // Idempotency: skip if we already logged this payment_intent
+        if (opts.stripePaymentIntentId) {
+          const { data: existing } = await supabase
+            .from("affiliate_conversions")
+            .select("id")
+            .eq("stripe_payment_intent_id", opts.stripePaymentIntentId)
+            .maybeSingle();
+          if (existing) {
+            console.log(`[AFFILIATE] conversion already logged for ${opts.stripePaymentIntentId}`);
+            return;
+          }
+        }
+
+        const { error: insertErr } = await supabase.from("affiliate_conversions").insert({
+          affiliate_id: aff.id,
+          affiliate_code: opts.affiliateCode,
+          referred_user_id: opts.referredUserId ?? null,
+          conversion_type: opts.conversionType,
+          amount_cents: opts.amountCents,
+          commission_cents: commissionCents,
+          stripe_payment_intent_id: opts.stripePaymentIntentId ?? null,
+          metadata: opts.metadata ?? {},
+        });
+        if (insertErr) {
+          console.error("[AFFILIATE] insert failed:", insertErr);
+          return;
+        }
+
+        // Increment affiliate totals
+        await supabase
+          .from("affiliates")
+          .update({
+            total_conversions: (aff.total_conversions || 0) + 1,
+            total_earnings_cents: (aff.total_earnings_cents || 0) + commissionCents,
+          })
+          .eq("id", aff.id);
+
+        console.log(`[AFFILIATE] +$${(commissionCents / 100).toFixed(2)} for ${opts.affiliateCode}`);
+      } catch (err) {
+        console.error("[AFFILIATE] log error:", err);
+      }
+    }
+
     // Handle different event types
     switch (event.type) {
       case "checkout.session.completed": {
@@ -164,6 +230,34 @@ const handler = async (req: Request): Promise<Response> => {
                 console.log("Upgrade email sent successfully");
               }
             }
+          }
+
+          // Affiliate conversion (subscription)
+          const affiliateCode = session.metadata?.affiliate_code || subscription.metadata?.affiliate_code;
+          if (affiliateCode && session.amount_total) {
+            await logAffiliateConversion({
+              affiliateCode,
+              conversionType: "subscription",
+              amountCents: session.amount_total,
+              referredUserId: userId,
+              stripePaymentIntentId: session.payment_intent as string | null,
+              metadata: { tier, price_id: priceId, subscription_id: subscription.id },
+            });
+          }
+        }
+
+        // One-time payments (e.g. parent scan)
+        if (session.mode === "payment") {
+          const affiliateCode = session.metadata?.affiliate_code;
+          if (affiliateCode && session.amount_total) {
+            await logAffiliateConversion({
+              affiliateCode,
+              conversionType: "one_time_purchase",
+              amountCents: session.amount_total,
+              referredUserId: session.metadata?.supabase_user_id || null,
+              stripePaymentIntentId: session.payment_intent as string | null,
+              metadata: { product: session.metadata?.product || "unknown" },
+            });
           }
         }
         break;
