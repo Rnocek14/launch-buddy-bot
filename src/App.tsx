@@ -42,6 +42,8 @@ import EmailSubscriptions from "./pages/EmailSubscriptions";
 import Parents from "./pages/Parents";
 import BlogIndex from "./pages/BlogIndex";
 import BlogPost from "./pages/BlogPost";
+import RemoveBroker from "./pages/RemoveBroker";
+import RemoveBrokerIndex from "./pages/RemoveBrokerIndex";
 
 const queryClient = new QueryClient();
 
@@ -89,6 +91,8 @@ const App = () => (
               <Route path="/scan" element={<Navigate to="/dashboard" replace />} />
               <Route path="/blog" element={<BlogIndex />} />
               <Route path="/blog/:slug" element={<BlogPost />} />
+              <Route path="/remove-from" element={<RemoveBrokerIndex />} />
+              <Route path="/remove-from/:slug" element={<RemoveBroker />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
