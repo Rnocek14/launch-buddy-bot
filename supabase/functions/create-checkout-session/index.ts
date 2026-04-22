@@ -9,6 +9,7 @@ const corsHeaders = {
 
 interface CheckoutRequest {
   priceId: string;
+  affiliateCode?: string;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -50,12 +51,28 @@ const handler = async (req: Request): Promise<Response> => {
     console.log(`Creating checkout for user: ${user.id}, email: ${user.email}`);
 
     // Parse request body
-    const { priceId }: CheckoutRequest = await req.json();
+    const { priceId, affiliateCode }: CheckoutRequest = await req.json();
     if (!priceId) {
       throw new Error("Missing required field: priceId");
     }
 
-    console.log(`Using price ID: ${priceId}`);
+    console.log(`Using price ID: ${priceId}${affiliateCode ? `, affiliate: ${affiliateCode}` : ""}`);
+
+    // Validate affiliate code if provided
+    let validAffiliateCode: string | undefined;
+    if (affiliateCode && /^[A-Z0-9]{4,16}$/.test(affiliateCode)) {
+      const supabaseService = createClient(
+        supabaseUrl,
+        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+      );
+      const { data: aff } = await supabaseService
+        .from("affiliates")
+        .select("code")
+        .eq("code", affiliateCode)
+        .eq("status", "approved")
+        .maybeSingle();
+      if (aff) validAffiliateCode = aff.code;
+    }
 
     // Initialize Stripe
     const stripe = new Stripe(stripeKey, { apiVersion: "2024-06-20" });
@@ -93,7 +110,11 @@ const handler = async (req: Request): Promise<Response> => {
       cancel_url: `${origin}/pricing?upgrade=cancelled`,
       metadata: {
         supabase_user_id: user.id,
+        ...(validAffiliateCode ? { affiliate_code: validAffiliateCode } : {}),
       },
+      subscription_data: validAffiliateCode
+        ? { metadata: { affiliate_code: validAffiliateCode, supabase_user_id: user.id } }
+        : { metadata: { supabase_user_id: user.id } },
     });
 
     console.log(`Checkout session created: ${session.id}`);
