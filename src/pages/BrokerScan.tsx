@@ -536,12 +536,24 @@ export default function BrokerScan() {
 
                 {issueResults.length > 0 && (
                   <div className="space-y-3">
-                    <h3 className="text-lg font-semibold flex items-center gap-2">
-                      <AlertCircle className="h-5 w-5 text-muted-foreground" />
-                      Issues with {issueResults.length} broker{issueResults.length !== 1 ? 's' : ''}
-                    </h3>
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      <h3 className="text-lg font-semibold flex items-center gap-2">
+                        <AlertCircle className="h-5 w-5 text-muted-foreground" />
+                        Couldn't check {issueResults.length} broker{issueResults.length !== 1 ? 's' : ''}
+                      </h3>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => startScan({ retryFailedOnly: true })}
+                        disabled={scanning}
+                      >
+                        <RefreshCw className={`h-4 w-4 mr-2 ${scanning ? 'animate-spin' : ''}`} />
+                        Retry these
+                      </Button>
+                    </div>
                     <p className="text-sm text-muted-foreground mb-2">
-                      These sites blocked our scan. Click "Check Manually" to verify yourself.
+                      These sites didn't respond or blocked our scan — this doesn't mean you're clean there.
+                      Click "Retry these" to re-check, or use "Check Manually" to verify yourself.
                     </p>
                     {issueResults.map(result => (
                       <BrokerResultCard
