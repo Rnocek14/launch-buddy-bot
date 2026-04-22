@@ -92,9 +92,9 @@ serve(async (req) => {
       };
     });
 
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-    if (!LOVABLE_API_KEY) {
-      throw new Error('LOVABLE_API_KEY not configured');
+    const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
+    if (!OPENAI_API_KEY) {
+      throw new Error('OPENAI_API_KEY not configured');
     }
 
     const systemPrompt = `You are a privacy and data cleanup advisor. Analyze user's connected accounts and categorize them into cleanup priority tiers.
@@ -129,16 +129,16 @@ Be concise and actionable.`;
 
 ${JSON.stringify(servicesData, null, 2)}`;
 
-    console.log('Calling Lovable AI for cleanup analysis...');
+    console.log('Calling OpenAI for cleanup analysis...');
 
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+        'Authorization': `Bearer ${OPENAI_API_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
+        model: 'gpt-4o-mini',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt }
@@ -149,14 +149,14 @@ ${JSON.stringify(servicesData, null, 2)}`;
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('Lovable AI error:', response.status, errorText);
+      console.error('OpenAI error:', response.status, errorText);
       if (response.status === 429) {
-        throw new Error('AI rate limit exceeded. Please try again in a moment.');
+        throw new Error('OpenAI rate limit exceeded. Please try again in a moment.');
       }
-      if (response.status === 402) {
-        throw new Error('AI credits exhausted. Add funds in Settings → Workspace → Usage.');
+      if (response.status === 401) {
+        throw new Error('OpenAI API key is invalid or expired.');
       }
-      throw new Error(`Lovable AI failed: ${response.status}`);
+      throw new Error(`OpenAI failed: ${response.status}`);
     }
 
     const aiResponse = await response.json();
