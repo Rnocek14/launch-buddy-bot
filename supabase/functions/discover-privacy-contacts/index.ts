@@ -277,10 +277,11 @@ function regexPrepassExtract(content: string, baseUrl: string, domain: string): 
 function contactFromSecurityTxt(rawContact: string, domain: string): ContactFinding | null {
   const normalized = rawContact.trim();
   if (!normalized) return null;
+  const privacyHint = /(privacy|dpo|gdpr|ccpa|data[-_ ]?(request|protection|deletion)|delete|erasure|subject[-_ ]?access)/i;
 
   if (normalized.toLowerCase().startsWith('mailto:')) {
     const email = normalized.replace(/^mailto:/i, '').trim().toLowerCase();
-    if (!email) return null;
+    if (!email || !privacyHint.test(email.split('@')[0])) return null;
     return {
       contact_type: 'email',
       value: email,
@@ -290,6 +291,7 @@ function contactFromSecurityTxt(rawContact: string, domain: string): ContactFind
   }
 
   if (/^https?:\/\//i.test(normalized)) {
+    if (!privacyHint.test(normalized)) return null;
     return {
       contact_type: 'form',
       value: normalized,
@@ -299,6 +301,7 @@ function contactFromSecurityTxt(rawContact: string, domain: string): ContactFind
   }
 
   if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized)) {
+    if (!privacyHint.test(normalized.split('@')[0])) return null;
     return {
       contact_type: 'email',
       value: normalized.toLowerCase(),
