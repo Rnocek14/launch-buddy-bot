@@ -66,8 +66,8 @@ export default function Subscribe() {
   };
 
   const handleSubscribeClick = () => {
-    // Intercept monthly checkout once per session with annual upsell
-    if (billingInterval === "month") {
+    // Family is annual-only — skip upsell modal
+    if (billingInterval === "month" && selectedTier !== "family") {
       const dismissed = sessionStorage.getItem(`upsell_dismissed_${selectedTier}`);
       if (!dismissed) {
         trackEvent("annual_upsell_shown", { tier: selectedTier });
@@ -98,6 +98,7 @@ export default function Subscribe() {
     try {
       const interval = intervalOverride ?? billingInterval;
       const priceForCheckout = (() => {
+        if (selectedTier === "family") return STRIPE_PRICES.FAMILY_ANNUAL;
         if (selectedTier === "complete") {
           return interval === "year" ? STRIPE_PRICES.COMPLETE_ANNUAL : STRIPE_PRICES.COMPLETE_MONTHLY;
         }
