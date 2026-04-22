@@ -1,5 +1,5 @@
-import { useEffect, useRef } from "react";
-import { Heart, ArrowRight, Phone, Home, Users, ShieldCheck } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Heart, ArrowRight, Phone, Home, Users, ShieldCheck, AlertTriangle } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,24 +10,43 @@ interface ParentScanUpsellProps {
   exposureCount?: number;
 }
 
+/** Bucket exposure into tiers for analytics segmentation. */
+const getExposureBucket = (count: number): "none" | "low" | "medium" | "high" => {
+  if (count <= 0) return "none";
+  if (count < 10) return "low";
+  if (count <= 100) return "medium";
+  return "high";
+};
+
 /**
  * Post-scan upsell card for the $39 Parent Protection Scan.
  * Shown right after the user sees their own exposure — the highest-intent moment.
+ * Mounts with a short delay so the user absorbs their own exposure first.
  */
 export const ParentScanUpsell = ({ exposureCount }: ParentScanUpsellProps) => {
   const ref = useRef<HTMLDivElement | null>(null);
   const viewedRef = useRef(false);
+  const [visible, setVisible] = useState(false);
+
+  // Delay reveal by ~2.5s so users absorb their own exposure before we pivot to parents.
+  useEffect(() => {
+    const timer = setTimeout(() => setVisible(true), 2500);
+    return () => clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
-    if (!ref.current || viewedRef.current) return;
+    if (!visible || !ref.current || viewedRef.current) return;
+    const node = ref.current;
     const observer = new IntersectionObserver(
       (entries) => {
         for (const entry of entries) {
           if (entry.isIntersecting && !viewedRef.current) {
             viewedRef.current = true;
+            const count = exposureCount ?? 0;
             trackEvent("parent_scan_cta_view", {
               source: "free_scan_results",
-              exposure_count: exposureCount ?? 0,
+              exposure_count: count,
+              exposure_bucket: getExposureBucket(count),
             });
             observer.disconnect();
           }
@@ -35,16 +54,20 @@ export const ParentScanUpsell = ({ exposureCount }: ParentScanUpsellProps) => {
       },
       { threshold: 0.4 }
     );
-    observer.observe(ref.current);
+    observer.observe(node);
     return () => observer.disconnect();
-  }, [exposureCount]);
+  }, [exposureCount, visible]);
 
   const handleClick = () => {
+    const count = exposureCount ?? 0;
     trackEvent("parent_scan_cta_click", {
       source: "free_scan_results",
-      exposure_count: exposureCount ?? 0,
+      exposure_count: count,
+      exposure_bucket: getExposureBucket(count),
     });
   };
+
+  if (!visible) return null;
 
   return (
     <Card ref={ref} className="border-accent/30 bg-gradient-to-br from-accent/5 via-background to-primary/5 overflow-hidden">
