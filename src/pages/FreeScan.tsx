@@ -7,47 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Mail, AlertTriangle, Lock, Zap, Shield, Search, Eye } from "lucide-react";
 import { BreachResults } from "@/components/free-scan/BreachResults";
-import { FootprintEstimate } from "@/components/free-scan/FootprintEstimate";
+import { WhatWeChecked } from "@/components/free-scan/WhatWeChecked";
 import { UpgradeCTA } from "@/components/free-scan/UpgradeCTA";
 import { supabase } from "@/integrations/supabase/client";
 import { trackEvent } from "@/lib/analytics";
-
-// Deterministic hash from email string
-function emailHash(email: string): number {
-  let hash = 5381;
-  const str = email.toLowerCase().trim();
-  for (let i = 0; i < str.length; i++) {
-    hash = ((hash << 5) + hash) ^ str.charCodeAt(i);
-  }
-  return hash >>> 0;
-}
-
-function getFootprintEstimate(email: string) {
-  const domain = email.split("@")[1]?.toLowerCase() || "";
-  const hash = emailHash(email);
-  const variation = hash % 20;
-
-  const isOlderEmail = ["gmail.com", "yahoo.com", "hotmail.com", "aol.com"].includes(domain);
-  const isWorkEmail = !["gmail.com", "yahoo.com", "hotmail.com", "aol.com", "outlook.com", "icloud.com"].includes(domain);
-
-  const baseServices = isOlderEmail ? 45 : 25;
-  const workBonus = isWorkEmail ? 15 : 0;
-  const estimatedServices = baseServices + workBonus + variation;
-  const dataBrokers = 3 + (hash % 8);
-
-  return {
-    estimatedServices,
-    categories: [
-      { name: "Shopping & E-commerce", count: Math.floor(estimatedServices * 0.25) },
-      { name: "Social Media", count: Math.floor(estimatedServices * 0.15) },
-      { name: "Newsletters & Marketing", count: Math.floor(estimatedServices * 0.30) },
-      { name: "Financial Services", count: Math.floor(estimatedServices * 0.10) },
-      { name: "Travel & Booking", count: Math.floor(estimatedServices * 0.10) },
-      { name: "Other Services", count: Math.floor(estimatedServices * 0.10) },
-    ],
-    dataBrokers,
-  };
-}
 
 interface BreachData {
   name: string;
