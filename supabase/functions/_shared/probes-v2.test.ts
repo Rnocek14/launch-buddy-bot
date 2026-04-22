@@ -1,6 +1,7 @@
 // Tests for Phase 2 probe enhancements: smart content window, policy URL validator, isOfficialDomain, isSoft404
 
 import { extractSmartContentWindow, validatePolicyUrl, isOfficialDomain, isSoft404 } from './probes.ts';
+import { extractJSON, parseAIContactsResponse, validateAIContacts } from './discovery_ai.ts';
 
 Deno.test('extractSmartContentWindow: short text returned as-is', () => {
   const text = 'Hello world';
@@ -157,4 +158,30 @@ Deno.test('isSoft404: does not flag long page with incidental "not found" mentio
 Deno.test('isSoft404: detects multiple signals even in long content', () => {
   const content = '<h1>Page Not Found</h1><p>Oops! We couldn\'t find this page.</p>' + 'x '.repeat(3000);
   if (!isSoft404(content)) throw new Error('Should detect 2+ signals regardless of length');
+});
+
+Deno.test('extractJSON: strips markdown fences and parses payload', () => {
+  const payload = extractJSON('```json\n{"contacts":[{"contact_type":"email","value":"privacy@example.com","confidence":"high","reasoning":"privacy@example.com appears in the policy"}]}\n```');
+  if (!Array.isArray(payload.contacts) || payload.contacts.length !== 1) throw new Error('Expected one parsed contact');
+});
+
+Deno.test('parseAIContactsResponse: rejects truncated responses', () => {
+  let threw = false;
+  try {
+    parseAIContactsResponse({ choices: [{ finish_reason: 'length', message: { content: '{}' } }] }, 1000);
+  } catch (error) {
+    threw = String((error as Error).message).includes('truncated');
+  }
+  if (!threw) throw new Error('Expected truncation detection to throw');
+});
+
+Deno.test('validateAIContacts: rejects hallucinated contact not present in source', () => {
+  const source = 'Privacy Policy. Contact us at privacy@example.com for deletion requests.';
+  const result = validateAIContacts([
+    { contact_type: 'email', value: 'fake@example.com', confidence: 'high', reasoning: 'Found fake@example.com in policy' },
+    { contact_type: 'email', value: 'privacy@example.com', confidence: 'high', reasoning: 'privacy@example.com appears in the policy' },
+  ], source);
+
+  if (result.validContacts.length !== 1) throw new Error('Expected only one valid contact');
+  if (result.rejectedContacts.length !== 1) throw new Error('Expected one rejected contact');
 });
