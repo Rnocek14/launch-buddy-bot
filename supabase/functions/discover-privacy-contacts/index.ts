@@ -2021,6 +2021,7 @@ Extract all relevant contact methods for data deletion requests.`;
     let inputTokens: number | null = null;
     let outputTokens: number | null = null;
     const MODEL_NAME = 'gpt-5-mini';
+    const MAX_COMPLETION_TOKENS = 1000;
 
     if (OPENAI_API_KEY) {
       try {
@@ -2079,7 +2080,7 @@ Extract all relevant contact methods for data deletion requests.`;
               }
             ],
             tool_choice: { type: 'function', function: { name: 'save_privacy_contacts' } },
-            max_completion_tokens: 1000
+            max_completion_tokens: MAX_COMPLETION_TOKENS
           }),
         });
 
@@ -2090,20 +2091,27 @@ Extract all relevant contact methods for data deletion requests.`;
         }
 
         const aiResponse = await response.json();
-        const toolCall = aiResponse.choices?.[0]?.message?.tool_calls?.[0];
         const tokenUsage = aiResponse.usage || {};
         inputTokens = tokenUsage.prompt_tokens || null;
         outputTokens = tokenUsage.completion_tokens || null;
         console.log(`[Cost] OpenAI tokens: ${inputTokens} in / ${outputTokens} out (model: ${MODEL_NAME})`);
 
-        if (toolCall) {
-          const parsed: { contacts: ContactFinding[] } = JSON.parse(toolCall.function.arguments);
-          aiContacts = parsed.contacts || [];
-          aiSucceeded = true;
-          console.log(`Found ${aiContacts.length} contact methods from AI`);
-        } else {
-          console.warn('[AI] No tool call returned — falling back to regex prepass only');
+        const parsedAI = parseAIContactsResponse(aiResponse, MAX_COMPLETION_TOKENS);
+        const validation = validateAIContacts(parsedAI.contacts as AIContactFinding[], privacyContent);
+        aiContacts = validation.validContacts as ContactFinding[];
+        aiSucceeded = aiContacts.length > 0;
+
+        if (parsedAI.warnings.length > 0) {
+          console.warn('[AI] Parse warnings:', parsedAI.warnings.join(', '));
         }
+        if (validation.warnings.length > 0) {
+          console.warn('[AI] Validation warnings:', validation.warnings.join(', '));
+        }
+        if (validation.rejectedContacts.length > 0) {
+          console.warn('[AI] Rejected contacts:', validation.rejectedContacts.map(item => `${item.contact.value} (${item.reason})`).join(', '));
+        }
+
+        console.log(`Found ${aiContacts.length} validated contact methods from AI`);
       } catch (aiErr) {
         console.error('[AI] Extraction failed, falling back to regex prepass:', aiErr);
         // Don't throw — fall through to merged findings below
@@ -2111,12 +2119,9 @@ Extract all relevant contact methods for data deletion requests.`;
     }
 
     // Merge AI + prepass findings (dedupe by contact_type + value)
-    const mergedMap = new Map<string, ContactFinding>();
-    for (const c of [...aiContacts, ...prepassFindings]) {
-      const key = `${c.contact_type}:${c.value.toLowerCase()}`;
-      if (!mergedMap.has(key)) mergedMap.set(key, c);
-    }
-    const findings: { contacts: ContactFinding[] } = { contacts: Array.from(mergedMap.values()) };
+    const findings: { contacts: ContactFinding[] } = {
+      contacts: mergeUniqueContacts([...aiContacts, ...prepassFindings]),
+    };
 
     if (findings.contacts.length === 0 && !aiSucceeded) {
       throw new Error('Unable to extract privacy contacts: AI extraction failed and no deterministic patterns matched. The privacy policy may be unusual or behind anti-bot protection.');
