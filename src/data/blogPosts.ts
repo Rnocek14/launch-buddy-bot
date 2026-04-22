@@ -49,7 +49,7 @@ export const BLOG_POSTS: BlogPost[] = [
         heading: "Data broker coverage",
         body: [
           "Incogni: ~180 brokers, fully automated requests, regular re-scans. This is their core competency and they do it well.",
-          "Footprint Finder: 20+ priority brokers (the ones that actually matter for scams and identity theft), with guided opt-out instructions. We're more focused on the high-impact brokers rather than blasting requests to obscure ones.",
+          "Footprint Finder: 45+ priority brokers (the ones that actually matter for scams and identity theft), with guided opt-out instructions. We're more focused on the high-impact brokers rather than blasting requests to obscure ones.",
           "Honest take: if your only concern is removing yourself from every data broker on Earth, Incogni's automation is more comprehensive. If you want broader privacy coverage, we're the better fit.",
         ],
       },
@@ -72,7 +72,7 @@ export const BLOG_POSTS: BlogPost[] = [
     comparisonTable: [
       { feature: "Free tier", us: "Yes — 1 email, 3 deletions/mo", them: "No" },
       { feature: "Inbox scanning", us: "Deep AI scan, all senders", them: "Not offered" },
-      { feature: "Data brokers", us: "20+ priority brokers", them: "~180 brokers" },
+      { feature: "Data brokers", us: "45+ priority brokers", them: "~180 brokers" },
       { feature: "Annual price (individual)", us: "$79 Pro / $129 Complete", them: "$77/year" },
       { feature: "Family plan", us: "Coming soon", them: "$134/yr (4 members)" },
       { feature: "One-click deletion templates", us: "Yes", them: "Brokers only" },

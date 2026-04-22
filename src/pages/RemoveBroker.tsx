@@ -93,7 +93,7 @@ export default function RemoveBroker() {
     ? `How to Remove Yourself from ${broker.name} (${new Date().getFullYear()} Guide)`
     : "Data Broker Removal Guide";
   const seoDescription = broker
-    ? `Step-by-step guide to opt out of ${broker.name}. Takes ${broker.opt_out_time_estimate ?? "a few minutes"}. Or let Footprint Finder do it for you across 20+ brokers.`
+    ? `Step-by-step guide to opt out of ${broker.name}. Takes ${broker.opt_out_time_estimate ?? "a few minutes"}. Or let Footprint Finder do it for you across 45+ brokers.`
     : "Remove your personal info from data brokers.";
   const canonical = broker
     ? `https://footprintfinder.co/remove-from/${broker.slug}`
@@ -189,7 +189,7 @@ export default function RemoveBroker() {
               {broker.name} is a data broker that publishes personal information — name,
               address, phone number, relatives — gathered from public records and other
               sources. Here's exactly how to opt out, and how Footprint Finder can do it
-              for you across {broker.name} and 20+ other brokers automatically.
+              for you across {broker.name} and 45+ other brokers automatically.
             </p>
           </header>
 
@@ -304,7 +304,7 @@ export default function RemoveBroker() {
                   <Clock className="w-5 h-5 text-primary mb-2" />
                   <h3 className="font-semibold mb-1">It takes time</h3>
                   <p className="text-sm text-muted-foreground">
-                    Manually opting out of one broker takes ~10 minutes. Doing all 20+
+                    Manually opting out of one broker takes ~10 minutes. Doing all 45+
                     can take a full afternoon — and you'll need to redo it quarterly.
                   </p>
                 </CardContent>
