@@ -85,6 +85,14 @@ export default function Auth() {
 
     let isMounted = true;
 
+    // Honor ?redirect=/path after sign-in (e.g. coming from /subscribe).
+    // Only allow same-origin relative paths to prevent open-redirect abuse.
+    const redirectParam = urlParams.get("redirect");
+    const safeRedirect =
+      redirectParam && redirectParam.startsWith("/") && !redirectParam.startsWith("//")
+        ? redirectParam
+        : "/dashboard";
+
     const checkUser = async () => {
       const { data } = await supabase.auth.getSession();
       if (!isMounted || !data.session) return;
@@ -94,7 +102,7 @@ export default function Auth() {
         return;
       }
 
-      navigate("/dashboard", { replace: true });
+      navigate(safeRedirect, { replace: true });
     };
 
     checkUser();
@@ -110,7 +118,7 @@ export default function Auth() {
       }
 
       if (location.pathname.startsWith("/auth") && event === "SIGNED_IN") {
-        navigate("/dashboard", { replace: true });
+        navigate(safeRedirect, { replace: true });
       }
     });
 
