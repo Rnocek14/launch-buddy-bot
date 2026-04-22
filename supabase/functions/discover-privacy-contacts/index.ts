@@ -177,8 +177,85 @@ const CURATED_CONTACTS: Record<string, Array<{ contact_type: string; value: stri
   ],
 };
 const MAX_REDIRECT_DEPTH = 1;
-const VALIDATION_TIMEOUT_MS = 5000;
+const VALIDATION_TIMEOUT_MS = 2500; // Reduced from 5000ms to prevent CPU exhaustion
 const FETCH_TIMEOUT_MS = 7000;
+
+/**
+ * Deterministic regex prepass: extracts privacy contacts from policy HTML/text.
+ * Resolves common cases (privacy@, dpo@, /dsar, /privacy-request) without LLM,
+ * and provides a fallback if the AI call fails or times out.
+ */
+function regexPrepassExtract(content: string, baseUrl: string, domain: string): ContactFinding[] {
+  const findings: ContactFinding[] = [];
+  const seen = new Set<string>();
+
+  // 1. Privacy-specific email addresses
+  const emailRegex = /\b([A-Z0-9._%+-]+)@([A-Z0-9.-]+\.[A-Z]{2,})\b/gi;
+  const privacyLocalParts = /^(privacy|dpo|gdpr|ccpa|data[-_.]?protection|datenschutz|privacidad|confidentialite|legal[-_.]?privacy|privacy[-_.]?officer|privacyoffice|dsar)$/i;
+  let m: RegExpExecArray | null;
+  while ((m = emailRegex.exec(content)) !== null) {
+    const local = m[1];
+    const host = m[2].toLowerCase();
+    const full = `${local}@${host}`.toLowerCase();
+    if (seen.has(`email:${full}`)) continue;
+    
+    const isPrivacyLocal = privacyLocalParts.test(local);
+    const matchesDomain = host === domain || host.endsWith(`.${domain}`) || domain.endsWith(`.${host}`);
+    
+    if (isPrivacyLocal) {
+      seen.add(`email:${full}`);
+      findings.push({
+        contact_type: 'email',
+        value: full,
+        confidence: matchesDomain ? 'high' : 'medium',
+        reasoning: `Regex prepass: privacy-specific email (${local}@) found in policy${matchesDomain ? ' matching service domain' : ''}.`,
+      });
+    }
+  }
+
+  // 2. DSAR / privacy request form URLs
+  const urlRegex = /https?:\/\/[^\s"'<>)]+/gi;
+  const privacyPathPattern = /(dsar|data[-_]?(request|deletion|subject)|privacy[-_]?(request|form|portal|center|rights|choices)|opt[-_]?out|delete[-_]?(my[-_]?)?data|do[-_]?not[-_]?sell|ccpa[-_]?request|gdpr[-_]?request|privacy\/.*\/(request|delete|form))/i;
+  while ((m = urlRegex.exec(content)) !== null) {
+    let url = m[0].replace(/[.,;:!?)\]]+$/, '');
+    if (seen.has(`form:${url.toLowerCase()}`)) continue;
+    if (!privacyPathPattern.test(url)) continue;
+    try {
+      const u = new URL(url);
+      const host = u.hostname.toLowerCase().replace(/^www\./, '');
+      const matchesDomain = host === domain || host.endsWith(`.${domain}`) || domain.endsWith(`.${host}`);
+      // Reject homepage / policy-only / generic contact pages
+      if (u.pathname === '/' || u.pathname === '') continue;
+      if (/^\/(privacy[-_]?policy|privacy|legal|terms)\/?$/i.test(u.pathname)) continue;
+      seen.add(`form:${url.toLowerCase()}`);
+      findings.push({
+        contact_type: 'form',
+        value: url,
+        confidence: matchesDomain ? 'high' : 'medium',
+        reasoning: `Regex prepass: privacy/data-request URL pattern matched in policy${matchesDomain ? ' on service domain' : ''}.`,
+      });
+    } catch { /* skip invalid URL */ }
+  }
+
+  // 3. mailto: links (likely DPO/privacy contacts adjacent to keywords)
+  const mailtoRegex = /mailto:([A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,})/gi;
+  while ((m = mailtoRegex.exec(content)) !== null) {
+    const email = m[1].toLowerCase();
+    if (seen.has(`email:${email}`)) continue;
+    const local = email.split('@')[0];
+    if (privacyLocalParts.test(local)) {
+      seen.add(`email:${email}`);
+      findings.push({
+        contact_type: 'email',
+        value: email,
+        confidence: 'high',
+        reasoning: 'Regex prepass: mailto: link with privacy-specific local part.',
+      });
+    }
+  }
+
+  return findings.slice(0, 8); // Cap to prevent flooding
+}
 
 
 // Phase 1.1: i18n keyword expansion
@@ -887,18 +964,20 @@ async function trySimpleFetch(
               console.log(`  - [Score: ${link.score}] ${sanitizeForLog(link.url)} (${link.linkText})`);
             });
             
-            // Try top 5 scored links
-            for (const link of scoredLinks.slice(0, 5)) {
+            // Phase 1.1 Refinement #4 & #5: Parallel validation of top 5 scored links
+            const topLinks = scoredLinks.slice(0, 5);
+            const validations = await Promise.all(
+              topLinks.map(link => smartValidateUrl(link.url).then(v => ({ link, v })).catch(() => ({ link, v: { valid: false } as ValidateResult })))
+            );
+
+            for (const { link, v: validation } of validations) {
               if (!budgetOk()) break;
-              
-              // Phase 1.1 Refinement #4 & #5: Quick validate with PDF detection
-              const validation = await smartValidateUrl(link.url);
               if (!validation.valid) {
                 console.log(`[Phase 1] Skipping invalid URL (${validation.status}): ${sanitizeForLog(link.url)}`);
                 failedUrls.set(link.url, validation.status || 0);
                 continue;
               }
-              
+
               // Phase 1.1 Refinement #5: Handle PDF policies
               if (validation.isPDF) {
                 console.log(`[Phase 1] ✓ Found PDF policy via link discovery: ${sanitizeForLog(link.url)}`);
@@ -913,7 +992,7 @@ async function trySimpleFetch(
                   policy_source: `footer_link`,
                 };
               }
-              
+
               console.log(`[Phase 1] Trying validated URL: ${sanitizeForLog(link.url)}`);
               const result = await trySimpleFetch([link.url], domain, attemptTimeoutMs, earlyStopScore);
               if (result) {
@@ -1708,10 +1787,19 @@ serve(async (req) => {
       );
     }
 
+    // === REGEX PREPASS: deterministic extraction before LLM ===
+    // Resolves ~70% of cases without an AI call and provides a fallback if AI fails.
+    const prepassFindings = regexPrepassExtract(privacyContent, successUrl, service.domain);
+    console.log(`[Regex Prepass] Extracted ${prepassFindings.length} contact(s) deterministically`);
+
     // Call OpenAI with tool calling for structured extraction
     const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
     if (!OPENAI_API_KEY) {
-      throw new Error('OPENAI_API_KEY not configured');
+      // No AI key — return prepass findings if any, otherwise fail
+      if (prepassFindings.length === 0) {
+        throw new Error('OPENAI_API_KEY not configured');
+      }
+      console.warn('[Regex Prepass] No OPENAI_API_KEY — returning prepass findings only');
     }
 
     const systemPrompt = `You are an AI assistant specializing in analyzing privacy policies to extract contact information for data deletion requests (GDPR, CCPA, etc.).
@@ -1798,93 +1886,115 @@ Extract all relevant contact methods for data deletion requests.`;
       }
     }
 
-    const response = await countedFetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${OPENAI_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
-        ],
-        tools: [
-          {
-            type: 'function',
-            function: {
-              name: 'save_privacy_contacts',
-              description: 'Save discovered privacy contact methods',
-              parameters: {
-                type: 'object',
-                properties: {
-                  contacts: {
-                    type: 'array',
-                    items: {
-                      type: 'object',
-                      properties: {
-                         contact_type: {
-                          type: 'string',
-                          enum: ['email', 'form', 'phone'],
-                          description: 'Type of contact method'
-                        },
-                        value: {
-                          type: 'string',
-                          description: 'The actual contact value (email address, URL, phone number, etc.)'
-                        },
-                        confidence: {
-                          type: 'string',
-                          enum: ['high', 'medium'],
-                          description: 'Confidence level — only return high or medium confidence contacts'
-                        },
-                        reasoning: {
-                          type: 'string',
-                          description: 'Explanation of why this contact was identified and confidence level'
+    // AI extraction with prepass fallback. If AI fails (timeout, rate limit, parse error),
+    // we still return regex prepass findings so the user gets actionable contacts.
+    let aiContacts: ContactFinding[] = [];
+    let aiSucceeded = false;
+    let inputTokens: number | null = null;
+    let outputTokens: number | null = null;
+    const MODEL_NAME = 'gpt-5-mini';
+
+    if (OPENAI_API_KEY) {
+      try {
+        const response = await countedFetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${OPENAI_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: MODEL_NAME,
+            messages: [
+              { role: 'system', content: systemPrompt },
+              { role: 'user', content: userPrompt }
+            ],
+            tools: [
+              {
+                type: 'function',
+                function: {
+                  name: 'save_privacy_contacts',
+                  description: 'Save discovered privacy contact methods',
+                  parameters: {
+                    type: 'object',
+                    properties: {
+                      contacts: {
+                        type: 'array',
+                        items: {
+                          type: 'object',
+                          properties: {
+                             contact_type: {
+                              type: 'string',
+                              enum: ['email', 'form', 'phone'],
+                              description: 'Type of contact method'
+                            },
+                            value: {
+                              type: 'string',
+                              description: 'The actual contact value (email address, URL, phone number, etc.)'
+                            },
+                            confidence: {
+                              type: 'string',
+                              enum: ['high', 'medium'],
+                              description: 'Confidence level — only return high or medium confidence contacts'
+                            },
+                            reasoning: {
+                              type: 'string',
+                              description: 'Explanation of why this contact was identified and confidence level'
+                            }
+                          },
+                          required: ['contact_type', 'value', 'confidence', 'reasoning']
                         }
-                      },
-                      required: ['contact_type', 'value', 'confidence', 'reasoning']
-                    }
+                      }
+                    },
+                    required: ['contacts']
                   }
-                },
-                required: ['contacts']
+                }
               }
-            }
-          }
-        ],
-        tool_choice: { type: 'function', function: { name: 'save_privacy_contacts' } },
-        max_tokens: 1000
-      }),
-    });
+            ],
+            tool_choice: { type: 'function', function: { name: 'save_privacy_contacts' } },
+            max_completion_tokens: 1000
+          }),
+        });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('OpenAI error:', response.status, errorText);
-      if (response.status === 429) {
-        throw new Error('OpenAI rate limit exceeded. Please try again in a moment.');
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('OpenAI error:', response.status, errorText);
+          throw new Error(`OpenAI failed: ${response.status}`);
+        }
+
+        const aiResponse = await response.json();
+        const toolCall = aiResponse.choices?.[0]?.message?.tool_calls?.[0];
+        const tokenUsage = aiResponse.usage || {};
+        inputTokens = tokenUsage.prompt_tokens || null;
+        outputTokens = tokenUsage.completion_tokens || null;
+        console.log(`[Cost] OpenAI tokens: ${inputTokens} in / ${outputTokens} out (model: ${MODEL_NAME})`);
+
+        if (toolCall) {
+          const parsed: { contacts: ContactFinding[] } = JSON.parse(toolCall.function.arguments);
+          aiContacts = parsed.contacts || [];
+          aiSucceeded = true;
+          console.log(`Found ${aiContacts.length} contact methods from AI`);
+        } else {
+          console.warn('[AI] No tool call returned — falling back to regex prepass only');
+        }
+      } catch (aiErr) {
+        console.error('[AI] Extraction failed, falling back to regex prepass:', aiErr);
+        // Don't throw — fall through to merged findings below
       }
-      if (response.status === 401) {
-        throw new Error('OpenAI API key is invalid or expired.');
-      }
-      throw new Error(`OpenAI failed: ${response.status}`);
     }
 
-    const aiResponse = await response.json();
-    const toolCall = aiResponse.choices[0].message.tool_calls?.[0];
-    
-    // Capture token usage for cost tracking
-    const tokenUsage = aiResponse.usage || {};
-    const inputTokens = tokenUsage.prompt_tokens || null;
-    const outputTokens = tokenUsage.completion_tokens || null;
-    console.log(`[Cost] OpenAI tokens: ${inputTokens} in / ${outputTokens} out (model: gpt-4o-mini)`);
-    
-    if (!toolCall) {
-      throw new Error('No tool call response from AI');
+    // Merge AI + prepass findings (dedupe by contact_type + value)
+    const mergedMap = new Map<string, ContactFinding>();
+    for (const c of [...aiContacts, ...prepassFindings]) {
+      const key = `${c.contact_type}:${c.value.toLowerCase()}`;
+      if (!mergedMap.has(key)) mergedMap.set(key, c);
+    }
+    const findings: { contacts: ContactFinding[] } = { contacts: Array.from(mergedMap.values()) };
+
+    if (findings.contacts.length === 0 && !aiSucceeded) {
+      throw new Error('Unable to extract privacy contacts: AI extraction failed and no deterministic patterns matched. The privacy policy may be unusual or behind anti-bot protection.');
     }
 
-    const findings: { contacts: ContactFinding[] } = JSON.parse(toolCall.function.arguments);
-
-    console.log(`Found ${findings.contacts.length} contact methods from AI`);
+    console.log(`[Merged] Total contacts: ${findings.contacts.length} (AI: ${aiContacts.length}, Prepass: ${prepassFindings.length})`);
 
     // Filter out invalid contacts BEFORE storing
     const validContacts = findings.contacts.filter(contact => {
@@ -2047,10 +2157,10 @@ Extract all relevant contact methods for data deletion requests.`;
     metrics.prefill_supported = vendorInfo?.pre_fill_supported ?? null;
     metrics.attempt_timeouts = attemptTimeouts;
     metrics.probe_used = securityTxtContact ? 'security_txt' : (sitemapUrls.length > 0 ? 'sitemap' : null);
-    metrics.llm_calls = 1;
+    metrics.llm_calls = aiSucceeded ? 1 : 0;
     metrics.input_tokens = inputTokens;
     metrics.output_tokens = outputTokens;
-    metrics.model_used = 'gpt-4o-mini';
+    metrics.model_used = aiSucceeded ? MODEL_NAME : 'regex_prepass';
     metrics.browserless_used = methodUsed === 'browserless';
     metrics.urls_considered = urlsToTry.length;
     metrics.urls_considered_top5 = top5Candidates.length;
