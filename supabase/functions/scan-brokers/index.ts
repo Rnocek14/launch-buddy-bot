@@ -1221,7 +1221,8 @@ Deno.serve(async (req) => {
 
     if (req.method === 'POST') {
       const body = await req.json().catch(() => ({}));
-      
+      const retryFailedOnly = body.retry_failed === true;
+
       // Check for existing scan in progress
       const { data: existingScan } = await supabase
         .from('broker_scans')
@@ -1240,11 +1241,11 @@ Deno.serve(async (req) => {
         );
       }
 
-      // Cooldown check (5 minutes)
+      // Cooldown check (5 minutes) — bypassed for retry-failed-only runs
       const COOLDOWN_MS = 5 * 60 * 1000;
       const forceRescan = body.force === true;
-      
-      if (!forceRescan) {
+
+      if (!forceRescan && !retryFailedOnly) {
         const { data: recentScan } = await supabase
           .from('broker_scans')
           .select('id, completed_at')
@@ -1296,11 +1297,46 @@ Deno.serve(async (req) => {
         };
       }
 
-      // Get active brokers
-      const { data: brokers, count: brokerCount } = await supabase
-        .from('data_brokers')
-        .select('id, slug', { count: 'exact' })
-        .eq('is_active', true);
+      // Determine which brokers to scan
+      let brokers: { id: string; slug: string }[] | null = null;
+      let brokerCount = 0;
+
+      if (retryFailedOnly) {
+        // Only re-scan brokers whose last result for this user is in an error state
+        const ERROR_STATUSES = ['blocked', 'rate_limited', 'provider_error', 'timeout', 'parse_failed', 'request_failed', 'unknown'];
+        const { data: failedResults } = await supabase
+          .from('broker_scan_results')
+          .select('broker_id')
+          .eq('user_id', userId)
+          .in('status_v2', ERROR_STATUSES);
+
+        const failedIds = Array.from(new Set((failedResults || []).map((r: any) => r.broker_id)));
+
+        if (failedIds.length === 0) {
+          return new Response(
+            JSON.stringify({ error: 'No failed brokers to retry' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        const { data: filtered } = await supabase
+          .from('data_brokers')
+          .select('id, slug')
+          .eq('is_active', true)
+          .in('id', failedIds);
+
+        brokers = filtered || [];
+        brokerCount = brokers.length;
+        console.log(`[RETRY] Re-scanning ${brokerCount} previously-failed brokers for user ${userId}`);
+      } else {
+        // Get all active brokers
+        const { data: all, count } = await supabase
+          .from('data_brokers')
+          .select('id, slug', { count: 'exact' })
+          .eq('is_active', true);
+        brokers = all || [];
+        brokerCount = count || 0;
+      }
 
       // Create scan record
       const { data: newScan, error: scanError } = await supabase
