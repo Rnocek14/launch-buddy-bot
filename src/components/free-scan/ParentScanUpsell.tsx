@@ -70,16 +70,22 @@ export const ParentScanUpsell = ({ exposureCount }: ParentScanUpsellProps) => {
   if (!visible) return null;
 
   return (
-    <Card ref={ref} className="border-accent/30 bg-gradient-to-br from-accent/5 via-background to-primary/5 overflow-hidden">
+    <Card
+      ref={ref}
+      className="border-destructive/30 bg-gradient-to-br from-destructive/5 via-background to-accent/5 overflow-hidden animate-fade-in shadow-lg"
+    >
       <CardContent className="p-6 sm:p-8">
+        {/* Risk alert ribbon — frames the card as a warning, not a promo */}
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-destructive/10 border border-destructive/30 mb-4">
+          <AlertTriangle className="w-3.5 h-3.5 text-destructive" />
+          <span className="text-xs font-semibold uppercase tracking-wide text-destructive">Risk Alert · Family Exposure</span>
+        </div>
+
         <div className="flex items-start gap-4 mb-5">
           <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-accent/15 border border-accent/30 flex items-center justify-center">
             <Heart className="w-6 h-6 text-accent" />
           </div>
           <div className="flex-1">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent/10 border border-accent/20 mb-2">
-              <span className="text-xs font-medium text-accent">Now think about your parents</span>
-            </div>
             <h3 className="text-xl sm:text-2xl font-bold text-foreground leading-tight">
               {exposureCount && exposureCount > 0
                 ? `You have ${exposureCount} exposures. Your parents are typically 2–3× more exposed — and far more targeted.`
