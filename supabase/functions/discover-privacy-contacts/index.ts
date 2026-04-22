@@ -271,6 +271,53 @@ function regexPrepassExtract(content: string, baseUrl: string, domain: string): 
     }
   }
 
+  // 4. Anchor text extraction: <a href="...">Privacy / DPO / Data Protection / Your Rights</a>
+  // Captures privacy-labeled links that don't match path heuristics (e.g. /help/article/12345).
+  const anchorRegex = /<a\b[^>]*\bhref\s*=\s*["']([^"']+)["'][^>]*>([\s\S]{0,200}?)<\/a>/gi;
+  const labelPattern = /\b(privacy|dpo|data[\s-]?protection(?:\s+officer)?|your\s+(privacy\s+)?rights|do\s+not\s+sell|data\s+(subject|deletion|request)|exercise\s+your\s+rights|gdpr|ccpa)\b/i;
+  while ((m = anchorRegex.exec(content)) !== null) {
+    const href = m[1].trim();
+    const label = m[2].replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+    if (!labelPattern.test(label)) continue;
+
+    // mailto: handler
+    if (/^mailto:/i.test(href)) {
+      const email = href.replace(/^mailto:/i, '').split('?')[0].trim().toLowerCase();
+      if (!email || seen.has(`email:${email}`)) continue;
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) continue;
+      seen.add(`email:${email}`);
+      findings.push({
+        contact_type: 'email',
+        value: email,
+        confidence: 'high',
+        reasoning: `Regex prepass: anchor labeled "${label.slice(0, 60)}" links to mailto:${email}.`,
+      });
+      continue;
+    }
+
+    // URL handler — resolve relative URLs against baseUrl
+    let resolved: URL;
+    try {
+      resolved = new URL(href, baseUrl);
+    } catch { continue; }
+    if (!/^https?:$/.test(resolved.protocol)) continue;
+    if (resolved.pathname === '/' || resolved.pathname === '') continue;
+
+    const urlStr = resolved.toString();
+    if (seen.has(`form:${urlStr.toLowerCase()}`)) continue;
+    const host = resolved.hostname.toLowerCase().replace(/^www\./, '');
+    const matchesDomain = host === domain || host.endsWith(`.${domain}`) || domain.endsWith(`.${host}`);
+    if (!matchesDomain) continue; // off-domain anchors are noise
+
+    seen.add(`form:${urlStr.toLowerCase()}`);
+    findings.push({
+      contact_type: 'form',
+      value: urlStr,
+      confidence: 'medium',
+      reasoning: `Regex prepass: anchor labeled "${label.slice(0, 60)}" links to ${resolved.pathname}.`,
+    });
+  }
+
   return findings.slice(0, 8); // Cap to prevent flooding
 }
 
