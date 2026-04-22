@@ -176,7 +176,7 @@ export default function ScanHub() {
       actionLabel: status.peopleSearch.lastRun ? "View Results" : "Run Check",
       done: !!status.peopleSearch.lastRun,
       error: status.peopleSearch.error,
-      rescanAction: isAdmin && status.peopleSearch.lastRun ? () => handleRescan('broker') : undefined,
+      rescanAction: status.peopleSearch.lastRun ? () => handleRescan('broker') : undefined,
     },
     {
       icon: Shield,
@@ -190,6 +190,7 @@ export default function ScanHub() {
       actionLabel: status.breach.lastRun ? "View Results" : "Run Check",
       done: !!status.breach.lastRun,
       error: status.breach.error,
+      rescanAction: status.breach.lastRun ? () => handleRescan('exposure') : undefined,
     },
   ];
 
