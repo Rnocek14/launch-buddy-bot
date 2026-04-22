@@ -189,6 +189,9 @@ serve(async (req) => {
         </td></tr>
 
         <tr><td style="padding:24px 32px 32px;">
+          <p style="margin:0 0 8px;font-size:13px;line-height:1.5;color:#3f3f46;font-weight:500;">
+            This wasn't here last time we checked.
+          </p>
           <p style="margin:0;font-size:13px;line-height:1.5;color:#71717a;">
             We only send this email when something actually changes — no noise, no weekly digests.
           </p>

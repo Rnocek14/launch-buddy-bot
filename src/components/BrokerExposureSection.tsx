@@ -41,6 +41,7 @@ interface ExposedBroker {
   } | null;
   opted_out_at: string | null;
   opt_out_started_at: string | null;
+  updated_at: string | null;
   state: BrokerResultState; // derived
   is_new: boolean; // discovered/updated since last alert
 }
@@ -200,6 +201,7 @@ export function BrokerExposureSection() {
             extracted_data: r.extracted_data,
             opted_out_at: r.opted_out_at,
             opt_out_started_at: r.opt_out_started_at,
+            updated_at: r.updated_at ?? null,
             state,
             is_new: isExposureState && updatedTs > lastAlertTs && lastAlertTs > 0,
           };
@@ -435,7 +437,7 @@ export function BrokerExposureSection() {
                         <h4 className="font-medium">{broker.broker_name}</h4>
                         {broker.is_new && (
                           <Badge className="text-[10px] h-5 px-1.5 bg-primary text-primary-foreground border-0 uppercase tracking-wider font-bold">
-                            New
+                            New{broker.updated_at ? ` · ${formatDistanceToNow(new Date(broker.updated_at), { addSuffix: false })} ago` : ""}
                           </Badge>
                         )}
                         <Badge
