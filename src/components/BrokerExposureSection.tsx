@@ -478,7 +478,7 @@ export function BrokerExposureSection() {
                           size="sm"
                           onClick={() => handleRemoveClick(broker)}
                         >
-                          {broker.state === "removal_started" ? "Continue" : "Remove"}
+                          {broker.state === "removal_started" ? "Continue" : "Request removal"}
                           <ExternalLink className="h-3 w-3 ml-1" />
                         </Button>
                         <p className="text-[10px] text-muted-foreground mt-1">
