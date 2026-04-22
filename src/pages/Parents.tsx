@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
@@ -16,18 +16,66 @@ import {
   Users,
   Lock,
   ArrowRight,
+  FileText,
+  Loader2,
 } from "lucide-react";
 import { trackEvent } from "@/lib/analytics";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { PARENT_SCAN_FEATURES, STRIPE_PRICES } from "@/config/pricing";
 
 export default function Parents() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [parentEmail, setParentEmail] = useState("");
+  const [purchaseLoading, setPurchaseLoading] = useState(false);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    const status = searchParams.get("purchase");
+    if (status === "success") {
+      trackEvent("parent_scan_purchase_success", {});
+      toast({
+        title: "Payment received 🎉",
+        description: "Check your inbox — we'll email instructions to start the parent scan.",
+      });
+    } else if (status === "cancelled") {
+      trackEvent("parent_scan_purchase_cancelled", {});
+    }
+  }, [searchParams, toast]);
 
   const handleScan = (e: React.FormEvent) => {
     e.preventDefault();
     if (!parentEmail.includes("@")) return;
     trackEvent("parents_scan_started", { email_domain: parentEmail.split("@")[1] });
     navigate(`/free-scan?email=${encodeURIComponent(parentEmail)}&source=parents`);
+  };
+
+  const handlePurchaseParentScan = async () => {
+    setPurchaseLoading(true);
+    try {
+      trackEvent("parent_scan_checkout_started", {
+        has_email: parentEmail.includes("@"),
+      });
+      const { data, error } = await supabase.functions.invoke(
+        "create-parent-scan-payment",
+        { body: parentEmail.includes("@") ? { parentEmail } : {} }
+      );
+      if (error) throw error;
+      if (data?.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error("No checkout URL returned");
+      }
+    } catch (err: any) {
+      console.error("Parent scan checkout error:", err);
+      toast({
+        title: "Checkout failed",
+        description: err.message || "Please try again in a moment.",
+        variant: "destructive",
+      });
+      setPurchaseLoading(false);
+    }
   };
 
   return (
