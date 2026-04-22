@@ -19,6 +19,8 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useSEO } from "@/hooks/useSEO";
 import { trackEvent } from "@/lib/analytics";
+import { SeoEmailCapture } from "@/components/SeoEmailCapture";
+import { RelatedBrokers } from "@/components/RelatedBrokers";
 
 interface BrokerRecord {
   slug: string;
