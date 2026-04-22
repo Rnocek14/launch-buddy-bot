@@ -374,5 +374,6 @@ export default function Subscribe() {
           loading={loading}
         />
       )}
+    </div>
   );
 }
