@@ -143,6 +143,15 @@ export const TIER_LIMITS = {
     monthlyRescans: true,
     prioritySupport: true,
   },
+  family: {
+    emailConnections: 25, // 5 members × 5 emails
+    deletionsPerMonth: null,
+    brokerScanning: true,
+    deepScan: true,
+    monthlyRescans: true,
+    prioritySupport: true,
+    familyMembers: 5,
+  },
 } as const;
 
 export const FREE_TIER_LIMITS = {
@@ -177,6 +186,25 @@ export const COMPLETE_FEATURES = [
   "Connect up to 5 email addresses",
   "Priority email support",
   "Monthly broker rescans",
+] as const;
+
+export const FAMILY_FEATURES = [
+  "Everything in Complete, for 5 family members:",
+  "Protect parents, partner, kids, or housemates",
+  "Each member gets their own private dashboard",
+  "Up to 5 email accounts per member (25 total)",
+  "Data broker scanning for every member",
+  "Family privacy score & shared insights",
+  "One bill, one subscription",
+] as const;
+
+export const PARENT_SCAN_FEATURES = [
+  "One-time deep scan of their email",
+  "Full data broker check (20+ sites)",
+  "Breach exposure report",
+  "Printable PDF action plan",
+  "Senior-friendly explanations",
+  "No subscription required",
 ] as const;
 
 // Enterprise pricing tiers
