@@ -1,6 +1,7 @@
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Mail, UserPlus, ScanSearch, ArrowRight, Shield } from "lucide-react";
+import { Mail, ScanSearch, ArrowRight, Shield, Globe, Sparkles } from "lucide-react";
 
 interface DashboardEmptyStateProps {
   hasGmailAccess: boolean;
@@ -17,208 +18,149 @@ export const DashboardEmptyState = ({
   isAuthorized,
   onAuthorize,
 }: DashboardEmptyStateProps) => {
+  const navigate = useNavigate();
+
   return (
     <div className="max-w-4xl mx-auto py-12">
       <div className="text-center mb-12">
         <Shield className="w-16 h-16 mx-auto mb-4 text-primary" />
         <h2 className="text-3xl font-bold mb-4">Welcome to Footprint Finder</h2>
         <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-          Connect your Gmail to discover which services hold your data — then delete what you don't need.
+          Find out where your personal information is exposed online — no email connection required to get started.
         </p>
       </div>
 
-      {/* Demo Preview */}
-      <Card className="mb-8 border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
-        <CardHeader>
-          <CardTitle className="text-lg">See What You'll Discover</CardTitle>
-          <CardDescription>
-            Here's an example of what your dashboard will look like after scanning
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {[
-              { name: 'Netflix', category: 'Entertainment', logo: '🎬' },
-              { name: 'Amazon', category: 'Shopping', logo: '📦' },
-              { name: 'LinkedIn', category: 'Professional', logo: '💼' },
-              { name: 'Spotify', category: 'Entertainment', logo: '🎵' },
-            ].map((demo, idx) => (
-              <div 
-                key={idx}
-                className="p-3 rounded-lg border border-border bg-card/50 text-center space-y-2 opacity-60"
-              >
-                <div className="text-3xl">{demo.logo}</div>
-                <div>
-                  <p className="text-sm font-medium truncate">{demo.name}</p>
-                  <p className="text-xs text-muted-foreground">{demo.category}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-          <p className="text-xs text-muted-foreground text-center mt-4">
-            Most users discover 20-50+ services they forgot about
-          </p>
-        </CardContent>
-      </Card>
-
-      <div className="grid gap-6">
-        {/* Step 1: Accept Privacy Agreement */}
-        <Card className={!isAuthorized ? "border-primary shadow-lg" : ""}>
+      {/* PRIMARY: No-Gmail scans */}
+      <div className="grid gap-6 md:grid-cols-2 mb-8">
+        {/* Data Broker Scan */}
+        <Card className="border-primary shadow-lg bg-gradient-to-br from-primary/5 to-transparent">
           <CardHeader>
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
-                1
+              <div className="p-2 rounded-lg bg-primary/10">
+                <Globe className="w-6 h-6 text-primary" />
               </div>
               <div className="flex-1">
-                <CardTitle className="flex items-center gap-2">
-                  <Shield className="w-5 h-5" />
-                  Accept Privacy Agreement
-                  {isAuthorized && (
-                    <span className="text-sm font-normal text-green-600">✓ Completed</span>
-                  )}
-                </CardTitle>
-                <CardDescription>
-                  Review what we access and how your data is handled
-                </CardDescription>
+                <CardTitle className="text-lg">Scan Data Brokers</CardTitle>
+                <CardDescription>Just needs your name + location</CardDescription>
               </div>
             </div>
           </CardHeader>
-          <CardContent>
-            {!isAuthorized ? (
-              <div className="space-y-4">
-                <ul className="text-sm text-muted-foreground space-y-2 list-none">
-                  <li><strong>Inbox scan:</strong> We read sender names and subject lines to find signups. No email body is read or stored.</li>
-                  <li><strong>Deletion requests:</strong> If Gmail is connected, deletion emails are sent from <strong>your Gmail</strong>. If not, we send them <strong>on your behalf</strong> — you approve each request first.</li>
-                  <li className="text-xs italic">You can review the email before sending.</li>
-                  <li>You can revoke access at any time from Settings.</li>
-                </ul>
-                <Button onClick={onAuthorize} className="w-full sm:w-auto">
-                  I Agree — Continue
-                  <ArrowRight className="w-4 h-4 ml-2" />
-                </Button>
-              </div>
-            ) : (
-              <p className="text-sm text-green-600">
-                ✓ Agreement accepted. You're all set!
-              </p>
-            )}
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Check 20+ people-search sites (Spokeo, Whitepages, BeenVerified, etc.) to see who's
+              selling your address, phone, and relatives.
+            </p>
+            <Button onClick={() => navigate("/broker-scan")} className="w-full">
+              <ScanSearch className="w-4 h-4 mr-2" />
+              Start Broker Scan
+              <ArrowRight className="w-4 h-4 ml-2" />
+            </Button>
+            <p className="text-xs text-muted-foreground text-center">
+              No email access needed • Takes 1-2 minutes
+            </p>
           </CardContent>
         </Card>
 
-        {/* Step 2: Connect Gmail */}
-        <Card className={isAuthorized && !hasGmailAccess ? "border-primary shadow-lg" : ""}>
+        {/* Web Exposure Scan */}
+        <Card className="border-primary shadow-lg bg-gradient-to-br from-primary/5 to-transparent">
           <CardHeader>
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
-                2
+              <div className="p-2 rounded-lg bg-primary/10">
+                <Sparkles className="w-6 h-6 text-primary" />
               </div>
               <div className="flex-1">
-                <CardTitle className="flex items-center gap-2">
-                  <Mail className="w-5 h-5" />
-                  Connect Your Gmail
-                  {hasGmailAccess && (
-                    <span className="text-sm font-normal text-green-600">✓ Completed</span>
-                  )}
-                </CardTitle>
-                <CardDescription>
-                  Scan your inbox to automatically discover services you've used
-                </CardDescription>
+                <CardTitle className="text-lg">Scan Web Exposure</CardTitle>
+                <CardDescription>Breaches + public mentions</CardDescription>
               </div>
             </div>
           </CardHeader>
-          <CardContent>
-            {!hasGmailAccess ? (
-              <div className="space-y-4">
-                <p className="text-sm text-muted-foreground">
-                  We'll scan your emails to find signup confirmations, receipts, and service
-                  notifications. Your emails are never stored—we only extract service names.
-                </p>
-                <Button
-                  onClick={onConnectGmail}
-                  variant={isAuthorized ? "default" : "outline"}
-                  disabled={!isAuthorized}
-                  className="w-full sm:w-auto"
-                >
-                  <Mail className="w-4 h-4 mr-2" />
-                  Connect Gmail
-                </Button>
-                {!isAuthorized && (
-                  <p className="text-xs text-muted-foreground">
-                    Complete Step 1 first to connect Gmail
-                  </p>
-                )}
-              </div>
-            ) : (
-              <p className="text-sm text-green-600">
-                ✓ Gmail connected. Ready to scan for services!
-              </p>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Step 3: Start Scan */}
-        <Card
-          className={
-            isAuthorized && hasGmailAccess ? "border-primary shadow-lg animate-pulse" : ""
-          }
-        >
-          <CardHeader>
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
-                3
-              </div>
-              <div className="flex-1">
-                <CardTitle className="flex items-center gap-2">
-                  <ScanSearch className="w-5 h-5" />
-                  Run Your First Scan
-                </CardTitle>
-                <CardDescription>Discover where your data lives across the internet</CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                Click the button below to start scanning your inbox. We'll find services you've
-                signed up for and show you how to delete your accounts.
-              </p>
-              <Button
-                onClick={onStartScan}
-                disabled={!isAuthorized || !hasGmailAccess}
-                size="lg"
-                className="w-full sm:w-auto"
-              >
-                <ScanSearch className="w-4 h-4 mr-2" />
-                Start Scanning Now
-              </Button>
-              {(!isAuthorized || !hasGmailAccess) && (
-                <p className="text-xs text-muted-foreground">
-                  Complete Steps 1 and 2 first to start scanning
-                </p>
-              )}
-            </div>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Find your email in known data breaches and discover where your name appears across
+              the public web.
+            </p>
+            <Button onClick={() => navigate("/exposure-scan")} variant="outline" className="w-full">
+              <ScanSearch className="w-4 h-4 mr-2" />
+              Start Exposure Scan
+              <ArrowRight className="w-4 h-4 ml-2" />
+            </Button>
+            <p className="text-xs text-muted-foreground text-center">
+              No email access needed • Free
+            </p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Additional Help */}
-      <Card className="mt-8 bg-muted/30">
+      {/* SECONDARY: Optional Gmail upgrade */}
+      <Card className="border-dashed border-2">
         <CardHeader>
-          <CardTitle className="text-lg">Need Help?</CardTitle>
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-muted">
+              <Mail className="w-5 h-5 text-muted-foreground" />
+            </div>
+            <div className="flex-1">
+              <CardTitle className="text-base flex items-center gap-2">
+                Optional: Connect Gmail for Deeper Discovery
+                {hasGmailAccess && (
+                  <span className="text-xs font-normal text-primary">✓ Connected</span>
+                )}
+              </CardTitle>
+              <CardDescription>
+                Find 20-50+ hidden accounts you forgot about — Netflix, Amazon, old subscriptions
+              </CardDescription>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
-          <div className="space-y-2 text-sm">
+          <div className="space-y-3">
+            <ul className="text-sm text-muted-foreground space-y-1.5 list-disc list-inside">
+              <li>We read sender names + subject lines only — never your email body</li>
+              <li>Most users discover 20-50 services they completely forgot about</li>
+              <li>Disconnect anytime from Settings</li>
+            </ul>
+            <div className="flex flex-wrap gap-2">
+              {!isAuthorized && (
+                <Button onClick={onAuthorize} variant="outline" size="sm">
+                  <Shield className="w-4 h-4 mr-2" />
+                  Accept Privacy Agreement
+                </Button>
+              )}
+              {isAuthorized && !hasGmailAccess && (
+                <Button onClick={onConnectGmail} size="sm">
+                  <Mail className="w-4 h-4 mr-2" />
+                  Connect Gmail
+                </Button>
+              )}
+              {isAuthorized && hasGmailAccess && (
+                <Button onClick={onStartScan} size="sm">
+                  <ScanSearch className="w-4 h-4 mr-2" />
+                  Scan Inbox Now
+                </Button>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* FAQ */}
+      <Card className="mt-8 bg-muted/30">
+        <CardHeader>
+          <CardTitle className="text-lg">Common Questions</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3 text-sm">
             <p>
-              <strong>How long does scanning take?</strong> Most scans complete in 2-5 minutes,
-              depending on the number of emails in your inbox.
+              <strong>Why do I need to connect Gmail?</strong> You don't — the broker and exposure
+              scans work with just your name. Gmail unlocks the inbox-discovery feature that finds
+              forgotten accounts.
             </p>
             <p>
-              <strong>Is my data safe?</strong> Yes! We encrypt all tokens, never store email
-              content, and you can disconnect at any time.
+              <strong>How long do scans take?</strong> Broker scan: 1-2 minutes. Exposure scan: under
+              30 seconds. Inbox scan: 2-5 minutes.
             </p>
             <p>
-              <strong>What happens after scanning?</strong> You'll see a list of discovered
-              services with options to request account deletion for each one.
+              <strong>Is my data safe?</strong> Yes. We encrypt all tokens, never store email
+              content, and you can disconnect or delete your account anytime.
             </p>
           </div>
         </CardContent>
