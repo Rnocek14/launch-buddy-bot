@@ -433,6 +433,11 @@ export function BrokerExposureSection() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <h4 className="font-medium">{broker.broker_name}</h4>
+                        {broker.is_new && (
+                          <Badge className="text-[10px] h-5 px-1.5 bg-primary text-primary-foreground border-0 uppercase tracking-wider font-bold">
+                            New
+                          </Badge>
+                        )}
                         <Badge
                           variant="outline"
                           className={`text-xs ${
