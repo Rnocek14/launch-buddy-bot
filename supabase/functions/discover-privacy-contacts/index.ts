@@ -964,18 +964,20 @@ async function trySimpleFetch(
               console.log(`  - [Score: ${link.score}] ${sanitizeForLog(link.url)} (${link.linkText})`);
             });
             
-            // Try top 5 scored links
-            for (const link of scoredLinks.slice(0, 5)) {
+            // Phase 1.1 Refinement #4 & #5: Parallel validation of top 5 scored links
+            const topLinks = scoredLinks.slice(0, 5);
+            const validations = await Promise.all(
+              topLinks.map(link => smartValidateUrl(link.url).then(v => ({ link, v })).catch(() => ({ link, v: { valid: false } as ValidateResult })))
+            );
+
+            for (const { link, v: validation } of validations) {
               if (!budgetOk()) break;
-              
-              // Phase 1.1 Refinement #4 & #5: Quick validate with PDF detection
-              const validation = await smartValidateUrl(link.url);
               if (!validation.valid) {
                 console.log(`[Phase 1] Skipping invalid URL (${validation.status}): ${sanitizeForLog(link.url)}`);
                 failedUrls.set(link.url, validation.status || 0);
                 continue;
               }
-              
+
               // Phase 1.1 Refinement #5: Handle PDF policies
               if (validation.isPDF) {
                 console.log(`[Phase 1] ✓ Found PDF policy via link discovery: ${sanitizeForLog(link.url)}`);
@@ -990,7 +992,7 @@ async function trySimpleFetch(
                   policy_source: `footer_link`,
                 };
               }
-              
+
               console.log(`[Phase 1] Trying validated URL: ${sanitizeForLog(link.url)}`);
               const result = await trySimpleFetch([link.url], domain, attemptTimeoutMs, earlyStopScore);
               if (result) {
