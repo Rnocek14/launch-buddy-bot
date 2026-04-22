@@ -219,7 +219,11 @@ export default function RemovalActionPanel({
             </TabsList>
 
             <TabsContent value="guide" className="mt-4">
-              {brokerGuide ? (
+              {loadingBroker ? (
+                <div className="text-center py-8 text-sm text-muted-foreground">
+                  Loading guide…
+                </div>
+              ) : brokerGuide ? (
                 <div className="space-y-4">
                   {/* Requirements */}
                   <Card>
@@ -237,9 +241,13 @@ export default function RemovalActionPanel({
                         {brokerGuide.requiresId && (
                           <Badge variant="secondary">ID Verification</Badge>
                         )}
-                        {!brokerGuide.requiresEmail && 
-                         !brokerGuide.requiresPhone && 
-                         !brokerGuide.requiresId && (
+                        {brokerGuide.requiresCaptcha && (
+                          <Badge variant="secondary">CAPTCHA</Badge>
+                        )}
+                        {!brokerGuide.requiresEmail &&
+                         !brokerGuide.requiresPhone &&
+                         !brokerGuide.requiresId &&
+                         !brokerGuide.requiresCaptcha && (
                           <Badge variant="secondary" className="bg-green-500/10 text-green-600">
                             No verification required
                           </Badge>
@@ -249,21 +257,29 @@ export default function RemovalActionPanel({
                   </Card>
 
                   {/* Steps */}
-                  <div className="space-y-3">
-                    {brokerGuide.steps.map((step, index) => (
-                      <div key={index} className="flex gap-3">
-                        <div className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-sm font-medium text-primary">
-                          {index + 1}
+                  {brokerGuide.steps.length > 0 ? (
+                    <div className="space-y-3">
+                      {brokerGuide.steps.map((step, index) => (
+                        <div key={index} className="flex gap-3">
+                          <div className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-sm font-medium text-primary">
+                            {index + 1}
+                          </div>
+                          <p className="text-sm pt-0.5">{step}</p>
                         </div>
-                        <p className="text-sm pt-0.5">{step}</p>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      Visit the opt-out page below and follow their on-site instructions.
+                      If they don't offer a self-serve form, switch to the Email Template tab
+                      and send a GDPR/CCPA request.
+                    </p>
+                  )}
 
                   {/* Opt-out Link */}
-                  {finding.removal_url && (
+                  {effectiveRemovalUrl && (
                     <Button className="w-full" asChild>
-                      <a href={finding.removal_url} target="_blank" rel="noopener noreferrer">
+                      <a href={effectiveRemovalUrl} target="_blank" rel="noopener noreferrer">
                         Go to Opt-Out Page
                         <ExternalLink className="h-4 w-4 ml-2" />
                       </a>
@@ -271,18 +287,29 @@ export default function RemovalActionPanel({
                   )}
                 </div>
               ) : (
-                <div className="text-center py-8 space-y-4">
-                  <p className="text-muted-foreground">
-                    No specific guide available for this source.
+                <div className="space-y-4">
+                  <p className="text-sm text-muted-foreground">
+                    {finding.source_name} isn't in our broker database, so we don't have a
+                    step-by-step guide. You can still request removal using the GDPR/CCPA
+                    email template — switch to the <strong>Email Template</strong> tab.
                   </p>
-                  {finding.removal_url && (
-                    <Button asChild>
-                      <a href={finding.removal_url} target="_blank" rel="noopener noreferrer">
-                        Visit Opt-Out Page
+                  {effectiveRemovalUrl && (
+                    <Button asChild className="w-full">
+                      <a href={effectiveRemovalUrl} target="_blank" rel="noopener noreferrer">
+                        Visit Source Page
                         <ExternalLink className="h-4 w-4 ml-2" />
                       </a>
                     </Button>
                   )}
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => setActiveTab("template")}
+                  >
+                    <Mail className="h-4 w-4 mr-2" />
+                    Use Email Template
+                    <ArrowRight className="h-4 w-4 ml-2" />
+                  </Button>
                 </div>
               )}
             </TabsContent>
