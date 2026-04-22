@@ -2086,7 +2086,7 @@ Extract all relevant contact methods for data deletion requests.`;
               }
             ],
             tool_choice: { type: 'function', function: { name: 'save_privacy_contacts' } },
-            max_completion_tokens: MAX_COMPLETION_TOKENS
+            max_tokens: MAX_COMPLETION_TOKENS
           }),
         });
 
