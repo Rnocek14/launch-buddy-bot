@@ -28,7 +28,6 @@ interface ScanResults {
   criticalCount: number;
   highCount: number;
   breachError: string | null;
-  estimate: ReturnType<typeof getFootprintEstimate>;
 }
 
 export default function FreeScan() {
@@ -72,11 +71,6 @@ export default function FreeScan() {
       breachData.error = "Breach check unavailable";
     }
 
-    // Phase 2: Footprint estimate
-    setScanPhase("Analyzing digital footprint...");
-    await new Promise((resolve) => setTimeout(resolve, 1200));
-    const estimate = getFootprintEstimate(scanEmail);
-
     setScanPhase("Generating report...");
     await new Promise((resolve) => setTimeout(resolve, 600));
 
@@ -86,14 +80,12 @@ export default function FreeScan() {
       criticalCount: breachData.criticalCount,
       highCount: breachData.highCount,
       breachError: breachData.error,
-      estimate,
     });
 
     trackEvent("scan_completed", {
       source: "free_scan",
       breach_count: breachData.breachCount,
       critical_count: breachData.criticalCount,
-      estimated_services: estimate.estimatedServices,
     });
 
     setIsScanning(false);
@@ -207,12 +199,11 @@ export default function FreeScan() {
                 />
               </section>
 
-              {/* Layer 2: Footprint Estimate */}
+              {/* Layer 2: What we checked (honest framing) */}
               <section>
-                <FootprintEstimate
-                  categories={results.estimate.categories}
-                  dataBrokers={results.estimate.dataBrokers}
-                  estimatedServices={results.estimate.estimatedServices}
+                <WhatWeChecked
+                  breachCount={results.breachCount}
+                  breachError={results.breachError}
                 />
               </section>
 
