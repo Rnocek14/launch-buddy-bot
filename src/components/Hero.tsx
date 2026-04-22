@@ -118,7 +118,7 @@ export const Hero = () => {
               <span>Email-only scan · No inbox access · No content stored</span>
             </div>
 
-            <div className="flex flex-wrap gap-4 mb-6 justify-center lg:justify-start">
+            <div className="flex flex-wrap gap-x-4 gap-y-2 mb-6 justify-center lg:justify-start items-center">
               {isLoggedIn ? (
                 <Link to="/dashboard" className="text-sm text-primary hover:underline">
                   Go to Dashboard →
@@ -135,7 +135,7 @@ export const Hero = () => {
             </div>
 
             {/* Social Proof */}
-            <div className="flex flex-wrap gap-6 text-sm justify-center lg:justify-start">
+            <div className="flex flex-wrap gap-x-6 gap-y-3 text-sm justify-center lg:justify-start">
               <div className="flex items-center gap-2">
                 <Shield className="w-4 h-4 text-primary" />
                 <span className="text-muted-foreground">169+ Services Tracked</span>
@@ -152,14 +152,14 @@ export const Hero = () => {
           </div>
 
           {/* Mobile-only trust cue (animation hidden on mobile) */}
-          <div className="flex md:hidden justify-center">
+          <div className="flex md:hidden justify-center lg:col-span-5">
             <p className="text-xs text-muted-foreground border border-border rounded-full px-4 py-2">
               ✓ Email-only · No inbox access · No content stored
             </p>
           </div>
 
           {/* Right: Animated scan preview (desktop only) */}
-          <div className="hidden md:flex justify-center lg:justify-end">
+          <div className="hidden md:flex lg:col-span-5 justify-center lg:justify-end">
             <HeroScanAnimation />
           </div>
         </div>
