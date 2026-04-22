@@ -84,17 +84,16 @@ export const ScanResultsBanner = ({
               </Badge>
             </div>
             <h2 className="text-2xl sm:text-3xl font-bold text-foreground leading-tight" style={{ lineHeight: '1.1' }}>
-              We found{" "}
-              <AnimatedCounter target={totalServices} className="text-destructive" />
-              {" "}accounts linked to your email
+              <AnimatedCounter target={displayHighRisk} className="text-destructive" />
+              {" "}{displayHighRisk === 1 ? "account is" : "accounts are"} exposing your personal data
             </h2>
             <p className="text-muted-foreground text-sm sm:text-base max-w-xl">
-              Scanned{" "}
+              We found{" "}
+              <span className="font-semibold text-foreground">{totalServices} accounts</span> linked to your email across{" "}
               <span className="font-medium text-foreground">{messagesScanned.toLocaleString()}</span>
-              {" "}messages across{" "}
-              <span className="font-medium text-foreground">{scannedEmails.length}</span>
-              {" "}email account{scannedEmails.length > 1 ? "s" : ""}.
-              Some of these may expose your personal data.
+              {" "}messages — and{" "}
+              <span className="font-semibold text-destructive">{displayHighRisk}</span>
+              {" "}of them are leaking sensitive info right now.
             </p>
           </div>
 
