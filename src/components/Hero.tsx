@@ -48,7 +48,7 @@ export const Hero = () => {
   }, []);
 
   return (
-    <section className="relative min-h-screen flex items-center justify-center px-4 py-28 lg:py-36 overflow-hidden">
+    <section className="relative min-h-screen flex items-center justify-center px-6 sm:px-8 lg:px-12 py-24 lg:py-32 overflow-hidden">
       {/* Gradient background */}
       <div className="absolute inset-0 bg-gradient-to-br from-background via-secondary to-background opacity-50" />
       
@@ -56,44 +56,42 @@ export const Hero = () => {
       <div className="absolute top-20 left-10 w-72 h-72 bg-accent/10 rounded-full blur-3xl animate-pulse" />
       <div className="absolute bottom-20 right-10 w-96 h-96 bg-primary/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
       
-      <div className="container relative z-10 max-w-6xl">
-        <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+      <div className="container relative z-10 max-w-7xl mx-auto">
+        <div className="grid lg:grid-cols-12 gap-10 lg:gap-12 items-center">
           {/* Left: Copy */}
-          <div className="text-center lg:text-left">
+          <div className="lg:col-span-7 text-center lg:text-left max-w-2xl mx-auto lg:mx-0">
             {/* Badge */}
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-destructive/10 border border-destructive/20 mb-8">
-              <AlertTriangle className="w-4 h-4 text-destructive" />
+              <AlertTriangle className="w-4 h-4 text-destructive shrink-0" />
               <span className="text-sm font-medium text-destructive">Your home address is probably public right now</span>
             </div>
 
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-normal mb-6 leading-tight tracking-tight">
-              <span className="text-foreground">Your address.</span>
-              <br />
-              <span className="text-foreground">Your phone. Your family.</span>
+            <h1 className="text-4xl sm:text-5xl lg:text-[3.75rem] font-normal mb-6 leading-[1.05] tracking-tight">
+              <span className="text-foreground">Your address. Your phone. Your family.</span>
               <br />
               <span className="text-accent">
                 All searchable online.
               </span>
             </h1>
 
-            <p className="text-lg sm:text-xl text-muted-foreground mb-4 max-w-lg mx-auto lg:mx-0 leading-relaxed">
+            <p className="text-lg sm:text-xl text-muted-foreground mb-6 leading-relaxed">
               Data brokers publish your home address, phone number, age, and relatives' names — and sell them to anyone with $20. We find every site exposing you, and monitor as new ones appear.
             </p>
 
             {/* Concrete example */}
-            <div className="mb-6 max-w-lg mx-auto lg:mx-0 rounded-lg border border-destructive/30 bg-destructive/5 backdrop-blur px-4 py-3">
+            <div className="mb-6 rounded-lg border border-destructive/30 bg-destructive/5 backdrop-blur px-4 py-3">
               <p className="text-xs uppercase tracking-wide text-destructive/80 mb-1 font-semibold">What we found for the average user last month</p>
               <p className="text-sm text-foreground/90">
                 <span className="text-destructive font-semibold">Address on 47 broker sites</span> · <span className="text-destructive font-semibold">Email in 8 data leaks</span> · <span className="text-destructive font-semibold">Phone listed publicly</span>
               </p>
             </div>
 
-            <p className="text-sm text-muted-foreground/70 mb-8 max-w-lg mx-auto lg:mx-0 italic">
+            <p className="text-sm text-muted-foreground/70 mb-6 italic">
               Free scan in 30 seconds. No signup required to see your exposure.
             </p>
 
             {/* Email scan form */}
-            <form onSubmit={handleScan} className="max-w-lg mx-auto lg:mx-0 mb-4">
+            <form onSubmit={handleScan} className="mb-4">
               <div className="flex flex-col sm:flex-row gap-3">
                 <Input
                   type="email"
