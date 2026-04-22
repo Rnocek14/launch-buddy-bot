@@ -1410,6 +1410,17 @@ Deno.serve(async (req) => {
 
       console.log(`Completed scan ${newScan.id}: found=${foundCount}, clean=${cleanCount}, errors=${errorCount}`);
 
+      // Fire-and-forget alert (only sends if diff > 0 vs last alert)
+      if (foundCount > 0) {
+        try {
+          await supabase.functions.invoke('send-exposure-alert', {
+            body: { userId, triggerSource: 'broker_scan' },
+          });
+        } catch (alertErr) {
+          console.error('[SCAN-BROKERS] Alert dispatch failed:', alertErr);
+        }
+      }
+
       return new Response(
         JSON.stringify({ 
           message: 'Scan completed',

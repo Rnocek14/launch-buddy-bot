@@ -42,6 +42,7 @@ interface ExposedBroker {
   opted_out_at: string | null;
   opt_out_started_at: string | null;
   state: BrokerResultState; // derived
+  is_new: boolean; // discovered/updated since last alert
 }
 
 // ---------------------------------------------------------------------------
@@ -154,11 +155,21 @@ export function BrokerExposureSection() {
       setScanCompleted(true);
       setLastCheckedAt(scanData.completed_at ?? scanData.created_at);
 
+      // Get the last alert timestamp — anything updated after this is "new"
+      const { data: lastAlert } = await supabase
+        .from("exposure_alerts")
+        .select("sent_at")
+        .eq("user_id", session.user.id)
+        .order("sent_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      const lastAlertTs = lastAlert?.sent_at ? new Date(lastAlert.sent_at).getTime() : 0;
+
       // Get results — filter by user only (schema has no scan_id FK on results)
       const { data: results } = await supabase
         .from("broker_scan_results")
         .select(`
-          id, status, status_v2, confidence, extracted_data, opted_out_at, opt_out_started_at,
+          id, status, status_v2, confidence, extracted_data, opted_out_at, opt_out_started_at, updated_at,
           data_brokers!broker_scan_results_broker_id_fkey (
             name, slug, website, opt_out_url, opt_out_difficulty
           )
@@ -174,6 +185,8 @@ export function BrokerExposureSection() {
             opted_out_at: r.opted_out_at,
             opt_out_started_at: r.opt_out_started_at,
           });
+          const updatedTs = r.updated_at ? new Date(r.updated_at).getTime() : 0;
+          const isExposureState = state === "found" || state === "possible";
           return {
             id: r.id,
             broker_name: r.data_brokers?.name || "Unknown",
@@ -188,6 +201,7 @@ export function BrokerExposureSection() {
             opted_out_at: r.opted_out_at,
             opt_out_started_at: r.opt_out_started_at,
             state,
+            is_new: isExposureState && updatedTs > lastAlertTs && lastAlertTs > 0,
           };
         });
 
@@ -419,6 +433,11 @@ export function BrokerExposureSection() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <h4 className="font-medium">{broker.broker_name}</h4>
+                        {broker.is_new && (
+                          <Badge className="text-[10px] h-5 px-1.5 bg-primary text-primary-foreground border-0 uppercase tracking-wider font-bold">
+                            New
+                          </Badge>
+                        )}
                         <Badge
                           variant="outline"
                           className={`text-xs ${
