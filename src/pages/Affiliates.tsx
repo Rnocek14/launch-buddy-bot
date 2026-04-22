@@ -30,6 +30,12 @@ const MONTHLY_PRICE = 15;
 
 export default function Affiliates() {
   const { toast } = useToast();
+  useSEO({
+    title: "Affiliate Program — Earn 40% Recurring | Deleteist",
+    description:
+      "Promote Deleteist privacy protection and earn 40% recurring commission on every subscription. Join the affiliate program.",
+    canonical: "https://footprintfinder.co/affiliates",
+  });
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [form, setForm] = useState({
@@ -104,16 +110,8 @@ export default function Affiliates() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Helmet>
-        <title>Affiliate Program — Earn 40% Recurring | Deleteist</title>
-        <meta
-          name="description"
-          content="Promote Deleteist privacy protection and earn 40% recurring commission on every subscription. Join the affiliate program."
-        />
-        <link rel="canonical" href="https://footprintfinder.co/affiliates" />
-      </Helmet>
-
       <Navbar />
+
 
       <main className="pt-20">
         {/* Hero */}
