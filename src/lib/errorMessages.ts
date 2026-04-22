@@ -150,7 +150,7 @@ export const getErrorMessage = (error: any): ErrorMessageConfig => {
     };
   }
 
-  // Gmail/OAuth errors
+  // Gmail/OAuth errors — only trigger when clearly Gmail/OAuth related
   if (errorMessage.includes("gmail") || errorMessage.includes("oauth")) {
     return {
       title: "Gmail Connection Failed",
@@ -160,7 +160,14 @@ export const getErrorMessage = (error: any): ErrorMessageConfig => {
     };
   }
 
-  if (errorMessage.includes("scope") || errorMessage.includes("permission")) {
+  // Only treat scope/permission errors as Gmail issues when paired with Gmail/OAuth context.
+  // Otherwise generic "permission" wording (e.g. RLS, broker scans) was incorrectly showing "Reconnect Gmail".
+  if (
+    (errorMessage.includes("insufficient") && errorMessage.includes("scope")) ||
+    errorMessage.includes("missing scope") ||
+    errorMessage.includes("gmail.readonly") ||
+    errorMessage.includes("mail.read")
+  ) {
     return {
       title: "Missing Permissions",
       description: "Your Gmail connection is missing required permissions. Please reconnect and grant access to scan your emails.",
