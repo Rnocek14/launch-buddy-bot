@@ -1,12 +1,12 @@
 import { useState } from "react";
-import { Check, Crown, Shield, Star } from "lucide-react";
+import { Check, Crown, Shield, Star, Users } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
 import { Link } from "react-router-dom";
 import { BillingToggle } from "./BillingToggle";
 import type { BillingInterval } from "@/config/pricing";
-import { FREE_FEATURES, PRO_FEATURES, COMPLETE_FEATURES, STRIPE_PRICES } from "@/config/pricing";
+import { FREE_FEATURES, PRO_FEATURES, COMPLETE_FEATURES, FAMILY_FEATURES, STRIPE_PRICES } from "@/config/pricing";
 
 const getPlans = (billingInterval: BillingInterval) => [
   {
@@ -45,6 +45,19 @@ const getPlans = (billingInterval: BillingInterval) => [
     icon: Crown,
     badge: billingInterval === "year" ? "Best Value" : null,
     monthlyEquivalent: billingInterval === "year" ? "Just $10.75/month" : null,
+  },
+  {
+    name: "Family",
+    price: "$179",
+    period: "/year",
+    description: "Protect up to 5 family members",
+    features: [...FAMILY_FEATURES],
+    cta: "Protect My Family",
+    ctaLink: `/subscribe?tier=family&interval=year`,
+    popular: false,
+    icon: Users,
+    badge: "Best for Families",
+    monthlyEquivalent: "Just $2.98/member/month",
   },
 ];
 
@@ -136,7 +149,7 @@ export const Pricing = () => {
 
         <BillingToggle value={billingInterval} onChange={setBillingInterval} />
 
-        <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
           {plans.map((plan, index) => {
             const Icon = plan.icon;
             return (
