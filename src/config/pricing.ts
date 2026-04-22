@@ -68,6 +68,28 @@ export const STRIPE_PRICES = {
     monthlyEquivalent: null,
     tier: "complete",
   },
+  // Family tier — protects up to 5 family members
+  FAMILY_ANNUAL: {
+    id: "price_1TP42pPwo7CiaABejT1heX0l",
+    name: "Family Annual",
+    amount: 179,
+    currency: "USD",
+    interval: "year",
+    displayPrice: "$179/year",
+    monthlyEquivalent: "$14.92/month",
+    tier: "family",
+  },
+  // One-time SKU — Parent Protection Scan
+  PARENT_SCAN_ONETIME: {
+    id: "price_1TP42rPwo7CiaABegxnVGeL2",
+    name: "Parent Protection Scan",
+    amount: 39,
+    currency: "USD",
+    interval: "one_time",
+    displayPrice: "$39 one-time",
+    monthlyEquivalent: null,
+    tier: "one_time",
+  },
 } as const;
 
 // Map price IDs to tiers for subscription checking
@@ -81,15 +103,18 @@ export const PRICE_ID_TO_TIER: Record<string, SubscriptionTier> = {
   // Complete prices
   [STRIPE_PRICES.COMPLETE_ANNUAL.id]: "complete",
   [STRIPE_PRICES.COMPLETE_MONTHLY.id]: "complete",
+  // Family tier
+  [STRIPE_PRICES.FAMILY_ANNUAL.id]: "family",
 };
 
 export type BillingInterval = "month" | "year";
-export type SubscriptionTier = "free" | "pro" | "complete";
+export type SubscriptionTier = "free" | "pro" | "complete" | "family";
 
 export const SUBSCRIPTION_TIERS = {
   FREE: "free",
   PRO: "pro",
   COMPLETE: "complete",
+  FAMILY: "family",
 } as const;
 
 // Tier limits
@@ -117,6 +142,15 @@ export const TIER_LIMITS = {
     deepScan: true,
     monthlyRescans: true,
     prioritySupport: true,
+  },
+  family: {
+    emailConnections: 25, // 5 members × 5 emails
+    deletionsPerMonth: null,
+    brokerScanning: true,
+    deepScan: true,
+    monthlyRescans: true,
+    prioritySupport: true,
+    familyMembers: 5,
   },
 } as const;
 
@@ -152,6 +186,25 @@ export const COMPLETE_FEATURES = [
   "Connect up to 5 email addresses",
   "Priority email support",
   "Monthly broker rescans",
+] as const;
+
+export const FAMILY_FEATURES = [
+  "Everything in Complete, for 5 family members:",
+  "Protect parents, partner, kids, or housemates",
+  "Each member gets their own private dashboard",
+  "Up to 5 email accounts per member (25 total)",
+  "Data broker scanning for every member",
+  "Family privacy score & shared insights",
+  "One bill, one subscription",
+] as const;
+
+export const PARENT_SCAN_FEATURES = [
+  "One-time deep scan of their email",
+  "Full data broker check (20+ sites)",
+  "Breach exposure report",
+  "Printable PDF action plan",
+  "Senior-friendly explanations",
+  "No subscription required",
 ] as const;
 
 // Enterprise pricing tiers

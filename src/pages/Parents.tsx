@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
@@ -16,18 +16,66 @@ import {
   Users,
   Lock,
   ArrowRight,
+  FileText,
+  Loader2,
 } from "lucide-react";
 import { trackEvent } from "@/lib/analytics";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { PARENT_SCAN_FEATURES, STRIPE_PRICES } from "@/config/pricing";
 
 export default function Parents() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [parentEmail, setParentEmail] = useState("");
+  const [purchaseLoading, setPurchaseLoading] = useState(false);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    const status = searchParams.get("purchase");
+    if (status === "success") {
+      trackEvent("parent_scan_purchase_success", {});
+      toast({
+        title: "Payment received 🎉",
+        description: "Check your inbox — we'll email instructions to start the parent scan.",
+      });
+    } else if (status === "cancelled") {
+      trackEvent("parent_scan_purchase_cancelled", {});
+    }
+  }, [searchParams, toast]);
 
   const handleScan = (e: React.FormEvent) => {
     e.preventDefault();
     if (!parentEmail.includes("@")) return;
     trackEvent("parents_scan_started", { email_domain: parentEmail.split("@")[1] });
     navigate(`/free-scan?email=${encodeURIComponent(parentEmail)}&source=parents`);
+  };
+
+  const handlePurchaseParentScan = async () => {
+    setPurchaseLoading(true);
+    try {
+      trackEvent("parent_scan_checkout_started", {
+        has_email: parentEmail.includes("@"),
+      });
+      const { data, error } = await supabase.functions.invoke(
+        "create-parent-scan-payment",
+        { body: parentEmail.includes("@") ? { parentEmail } : {} }
+      );
+      if (error) throw error;
+      if (data?.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error("No checkout URL returned");
+      }
+    } catch (err: any) {
+      console.error("Parent scan checkout error:", err);
+      toast({
+        title: "Checkout failed",
+        description: err.message || "Please try again in a moment.",
+        variant: "destructive",
+      });
+      setPurchaseLoading(false);
+    }
   };
 
   return (
@@ -211,6 +259,64 @@ export default function Parents() {
                 </Card>
               ))}
             </div>
+          </div>
+        </section>
+
+        {/* PARENT PROTECTION SCAN — One-time SKU */}
+        <section className="px-4 py-16">
+          <div className="container max-w-3xl mx-auto">
+            <Card className="border-2 border-primary/30 bg-gradient-to-br from-primary/5 to-accent/5 shadow-lg">
+              <CardContent className="p-8 md:p-10">
+                <div className="text-center mb-6">
+                  <Badge className="mb-3 bg-primary text-primary-foreground">
+                    <FileText className="w-3 h-3 mr-1" />
+                    One-time scan · No subscription
+                  </Badge>
+                  <h2 className="text-3xl md:text-4xl font-bold mb-3">
+                    Parent Protection Scan
+                  </h2>
+                  <p className="text-lg text-muted-foreground">
+                    Pay once. Get a complete privacy report for your parent — including a printable PDF action plan.
+                  </p>
+                </div>
+
+                <div className="text-center mb-8">
+                  <div className="text-5xl font-bold mb-1">${STRIPE_PRICES.PARENT_SCAN_ONETIME.amount}</div>
+                  <div className="text-sm text-muted-foreground">one-time payment · no recurring charges</div>
+                </div>
+
+                <div className="grid sm:grid-cols-2 gap-3 mb-8">
+                  {PARENT_SCAN_FEATURES.map((feature) => (
+                    <div key={feature} className="flex items-start gap-2 text-sm">
+                      <CheckCircle2 className="w-4 h-4 text-accent shrink-0 mt-0.5" />
+                      <span>{feature}</span>
+                    </div>
+                  ))}
+                </div>
+
+                <Button
+                  onClick={handlePurchaseParentScan}
+                  disabled={purchaseLoading}
+                  size="lg"
+                  className="w-full h-14 text-lg bg-gradient-to-r from-primary to-accent"
+                >
+                  {purchaseLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                      Loading checkout...
+                    </>
+                  ) : (
+                    <>
+                      Get Parent Scan — $39
+                      <ArrowRight className="w-4 h-4 ml-2" />
+                    </>
+                  )}
+                </Button>
+                <p className="text-xs text-center text-muted-foreground mt-4">
+                  Secure checkout via Stripe · Refund if we can't complete the scan
+                </p>
+              </CardContent>
+            </Card>
           </div>
         </section>
 
