@@ -1,4 +1,4 @@
-import { Mail, Scan, CheckSquare, Send, ArrowRight } from "lucide-react";
+import { Search, Radar, Bell, Wrench, ArrowRight } from "lucide-react";
 import { Card, CardContent } from "./ui/card";
 import { Button } from "./ui/button";
 import { Link } from "react-router-dom";
@@ -6,30 +6,30 @@ import { Link } from "react-router-dom";
 const steps = [
   {
     number: 1,
-    icon: Mail,
-    title: "Connect Email",
-    description: "Securely sign in with your Gmail or Outlook account. We only read sender names and subject lines — never your email content.",
+    icon: Search,
+    title: "Baseline Scan",
+    description: "Enter your email. We check breaches, data brokers, and forgotten accounts to map your starting exposure — in under 60 seconds.",
     color: "from-primary to-primary/70",
   },
   {
     number: 2,
-    icon: Scan,
-    title: "Scan & Discover",
-    description: "We scan your inbox and automatically identify services you've signed up for across the web.",
+    icon: Radar,
+    title: "Continuous Monitoring",
+    description: "We re-scan every month. New breaches, new broker listings, new accounts — we track what changes so you don't have to.",
     color: "from-accent to-accent/70",
   },
   {
     number: 3,
-    icon: CheckSquare,
-    title: "Review Services",
-    description: "Browse your digital footprint in an organized dashboard. See privacy contacts and deletion options for each service.",
+    icon: Bell,
+    title: "Alerts on Change",
+    description: "When your exposure shifts — a new breach, a re-listing on a broker site — you get notified immediately with what to do next.",
     color: "from-primary to-primary/70",
   },
   {
     number: 4,
-    icon: Send,
-    title: "Send Deletion Requests",
-    description: "One-click deletion requests with pre-filled legal templates. Track status and get notified when accounts are deleted.",
+    icon: Wrench,
+    title: "Guided Cleanup",
+    description: "One-click deletion requests with legal templates. Track responses. Watch your exposure score drop month over month.",
     color: "from-accent to-accent/70",
   },
 ];
@@ -43,7 +43,7 @@ export const HowItWorks = () => {
             How It Works
           </h2>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Four simple steps to take back control of your digital privacy
+            Privacy isn't a one-time fix. It's a habit. Here's the loop that keeps you protected.
           </p>
         </div>
 
@@ -142,11 +142,11 @@ export const HowItWorks = () => {
         {/* CTA */}
         <div className="text-center mt-16 animate-fade-in" style={{ animationDelay: "800ms" }}>
           <p className="text-lg text-muted-foreground mb-6">
-            Ready to get started? It takes less than 2 minutes.
+            Start your baseline scan in under 60 seconds.
           </p>
           <Link to="/auth">
             <Button size="lg" className="px-8 py-4 text-lg">
-              Start Your Cleanup
+              Start Monitoring
             </Button>
           </Link>
         </div>
