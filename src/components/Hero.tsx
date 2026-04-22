@@ -84,7 +84,7 @@ export const Hero = () => {
             <div className="mb-6 max-w-lg mx-auto lg:mx-0 rounded-lg border border-border/60 bg-card/40 backdrop-blur px-4 py-3">
               <p className="text-xs uppercase tracking-wide text-muted-foreground/70 mb-1">Here's what changed for one user last month</p>
               <p className="text-sm text-foreground/90">
-                <span className="text-destructive font-medium">2 new breaches</span> · <span className="text-destructive font-medium">1 broker re-listed</span> · <span className="text-accent font-medium">3 cleanups completed</span>
+                <span className="text-destructive font-medium">2 new breaches detected</span> · <span className="text-destructive font-medium">1 broker re-listed your data</span> · <span className="text-accent font-medium">3 cleanups completed</span>
               </p>
             </div>
 
