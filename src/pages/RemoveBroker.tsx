@@ -36,7 +36,7 @@ interface BrokerRecord {
 
 const difficultyTone: Record<string, string> = {
   easy: "bg-accent/15 text-accent border-accent/30",
-  medium: "bg-amber-500/15 text-amber-600 border-amber-500/30",
+  medium: "bg-primary/10 text-primary border-primary/30",
   hard: "bg-destructive/15 text-destructive border-destructive/30",
 };
 
@@ -274,7 +274,7 @@ export default function RemoveBroker() {
             <div className="grid sm:grid-cols-2 gap-4">
               <Card>
                 <CardContent className="p-5">
-                  <AlertTriangle className="w-5 h-5 text-amber-500 mb-2" />
+                  <AlertTriangle className="w-5 h-5 text-primary mb-2" />
                   <h3 className="font-semibold mb-1">They re-list you</h3>
                   <p className="text-sm text-muted-foreground">
                     Most brokers refresh their data every 30–90 days. Even if you opt out
@@ -284,7 +284,7 @@ export default function RemoveBroker() {
               </Card>
               <Card>
                 <CardContent className="p-5">
-                  <Users className="w-5 h-5 text-amber-500 mb-2" />
+                  <Users className="w-5 h-5 text-primary mb-2" />
                   <h3 className="font-semibold mb-1">{broker.name} is one of many</h3>
                   <p className="text-sm text-muted-foreground">
                     There are 100+ broker sites. Removing yourself from one doesn't
@@ -294,7 +294,7 @@ export default function RemoveBroker() {
               </Card>
               <Card>
                 <CardContent className="p-5">
-                  <Lock className="w-5 h-5 text-amber-500 mb-2" />
+                  <Lock className="w-5 h-5 text-primary mb-2" />
                   <h3 className="font-semibold mb-1">Verification can be invasive</h3>
                   <p className="text-sm text-muted-foreground">
                     Some brokers ask for an ID scan to "verify" you before removing
@@ -304,7 +304,7 @@ export default function RemoveBroker() {
               </Card>
               <Card>
                 <CardContent className="p-5">
-                  <Clock className="w-5 h-5 text-amber-500 mb-2" />
+                  <Clock className="w-5 h-5 text-primary mb-2" />
                   <h3 className="font-semibold mb-1">It takes time</h3>
                   <p className="text-sm text-muted-foreground">
                     Manually opting out of one broker takes ~10 minutes. Doing all 20+
