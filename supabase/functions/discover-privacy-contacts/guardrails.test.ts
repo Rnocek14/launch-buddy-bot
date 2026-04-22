@@ -1,10 +1,16 @@
 // Phase 1.3: Unit tests for tail latency guardrails
 
 Deno.test('attempt timeout wrapper', async () => {
-  const slow = new Promise(res => setTimeout(() => res('ok'), 9999));
+  let slowTimer: number | undefined;
+  let timeoutTimer: number | undefined;
+  const slow = new Promise(res => {
+    slowTimer = setTimeout(() => res('ok'), 9999);
+  });
   const race = Promise.race([
-    slow, 
-    new Promise((_, rej) => setTimeout(() => rej(new Error('attempt_timeout')), 50))
+    slow,
+    new Promise((_, rej) => {
+      timeoutTimer = setTimeout(() => rej(new Error('attempt_timeout')), 50);
+    })
   ]);
   
   let threw = false;
@@ -12,6 +18,9 @@ Deno.test('attempt timeout wrapper', async () => {
     await race;
   } catch (e) {
     threw = String((e as Error).message).includes('attempt_timeout');
+  } finally {
+    if (slowTimer !== undefined) clearTimeout(slowTimer);
+    if (timeoutTimer !== undefined) clearTimeout(timeoutTimer);
   }
   
   if (!threw) throw new Error('expected attempt_timeout');
