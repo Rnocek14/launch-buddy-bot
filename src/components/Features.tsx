@@ -4,8 +4,8 @@ import { Card, CardContent } from "./ui/card";
 const keyFeatures = [
   {
     icon: Radar,
-    title: "Continuous Exposure Monitoring",
-    description: "We don't scan once and disappear. Your data leaks evolve — new breaches, new broker listings, new accounts. We re-scan automatically every month.",
+    title: "Ongoing Exposure Monitoring",
+    description: "We don't scan once and disappear. Your data leaks evolve — new breaches, new broker listings, new accounts. We re-check automatically every month.",
     highlights: ["Monthly automated rescans", "Breach + broker + account tracking", "Diff detection across scans"],
     gradient: "from-primary/20 to-accent/20",
   },
