@@ -193,36 +193,31 @@ export default function RemoveBroker() {
             </p>
           </header>
 
-          {/* Above-the-fold CTA — auto-removal upsell */}
-          <Card className="mb-10 border-primary/30 bg-gradient-to-br from-primary/5 via-background to-accent/5">
-            <CardContent className="p-6 md:p-8">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          {/* Above-the-fold: real differentiator + email capture */}
+          <div className="mb-10">
+            <SeoEmailCapture brokerSlug={broker.slug} brokerName={broker.name} />
+          </div>
+
+          {/* Differentiator strip — what makes us different from manual */}
+          <Card className="mb-10 border-accent/30 bg-accent/5">
+            <CardContent className="p-5 md:p-6">
+              <div className="flex items-start gap-3">
+                <Zap className="w-5 h-5 text-accent flex-shrink-0 mt-0.5" />
                 <div>
-                  <h2 className="text-xl font-bold mb-1 flex items-center gap-2">
-                    <Zap className="w-5 h-5 text-primary" />
-                    Don't want to do this manually?
-                  </h2>
+                  <h3 className="font-semibold mb-1">
+                    Why a scan beats opting out one site at a time
+                  </h3>
                   <p className="text-sm text-muted-foreground">
-                    Footprint Finder removes you from {broker.name} <strong>and 20+ other brokers</strong> — automatically. Free scan, no credit card.
+                    Most people are exposed on <strong>50+ data brokers, breach lists, and
+                    forgotten accounts</strong> — not just {broker.name}. Footprint Finder
+                    scans your inbox to find every account tied to your email, then
+                    removes you everywhere it can. That's the part Google can't show you.
                   </p>
                 </div>
-                <Link
-                  to="/free-scan"
-                  onClick={() =>
-                    trackEvent("seo_broker_cta_click", {
-                      broker_slug: broker.slug,
-                      placement: "above_fold",
-                    })
-                  }
-                >
-                  <Button size="lg" className="gap-2 cta-shimmer whitespace-nowrap">
-                    Free exposure scan
-                    <ArrowRight className="w-4 h-4" />
-                  </Button>
-                </Link>
               </div>
             </CardContent>
           </Card>
+
 
           {/* Manual steps */}
           <section className="mb-10">
