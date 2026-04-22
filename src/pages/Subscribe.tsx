@@ -146,8 +146,18 @@ export default function Subscribe() {
     }
   };
 
-  const features = selectedTier === "complete" ? COMPLETE_FEATURES : PRO_FEATURES;
-  const Icon = selectedTier === "complete" ? Crown : Star;
+  const features = isFamily
+    ? FAMILY_FEATURES
+    : selectedTier === "complete"
+      ? COMPLETE_FEATURES
+      : PRO_FEATURES;
+  const Icon = isFamily ? Users : selectedTier === "complete" ? Crown : Star;
+  const tierLabel = isFamily ? "Family" : selectedTier === "complete" ? "Complete" : "Pro";
+  const tierAccentClass = isFamily
+    ? "text-primary"
+    : selectedTier === "complete"
+      ? "text-accent"
+      : "text-primary";
 
   return (
     <div className="container max-w-4xl py-8">
@@ -161,18 +171,19 @@ export default function Subscribe() {
 
       <div className="text-center mb-8">
         <h1 className="text-4xl font-bold mb-2">
-          Upgrade to {selectedTier === "complete" ? "Complete" : "Pro"}
+          Upgrade to {tierLabel}
         </h1>
         <p className="text-xl text-muted-foreground">
-          {selectedTier === "complete" 
-            ? "Full privacy protection with data broker removal"
-            : "Unlimited deletions + deep AI scanning"
-          }
+          {isFamily
+            ? "Protect up to 5 family members with one subscription"
+            : selectedTier === "complete"
+              ? "Full privacy protection with data broker removal"
+              : "Unlimited deletions + deep AI scanning"}
         </p>
       </div>
 
       {/* Tier Toggle */}
-      <div className="flex justify-center gap-4 mb-6">
+      <div className="flex flex-wrap justify-center gap-3 mb-6">
         <Button
           variant={selectedTier === "pro" ? "default" : "outline"}
           onClick={() => setSelectedTier("pro")}
@@ -189,71 +200,111 @@ export default function Subscribe() {
           <Crown className="w-4 h-4" />
           Complete
         </Button>
+        <Button
+          variant={selectedTier === "family" ? "default" : "outline"}
+          onClick={() => {
+            setSelectedTier("family");
+            setBillingInterval("year");
+          }}
+          className="flex items-center gap-2"
+        >
+          <Users className="w-4 h-4" />
+          Family
+          <Badge className="ml-1 bg-primary/15 text-primary text-[10px] px-1.5 py-0">
+            5 members
+          </Badge>
+        </Button>
       </div>
 
-      <BillingToggle value={billingInterval} onChange={setBillingInterval} />
+      {!isFamily && <BillingToggle value={billingInterval} onChange={setBillingInterval} />}
+      {isFamily && (
+        <p className="text-center text-sm text-muted-foreground mb-8">
+          Family plan is billed annually. Cancel anytime.
+        </p>
+      )}
 
       <Card className={`max-w-2xl mx-auto shadow-lg ${
-        selectedTier === "complete" 
-          ? "border-accent/30 bg-gradient-to-br from-card to-accent/5" 
-          : "border-primary/20"
+        isFamily
+          ? "border-primary/30 bg-gradient-to-br from-card to-primary/5"
+          : selectedTier === "complete"
+            ? "border-accent/30 bg-gradient-to-br from-card to-accent/5"
+            : "border-primary/20"
       }`}>
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Icon className={`w-5 h-5 ${selectedTier === "complete" ? "text-accent" : "text-primary"}`} />
-              <span>{selectedTier === "complete" ? "Complete" : "Pro"} {billingInterval === "year" ? "Annual" : "Monthly"}</span>
+              <Icon className={`w-5 h-5 ${tierAccentClass}`} />
+              <span>{tierLabel} {isFamily ? "Annual" : billingInterval === "year" ? "Annual" : "Monthly"}</span>
             </div>
-            {selectedTier === "complete" && (
-              <Badge className="bg-accent text-accent-foreground">
-                Best Value
-              </Badge>
-            )}
+            {isFamily ? (
+              <Badge className="bg-primary text-primary-foreground">Best for households</Badge>
+            ) : selectedTier === "complete" ? (
+              <Badge className="bg-accent text-accent-foreground">Best Value</Badge>
+            ) : null}
           </CardTitle>
           <CardDescription>
-            {selectedTier === "complete" 
-              ? "The complete privacy protection package"
-              : "Take control of your digital footprint"
-            }
+            {isFamily
+              ? "Same as Complete, but for the whole family"
+              : selectedTier === "complete"
+                ? "The complete privacy protection package"
+                : "Take control of your digital footprint"}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="text-center mb-8 p-6 bg-muted/30 rounded-lg relative">
-            {billingInterval === "year" && (
-              <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-accent text-accent-foreground shadow-md">
-                Save ${selectedTier === "complete" ? "111" : "77"}/year vs monthly
-              </Badge>
-            )}
-            {billingInterval === "year" ? (
+            {isFamily ? (
               <>
-                <div className="text-6xl font-bold mb-2">
-                  ${selectedTier === "complete" ? "129" : "79"}
-                </div>
-                <div className="text-xl text-muted-foreground mb-3">per year</div>
-                <div className="text-sm text-accent font-medium">
-                  Just ${selectedTier === "complete" ? "10.75" : "6.58"}/month, billed annually
+                <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground shadow-md">
+                  Just $35.80/member/year
+                </Badge>
+                <div className="text-6xl font-bold mb-2">$179</div>
+                <div className="text-xl text-muted-foreground mb-3">per year, 5 members</div>
+                <div className="text-sm text-primary font-medium">
+                  Save $466 vs 5 individual Complete plans
                 </div>
                 <div className="text-xs text-muted-foreground line-through mt-1">
-                  ${selectedTier === "complete" ? "239.88" : "155.88"}/year if billed monthly
+                  $645/year if bought separately
                 </div>
-                {selectedTier === "complete" && (
-                  <div className="text-xs text-muted-foreground mt-2">
-                    Same price as DeleteMe, but with email scanning included
-                  </div>
-                )}
               </>
             ) : (
               <>
-                <div className="text-6xl font-bold mb-2">
-                  ${selectedTier === "complete" ? "19.99" : "12.99"}
-                </div>
-                <div className="text-xl text-muted-foreground mb-3">per month</div>
-                <button
-                  onClick={() => setBillingInterval("year")}
-                  className="inline-flex items-center gap-2 mt-2 px-3 py-1.5 rounded-full bg-accent/10 text-accent text-sm font-semibold hover:bg-accent/20 transition-colors"
-                >
-                  💰 Switch to annual & save ${selectedTier === "complete" ? "111" : "77"}/year
-                </button>
+                {billingInterval === "year" && (
+                  <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-accent text-accent-foreground shadow-md">
+                    Save ${selectedTier === "complete" ? "111" : "77"}/year vs monthly
+                  </Badge>
+                )}
+                {billingInterval === "year" ? (
+                  <>
+                    <div className="text-6xl font-bold mb-2">
+                      ${selectedTier === "complete" ? "129" : "79"}
+                    </div>
+                    <div className="text-xl text-muted-foreground mb-3">per year</div>
+                    <div className="text-sm text-accent font-medium">
+                      Just ${selectedTier === "complete" ? "10.75" : "6.58"}/month, billed annually
+                    </div>
+                    <div className="text-xs text-muted-foreground line-through mt-1">
+                      ${selectedTier === "complete" ? "239.88" : "155.88"}/year if billed monthly
+                    </div>
+                    {selectedTier === "complete" && (
+                      <div className="text-xs text-muted-foreground mt-2">
+                        Same price as DeleteMe, but with email scanning included
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <div className="text-6xl font-bold mb-2">
+                      ${selectedTier === "complete" ? "19.99" : "12.99"}
+                    </div>
+                    <div className="text-xl text-muted-foreground mb-3">per month</div>
+                    <button
+                      onClick={() => setBillingInterval("year")}
+                      className="inline-flex items-center gap-2 mt-2 px-3 py-1.5 rounded-full bg-accent/10 text-accent text-sm font-semibold hover:bg-accent/20 transition-colors"
+                    >
+                      💰 Switch to annual & save ${selectedTier === "complete" ? "111" : "77"}/year
+                    </button>
+                  </>
+                )}
               </>
             )}
           </div>
