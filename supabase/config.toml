@@ -113,3 +113,6 @@ verify_jwt = false
 
 [functions.send-exposure-alert]
 verify_jwt = false
+
+[functions.create-parent-scan-payment]
+verify_jwt = false
