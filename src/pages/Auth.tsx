@@ -315,7 +315,7 @@ export default function Auth() {
         email: signupEmail,
         password: signupPassword,
         options: {
-          emailRedirectTo: `${PUBLISHED_APP_URL}/dashboard`,
+          emailRedirectTo: `${window.location.origin}/dashboard`,
           data: {
             full_name: signupFullName,
           },

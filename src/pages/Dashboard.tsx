@@ -351,8 +351,8 @@ export default function Dashboard() {
 
       setScanProgress({ currentEmail: 10, totalEmails: 100, status: "Fetching emails..." });
       
-      // Determine whether to scan all emails or just one
-      const shouldScanAll = connections.length > 1 && subscriptionTier === 'pro';
+      // Determine whether to scan all emails or just one (Pro and Complete tiers)
+      const shouldScanAll = connections.length > 1 && (subscriptionTier === 'pro' || subscriptionTier === 'complete');
       
       let data, error;
       
