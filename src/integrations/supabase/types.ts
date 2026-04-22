@@ -1021,6 +1021,48 @@ export type Database = {
         }
         Relationships: []
       }
+      exposure_alerts: {
+        Row: {
+          created_at: string
+          email_error: string | null
+          email_sent: boolean
+          id: string
+          new_breach_count: number
+          new_breach_names: string[]
+          new_broker_count: number
+          new_broker_ids: string[]
+          sent_at: string
+          trigger_source: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email_error?: string | null
+          email_sent?: boolean
+          id?: string
+          new_breach_count?: number
+          new_breach_names?: string[]
+          new_broker_count?: number
+          new_broker_ids?: string[]
+          sent_at?: string
+          trigger_source?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email_error?: string | null
+          email_sent?: boolean
+          id?: string
+          new_breach_count?: number
+          new_breach_names?: string[]
+          new_broker_count?: number
+          new_broker_ids?: string[]
+          sent_at?: string
+          trigger_source?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       exposure_findings: {
         Row: {
           created_at: string
@@ -1799,6 +1841,30 @@ export type Database = {
           sensitive_accounts_count?: number
           total_accounts?: number
           unmatched_domains_count?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
+      seen_findings: {
+        Row: {
+          finding_key: string
+          finding_type: string
+          id: string
+          seen_at: string
+          user_id: string
+        }
+        Insert: {
+          finding_key: string
+          finding_type: string
+          id?: string
+          seen_at?: string
+          user_id: string
+        }
+        Update: {
+          finding_key?: string
+          finding_type?: string
+          id?: string
+          seen_at?: string
           user_id?: string
         }
         Relationships: []
