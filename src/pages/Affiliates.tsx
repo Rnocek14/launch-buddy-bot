@@ -143,6 +143,15 @@ export default function Affiliates() {
                 Free assets & copy
               </Badge>
             </div>
+            <p className="text-sm text-muted-foreground pt-4">
+              Already an affiliate?{" "}
+              <a
+                href="/affiliates/dashboard"
+                className="text-primary hover:underline font-medium"
+              >
+                View your dashboard →
+              </a>
+            </p>
           </div>
         </section>
 

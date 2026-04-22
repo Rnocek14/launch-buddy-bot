@@ -45,6 +45,7 @@ import BlogPost from "./pages/BlogPost";
 import RemoveBroker from "./pages/RemoveBroker";
 import RemoveBrokerIndex from "./pages/RemoveBrokerIndex";
 import Affiliates from "./pages/Affiliates";
+import AffiliateDashboard from "./pages/AffiliateDashboard";
 import { captureAffiliateRef } from "./lib/affiliateTracking";
 
 if (typeof window !== "undefined") {
@@ -100,6 +101,7 @@ const App = () => (
               <Route path="/remove-from" element={<RemoveBrokerIndex />} />
               <Route path="/remove-from/:slug" element={<RemoveBroker />} />
               <Route path="/affiliates" element={<Affiliates />} />
+              <Route path="/affiliates/dashboard" element={<AffiliateDashboard />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
