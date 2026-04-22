@@ -304,6 +304,15 @@ export default function Subscribe() {
           </p>
         </div>
       )}
+
+      <AnnualUpsellModal
+        open={showUpsell}
+        onClose={() => setShowUpsell(false)}
+        onSwitchToAnnual={handleSwitchToAnnual}
+        onContinueMonthly={handleContinueMonthly}
+        tier={selectedTier}
+        loading={loading}
+      />
     </div>
   );
 }
