@@ -166,14 +166,16 @@ export default function BrokerScan() {
     }
   };
 
-  const startScan = async () => {
+  const startScan = async (opts?: { retryFailedOnly?: boolean }) => {
+    const retryFailedOnly = opts?.retryFailedOnly === true;
     setScanning(true);
-    
-    // Create a temporary scan state to show progress
+
+    // Show progress bar (use issue count for retries, full count otherwise)
+    const expectedTotal = retryFailedOnly ? issueResults.length : 45;
     setScan({
       id: 'temp',
       status: 'running',
-      total_brokers: 45,
+      total_brokers: expectedTotal,
       scanned_count: 0,
       found_count: 0,
       clean_count: 0,
@@ -181,13 +183,22 @@ export default function BrokerScan() {
     });
 
     toast({
-      title: "Scan started",
-      description: "Scanning data brokers... This may take 1-2 minutes.",
+      title: retryFailedOnly ? "Retrying failed brokers" : "Scan started",
+      description: retryFailedOnly
+        ? `Re-checking ${expectedTotal} broker${expectedTotal !== 1 ? 's' : ''} that didn't respond last time...`
+        : "Scanning data brokers... This may take 1-2 minutes.",
     });
+
+    const requestBody: Record<string, unknown> = {};
+    if (profileData) {
+      requestBody.city = profileData.city;
+      requestBody.state = profileData.state;
+    }
+    if (retryFailedOnly) requestBody.retry_failed = true;
 
     const { data, error } = await supabase.functions.invoke('scan-brokers', {
       method: 'POST',
-      body: profileData ? { city: profileData.city, state: profileData.state } : {},
+      body: requestBody,
     });
 
     if (error || data?.error) {
@@ -201,10 +212,15 @@ export default function BrokerScan() {
       
       toast({
         variant: "destructive",
-        title: "Scan failed",
+        title: retryFailedOnly ? "Retry failed" : "Scan failed",
         description: data?.error || error?.message || "Failed to complete scan",
       });
-      setScan(null);
+      // Restore previous scan state on retry failure so the UI doesn't blank out
+      if (retryFailedOnly) {
+        await loadScanData();
+      } else {
+        setScan(null);
+      }
       setScanning(false);
       return;
     }
@@ -213,8 +229,10 @@ export default function BrokerScan() {
     setCooldownInfo(null);
 
     toast({
-      title: "Scan complete!",
-      description: `Found exposures on ${data.scan?.found_count || 0} brokers.`,
+      title: retryFailedOnly ? "Retry complete" : "Scan complete!",
+      description: retryFailedOnly
+        ? `Re-checked ${data.scan?.scanned_count ?? expectedTotal} brokers.`
+        : `Found exposures on ${data.scan?.found_count || 0} brokers.`,
     });
 
     setScan(data.scan);
@@ -388,7 +406,7 @@ export default function BrokerScan() {
                       <Button 
                         variant="outline" 
                         size="sm"
-                        onClick={startScan}
+                        onClick={() => startScan()}
                         disabled={scanning || !!cooldownInfo}
                       >
                         <RefreshCw className={`h-4 w-4 mr-2 ${scanning ? 'animate-spin' : ''}`} />
@@ -406,7 +424,7 @@ export default function BrokerScan() {
               </CardHeader>
               <CardContent>
                 {!scan && (
-                  <Button onClick={startScan} disabled={scanning} className="w-full">
+                  <Button onClick={() => startScan()} disabled={scanning} className="w-full">
                     {scanning ? (
                       <>
                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -518,12 +536,24 @@ export default function BrokerScan() {
 
                 {issueResults.length > 0 && (
                   <div className="space-y-3">
-                    <h3 className="text-lg font-semibold flex items-center gap-2">
-                      <AlertCircle className="h-5 w-5 text-muted-foreground" />
-                      Issues with {issueResults.length} broker{issueResults.length !== 1 ? 's' : ''}
-                    </h3>
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      <h3 className="text-lg font-semibold flex items-center gap-2">
+                        <AlertCircle className="h-5 w-5 text-muted-foreground" />
+                        Couldn't check {issueResults.length} broker{issueResults.length !== 1 ? 's' : ''}
+                      </h3>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => startScan({ retryFailedOnly: true })}
+                        disabled={scanning}
+                      >
+                        <RefreshCw className={`h-4 w-4 mr-2 ${scanning ? 'animate-spin' : ''}`} />
+                        Retry these
+                      </Button>
+                    </div>
                     <p className="text-sm text-muted-foreground mb-2">
-                      These sites blocked our scan. Click "Check Manually" to verify yourself.
+                      These sites didn't respond or blocked our scan — this doesn't mean you're clean there.
+                      Click "Retry these" to re-check, or use "Check Manually" to verify yourself.
                     </p>
                     {issueResults.map(result => (
                       <BrokerResultCard

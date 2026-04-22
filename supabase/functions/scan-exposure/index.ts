@@ -120,14 +120,18 @@ function isBlockedPage(html: string): BlockCheckResult {
 }
 
 async function fetchWithBrowserless(url: string, browserlessToken: string): Promise<string> {
-  const browserlessUrl = `https://chrome.browserless.io/content?token=${browserlessToken}`;
+  // Use current production endpoint. The legacy `chrome.browserless.io` host
+  // returns 400 against the new API. `production-sfo.browserless.io` is the
+  // documented v2 host.
+  const browserlessUrl = `https://production-sfo.browserless.io/content?token=${browserlessToken}`;
 
   const response = await fetch(browserlessUrl, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       url,
-      waitFor: 3000,
+      // `waitFor` (number) is no longer accepted on /content — must be a
+      // selector or function. Use `gotoOptions.timeout` + `waitUntil` instead.
       gotoOptions: {
         waitUntil: "networkidle2",
         timeout: 30000,
@@ -136,7 +140,8 @@ async function fetchWithBrowserless(url: string, browserlessToken: string): Prom
   });
 
   if (!response.ok) {
-    throw new Error(`Browserless error: ${response.status}`);
+    const body = await response.text().catch(() => "");
+    throw new Error(`Browserless error: ${response.status}${body ? ` — ${body.substring(0, 200)}` : ""}`);
   }
 
   return response.text();
