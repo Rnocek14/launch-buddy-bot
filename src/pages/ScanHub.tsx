@@ -118,6 +118,9 @@ export default function ScanHub() {
           toast({ title: "Rescan complete", description: `Found exposures on ${data.scan?.found_count || 0} brokers.` });
           await loadStatus();
         }
+      } else if (scanType === 'exposure') {
+        // Web exposure scans need name/location params — send the user to the scan page.
+        navigate('/exposure-scan');
       }
     } catch (err) {
       console.error("Rescan error:", err);
@@ -125,7 +128,7 @@ export default function ScanHub() {
     } finally {
       setRescanning(false);
     }
-  }, [loadStatus, toast]);
+  }, [loadStatus, navigate, toast]);
 
   useEffect(() => {
     loadStatus();
@@ -173,7 +176,7 @@ export default function ScanHub() {
       actionLabel: status.peopleSearch.lastRun ? "View Results" : "Run Check",
       done: !!status.peopleSearch.lastRun,
       error: status.peopleSearch.error,
-      rescanAction: isAdmin && status.peopleSearch.lastRun ? () => handleRescan('broker') : undefined,
+      rescanAction: status.peopleSearch.lastRun ? () => handleRescan('broker') : undefined,
     },
     {
       icon: Shield,
@@ -187,6 +190,7 @@ export default function ScanHub() {
       actionLabel: status.breach.lastRun ? "View Results" : "Run Check",
       done: !!status.breach.lastRun,
       error: status.breach.error,
+      rescanAction: status.breach.lastRun ? () => handleRescan('exposure') : undefined,
     },
   ];
 
