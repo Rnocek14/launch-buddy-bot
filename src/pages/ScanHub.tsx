@@ -118,6 +118,9 @@ export default function ScanHub() {
           toast({ title: "Rescan complete", description: `Found exposures on ${data.scan?.found_count || 0} brokers.` });
           await loadStatus();
         }
+      } else if (scanType === 'exposure') {
+        // Web exposure scans need name/location params — send the user to the scan page.
+        navigate('/exposure-scan');
       }
     } catch (err) {
       console.error("Rescan error:", err);
@@ -125,7 +128,7 @@ export default function ScanHub() {
     } finally {
       setRescanning(false);
     }
-  }, [loadStatus, toast]);
+  }, [loadStatus, navigate, toast]);
 
   useEffect(() => {
     loadStatus();
