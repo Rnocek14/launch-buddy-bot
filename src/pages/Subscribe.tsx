@@ -13,9 +13,10 @@ import {
   BillingInterval,
   SubscriptionTier 
 } from "@/config/pricing";
-import { trackConversion } from "@/lib/analytics";
+import { trackConversion, trackEvent } from "@/lib/analytics";
 import { BillingToggle } from "@/components/BillingToggle";
 import { Badge } from "@/components/ui/badge";
+import { AnnualUpsellModal } from "@/components/AnnualUpsellModal";
 
 export default function Subscribe() {
   const [loading, setLoading] = useState(false);
@@ -26,6 +27,7 @@ export default function Subscribe() {
   const [selectedTier, setSelectedTier] = useState<"pro" | "complete">(
     (searchParams.get("tier") as "pro" | "complete") || "pro"
   );
+  const [showUpsell, setShowUpsell] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -58,29 +60,64 @@ export default function Subscribe() {
     }
   };
 
-  const handleSubscribe = async () => {
+  const handleSubscribeClick = () => {
+    // Intercept monthly checkout once per session with annual upsell
+    if (billingInterval === "month") {
+      const dismissed = sessionStorage.getItem(`upsell_dismissed_${selectedTier}`);
+      if (!dismissed) {
+        trackEvent("annual_upsell_shown", { tier: selectedTier });
+        setShowUpsell(true);
+        return;
+      }
+    }
+    void runCheckout();
+  };
+
+  const handleSwitchToAnnual = () => {
+    trackEvent("annual_upsell_accepted", { tier: selectedTier });
+    setBillingInterval("year");
+    setShowUpsell(false);
+    // Defer checkout so price recomputes with annual price
+    setTimeout(() => void runCheckout("year"), 50);
+  };
+
+  const handleContinueMonthly = () => {
+    trackEvent("annual_upsell_dismissed", { tier: selectedTier });
+    sessionStorage.setItem(`upsell_dismissed_${selectedTier}`, "1");
+    setShowUpsell(false);
+    void runCheckout();
+  };
+
+  const runCheckout = async (intervalOverride?: BillingInterval) => {
     setLoading(true);
     try {
+      const interval = intervalOverride ?? billingInterval;
+      const priceForCheckout = (() => {
+        if (selectedTier === "complete") {
+          return interval === "year" ? STRIPE_PRICES.COMPLETE_ANNUAL : STRIPE_PRICES.COMPLETE_MONTHLY;
+        }
+        return interval === "year" ? STRIPE_PRICES.PRO_ANNUAL : STRIPE_PRICES.PRO_MONTHLY;
+      })();
       const { data: { user } } = await supabase.auth.getUser();
       
       // Track checkout initiation
       if (user) {
         trackConversion(
-          selectedTier === "complete" 
-            ? TRACKING_EVENTS.UPGRADE_TO_COMPLETE 
-            : TRACKING_EVENTS.CHECKOUT_INITIATED, 
-          user.id, 
+          selectedTier === "complete"
+            ? TRACKING_EVENTS.UPGRADE_TO_COMPLETE
+            : TRACKING_EVENTS.CHECKOUT_INITIATED,
+          user.id,
           {
-            priceId: selectedPrice.id,
-            amount: selectedPrice.amount,
-            interval: billingInterval,
+            priceId: priceForCheckout.id,
+            amount: priceForCheckout.amount,
+            interval,
             tier: selectedTier,
           }
         );
       }
 
       const { data, error } = await supabase.functions.invoke("create-checkout-session", {
-        body: { priceId: selectedPrice.id },
+        body: { priceId: priceForCheckout.id },
       });
 
       if (error) throw error;
@@ -226,7 +263,7 @@ export default function Subscribe() {
           </div>
 
           <Button
-            onClick={handleSubscribe}
+            onClick={handleSubscribeClick}
             disabled={loading}
             size="lg"
             className={`w-full text-lg h-14 ${
@@ -267,6 +304,15 @@ export default function Subscribe() {
           </p>
         </div>
       )}
+
+      <AnnualUpsellModal
+        open={showUpsell}
+        onClose={() => setShowUpsell(false)}
+        onSwitchToAnnual={handleSwitchToAnnual}
+        onContinueMonthly={handleContinueMonthly}
+        tier={selectedTier}
+        loading={loading}
+      />
     </div>
   );
 }
