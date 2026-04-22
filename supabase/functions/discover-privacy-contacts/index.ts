@@ -20,6 +20,7 @@ import { detectLanguage, rankByLocale } from '../_shared/lang.ts';
 import { getSitemapCache, setSitemapCache } from '../_shared/cache.ts';
 import { getVendorHint, getDomainHint } from '../_shared/vendor_hints.ts';
 import { isQuarantined, addToQuarantine } from '../_shared/quarantine.ts';
+import { parseAIContactsResponse, validateAIContacts, type AIContactFinding } from '../_shared/discovery_ai.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -106,6 +107,13 @@ const REDACT_PARAMS = ['email', 'e', 'user', 'token', 'auth', 'code', 'sid', 'se
 
 // Curated privacy contacts for domains that consistently block automated discovery
 const CURATED_CONTACTS: Record<string, Array<{ contact_type: string; value: string; confidence: string; reasoning: string }>> = {
+  'vercel.com': [
+    { contact_type: 'form', value: 'https://datarequest.vercel.com/privacy', confidence: 'high', reasoning: 'Vercel public privacy request portal linked from the privacy policy.' },
+    { contact_type: 'email', value: 'privacy@vercel.com', confidence: 'high', reasoning: 'Vercel privacy contact published in the privacy policy.' },
+  ],
+  'airtable.com': [
+    { contact_type: 'email', value: 'privacy@airtable.com', confidence: 'high', reasoning: 'Airtable privacy contact published in the privacy policy.' },
+  ],
   'bestbuy.com': [
     { contact_type: 'form', value: 'https://www.bestbuy.com/site/privacy-policy/data-request/pcmcat778300050498.c', confidence: 'high', reasoning: 'Best Buy official DSAR form from privacy policy' },
     { contact_type: 'email', value: 'privacy@bestbuy.com', confidence: 'high', reasoning: 'Best Buy privacy team email' },
@@ -175,6 +183,15 @@ const CURATED_CONTACTS: Record<string, Array<{ contact_type: string; value: stri
     { contact_type: 'form', value: 'https://help.doordash.com/s/privacy-requests', confidence: 'high', reasoning: 'DoorDash privacy requests form' },
     { contact_type: 'email', value: 'privacy@doordash.com', confidence: 'high', reasoning: 'DoorDash privacy team email' },
   ],
+};
+const KNOWN_PRIVACY_URLS: Record<string, string[]> = {
+  'airbnb.com': ['https://www.airbnb.com/privacy'],
+  'airtable.com': ['https://www.airtable.com/company/privacy'],
+  'facebook.com': ['https://www.facebook.com/privacy/policy/'],
+  'google.com': ['https://policies.google.com/privacy'],
+  'grubhub.com': ['https://www.grubhub.com/privacy'],
+  'netflix.com': ['https://help.netflix.com/legal/privacy'],
+  'vercel.com': ['https://vercel.com/legal/privacy-policy'],
 };
 const MAX_REDIRECT_DEPTH = 1;
 const VALIDATION_TIMEOUT_MS = 2500; // Reduced from 5000ms to prevent CPU exhaustion
@@ -255,6 +272,54 @@ function regexPrepassExtract(content: string, baseUrl: string, domain: string): 
   }
 
   return findings.slice(0, 8); // Cap to prevent flooding
+}
+
+function contactFromSecurityTxt(rawContact: string, domain: string): ContactFinding | null {
+  const normalized = rawContact.trim();
+  if (!normalized) return null;
+  const privacyHint = /(privacy|dpo|gdpr|ccpa|data[-_ ]?(request|protection|deletion)|delete|erasure|subject[-_ ]?access)/i;
+
+  if (normalized.toLowerCase().startsWith('mailto:')) {
+    const email = normalized.replace(/^mailto:/i, '').trim().toLowerCase();
+    if (!email || !privacyHint.test(email.split('@')[0])) return null;
+    return {
+      contact_type: 'email',
+      value: email,
+      confidence: 'medium',
+      reasoning: `security.txt published a contact for ${domain}.`,
+    };
+  }
+
+  if (/^https?:\/\//i.test(normalized)) {
+    if (!privacyHint.test(normalized)) return null;
+    return {
+      contact_type: 'form',
+      value: normalized,
+      confidence: 'medium',
+      reasoning: `security.txt published a contact URL for ${domain}.`,
+    };
+  }
+
+  if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized)) {
+    if (!privacyHint.test(normalized.split('@')[0])) return null;
+    return {
+      contact_type: 'email',
+      value: normalized.toLowerCase(),
+      confidence: 'medium',
+      reasoning: `security.txt published a contact for ${domain}.`,
+    };
+  }
+
+  return null;
+}
+
+function mergeUniqueContacts<T extends { contact_type: string; value: string }>(contacts: T[]): T[] {
+  const map = new Map<string, T>();
+  for (const contact of contacts) {
+    const key = `${contact.contact_type}:${contact.value.toLowerCase()}`;
+    if (!map.has(key)) map.set(key, contact);
+  }
+  return Array.from(map.values());
 }
 
 
@@ -1558,9 +1623,10 @@ serve(async (req) => {
       });
     };
     
+    const knownPrivacyUrls = KNOWN_PRIVACY_URLS[apexDomain] ?? [];
     const candidateUrls = privacy_url 
       ? [privacy_url]
-      : dedupeUrls([...tier1, ...tier2]);
+      : dedupeUrls([...knownPrivacyUrls, ...tier1, ...tier2]);
     
     // Phase 1.3: Language detection — reuse homepage HTML to avoid double-fetch
     let langDetected = 'en';
@@ -1673,6 +1739,71 @@ serve(async (req) => {
         };
         methodUsed = 'browserless';
       }
+    }
+
+    const securityTxtFallback = securityTxtContact ? contactFromSecurityTxt(securityTxtContact.contact, service.domain) : null;
+
+    // If both phases failed, use security.txt as a last-resort actionable contact when available.
+    if ((!result || !result.content) && securityTxtFallback) {
+      console.warn(`[Fallback] Using security.txt contact for ${service.domain} after policy discovery failure`);
+
+      const { data: existingContacts } = await supabase
+        .from('privacy_contacts')
+        .select('contact_type, value')
+        .eq('service_id', service_id);
+
+      const existingSet = new Set((existingContacts || []).map((c: any) => `${c.contact_type}:${c.value.toLowerCase()}`));
+      const fallbackContacts = mergeUniqueContacts([securityTxtFallback]).filter(contact => {
+        const key = `${contact.contact_type}:${contact.value.toLowerCase()}`;
+        return !existingSet.has(key);
+      });
+
+      const insertedFallback = fallbackContacts.length > 0
+        ? await supabase.from('privacy_contacts').insert(
+            fallbackContacts.map(contact => ({
+              service_id,
+              contact_type: contact.contact_type,
+              value: contact.value,
+              confidence: contact.confidence,
+              reasoning: contact.reasoning,
+              verified: false,
+              added_by: 'security_txt_fallback',
+              source_url: securityTxtContact?.url ?? `https://${service.domain}/.well-known/security.txt`,
+            }))
+            .select()
+          )
+        : { data: [], error: null };
+
+      if (insertedFallback.error) throw insertedFallback.error;
+
+      metrics.success = true;
+      metrics.method_used = 'security_txt_fallback';
+      metrics.policy_type = 'security_txt';
+      metrics.confidence = securityTxtFallback.confidence;
+      metrics.cache_hit = cacheHit;
+      metrics.probe_used = 'security_txt';
+      metrics.urls_considered = urlsToTry.length;
+      metrics.urls_fetched = realFetchCount;
+      metrics.status_map = { fallback: 'security_txt', policy_source: 'security_txt' };
+      metricsEmitted = true;
+
+      return new Response(JSON.stringify({
+        success: true,
+        service: service.name,
+        contacts_found: (insertedFallback.data || []).length || 1,
+        contacts: (insertedFallback.data || []).length ? insertedFallback.data : [{
+          ...securityTxtFallback,
+          service_id,
+          verified: false,
+          added_by: 'security_txt_fallback',
+          source_url: securityTxtContact?.url ?? `https://${service.domain}/.well-known/security.txt`,
+        }],
+        method_used: 'security_txt_fallback',
+        confidence: securityTxtFallback.confidence,
+        privacy_policy_found: false,
+        security_contact: securityTxtContact?.contact,
+        discovery_metadata: { fallback: 'security_txt' },
+      }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
     }
 
     // If both phases failed, return error
@@ -1893,6 +2024,7 @@ Extract all relevant contact methods for data deletion requests.`;
     let inputTokens: number | null = null;
     let outputTokens: number | null = null;
     const MODEL_NAME = 'gpt-5-mini';
+    const MAX_COMPLETION_TOKENS = 1000;
 
     if (OPENAI_API_KEY) {
       try {
@@ -1951,7 +2083,7 @@ Extract all relevant contact methods for data deletion requests.`;
               }
             ],
             tool_choice: { type: 'function', function: { name: 'save_privacy_contacts' } },
-            max_completion_tokens: 1000
+            max_completion_tokens: MAX_COMPLETION_TOKENS
           }),
         });
 
@@ -1962,20 +2094,27 @@ Extract all relevant contact methods for data deletion requests.`;
         }
 
         const aiResponse = await response.json();
-        const toolCall = aiResponse.choices?.[0]?.message?.tool_calls?.[0];
         const tokenUsage = aiResponse.usage || {};
         inputTokens = tokenUsage.prompt_tokens || null;
         outputTokens = tokenUsage.completion_tokens || null;
         console.log(`[Cost] OpenAI tokens: ${inputTokens} in / ${outputTokens} out (model: ${MODEL_NAME})`);
 
-        if (toolCall) {
-          const parsed: { contacts: ContactFinding[] } = JSON.parse(toolCall.function.arguments);
-          aiContacts = parsed.contacts || [];
-          aiSucceeded = true;
-          console.log(`Found ${aiContacts.length} contact methods from AI`);
-        } else {
-          console.warn('[AI] No tool call returned — falling back to regex prepass only');
+        const parsedAI = parseAIContactsResponse(aiResponse, MAX_COMPLETION_TOKENS);
+        const validation = validateAIContacts(parsedAI.contacts as AIContactFinding[], privacyContent);
+        aiContacts = validation.validContacts as ContactFinding[];
+        aiSucceeded = aiContacts.length > 0;
+
+        if (parsedAI.warnings.length > 0) {
+          console.warn('[AI] Parse warnings:', parsedAI.warnings.join(', '));
         }
+        if (validation.warnings.length > 0) {
+          console.warn('[AI] Validation warnings:', validation.warnings.join(', '));
+        }
+        if (validation.rejectedContacts.length > 0) {
+          console.warn('[AI] Rejected contacts:', validation.rejectedContacts.map(item => `${item.contact.value} (${item.reason})`).join(', '));
+        }
+
+        console.log(`Found ${aiContacts.length} validated contact methods from AI`);
       } catch (aiErr) {
         console.error('[AI] Extraction failed, falling back to regex prepass:', aiErr);
         // Don't throw — fall through to merged findings below
@@ -1983,12 +2122,9 @@ Extract all relevant contact methods for data deletion requests.`;
     }
 
     // Merge AI + prepass findings (dedupe by contact_type + value)
-    const mergedMap = new Map<string, ContactFinding>();
-    for (const c of [...aiContacts, ...prepassFindings]) {
-      const key = `${c.contact_type}:${c.value.toLowerCase()}`;
-      if (!mergedMap.has(key)) mergedMap.set(key, c);
-    }
-    const findings: { contacts: ContactFinding[] } = { contacts: Array.from(mergedMap.values()) };
+    const findings: { contacts: ContactFinding[] } = {
+      contacts: mergeUniqueContacts([...aiContacts, ...prepassFindings]),
+    };
 
     if (findings.contacts.length === 0 && !aiSucceeded) {
       throw new Error('Unable to extract privacy contacts: AI extraction failed and no deterministic patterns matched. The privacy policy may be unusual or behind anti-bot protection.');
