@@ -1886,93 +1886,115 @@ Extract all relevant contact methods for data deletion requests.`;
       }
     }
 
-    const response = await countedFetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${OPENAI_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
-        ],
-        tools: [
-          {
-            type: 'function',
-            function: {
-              name: 'save_privacy_contacts',
-              description: 'Save discovered privacy contact methods',
-              parameters: {
-                type: 'object',
-                properties: {
-                  contacts: {
-                    type: 'array',
-                    items: {
-                      type: 'object',
-                      properties: {
-                         contact_type: {
-                          type: 'string',
-                          enum: ['email', 'form', 'phone'],
-                          description: 'Type of contact method'
-                        },
-                        value: {
-                          type: 'string',
-                          description: 'The actual contact value (email address, URL, phone number, etc.)'
-                        },
-                        confidence: {
-                          type: 'string',
-                          enum: ['high', 'medium'],
-                          description: 'Confidence level — only return high or medium confidence contacts'
-                        },
-                        reasoning: {
-                          type: 'string',
-                          description: 'Explanation of why this contact was identified and confidence level'
+    // AI extraction with prepass fallback. If AI fails (timeout, rate limit, parse error),
+    // we still return regex prepass findings so the user gets actionable contacts.
+    let aiContacts: ContactFinding[] = [];
+    let aiSucceeded = false;
+    let inputTokens: number | null = null;
+    let outputTokens: number | null = null;
+    const MODEL_NAME = 'gpt-5-mini';
+
+    if (OPENAI_API_KEY) {
+      try {
+        const response = await countedFetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${OPENAI_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: MODEL_NAME,
+            messages: [
+              { role: 'system', content: systemPrompt },
+              { role: 'user', content: userPrompt }
+            ],
+            tools: [
+              {
+                type: 'function',
+                function: {
+                  name: 'save_privacy_contacts',
+                  description: 'Save discovered privacy contact methods',
+                  parameters: {
+                    type: 'object',
+                    properties: {
+                      contacts: {
+                        type: 'array',
+                        items: {
+                          type: 'object',
+                          properties: {
+                             contact_type: {
+                              type: 'string',
+                              enum: ['email', 'form', 'phone'],
+                              description: 'Type of contact method'
+                            },
+                            value: {
+                              type: 'string',
+                              description: 'The actual contact value (email address, URL, phone number, etc.)'
+                            },
+                            confidence: {
+                              type: 'string',
+                              enum: ['high', 'medium'],
+                              description: 'Confidence level — only return high or medium confidence contacts'
+                            },
+                            reasoning: {
+                              type: 'string',
+                              description: 'Explanation of why this contact was identified and confidence level'
+                            }
+                          },
+                          required: ['contact_type', 'value', 'confidence', 'reasoning']
                         }
-                      },
-                      required: ['contact_type', 'value', 'confidence', 'reasoning']
-                    }
+                      }
+                    },
+                    required: ['contacts']
                   }
-                },
-                required: ['contacts']
+                }
               }
-            }
-          }
-        ],
-        tool_choice: { type: 'function', function: { name: 'save_privacy_contacts' } },
-        max_tokens: 1000
-      }),
-    });
+            ],
+            tool_choice: { type: 'function', function: { name: 'save_privacy_contacts' } },
+            max_completion_tokens: 1000
+          }),
+        });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('OpenAI error:', response.status, errorText);
-      if (response.status === 429) {
-        throw new Error('OpenAI rate limit exceeded. Please try again in a moment.');
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('OpenAI error:', response.status, errorText);
+          throw new Error(`OpenAI failed: ${response.status}`);
+        }
+
+        const aiResponse = await response.json();
+        const toolCall = aiResponse.choices?.[0]?.message?.tool_calls?.[0];
+        const tokenUsage = aiResponse.usage || {};
+        inputTokens = tokenUsage.prompt_tokens || null;
+        outputTokens = tokenUsage.completion_tokens || null;
+        console.log(`[Cost] OpenAI tokens: ${inputTokens} in / ${outputTokens} out (model: ${MODEL_NAME})`);
+
+        if (toolCall) {
+          const parsed: { contacts: ContactFinding[] } = JSON.parse(toolCall.function.arguments);
+          aiContacts = parsed.contacts || [];
+          aiSucceeded = true;
+          console.log(`Found ${aiContacts.length} contact methods from AI`);
+        } else {
+          console.warn('[AI] No tool call returned — falling back to regex prepass only');
+        }
+      } catch (aiErr) {
+        console.error('[AI] Extraction failed, falling back to regex prepass:', aiErr);
+        // Don't throw — fall through to merged findings below
       }
-      if (response.status === 401) {
-        throw new Error('OpenAI API key is invalid or expired.');
-      }
-      throw new Error(`OpenAI failed: ${response.status}`);
     }
 
-    const aiResponse = await response.json();
-    const toolCall = aiResponse.choices[0].message.tool_calls?.[0];
-    
-    // Capture token usage for cost tracking
-    const tokenUsage = aiResponse.usage || {};
-    const inputTokens = tokenUsage.prompt_tokens || null;
-    const outputTokens = tokenUsage.completion_tokens || null;
-    console.log(`[Cost] OpenAI tokens: ${inputTokens} in / ${outputTokens} out (model: gpt-4o-mini)`);
-    
-    if (!toolCall) {
-      throw new Error('No tool call response from AI');
+    // Merge AI + prepass findings (dedupe by contact_type + value)
+    const mergedMap = new Map<string, ContactFinding>();
+    for (const c of [...aiContacts, ...prepassFindings]) {
+      const key = `${c.contact_type}:${c.value.toLowerCase()}`;
+      if (!mergedMap.has(key)) mergedMap.set(key, c);
+    }
+    const findings: { contacts: ContactFinding[] } = { contacts: Array.from(mergedMap.values()) };
+
+    if (findings.contacts.length === 0 && !aiSucceeded) {
+      throw new Error('Unable to extract privacy contacts: AI extraction failed and no deterministic patterns matched. The privacy policy may be unusual or behind anti-bot protection.');
     }
 
-    const findings: { contacts: ContactFinding[] } = JSON.parse(toolCall.function.arguments);
-
-    console.log(`Found ${findings.contacts.length} contact methods from AI`);
+    console.log(`[Merged] Total contacts: ${findings.contacts.length} (AI: ${aiContacts.length}, Prepass: ${prepassFindings.length})`);
 
     // Filter out invalid contacts BEFORE storing
     const validContacts = findings.contacts.filter(contact => {
