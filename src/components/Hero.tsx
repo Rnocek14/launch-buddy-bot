@@ -76,9 +76,18 @@ export const Hero = () => {
               </span>
             </h1>
 
-            <p className="text-lg sm:text-xl text-muted-foreground mb-2 max-w-lg mx-auto lg:mx-0 leading-relaxed">
-              Your data leaks, gets resold, and reappears constantly. We scan continuously — surfacing new breaches, broker listings, and forgotten accounts so you can act before damage is done.
+            <p className="text-lg sm:text-xl text-muted-foreground mb-4 max-w-lg mx-auto lg:mx-0 leading-relaxed">
+              Your data leaks, gets resold, and reappears over time. We monitor your exposure — surfacing new breaches, broker listings, and forgotten accounts as they appear.
             </p>
+
+            {/* Concrete example */}
+            <div className="mb-6 max-w-lg mx-auto lg:mx-0 rounded-lg border border-border/60 bg-card/40 backdrop-blur px-4 py-3">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground/70 mb-1">A typical month for one of our users</p>
+              <p className="text-sm text-foreground/90">
+                <span className="text-destructive font-medium">2 new breaches</span> · <span className="text-destructive font-medium">1 broker re-listed</span> · <span className="text-accent font-medium">3 cleanups completed</span>
+              </p>
+            </div>
+
             <p className="text-sm text-muted-foreground/70 mb-8 max-w-lg mx-auto lg:mx-0 italic">
               Start with a free scan. We'll keep watching after.
             </p>
