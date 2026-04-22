@@ -110,3 +110,6 @@ verify_jwt = true
 
 [functions.free-breach-check]
 verify_jwt = false
+
+[functions.send-exposure-alert]
+verify_jwt = false
