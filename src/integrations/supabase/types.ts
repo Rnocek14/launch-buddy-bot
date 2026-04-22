@@ -14,6 +14,169 @@ export type Database = {
   }
   public: {
     Tables: {
+      affiliate_clicks: {
+        Row: {
+          affiliate_code: string
+          affiliate_id: string
+          created_at: string
+          id: string
+          ip_hash: string | null
+          landing_path: string | null
+          referrer: string | null
+          source_url: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          affiliate_code: string
+          affiliate_id: string
+          created_at?: string
+          id?: string
+          ip_hash?: string | null
+          landing_path?: string | null
+          referrer?: string | null
+          source_url?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          affiliate_code?: string
+          affiliate_id?: string
+          created_at?: string
+          id?: string
+          ip_hash?: string | null
+          landing_path?: string | null
+          referrer?: string | null
+          source_url?: string | null
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "affiliate_clicks_affiliate_id_fkey"
+            columns: ["affiliate_id"]
+            isOneToOne: false
+            referencedRelation: "affiliates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      affiliate_conversions: {
+        Row: {
+          affiliate_code: string
+          affiliate_id: string
+          amount_cents: number
+          commission_cents: number
+          conversion_type: string
+          created_at: string
+          id: string
+          metadata: Json | null
+          paid_at: string | null
+          referred_user_id: string | null
+          status: string
+          stripe_payment_intent_id: string | null
+        }
+        Insert: {
+          affiliate_code: string
+          affiliate_id: string
+          amount_cents?: number
+          commission_cents?: number
+          conversion_type: string
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          paid_at?: string | null
+          referred_user_id?: string | null
+          status?: string
+          stripe_payment_intent_id?: string | null
+        }
+        Update: {
+          affiliate_code?: string
+          affiliate_id?: string
+          amount_cents?: number
+          commission_cents?: number
+          conversion_type?: string
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          paid_at?: string | null
+          referred_user_id?: string | null
+          status?: string
+          stripe_payment_intent_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "affiliate_conversions_affiliate_id_fkey"
+            columns: ["affiliate_id"]
+            isOneToOne: false
+            referencedRelation: "affiliates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      affiliates: {
+        Row: {
+          approved_at: string | null
+          audience_description: string | null
+          code: string
+          commission_rate: number
+          created_at: string
+          email: string
+          full_name: string
+          id: string
+          notes: string | null
+          payout_email: string | null
+          promotion_channels: string[] | null
+          status: string
+          total_clicks: number
+          total_conversions: number
+          total_earnings_cents: number
+          total_signups: number
+          updated_at: string
+          user_id: string | null
+          website_url: string | null
+        }
+        Insert: {
+          approved_at?: string | null
+          audience_description?: string | null
+          code: string
+          commission_rate?: number
+          created_at?: string
+          email: string
+          full_name: string
+          id?: string
+          notes?: string | null
+          payout_email?: string | null
+          promotion_channels?: string[] | null
+          status?: string
+          total_clicks?: number
+          total_conversions?: number
+          total_earnings_cents?: number
+          total_signups?: number
+          updated_at?: string
+          user_id?: string | null
+          website_url?: string | null
+        }
+        Update: {
+          approved_at?: string | null
+          audience_description?: string | null
+          code?: string
+          commission_rate?: number
+          created_at?: string
+          email?: string
+          full_name?: string
+          id?: string
+          notes?: string | null
+          payout_email?: string | null
+          promotion_channels?: string[] | null
+          status?: string
+          total_clicks?: number
+          total_conversions?: number
+          total_earnings_cents?: number
+          total_signups?: number
+          updated_at?: string
+          user_id?: string | null
+          website_url?: string | null
+        }
+        Relationships: []
+      }
       alpha_applications: {
         Row: {
           admin_notes: string | null
@@ -2550,6 +2713,7 @@ export type Database = {
           removed: boolean
         }[]
       }
+      generate_affiliate_code: { Args: never; Returns: string }
       generate_referral_code: { Args: never; Returns: string }
       get_email_analytics_summary: {
         Args: never
