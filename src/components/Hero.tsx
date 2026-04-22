@@ -142,7 +142,7 @@ export const Hero = () => {
               </div>
               <div className="flex items-center gap-2">
                 <Zap className="w-4 h-4 text-primary" />
-                <span className="text-muted-foreground">20 Data Brokers</span>
+                <span className="text-muted-foreground">45+ Data Brokers</span>
               </div>
               <div className="flex items-center gap-2">
                 <Target className="w-4 h-4 text-primary" />
