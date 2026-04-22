@@ -2023,7 +2023,10 @@ Extract all relevant contact methods for data deletion requests.`;
     let aiSucceeded = false;
     let inputTokens: number | null = null;
     let outputTokens: number | null = null;
-    const MODEL_NAME = 'gpt-5-mini';
+    // Reverted from gpt-5-mini → gpt-4o-mini: telemetry showed gpt-5-mini produced
+    // inconsistent tool-call response shapes causing AI_PROCESSING_ERROR on most domains.
+    // gpt-4o-mini has stable, predictable tool calling behavior.
+    const MODEL_NAME = 'gpt-4o-mini';
     const MAX_COMPLETION_TOKENS = 1000;
 
     if (OPENAI_API_KEY) {
