@@ -1708,10 +1708,10 @@ serve(async (req) => {
       );
     }
 
-    // Call OpenAI with tool calling for structured extraction
-    const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
-    if (!openAIApiKey) {
-      throw new Error('OpenAI API key not configured');
+    // Call Lovable AI Gateway with tool calling for structured extraction
+    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+    if (!LOVABLE_API_KEY) {
+      throw new Error('LOVABLE_API_KEY not configured');
     }
 
     const systemPrompt = `You are an AI assistant specializing in analyzing privacy policies to extract contact information for data deletion requests (GDPR, CCPA, etc.).
@@ -1761,7 +1761,7 @@ ${privacyContent}
 
 Extract all relevant contact methods for data deletion requests.`;
 
-    console.log('Calling OpenAI for contact extraction...');
+    console.log('Calling Lovable AI for contact extraction...');
 
     // Helper: validate form URLs with soft-404 and privacy-relevance check
     async function validateContactUrl(url: string): Promise<boolean> {
@@ -1798,14 +1798,14 @@ Extract all relevant contact methods for data deletion requests.`;
       }
     }
 
-    const response = await countedFetch('https://api.openai.com/v1/chat/completions', {
+    const response = await countedFetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${openAIApiKey}`,
+        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: 'google/gemini-2.5-flash',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt }
@@ -1859,8 +1859,14 @@ Extract all relevant contact methods for data deletion requests.`;
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('OpenAI API error:', response.status, errorText);
-      throw new Error(`OpenAI API failed: ${response.status}`);
+      console.error('Lovable AI error:', response.status, errorText);
+      if (response.status === 429) {
+        throw new Error('AI rate limit exceeded. Please try again in a moment.');
+      }
+      if (response.status === 402) {
+        throw new Error('AI credits exhausted. Add funds in Settings → Workspace → Usage.');
+      }
+      throw new Error(`Lovable AI failed: ${response.status}`);
     }
 
     const aiResponse = await response.json();
@@ -1870,7 +1876,7 @@ Extract all relevant contact methods for data deletion requests.`;
     const tokenUsage = aiResponse.usage || {};
     const inputTokens = tokenUsage.prompt_tokens || null;
     const outputTokens = tokenUsage.completion_tokens || null;
-    console.log(`[Cost] OpenAI tokens: ${inputTokens} in / ${outputTokens} out (model: gpt-4o-mini)`);
+    console.log(`[Cost] Lovable AI tokens: ${inputTokens} in / ${outputTokens} out (model: google/gemini-2.5-flash)`);
     
     if (!toolCall) {
       throw new Error('No tool call response from AI');
