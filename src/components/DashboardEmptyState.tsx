@@ -102,7 +102,7 @@ export const DashboardEmptyState = ({
               <CardTitle className="text-base flex items-center gap-2">
                 Optional: Connect Gmail for Deeper Discovery
                 {hasGmailAccess && (
-                  <span className="text-xs font-normal text-green-600">✓ Connected</span>
+                  <span className="text-xs font-normal text-primary">✓ Connected</span>
                 )}
               </CardTitle>
               <CardDescription>
