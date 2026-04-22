@@ -3,42 +3,47 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Check, Loader2, Crown, Star } from "lucide-react";
+import { Check, Loader2, Crown, Star, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { 
-  STRIPE_PRICES, 
-  PRO_FEATURES, 
-  COMPLETE_FEATURES, 
-  TRACKING_EVENTS, 
+import {
+  STRIPE_PRICES,
+  PRO_FEATURES,
+  COMPLETE_FEATURES,
+  FAMILY_FEATURES,
+  TRACKING_EVENTS,
   BillingInterval,
-  SubscriptionTier 
+  SubscriptionTier
 } from "@/config/pricing";
 import { trackConversion, trackEvent } from "@/lib/analytics";
 import { BillingToggle } from "@/components/BillingToggle";
 import { Badge } from "@/components/ui/badge";
 import { AnnualUpsellModal } from "@/components/AnnualUpsellModal";
 
+type SelectableTier = "pro" | "complete" | "family";
+
 export default function Subscribe() {
   const [loading, setLoading] = useState(false);
   const [searchParams] = useSearchParams();
+  const initialTier = (searchParams.get("tier") as SelectableTier) || "pro";
   const [billingInterval, setBillingInterval] = useState<BillingInterval>(
-    (searchParams.get("interval") as BillingInterval) || "year"
+    initialTier === "family" ? "year" : ((searchParams.get("interval") as BillingInterval) || "year")
   );
-  const [selectedTier, setSelectedTier] = useState<"pro" | "complete">(
-    (searchParams.get("tier") as "pro" | "complete") || "pro"
-  );
+  const [selectedTier, setSelectedTier] = useState<SelectableTier>(initialTier);
   const [showUpsell, setShowUpsell] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
+  const isFamily = selectedTier === "family";
+
   const getSelectedPrice = () => {
+    if (selectedTier === "family") return STRIPE_PRICES.FAMILY_ANNUAL;
     if (selectedTier === "complete") {
-      return billingInterval === "year" 
-        ? STRIPE_PRICES.COMPLETE_ANNUAL 
+      return billingInterval === "year"
+        ? STRIPE_PRICES.COMPLETE_ANNUAL
         : STRIPE_PRICES.COMPLETE_MONTHLY;
     }
-    return billingInterval === "year" 
-      ? STRIPE_PRICES.PRO_ANNUAL 
+    return billingInterval === "year"
+      ? STRIPE_PRICES.PRO_ANNUAL
       : STRIPE_PRICES.PRO_MONTHLY;
   };
 
