@@ -12,6 +12,7 @@ import { UpgradeCTA } from "@/components/free-scan/UpgradeCTA";
 import { ParentScanUpsell } from "@/components/free-scan/ParentScanUpsell";
 import { supabase } from "@/integrations/supabase/client";
 import { trackEvent } from "@/lib/analytics";
+import { useSEO } from "@/hooks/useSEO";
 
 interface BreachData {
   name: string;
@@ -38,6 +39,14 @@ export default function FreeScan() {
   const [scanPhase, setScanPhase] = useState("");
   const [results, setResults] = useState<ScanResults | null>(null);
   const [error, setError] = useState("");
+
+  useSEO({
+    title: "Free Email Exposure Scan — Check Breaches & Data Leaks Instantly",
+    description:
+      "Find out instantly if your email has been exposed in data breaches. 100% free, no credit card, no signup. Powered by HaveIBeenPwned + Footprint Finder.",
+    canonical: "https://footprintfinder.co/free-scan",
+    ogType: "website",
+  });
 
   const runScan = useCallback(async (scanEmail: string) => {
     setIsScanning(true);

@@ -99,7 +99,7 @@ export default function RemoveBroker() {
     ? `https://footprintfinder.co/remove-from/${broker.slug}`
     : undefined;
 
-  const jsonLd = broker
+  const howToJsonLd = broker
     ? {
         "@context": "https://schema.org",
         "@type": "HowTo",
@@ -115,11 +115,54 @@ export default function RemoveBroker() {
       }
     : undefined;
 
+  const faqJsonLd = broker
+    ? {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        mainEntity: [
+          {
+            "@type": "Question",
+            name: `Is it free to remove yourself from ${broker.name}?`,
+            acceptedAnswer: {
+              "@type": "Answer",
+              text: `Yes — ${broker.name} is legally required to honor opt-out requests at no cost. The manual process takes ${broker.opt_out_time_estimate ?? "around 10 minutes"} and is described step-by-step on this page.`,
+            },
+          },
+          {
+            "@type": "Question",
+            name: `How long until ${broker.name} removes my information?`,
+            acceptedAnswer: {
+              "@type": "Answer",
+              text: `${broker.name} typically removes listings within 7–30 days of a verified opt-out request. However, most data brokers re-list users after 30–90 days as their data sources refresh, which is why ongoing monitoring is recommended.`,
+            },
+          },
+          {
+            "@type": "Question",
+            name: `Will ${broker.name} re-list my information later?`,
+            acceptedAnswer: {
+              "@type": "Answer",
+              text: `Yes, in most cases. Data brokers continuously refresh their databases from public records, voter rolls, and third-party data sources. Even after a successful opt-out, your information often reappears within 30–90 days unless you actively monitor and re-submit removal requests.`,
+            },
+          },
+          {
+            "@type": "Question",
+            name: `What other data brokers should I opt out of besides ${broker.name}?`,
+            acceptedAnswer: {
+              "@type": "Answer",
+              text: `${broker.name} is one of 100+ data broker sites that publish personal information. Major ones include Spokeo, Whitepages, BeenVerified, Radaris, MyLife, Intelius, and PeopleFinder. Footprint Finder removes you from 45+ brokers automatically and re-checks monthly.`,
+            },
+          },
+        ],
+      }
+    : undefined;
+
+  const jsonLd = [howToJsonLd, faqJsonLd].filter(Boolean) as Record<string, unknown>[];
+
   useSEO({
     title: seoTitle,
     description: seoDescription,
     canonical,
-    jsonLd,
+    jsonLd: jsonLd.length ? jsonLd : undefined,
   });
 
   if (notFound) return <Navigate to="/remove-from" replace />;

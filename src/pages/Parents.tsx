@@ -23,6 +23,7 @@ import { trackEvent } from "@/lib/analytics";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { PARENT_SCAN_FEATURES, STRIPE_PRICES } from "@/config/pricing";
+import { useSEO } from "@/hooks/useSEO";
 
 export default function Parents() {
   const navigate = useNavigate();
@@ -30,6 +31,26 @@ export default function Parents() {
   const [parentEmail, setParentEmail] = useState("");
   const [purchaseLoading, setPurchaseLoading] = useState(false);
   const { toast } = useToast();
+
+  useSEO({
+    title: "Protect Your Elderly Parents from Online Scams — $39 Parent Scan",
+    description:
+      "Adult children: scan your parent's email for scams, breaches, and shady subscriptions in 60 seconds. One-time $39, no recurring fee. Built for non-technical seniors.",
+    canonical: "https://footprintfinder.co/parents",
+    ogType: "website",
+    jsonLd: {
+      "@context": "https://schema.org",
+      "@type": "Product",
+      name: "Footprint Finder Parent Scan",
+      description: "One-time digital exposure scan for an elderly parent's email — finds scams, breaches, and risky accounts.",
+      offers: {
+        "@type": "Offer",
+        price: "39",
+        priceCurrency: "USD",
+        availability: "https://schema.org/InStock",
+      },
+    },
+  });
 
   useEffect(() => {
     const status = searchParams.get("purchase");
