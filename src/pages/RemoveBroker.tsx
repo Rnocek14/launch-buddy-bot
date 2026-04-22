@@ -312,16 +312,24 @@ export default function RemoveBroker() {
             </div>
           </section>
 
-          {/* Final CTA */}
+          {/* Internal linking — boost SEO + dwell time */}
+          <RelatedBrokers currentSlug={broker.slug} />
+
+          {/* Final CTA — sharpened: "this is one site, you're on 50+" */}
           <Card className="border-destructive/30 bg-gradient-to-br from-destructive/5 via-background to-accent/5">
             <CardContent className="p-6 md:p-8 text-center">
               <Shield className="w-10 h-10 text-primary mx-auto mb-3" />
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-destructive/10 text-destructive text-xs font-semibold mb-3">
+                <AlertTriangle className="w-3.5 h-3.5" />
+                {broker.name} is just 1 of 50+
+              </div>
               <h2 className="text-2xl md:text-3xl font-bold mb-3">
-                Save 4+ hours. Let us remove you from {broker.name} — and the rest.
+                Most people are exposed on 50+ sites. We find — and remove — all of them.
               </h2>
               <p className="text-muted-foreground mb-6 max-w-2xl mx-auto">
-                Footprint Finder scans 20+ data brokers, requests removal on your
-                behalf, and re-checks every month. Free to start.
+                Footprint Finder scans your inbox to discover every account, every
+                broker listing, and every breach tied to your email. Then we send the
+                opt-out requests for you and re-check every month.
               </p>
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
                 <Link
@@ -334,7 +342,7 @@ export default function RemoveBroker() {
                   }
                 >
                   <Button size="lg" className="gap-2 cta-shimmer">
-                    Run my free scan
+                    Scan everything in 60 seconds
                     <ArrowRight className="w-4 h-4" />
                   </Button>
                 </Link>
@@ -346,7 +354,7 @@ export default function RemoveBroker() {
               </div>
               <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground mt-5">
                 <CheckCircle2 className="w-3.5 h-3.5 text-accent" />
-                <span>No credit card · 60-second scan · 20+ brokers covered</span>
+                <span>No credit card · 60-second scan · 50+ brokers covered</span>
               </div>
             </CardContent>
           </Card>
