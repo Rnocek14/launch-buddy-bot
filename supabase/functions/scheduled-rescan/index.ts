@@ -116,6 +116,15 @@ serve(async (req) => {
           .eq('id', profile.id);
 
         console.log(`[SCHEDULED-RESCAN] User ${profile.id}: ${result.totalNew} new, ${result.totalReappeared} reappeared`);
+
+        // Fire-and-forget: alert function will diff and only send if something is new
+        try {
+          await supabase.functions.invoke('send-exposure-alert', {
+            body: { userId: profile.id, triggerSource: 'scheduled_rescan' },
+          });
+        } catch (alertErr) {
+          console.error(`[SCHEDULED-RESCAN] Alert dispatch failed for ${profile.id}:`, alertErr);
+        }
       } catch (error) {
         const errorMsg = error instanceof Error ? error.message : 'Unknown error';
         console.error(`[SCHEDULED-RESCAN] Error processing user ${profile.id}:`, errorMsg);
