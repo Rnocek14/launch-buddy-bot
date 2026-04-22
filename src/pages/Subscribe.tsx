@@ -175,7 +175,12 @@ export default function Subscribe() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="text-center mb-8 p-6 bg-muted/30 rounded-lg">
+          <div className="text-center mb-8 p-6 bg-muted/30 rounded-lg relative">
+            {billingInterval === "year" && (
+              <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-accent text-accent-foreground shadow-md">
+                Save ${selectedTier === "complete" ? "111" : "77"}/year vs monthly
+              </Badge>
+            )}
             {billingInterval === "year" ? (
               <>
                 <div className="text-6xl font-bold mb-2">
@@ -184,6 +189,9 @@ export default function Subscribe() {
                 <div className="text-xl text-muted-foreground mb-3">per year</div>
                 <div className="text-sm text-accent font-medium">
                   Just ${selectedTier === "complete" ? "10.75" : "6.58"}/month, billed annually
+                </div>
+                <div className="text-xs text-muted-foreground line-through mt-1">
+                  ${selectedTier === "complete" ? "239.88" : "155.88"}/year if billed monthly
                 </div>
                 {selectedTier === "complete" && (
                   <div className="text-xs text-muted-foreground mt-2">
@@ -197,9 +205,12 @@ export default function Subscribe() {
                   ${selectedTier === "complete" ? "19.99" : "12.99"}
                 </div>
                 <div className="text-xl text-muted-foreground mb-3">per month</div>
-                <div className="text-xs text-accent font-medium mt-2">
-                  Switch to annual and save {selectedTier === "complete" ? "46%" : "49%"}
-                </div>
+                <button
+                  onClick={() => setBillingInterval("year")}
+                  className="inline-flex items-center gap-2 mt-2 px-3 py-1.5 rounded-full bg-accent/10 text-accent text-sm font-semibold hover:bg-accent/20 transition-colors"
+                >
+                  💰 Switch to annual & save ${selectedTier === "complete" ? "111" : "77"}/year
+                </button>
               </>
             )}
           </div>
