@@ -324,9 +324,11 @@ export default function Subscribe() {
             disabled={loading}
             size="lg"
             className={`w-full text-lg h-14 ${
-              selectedTier === "complete" 
-                ? "bg-gradient-to-r from-accent to-primary" 
-                : ""
+              isFamily
+                ? "bg-gradient-to-r from-primary to-accent"
+                : selectedTier === "complete"
+                  ? "bg-gradient-to-r from-accent to-primary"
+                  : ""
             }`}
           >
             {loading ? (
@@ -335,7 +337,7 @@ export default function Subscribe() {
                 Processing...
               </>
             ) : (
-              `Subscribe to ${selectedTier === "complete" ? "Complete" : "Pro"} - ${selectedPrice.displayPrice}`
+              `Subscribe to ${tierLabel} - ${selectedPrice.displayPrice}`
             )}
           </Button>
 
@@ -362,14 +364,15 @@ export default function Subscribe() {
         </div>
       )}
 
-      <AnnualUpsellModal
-        open={showUpsell}
-        onClose={() => setShowUpsell(false)}
-        onSwitchToAnnual={handleSwitchToAnnual}
-        onContinueMonthly={handleContinueMonthly}
-        tier={selectedTier}
-        loading={loading}
-      />
-    </div>
+      {!isFamily && (
+        <AnnualUpsellModal
+          open={showUpsell}
+          onClose={() => setShowUpsell(false)}
+          onSwitchToAnnual={handleSwitchToAnnual}
+          onContinueMonthly={handleContinueMonthly}
+          tier={selectedTier as "pro" | "complete"}
+          loading={loading}
+        />
+      )}
   );
 }
