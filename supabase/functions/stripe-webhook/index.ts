@@ -231,6 +231,34 @@ const handler = async (req: Request): Promise<Response> => {
               }
             }
           }
+
+          // Affiliate conversion (subscription)
+          const affiliateCode = session.metadata?.affiliate_code || subscription.metadata?.affiliate_code;
+          if (affiliateCode && session.amount_total) {
+            await logAffiliateConversion({
+              affiliateCode,
+              conversionType: "subscription",
+              amountCents: session.amount_total,
+              referredUserId: userId,
+              stripePaymentIntentId: session.payment_intent as string | null,
+              metadata: { tier, price_id: priceId, subscription_id: subscription.id },
+            });
+          }
+        }
+
+        // One-time payments (e.g. parent scan)
+        if (session.mode === "payment") {
+          const affiliateCode = session.metadata?.affiliate_code;
+          if (affiliateCode && session.amount_total) {
+            await logAffiliateConversion({
+              affiliateCode,
+              conversionType: "one_time_purchase",
+              amountCents: session.amount_total,
+              referredUserId: session.metadata?.supabase_user_id || null,
+              stripePaymentIntentId: session.payment_intent as string | null,
+              metadata: { product: session.metadata?.product || "unknown" },
+            });
+          }
         }
         break;
       }
