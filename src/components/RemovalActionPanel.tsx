@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -56,8 +56,69 @@ export default function RemovalActionPanel({
   const [selectedTemplate, setSelectedTemplate] = useState(removalTemplates[0]);
   const [isCopied, setIsCopied] = useState(false);
   const [isMarking, setIsMarking] = useState(false);
+  const [dbBroker, setDbBroker] = useState<{
+    name: string;
+    slug: string;
+    opt_out_url: string | null;
+    opt_out_difficulty: string | null;
+    opt_out_time_estimate: string | null;
+    instructions: string | null;
+    requires_captcha: boolean | null;
+    requires_phone: boolean | null;
+    requires_id: boolean | null;
+  } | null>(null);
+  const [loadingBroker, setLoadingBroker] = useState(true);
 
-  const brokerGuide = getOptOutGuide(finding.source_name.toLowerCase().replace(/[^a-z]/g, ""));
+  const hardcodedGuide = getOptOutGuide(finding.source_name.toLowerCase().replace(/[^a-z]/g, ""));
+
+  // Fetch broker details from data_brokers table by fuzzy name match
+  useEffect(() => {
+    let cancelled = false;
+    const loadBroker = async () => {
+      const normalizedName = finding.source_name.toLowerCase().trim();
+      const slugCandidate = normalizedName.replace(/[^a-z0-9]/g, "");
+
+      const { data } = await supabase
+        .from("data_brokers")
+        .select("name,slug,opt_out_url,opt_out_difficulty,opt_out_time_estimate,instructions,requires_captcha,requires_phone,requires_id")
+        .eq("is_active", true)
+        .or(`slug.eq.${slugCandidate},name.ilike.${normalizedName}`)
+        .limit(1)
+        .maybeSingle();
+
+      if (cancelled) return;
+      setDbBroker(data ?? null);
+      setLoadingBroker(false);
+    };
+    void loadBroker();
+    return () => {
+      cancelled = true;
+    };
+  }, [finding.source_name]);
+
+  // Build a unified guide from DB > hardcoded > none
+  const brokerGuide = dbBroker
+    ? {
+        name: dbBroker.name,
+        slug: dbBroker.slug,
+        difficulty: (dbBroker.opt_out_difficulty ?? "medium") as "easy" | "medium" | "hard",
+        estimatedTime: dbBroker.opt_out_time_estimate ?? "5-10 minutes",
+        optOutUrl: dbBroker.opt_out_url ?? "",
+        requiresEmail: false,
+        requiresPhone: !!dbBroker.requires_phone,
+        requiresId: !!dbBroker.requires_id,
+        requiresCaptcha: !!dbBroker.requires_captcha,
+        steps: (dbBroker.instructions ?? "")
+          .split("\n")
+          .map((s) => s.trim())
+          .filter(Boolean),
+      }
+    : hardcodedGuide
+      ? { ...hardcodedGuide, requiresCaptcha: false }
+      : null;
+
+  // Prefer the DB opt-out URL when finding doesn't have one
+  const effectiveRemovalUrl = finding.removal_url || dbBroker?.opt_out_url || hardcodedGuide?.optOutUrl || null;
   
   const templateVariables: TemplateVariables = {
     fullName: userName,
@@ -158,7 +219,11 @@ export default function RemovalActionPanel({
             </TabsList>
 
             <TabsContent value="guide" className="mt-4">
-              {brokerGuide ? (
+              {loadingBroker ? (
+                <div className="text-center py-8 text-sm text-muted-foreground">
+                  Loading guide…
+                </div>
+              ) : brokerGuide ? (
                 <div className="space-y-4">
                   {/* Requirements */}
                   <Card>
@@ -176,9 +241,13 @@ export default function RemovalActionPanel({
                         {brokerGuide.requiresId && (
                           <Badge variant="secondary">ID Verification</Badge>
                         )}
-                        {!brokerGuide.requiresEmail && 
-                         !brokerGuide.requiresPhone && 
-                         !brokerGuide.requiresId && (
+                        {brokerGuide.requiresCaptcha && (
+                          <Badge variant="secondary">CAPTCHA</Badge>
+                        )}
+                        {!brokerGuide.requiresEmail &&
+                         !brokerGuide.requiresPhone &&
+                         !brokerGuide.requiresId &&
+                         !brokerGuide.requiresCaptcha && (
                           <Badge variant="secondary" className="bg-green-500/10 text-green-600">
                             No verification required
                           </Badge>
@@ -188,21 +257,29 @@ export default function RemovalActionPanel({
                   </Card>
 
                   {/* Steps */}
-                  <div className="space-y-3">
-                    {brokerGuide.steps.map((step, index) => (
-                      <div key={index} className="flex gap-3">
-                        <div className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-sm font-medium text-primary">
-                          {index + 1}
+                  {brokerGuide.steps.length > 0 ? (
+                    <div className="space-y-3">
+                      {brokerGuide.steps.map((step, index) => (
+                        <div key={index} className="flex gap-3">
+                          <div className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-sm font-medium text-primary">
+                            {index + 1}
+                          </div>
+                          <p className="text-sm pt-0.5">{step}</p>
                         </div>
-                        <p className="text-sm pt-0.5">{step}</p>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      Visit the opt-out page below and follow their on-site instructions.
+                      If they don't offer a self-serve form, switch to the Email Template tab
+                      and send a GDPR/CCPA request.
+                    </p>
+                  )}
 
                   {/* Opt-out Link */}
-                  {finding.removal_url && (
+                  {effectiveRemovalUrl && (
                     <Button className="w-full" asChild>
-                      <a href={finding.removal_url} target="_blank" rel="noopener noreferrer">
+                      <a href={effectiveRemovalUrl} target="_blank" rel="noopener noreferrer">
                         Go to Opt-Out Page
                         <ExternalLink className="h-4 w-4 ml-2" />
                       </a>
@@ -210,18 +287,29 @@ export default function RemovalActionPanel({
                   )}
                 </div>
               ) : (
-                <div className="text-center py-8 space-y-4">
-                  <p className="text-muted-foreground">
-                    No specific guide available for this source.
+                <div className="space-y-4">
+                  <p className="text-sm text-muted-foreground">
+                    {finding.source_name} isn't in our broker database, so we don't have a
+                    step-by-step guide. You can still request removal using the GDPR/CCPA
+                    email template — switch to the <strong>Email Template</strong> tab.
                   </p>
-                  {finding.removal_url && (
-                    <Button asChild>
-                      <a href={finding.removal_url} target="_blank" rel="noopener noreferrer">
-                        Visit Opt-Out Page
+                  {effectiveRemovalUrl && (
+                    <Button asChild className="w-full">
+                      <a href={effectiveRemovalUrl} target="_blank" rel="noopener noreferrer">
+                        Visit Source Page
                         <ExternalLink className="h-4 w-4 ml-2" />
                       </a>
                     </Button>
                   )}
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => setActiveTab("template")}
+                  >
+                    <Mail className="h-4 w-4 mr-2" />
+                    Use Email Template
+                    <ArrowRight className="h-4 w-4 ml-2" />
+                  </Button>
                 </div>
               )}
             </TabsContent>
