@@ -9,15 +9,20 @@ const corsHeaders = {
 
 // Map Stripe price IDs to tiers
 const PRICE_ID_TO_TIER: Record<string, string> = {
-  // Legacy prices (grandfathered users)
-  "price_1SUqvlPwo7CiaABewIGGxC79": "pro", // Legacy Pro Annual $49
-  "price_1SUW44Pwo7CiaABeCXvND0Qj": "pro", // Legacy Pro Monthly $9.99
-  // New Pro prices
-  "price_1Smd2JPwo7CiaABexEEYZMFn": "pro", // Pro Annual $79
-  "price_1Smd2KPwo7CiaABeBeqI5MAG": "pro", // Pro Monthly $12.99
-  // Complete prices
-  "price_1Smd2MPwo7CiaABemCv3b6Lj": "complete", // Complete Annual $129
-  "price_1Smd2NPwo7CiaABeyV6KFls0": "complete", // Complete Monthly $19.99
+  // Legacy/sandbox prices (grandfathered users)
+  "price_1SUqvlPwo7CiaABewIGGxC79": "pro",
+  "price_1SUW44Pwo7CiaABeCXvND0Qj": "pro",
+  "price_1Smd2JPwo7CiaABexEEYZMFn": "pro",
+  "price_1Smd2KPwo7CiaABeBeqI5MAG": "pro",
+  "price_1Smd2MPwo7CiaABemCv3b6Lj": "complete",
+  "price_1Smd2NPwo7CiaABeyV6KFls0": "complete",
+  "price_1TP42pPwo7CiaABejT1heX0l": "family",
+  // LIVE prices
+  "price_1TPPRrPwo7CiaABeUSPGxN2f": "pro",      // Pro Annual $79
+  "price_1TPPRqPwo7CiaABeVCJnjYis": "pro",      // Pro Monthly $12.99
+  "price_1TPPRuPwo7CiaABek9AhNKNz": "complete", // Complete Annual $129
+  "price_1TPPRtPwo7CiaABeFpIzMmVO": "complete", // Complete Monthly $19.99
+  "price_1TPPRwPwo7CiaABeLNoPh4Zp": "family",   // Family Annual $179
 };
 
 const handler = async (req: Request): Promise<Response> => {
