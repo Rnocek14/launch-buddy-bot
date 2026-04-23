@@ -65,6 +65,16 @@ export const DeletionRequestDialog = ({
   const { toast } = useToast();
   const navigate = useNavigate();
 
+  const openReconnectFlow = (message?: string) => {
+    setReconnectMessage(
+      message ||
+        "Your connected Gmail account needs to be reconnected before we can send deletion requests."
+    );
+    setShowPreview(false);
+    onOpenChange(false);
+    setShowReconnectDialog(true);
+  };
+
   // Fetch user identifiers and jurisdiction when dialog opens
   useEffect(() => {
     if (open && service) {
@@ -314,13 +324,10 @@ export const DeletionRequestDialog = ({
       }
 
       if (reconnectFromData || reconnectFromError) {
-        setReconnectMessage(
+        openReconnectFlow(
           data?.error || parsedErrorMessage ||
-          "Your connected Gmail account needs to be reconnected before we can send deletion requests."
+            "Your connected Gmail account needs to be reconnected before we can send deletion requests."
         );
-        setShowPreview(false);
-        onOpenChange(false);
-        setShowReconnectDialog(true);
         setLoading(false);
         return;
       }
@@ -357,6 +364,21 @@ export const DeletionRequestDialog = ({
       }, 2000);
     } catch (error: any) {
       console.error("Error sending deletion request:", error);
+
+      const fallbackMessage = String(error?.message || "");
+      if (
+        fallbackMessage.includes("GMAIL_RECONNECT_REQUIRED") ||
+        fallbackMessage.toLowerCase().includes("reconnect gmail") ||
+        fallbackMessage.toLowerCase().includes("connected gmail account needs to be reconnected") ||
+        fallbackMessage.toLowerCase().includes("failed to refresh access token") ||
+        fallbackMessage.toLowerCase().includes("invalid_grant")
+      ) {
+        openReconnectFlow(
+          "Your connected Gmail session expired. Reconnect Gmail in Settings, then resend the deletion request."
+        );
+        return;
+      }
+
       toast({
         title: "Failed to Send Request",
         description: error.message || "An unexpected error occurred. Please try again.",
