@@ -1,4 +1,4 @@
-import brandIcon from "@/assets/footprint-finder-icon.png";
+import { BrandMark } from "./BrandMark";
 
 export const Footer = () => {
   return (
@@ -7,8 +7,10 @@ export const Footer = () => {
         <div className="flex flex-col md:flex-row justify-between items-center gap-6">
           <div className="flex flex-col items-center md:items-start gap-1">
             <div className="flex items-center gap-2">
-              <img src={brandIcon} alt="Footprint Finder" width={28} height={28} className="w-7 h-7 rounded-md" loading="lazy" />
-              <span className="font-bold text-xl">Footprint Finder</span>
+              <BrandMark className="w-8 h-8 text-foreground" />
+              <span className="font-bold text-xl">
+                Footprint <span className="text-accent">Finder</span>
+              </span>
             </div>
             <p className="text-xs text-muted-foreground tracking-wide uppercase">
               Find it. Remove it. <span className="text-accent font-semibold">Protect</span> your privacy.
