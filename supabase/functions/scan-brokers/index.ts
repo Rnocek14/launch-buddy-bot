@@ -1323,17 +1323,19 @@ Deno.serve(async (req) => {
           .from('data_brokers')
           .select('id, slug')
           .eq('is_active', true)
+          .eq('is_searchable', true)
           .in('id', failedIds);
 
         brokers = filtered || [];
         brokerCount = brokers.length;
         console.log(`[RETRY] Re-scanning ${brokerCount} previously-failed brokers for user ${userId}`);
       } else {
-        // Get all active brokers
+        // Get all active + searchable brokers (skip enterprise aggregators with no public people-search)
         const { data: all, count } = await supabase
           .from('data_brokers')
           .select('id, slug', { count: 'exact' })
-          .eq('is_active', true);
+          .eq('is_active', true)
+          .eq('is_searchable', true);
         brokers = all || [];
         brokerCount = count || 0;
       }

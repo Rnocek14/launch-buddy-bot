@@ -567,6 +567,7 @@ export type Database = {
           id: string
           instructions: string | null
           is_active: boolean | null
+          is_searchable: boolean
           logo_url: string | null
           name: string
           opt_out_difficulty: string | null
@@ -586,6 +587,7 @@ export type Database = {
           id?: string
           instructions?: string | null
           is_active?: boolean | null
+          is_searchable?: boolean
           logo_url?: string | null
           name: string
           opt_out_difficulty?: string | null
@@ -605,6 +607,7 @@ export type Database = {
           id?: string
           instructions?: string | null
           is_active?: boolean | null
+          is_searchable?: boolean
           logo_url?: string | null
           name?: string
           opt_out_difficulty?: string | null
