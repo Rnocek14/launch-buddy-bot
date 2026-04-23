@@ -707,28 +707,42 @@ export const DeletionRequestDialog = ({
           </Alert>
 
           <div className="text-sm text-muted-foreground space-y-1">
-            <p className="font-medium text-foreground">What to do:</p>
+            <p className="font-medium text-foreground">What happens next:</p>
             <ol className="list-decimal list-inside space-y-1">
               <li>Click <strong>Reconnect Gmail</strong> below</li>
-              <li>Sign in with the same Google account</li>
-              <li>Approve the "send email" permission</li>
-              <li>Return here and try again</li>
+              <li>A small Google sign-in window will open</li>
+              <li>Sign in and approve the "send email" permission</li>
+              <li>We'll automatically resend your deletion request</li>
             </ol>
           </div>
 
           <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={() => setShowReconnectDialog(false)}>
-              Not now
-            </Button>
             <Button
+              variant="ghost"
               onClick={() => {
                 setShowReconnectDialog(false);
                 navigate("/settings");
               }}
+              disabled={reconnecting}
+            >
+              Open Settings instead
+            </Button>
+            <Button
+              onClick={handleInlineReconnect}
+              disabled={reconnecting}
               className="gap-2"
             >
-              <Mail className="h-4 w-4" />
-              Reconnect Gmail
+              {reconnecting ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Waiting for sign-in…
+                </>
+              ) : (
+                <>
+                  <Mail className="h-4 w-4" />
+                  Reconnect Gmail
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
