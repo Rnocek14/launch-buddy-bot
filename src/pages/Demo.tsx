@@ -5,7 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Shield, Search, TrendingUp, Calendar, Activity, ExternalLink, CheckCircle, Clock, AlertCircle } from "lucide-react";
+import { Search, TrendingUp, Calendar, Activity, ExternalLink, CheckCircle, Clock, AlertCircle } from "lucide-react";
+import { BrandMark } from "@/components/BrandMark";
 import { RiskScoreCard } from "@/components/RiskScoreCard";
 import { DeletionProgressTracker } from "@/components/DeletionProgressTracker";
 import { Navbar } from "@/components/Navbar";
@@ -80,7 +81,7 @@ export default function Demo() {
             onClick={() => navigate('/auth')} 
             className="gap-2"
           >
-            <Shield className="w-4 h-4" />
+            <BrandMark className="w-4 h-4" />
             Scan Your Own Inbox
           </Button>
         </div>
@@ -259,9 +260,7 @@ export default function Demo() {
             <Card className="border-primary/30 bg-gradient-to-br from-primary/5 to-accent/5">
               <CardContent className="pt-6">
                 <div className="text-center space-y-4">
-                  <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-primary/10">
-                    <Shield className="w-6 h-6 text-primary" />
-                  </div>
+                  <BrandMark className="w-12 h-12 mx-auto" />
                   <div>
                     <h3 className="text-lg font-semibold">Ready to discover your real footprint?</h3>
                     <p className="text-muted-foreground text-sm mt-1">
@@ -269,7 +268,7 @@ export default function Demo() {
                     </p>
                   </div>
                   <Button onClick={() => navigate('/auth')} className="gap-2">
-                    <Shield className="w-4 h-4" />
+                    <BrandMark className="w-4 h-4" />
                     Get Started Free
                   </Button>
                   <p className="text-xs text-muted-foreground">

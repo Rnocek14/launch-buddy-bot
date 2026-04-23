@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
-import { Shield, Loader2, Chrome, Mail } from "lucide-react";
+import { Loader2, Chrome, Mail } from "lucide-react";
+import { BrandMark } from "@/components/BrandMark";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -359,9 +360,7 @@ export default function Auth() {
     <div className="min-h-screen flex items-center justify-center p-4 sm:p-6 bg-background">
       <Card className="w-full max-w-md shadow-lg">
         <CardHeader className="text-center space-y-4">
-          <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-primary to-accent p-3">
-            <Shield className="w-full h-full text-primary-foreground" />
-          </div>
+          <BrandMark className="w-16 h-16 mx-auto" />
           <div>
             <CardTitle className="text-2xl">Footprint Finder</CardTitle>
             <CardDescription className="mt-2">Sign in to discover your digital footprint</CardDescription>

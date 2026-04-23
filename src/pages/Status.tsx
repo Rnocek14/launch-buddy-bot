@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
+import { Navbar } from "@/components/Navbar";
+import { Footer } from "@/components/Footer";
 
 type OverallStatus = "operational" | "degraded" | "major_outage" | "unknown";
 
@@ -124,8 +126,9 @@ export default function Status() {
   const overallStatus = snapshot?.overall.status ?? "unknown";
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="max-w-5xl mx-auto px-4 py-10 space-y-8">
+    <div className="min-h-screen bg-background flex flex-col">
+      <Navbar />
+      <div className="max-w-5xl mx-auto px-4 py-10 pt-24 space-y-8 flex-1 w-full">
         {/* Header */}
         <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -384,6 +387,7 @@ export default function Status() {
           </>
         )}
       </div>
+      <Footer />
     </div>
   );
 }

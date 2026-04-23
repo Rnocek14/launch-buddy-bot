@@ -130,8 +130,8 @@ export const Pricing = () => {
         {/* Launch Pricing Banner */}
         <div className="mb-8 rounded-xl border border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950/30 px-4 py-3 text-xs md:text-sm flex flex-col md:flex-row md:items-center md:justify-between gap-2">
           <div>
-            <span className="font-medium">Three simple plans:</span>{" "}
-            Free to start, <span className="font-semibold">Pro at $79/year</span>, or <span className="font-semibold">Complete at $129/year</span> for everything.
+            <span className="font-medium">Simple plans for every need:</span>{" "}
+            Free to start, <span className="font-semibold">Pro at $79/year</span>, <span className="font-semibold">Complete at $129/year</span>, or <span className="font-semibold">Family at $179/year</span>.
           </div>
           <div className="text-emerald-700 dark:text-emerald-400 font-medium">
             No hidden fees • Cancel anytime
@@ -161,15 +161,16 @@ export const Pricing = () => {
                     : "border-border/50"
                 }`}
               >
-                {plan.badge && (
-                  <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-primary to-accent">
-                    {plan.badge}
+                {plan.popular ? (
+                  <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary whitespace-nowrap">
+                    Most Popular {plan.badge ? `• ${plan.badge}` : ""}
                   </Badge>
-                )}
-                {plan.popular && (
-                  <Badge className="absolute -top-3 right-4 bg-primary">
-                    Most Popular
-                  </Badge>
+                ) : (
+                  plan.badge && (
+                    <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-primary to-accent whitespace-nowrap">
+                      {plan.badge}
+                    </Badge>
+                  )
                 )}
                 <CardHeader>
                   <div className="flex items-center gap-2 mb-2">
