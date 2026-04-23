@@ -2548,7 +2548,10 @@ Extract all relevant contact methods for data deletion requests.`;
         if (quarantined) {
           console.log(`[T2] Skipped (quarantined) → ${t2Domain}`);
         } else {
-          const seedUrl = urlsToTry.length > 0 ? urlsToTry[0] : `https://${t2Domain}`;
+          // Prefer a known canonical URL or first privacy-pathed candidate over a generic homepage
+          const knownForDomain = KNOWN_PRIVACY_URLS[t2Domain.toLowerCase()] ?? [];
+          const privacyPathed = urlsToTry.find(u => /\/(privacy|legal|datenschutz|info\/privacy|policies)/i.test(u));
+          const seedUrl = knownForDomain[0] || privacyPathed || urlsToTry[0] || `https://${t2Domain}`;
           const requestId = crypto.randomUUID();
           await supabase.from('t2_retries').insert({
             domain: t2Domain.toLowerCase(),
