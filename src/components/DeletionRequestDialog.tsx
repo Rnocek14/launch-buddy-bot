@@ -177,15 +177,9 @@ export const DeletionRequestDialog = ({
 
   const handleContactDiscovered = () => {
     console.log('[DeletionRequest] handleContactDiscovered called');
-    // Refresh contact status after discovery
+    // Refresh contact availability after verification so the user can continue to preview/send.
     checkContactStatus();
-    console.log('[DeletionRequest] NOT showing duplicate toast - ContactDiscovery already showed one');
-    // Don't show toast here - ContactDiscoveryDialog already shows "Contact Verified!" toast
-    // Notify parent component to refresh services
-    if (onSuccess) {
-      console.log('[DeletionRequest] Calling onSuccess callback');
-      onSuccess();
-    }
+    console.log('[DeletionRequest] Contact verified; waiting for preview/send before any success callback');
   };
 
   const getTemplateType = (jurisdiction: string): string => {
