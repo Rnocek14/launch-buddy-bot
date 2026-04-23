@@ -2,7 +2,7 @@ import { cn } from "@/lib/utils";
 
 interface BrandMarkProps {
   className?: string;
-  /** Color of the footprint silhouette. Defaults to currentColor so it adapts to light/dark surfaces. */
+  /** Color of the footprint silhouette. Defaults to currentColor. */
   footColor?: string;
   /** Color of the dashed scan ring + accent dot. Defaults to brand orange. */
   ringColor?: string;
@@ -11,8 +11,10 @@ interface BrandMarkProps {
 
 /**
  * Footprint Finder brand mark.
- * Dashed orange scan ring + footprint silhouette + accent dot (lower-right).
- * Transparent background, scales to any size, inherits foot color from text.
+ *
+ * Hand-crafted SVG: dashed orange scan ring + bold filled footprint + accent dot.
+ * The footprint is intentionally chunky and slightly "cute" (baby-footprint stamp
+ * style) so it remains recognizable down to ~24px. Foot inherits currentColor.
  */
 export const BrandMark = ({
   className,
@@ -23,13 +25,14 @@ export const BrandMark = ({
   const cx = 50;
   const cy = 50;
   const r = 40;
-  // 8 segments around the ring
+
+  // 8 dash segments around ring with a noticeable gap on lower-right for the dot
   const circumference = 2 * Math.PI * r;
   const segLen = (circumference * 32) / 360;
   const gapLen = (circumference * 13) / 360;
   const dashArray = `${segLen} ${gapLen}`;
 
-  // Accent dot at ~35deg below horizontal on right
+  // Accent dot at ~35° below horizontal on the right
   const dotAngle = 35;
   const dotX = cx + r * Math.cos((Math.PI / 180) * dotAngle);
   const dotY = cy + r * Math.sin((Math.PI / 180) * dotAngle);
@@ -60,34 +63,34 @@ export const BrandMark = ({
       <circle cx={dotX} cy={dotY} r="5" fill={ringColor} />
 
       {/*
-        Footprint — proper anatomical silhouette.
-        Sole is an asymmetric teardrop: wider at the ball (top), narrower at the heel (bottom).
-        Designed at viewBox 100x100, foot occupies roughly y=22 (toes) to y=78 (heel base).
+        Footprint — chunky baby-stamp style, vertical orientation.
+        Big rounded sole bottom + 5 toe pads in an arc on top.
+        Sole occupies y=42..76, toes y=22..40. All pads are GENEROUSLY sized
+        and slightly overlap the sole so the mark stays legible at small sizes.
       */}
-      <g fill={footColor} fillRule="evenodd">
-        {/* Ball + arch + heel as one continuous shape (right-foot orientation, big toe on left) */}
+      <g fill={footColor}>
+        {/* Sole — single chunky teardrop, wider at top (ball of foot), rounded heel */}
         <path d="
-          M 50 36
-          C 58.5 36, 64 41, 64 49
-          C 64 53.5, 62.5 57, 60 60
-          C 57 64, 56 67, 56 70.5
-          C 56 75, 53 78, 50 78
-          C 47 78, 44 75, 44 70.5
-          C 44 67, 43 64, 40 60
-          C 37.5 57, 36 53.5, 36 49
-          C 36 41, 41.5 36, 50 36
+          M 50 42
+          C 60 42, 65 48, 65 56
+          C 65 64, 62 70, 58 73
+          C 55 75, 53 76, 50 76
+          C 47 76, 45 75, 42 73
+          C 38 70, 35 64, 35 56
+          C 35 48, 40 42, 50 42
           Z
         " />
-        {/* Big toe — leftmost & largest, slightly higher */}
-        <ellipse cx="41.5" cy="27" rx="3.6" ry="4.6" transform="rotate(-8 41.5 27)" />
+        {/* Toes arranged in an arc above sole, big toe leftmost */}
+        {/* Big toe — biggest, most prominent */}
+        <ellipse cx="38" cy="34" rx="4.5" ry="5.5" />
         {/* Toe 2 */}
-        <ellipse cx="47" cy="24" rx="2.9" ry="3.7" />
-        {/* Toe 3 */}
-        <ellipse cx="52.5" cy="24" rx="2.6" ry="3.3" />
+        <ellipse cx="46" cy="29" rx="3.5" ry="4.3" />
+        {/* Toe 3 — center top */}
+        <ellipse cx="53" cy="28" rx="3.2" ry="4" />
         {/* Toe 4 */}
-        <ellipse cx="57" cy="25.5" rx="2.3" ry="2.9" />
-        {/* Pinky toe — smallest, lowest */}
-        <ellipse cx="60.5" cy="28" rx="2" ry="2.5" />
+        <ellipse cx="59.5" cy="30" rx="3" ry="3.7" />
+        {/* Pinky toe — smallest */}
+        <ellipse cx="64" cy="34" rx="2.6" ry="3.2" />
       </g>
     </svg>
   );
