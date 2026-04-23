@@ -10,8 +10,25 @@ import { TrustBar } from "@/components/TrustBar";
 import { FAQ } from "@/components/FAQ";
 import { Footer } from "@/components/Footer";
 import { useSEO } from "@/hooks/useSEO";
+import { useEffect } from "react";
 
 const Index = () => {
+  // Handle direct hash navigation (e.g. /#pricing) on initial mount
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const hash = window.location.hash.replace("#", "");
+    if (!hash) return;
+    // Wait for sections to mount
+    const t = setTimeout(() => {
+      const el = document.getElementById(hash);
+      if (el) {
+        const top = el.getBoundingClientRect().top + window.pageYOffset - 80;
+        window.scrollTo({ top, behavior: "smooth" });
+      }
+    }, 250);
+    return () => clearTimeout(t);
+  }, []);
+
   useSEO({
     title: "Footprint Finder — Continuously Monitor Your Digital Exposure",
     description:
