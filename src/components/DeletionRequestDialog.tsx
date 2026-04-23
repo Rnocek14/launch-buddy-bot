@@ -562,6 +562,53 @@ export const DeletionRequestDialog = ({
         onOpenChange={setShowUpgradeModal}
         remainingServices={remainingServices}
       />
+
+      <Dialog open={showReconnectDialog} onOpenChange={setShowReconnectDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Mail className="h-5 w-5 text-primary" />
+              Reconnect Gmail to Continue
+            </DialogTitle>
+            <DialogDescription className="pt-2">
+              {reconnectMessage || "Your Gmail connection has expired or is missing the permission needed to send deletion requests on your behalf."}
+            </DialogDescription>
+          </DialogHeader>
+
+          <Alert className="border-primary/30 bg-primary/5">
+            <AlertTriangle className="h-4 w-4 text-primary" />
+            <AlertDescription className="text-sm">
+              We send deletion requests <strong>from your own email address</strong> so services recognize you as the account owner. This requires an active Gmail connection with send access.
+            </AlertDescription>
+          </Alert>
+
+          <div className="text-sm text-muted-foreground space-y-1">
+            <p className="font-medium text-foreground">What to do:</p>
+            <ol className="list-decimal list-inside space-y-1">
+              <li>Click <strong>Reconnect Gmail</strong> below</li>
+              <li>Sign in with the same Google account</li>
+              <li>Approve the "send email" permission</li>
+              <li>Return here and try again</li>
+            </ol>
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setShowReconnectDialog(false)}>
+              Not now
+            </Button>
+            <Button
+              onClick={() => {
+                setShowReconnectDialog(false);
+                navigate("/settings");
+              }}
+              className="gap-2"
+            >
+              <Mail className="h-4 w-4" />
+              Reconnect Gmail
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 };
