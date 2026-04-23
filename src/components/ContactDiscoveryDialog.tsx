@@ -217,27 +217,8 @@ export const ContactDiscoveryDialog = ({
       if (validationError) throw validationError;
 
       if (validationData.validation.isValid) {
-        // MX validation passed, now approve the contact
-        const { error: approveError } = await supabase
-          .from("privacy_contacts")
-          .update({ verified: true })
-          .eq("id", contact.id);
-
-        if (approveError) throw approveError;
-
-        // Update service catalog
-        const { error: catalogError } = await supabase
-          .from("service_catalog")
-          .update({
-            contact_verified: true,
-            privacy_email: contact.value,
-          })
-          .eq("id", service.id);
-
-        if (catalogError) {
-          console.error("Error updating service catalog:", catalogError);
-        }
-
+        // Edge function already updated privacy_contacts (verified=true, mx_validated=true)
+        // and service_catalog (contact_verified=true, privacy_email).
         console.log('[ContactDiscovery] Showing Contact Verified toast');
         toast({
           title: "Contact Verified!",
