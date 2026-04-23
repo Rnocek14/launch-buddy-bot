@@ -185,20 +185,13 @@ export const DeletionRequestDialog = ({
   const getTemplateType = (jurisdiction: string): string => {
     if (jurisdiction.includes("EU") || jurisdiction === "GDPR") {
       return "gdpr";
-    } else if (jurisdiction === "US-CA" || jurisdiction === "CCPA" || jurisdiction === "US") {
+    }
+
+    if (["US-CA", "CCPA", "US", "California"].includes(jurisdiction)) {
       return "ccpa";
     }
-    return "general_deletion";
-  };
 
-  // Map jurisdiction codes to the values stored in request_templates table
-  const getTemplateJurisdictions = (jurisdiction: string): string[] => {
-    if (jurisdiction.includes("EU") || jurisdiction === "GDPR") {
-      return ["EU", "GLOBAL", "OTHER"];
-    } else if (jurisdiction === "US-CA" || jurisdiction === "CCPA" || jurisdiction === "US") {
-      return ["US", "GLOBAL", "OTHER"];
-    }
-    return ["OTHER", "GLOBAL"];
+    return "general_deletion";
   };
 
   const handlePreview = async () => {
@@ -213,107 +206,39 @@ export const DeletionRequestDialog = ({
 
     setLoading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("User not authenticated");
+      const { data, error } = await supabase.functions.invoke("send-deletion-request", {
+        body: {
+          service_id: service.id,
+          identifier_id: selectedIdentifierId || undefined,
+          account_identifier: accountIdentifier || undefined,
+          template_type: getTemplateType(jurisdiction),
+          preview_only: true,
+        },
+      });
 
-      // Fetch user profile and authorization
-      const [profileRes, authRes, identifierRes] = await Promise.all([
-        supabase.from("profiles").select("*").eq("id", user.id).single(),
-        supabase.from("user_authorizations").select("*").eq("user_id", user.id).is("revoked_at", null).order("created_at", { ascending: false }).limit(1).single(),
-        selectedIdentifierId ? supabase.from("user_identifiers").select("*").eq("id", selectedIdentifierId).single() : Promise.resolve({ data: null })
-      ]);
+      if (error) {
+        let message = error.message || "Failed to generate preview";
 
-      const profile = profileRes.data;
-      const authorization = authRes.data;
-      const identifier = identifierRes.data;
-
-      if (!profile || !authorization) {
-        throw new Error("User profile or authorization not found");
-      }
-
-      // Fetch service details
-      const { data: serviceData } = await supabase
-        .from("service_catalog")
-        .select("*")
-        .eq("id", service.id)
-        .single();
-
-      // Fetch template — try jurisdiction-specific first, then fallback
-      const templateType = getTemplateType(jurisdiction);
-      const allowedJurisdictions = getTemplateJurisdictions(jurisdiction);
-
-      let template: any = null;
-
-      // Try exact template_type match across allowed jurisdictions
-      const { data: typedTemplates } = await supabase
-        .from("request_templates")
-        .select("*")
-        .eq("is_active", true)
-        .eq("template_type", templateType)
-        .in("jurisdiction", allowedJurisdictions);
-
-      if (typedTemplates && typedTemplates.length > 0) {
-        // Prefer the most specific jurisdiction (first in the list)
-        for (const j of allowedJurisdictions) {
-          const match = typedTemplates.find((t) => t.jurisdiction === j);
-          if (match) { template = match; break; }
+        try {
+          if ("context" in error && error.context && typeof error.context.json === "function") {
+            const errorBody = await error.context.json();
+            message = errorBody?.error || message;
+          }
+        } catch (parseError) {
+          console.warn("Failed to parse preview error response", parseError);
         }
-        template = template || typedTemplates[0];
+
+        throw new Error(message);
       }
 
-      // Fallback: any active general_deletion template
-      if (!template) {
-        const { data: fallback } = await supabase
-          .from("request_templates")
-          .select("*")
-          .eq("is_active", true)
-          .eq("template_type", "general_deletion")
-          .limit(1);
-        template = fallback?.[0] || null;
+      if (!data?.preview || !data?.subject || !data?.body || !data?.recipient) {
+        throw new Error("Preview data was incomplete.");
       }
-
-      if (!template) {
-        throw new Error("No deletion template available. Please contact support.");
-      }
-
-      // Resolve recipient email — privacy_contacts first, then service_catalog
-      let recipientEmail = "";
-      const { data: contactRow } = await supabase
-        .from("privacy_contacts")
-        .select("value")
-        .eq("service_id", service.id)
-        .eq("contact_type", "email")
-        .eq("verified", true)
-        .limit(1)
-        .maybeSingle();
-      recipientEmail = contactRow?.value || serviceData?.privacy_email || "";
-
-      if (!recipientEmail) {
-        throw new Error("No verified privacy contact email found for this service.");
-      }
-
-      const identifierValue = identifier?.value || accountIdentifier;
-      const signatureData = authorization.signature_data as any;
-      const signature = signatureData?.text || profile.full_name || "Authorized User";
-
-      // Personalize template
-      const personalizedBody = template.body_template
-        .replace(/\{\{user_full_name\}\}/g, profile.full_name || "User")
-        .replace(/\{\{full_name\}\}/g, profile.full_name || "User")
-        .replace(/\{\{user_email\}\}/g, profile.email || user.email || "")
-        .replace(/\{\{email\}\}/g, profile.email || user.email || "")
-        .replace(/\{\{account_identifier\}\}/g, identifierValue || profile.email || user.email || "")
-        .replace(/\{\{jurisdiction\}\}/g, jurisdiction)
-        .replace(/\{\{signature\}\}/g, signature)
-        .replace(/\{\{service_name\}\}/g, service.name);
-
-      const personalizedSubject = template.subject_template
-        .replace(/\{\{service_name\}\}/g, service.name);
 
       setEmailPreview({
-        subject: personalizedSubject,
-        body: personalizedBody,
-        recipientEmail,
+        subject: data.subject,
+        body: data.body,
+        recipientEmail: data.recipient,
       });
       setShowPreview(true);
     } catch (error: any) {

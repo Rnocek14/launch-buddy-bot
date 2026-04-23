@@ -15,36 +15,58 @@ interface DeletionRequestBody {
   identifier_id?: string;
   account_identifier?: string;
   template_type?: string;
+  preview_only?: boolean;
+}
+
+function jsonResponse(body: Record<string, unknown>, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
 }
 
 // Sanitize user input to prevent template injection
-function sanitizeForEmail(text: string): string {
-  if (!text) return '';
+function sanitizeForEmail(text: string) {
+  if (!text) return "";
   return text
-    .replace(/<[^>]*>/g, '') // Strip HTML tags
-    .replace(/[\r\n]+/g, ' ') // Remove newlines that could manipulate email content
+    .replace(/<[^>]*>/g, "")
+    .replace(/[\r\n]+/g, " ")
     .trim()
-    .substring(0, 500); // Limit length to reasonable size
+    .substring(0, 500);
+}
+
+function isEuJurisdiction(jurisdiction: string) {
+  return jurisdiction.includes("EU") || jurisdiction === "GDPR";
+}
+
+function isUsDeletionJurisdiction(jurisdiction: string) {
+  return ["US-CA", "CCPA", "US", "California"].includes(jurisdiction);
+}
+
+function getTemplateTypeForJurisdiction(jurisdiction: string) {
+  if (isEuJurisdiction(jurisdiction)) return "gdpr";
+  if (isUsDeletionJurisdiction(jurisdiction)) return "ccpa";
+  return "general_deletion";
+}
+
+function getAllowedTemplateJurisdictions(jurisdiction: string) {
+  if (isEuJurisdiction(jurisdiction)) return ["EU", "GLOBAL", "OTHER"];
+  if (isUsDeletionJurisdiction(jurisdiction)) return ["US", "GLOBAL", "OTHER"];
+  return ["OTHER", "GLOBAL"];
 }
 
 const handler = async (req: Request): Promise<Response> => {
-  // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    // Get authorization header
     const authHeader = req.headers.get("authorization");
     if (!authHeader) {
       console.error("Missing authorization header");
-      return new Response(
-        JSON.stringify({ error: "Unauthorized - missing auth header" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return jsonResponse({ error: "Unauthorized - missing auth header" }, 401);
     }
 
-    // Initialize Supabase client with auth
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey, {
@@ -53,65 +75,72 @@ const handler = async (req: Request): Promise<Response> => {
       },
     });
 
-    // Get authenticated user
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
     if (userError || !user) {
       console.error("User authentication failed:", userError);
-      return new Response(
-        JSON.stringify({ error: "Unauthorized - invalid token" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return jsonResponse({ error: "Unauthorized - invalid token" }, 401);
     }
 
     console.log(`Processing deletion request for user: ${user.id}`);
 
-    // Check if user is authorized agent
-    const { data: authData, error: authError } = await supabase.rpc(
-      "is_authorized_agent",
-      { user_uuid: user.id }
-    );
+    const { data: authData, error: authError } = await supabase.rpc("is_authorized_agent", {
+      user_uuid: user.id,
+    });
 
     if (authError || !authData) {
       console.error("Authorization check failed:", authError);
-      return new Response(
-        JSON.stringify({ 
+      return jsonResponse(
+        {
           error: "User is not an authorized agent. Please complete the authorization wizard first.",
-          requiresAuthorization: true
-        }),
-        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          requiresAuthorization: true,
+        },
+        403,
       );
     }
 
-    // Check subscription tier and deletion limits
+    const body: DeletionRequestBody = await req.json();
+    const {
+      service_id,
+      identifier_id,
+      account_identifier,
+      template_type,
+      preview_only = false,
+    } = body;
+
+    if (!service_id) {
+      return jsonResponse({ error: "Missing required field: service_id" }, 400);
+    }
+
     const { data: remainingDeletions, error: tierError } = await supabase.rpc(
       "get_remaining_deletions",
-      { p_user_id: user.id }
+      { p_user_id: user.id },
     );
 
     if (tierError) {
       console.error("Error checking subscription tier:", tierError);
-      return new Response(
-        JSON.stringify({ error: "Failed to verify subscription status" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return jsonResponse({ error: "Failed to verify subscription status" }, 500);
     }
 
-    // If remainingDeletions is not null and is 0, user has hit their limit
-    if (remainingDeletions !== null && remainingDeletions <= 0) {
+    if (!preview_only && remainingDeletions !== null && remainingDeletions <= 0) {
       console.log(`User ${user.id} has reached their free deletion limit`);
-      return new Response(
-        JSON.stringify({ 
+      return jsonResponse(
+        {
           error: "You've used all 3 free deletion requests this month. Upgrade to Pro for unlimited deletions.",
           limitReached: true,
-          remainingDeletions: 0
-        }),
-        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          remainingDeletions: 0,
+        },
+        403,
       );
     }
 
-    console.log(`User ${user.id} has ${remainingDeletions === null ? 'unlimited' : remainingDeletions} deletions remaining`);
+    console.log(
+      `User ${user.id} has ${remainingDeletions === null ? "unlimited" : remainingDeletions} deletions remaining`,
+    );
 
-    // Check if user has Gmail connected
     const { data: gmailConnection } = await supabase
       .from("email_connections")
       .select("*")
@@ -123,18 +152,6 @@ const handler = async (req: Request): Promise<Response> => {
     const useGmail = !!gmailConnection;
     console.log(`User ${user.id} Gmail connection status:`, useGmail);
 
-    // Parse request body
-    const body: DeletionRequestBody = await req.json();
-    const { service_id, identifier_id, account_identifier, template_type = "global" } = body;
-
-    if (!service_id) {
-      return new Response(
-        JSON.stringify({ error: "Missing required field: service_id" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Fetch identifier if provided
     let selectedIdentifier: any = null;
     let identifierValue = account_identifier;
 
@@ -148,10 +165,7 @@ const handler = async (req: Request): Promise<Response> => {
 
       if (identifierError || !identifierData) {
         console.error("Identifier not found or unauthorized:", identifierError);
-        return new Response(
-          JSON.stringify({ error: "Invalid or unauthorized identifier" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        return jsonResponse({ error: "Invalid or unauthorized identifier" }, 400);
       }
 
       selectedIdentifier = identifierData;
@@ -159,9 +173,6 @@ const handler = async (req: Request): Promise<Response> => {
       console.log(`Using identifier: ${identifierData.type} - ${identifierData.value}`);
     }
 
-    console.log(`Fetching service details for: ${service_id}`);
-
-    // Get service details
     const { data: service, error: serviceError } = await supabase
       .from("service_catalog")
       .select("*")
@@ -170,13 +181,9 @@ const handler = async (req: Request): Promise<Response> => {
 
     if (serviceError || !service) {
       console.error("Service not found:", serviceError);
-      return new Response(
-        JSON.stringify({ error: "Service not found" }),
-        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return jsonResponse({ error: "Service not found" }, 404);
     }
 
-    // Get user authorization details
     const { data: authorization, error: authzError } = await supabase
       .from("user_authorizations")
       .select("*")
@@ -188,13 +195,9 @@ const handler = async (req: Request): Promise<Response> => {
 
     if (authzError || !authorization) {
       console.error("Authorization record not found:", authzError);
-      return new Response(
-        JSON.stringify({ error: "Authorization details not found" }),
-        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return jsonResponse({ error: "Authorization details not found" }, 404);
     }
 
-    // Get user profile
     const { data: profile, error: profileError } = await supabase
       .from("profiles")
       .select("*")
@@ -203,68 +206,93 @@ const handler = async (req: Request): Promise<Response> => {
 
     if (profileError || !profile) {
       console.error("Profile not found:", profileError);
-      return new Response(
-        JSON.stringify({ error: "User profile not found" }),
-        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return jsonResponse({ error: "User profile not found" }, 404);
     }
 
-    // Get appropriate template based on jurisdiction
     const jurisdiction = authorization.jurisdiction || "GLOBAL";
-    console.log(`Fetching template for jurisdiction: ${jurisdiction}, template_type: ${template_type}`);
+    const resolvedTemplateType =
+      template_type && template_type !== "auto"
+        ? template_type
+        : getTemplateTypeForJurisdiction(jurisdiction);
+    const allowedJurisdictions = getAllowedTemplateJurisdictions(jurisdiction);
 
-    // Map jurisdiction to template lookup
-    let templateQuery = supabase
+    console.log(
+      `Fetching template for jurisdiction: ${jurisdiction}, template_type: ${resolvedTemplateType}`,
+    );
+
+    let template: any = null;
+
+    const { data: typedTemplates, error: templateError } = await supabase
       .from("request_templates")
       .select("*")
-      .eq("is_active", true);
+      .eq("is_active", true)
+      .eq("template_type", resolvedTemplateType)
+      .in("jurisdiction", allowedJurisdictions);
 
-    // If template_type is provided, use it; otherwise select based on jurisdiction
-    if (template_type !== "auto") {
-      templateQuery = templateQuery.eq("template_type", template_type);
-    } else {
-      // Auto-select template based on jurisdiction
-      if (jurisdiction.includes("EU") || jurisdiction === "GDPR") {
-        templateQuery = templateQuery.eq("template_type", "gdpr");
-      } else if (jurisdiction === "US-CA" || jurisdiction === "CCPA") {
-        templateQuery = templateQuery.eq("template_type", "ccpa");
-      } else {
-        templateQuery = templateQuery.eq("template_type", "global");
+    if (templateError) {
+      console.error("Template lookup failed:", templateError);
+      return jsonResponse({ error: "Unable to load deletion template" }, 500);
+    }
+
+    if (typedTemplates && typedTemplates.length > 0) {
+      for (const targetJurisdiction of allowedJurisdictions) {
+        const match = typedTemplates.find((candidate) => candidate.jurisdiction === targetJurisdiction);
+        if (match) {
+          template = match;
+          break;
+        }
       }
+
+      template = template || typedTemplates[0];
     }
 
-    const { data: templates, error: templateError } = await templateQuery
-      .or(`jurisdiction.eq.${jurisdiction},jurisdiction.eq.GLOBAL`)
-      .order("jurisdiction", { ascending: false }); // Prioritize specific jurisdiction over GLOBAL
+    if (!template) {
+      const { data: fallback, error: fallbackError } = await supabase
+        .from("request_templates")
+        .select("*")
+        .eq("is_active", true)
+        .eq("template_type", "general_deletion")
+        .limit(1);
 
-    if (templateError || !templates || templates.length === 0) {
-      console.error("No templates found:", templateError);
-      return new Response(
-        JSON.stringify({ error: "No suitable template found" }),
-        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      if (fallbackError) {
+        console.error("Fallback template lookup failed:", fallbackError);
+        return jsonResponse({ error: "Unable to load deletion template" }, 500);
+      }
+
+      template = fallback?.[0] || null;
     }
 
-    const template = templates[0];
+    if (!template) {
+      console.error("No suitable template found");
+      return jsonResponse({ error: "No suitable template found" }, 404);
+    }
+
     console.log(`Using template: ${template.name}`);
 
-    // Personalize the email template with sanitized user inputs
-    const signature = sanitizeForEmail(authorization.signature_data?.text || profile.full_name || "Authorized User");
-    const personalizedBody = template.body_template
+    const signature = sanitizeForEmail(
+      authorization.signature_data?.text || profile.full_name || "Authorized User",
+    );
+    const sanitizedServiceName = sanitizeForEmail(service.name);
+    const personalizedBody = String(template.body_template || "")
       .replace(/\{\{user_full_name\}\}/g, sanitizeForEmail(profile.full_name || "User"))
       .replace(/\{\{full_name\}\}/g, sanitizeForEmail(profile.full_name || "User"))
       .replace(/\{\{user_email\}\}/g, sanitizeForEmail(profile.email || user.email || ""))
       .replace(/\{\{email\}\}/g, sanitizeForEmail(profile.email || user.email || ""))
-      .replace(/\{\{account_identifier\}\}/g, sanitizeForEmail(identifierValue || profile.email || user.email || ""))
+      .replace(
+        /\{\{account_identifier\}\}/g,
+        sanitizeForEmail(identifierValue || profile.email || user.email || ""),
+      )
       .replace(/\{\{jurisdiction\}\}/g, sanitizeForEmail(jurisdiction))
-      .replace(/\{\{signature\}\}/g, signature);
+      .replace(/\{\{signature\}\}/g, signature)
+      .replace(/\{\{service_name\}\}/g, sanitizedServiceName);
 
-    const subject = template.subject_template || `Data Deletion Request - ${service.name}`;
+    const subject = String(template.subject_template || `Data Deletion Request - ${service.name}`).replace(
+      /\{\{service_name\}\}/g,
+      sanitizedServiceName,
+    );
 
-    // PHASE 1: Strict contact validation - Block unverified sends
     console.log(`Selecting best contact for service: ${service.name}`);
-    
-    // Priority 1: Verified email from privacy_contacts table
+
     const { data: verifiedContact } = await supabase
       .from("privacy_contacts")
       .select("*")
@@ -282,65 +310,71 @@ const handler = async (req: Request): Promise<Response> => {
       recipientEmail = verifiedContact.value;
       contactSource = "verified_privacy_contacts";
       console.log(`Using verified contact from privacy_contacts: ${recipientEmail}`);
-    } 
-    // Priority 2: Service catalog privacy_email (only if contact_verified=true)
-    else if (service.privacy_email && service.contact_verified) {
+    } else if (service.privacy_email && service.contact_verified) {
       recipientEmail = service.privacy_email;
       contactSource = "verified_catalog";
       console.log(`Using verified catalog email: ${recipientEmail}`);
-    }
-    // Priority 3: Privacy form URL (different flow - not implemented in Phase 1)
-    else if (service.privacy_form_url) {
+    } else if (service.privacy_form_url) {
       console.log("Service has form URL but form submission not implemented yet");
-      return new Response(
-        JSON.stringify({ 
-          error: "This service requires manual form submission for deletion requests. Form-based deletion is coming soon.",
+      return jsonResponse(
+        {
+          error:
+            "This service requires manual form submission for deletion requests. Form-based deletion is coming soon.",
           contactMethod: "form",
           formUrl: service.privacy_form_url,
-          serviceName: service.name
-        }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          serviceName: service.name,
+        },
+        400,
       );
     }
-    
-    // BLOCK: No verified contact available
+
     if (!recipientEmail) {
       console.error(`No verified contact found for service: ${service.name}`);
-      return new Response(
-        JSON.stringify({ 
-          error: "This service does not have a verified contact email. We're working to verify contact information for all services.",
+      return jsonResponse(
+        {
+          error:
+            "This service does not have a verified contact email. We're working to verify contact information for all services.",
           needsVerification: true,
           serviceName: service.name,
-          serviceId: service_id
-        }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          serviceId: service_id,
+        },
+        400,
       );
+    }
+
+    if (preview_only) {
+      return jsonResponse({
+        success: true,
+        preview: true,
+        subject,
+        body: personalizedBody,
+        recipient: recipientEmail,
+        service_name: service.name,
+        template_id: template.id,
+        contact_source: contactSource,
+      });
     }
 
     console.log(`Sending email to: ${recipientEmail} (source: ${contactSource})`);
 
-    // Send email via Gmail if connected, otherwise use Resend
     let emailSent = false;
     let emailId = null;
 
     if (useGmail) {
       console.log("Attempting to send via Gmail...");
       try {
-        const gmailResponse = await fetch(
-          `${supabaseUrl}/functions/v1/send-via-gmail`,
-          {
-            method: "POST",
-            headers: {
-              "Authorization": authHeader,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              to: recipientEmail,
-              subject: subject,
-              body: personalizedBody,
-            }),
-          }
-        );
+        const gmailResponse = await fetch(`${supabaseUrl}/functions/v1/send-via-gmail`, {
+          method: "POST",
+          headers: {
+            Authorization: authHeader,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            to: recipientEmail,
+            subject,
+            body: personalizedBody,
+          }),
+        });
 
         if (gmailResponse.ok) {
           const gmailData = await gmailResponse.json();
@@ -356,26 +390,25 @@ const handler = async (req: Request): Promise<Response> => {
       }
     }
 
-    // Fallback to Resend if Gmail failed or not connected
     if (!emailSent) {
       console.log("Sending via Resend...");
       const emailResponse = await resend.emails.send({
         from: "Footprint Finder <onboarding@resend.dev>",
         to: [recipientEmail],
         cc: [profile.email || user.email!],
-        subject: subject,
+        subject,
         text: personalizedBody,
         reply_to: profile.email || user.email!,
       });
 
       if (!emailResponse.data?.id) {
         console.error("Failed to send email:", emailResponse.error);
-        return new Response(
-          JSON.stringify({ 
+        return jsonResponse(
+          {
             error: "Unable to send deletion request. Please try again or contact support.",
-            error_code: "EMAIL_SEND_FAILED"
-          }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            error_code: "EMAIL_SEND_FAILED",
+          },
+          500,
         );
       }
 
@@ -385,16 +418,15 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log(`Email sent successfully. ID: ${emailId}`);
 
-    // Log deletion request to database
     const insertData: any = {
       user_id: user.id,
-      service_id: service_id,
+      service_id,
       service_name: service.name,
       request_type: "email_sent",
       method: useGmail ? "gmail" : "resend",
       request_body: {
         to: recipientEmail,
-        subject: subject,
+        subject,
         body: personalizedBody,
         template_id: template.id,
         account_identifier: identifierValue,
@@ -402,7 +434,6 @@ const handler = async (req: Request): Promise<Response> => {
       status: "sent",
     };
 
-    // Add identifier tracking if used
     if (selectedIdentifier) {
       insertData.identifier_used_id = selectedIdentifier.id;
       insertData.identifier_used_value = selectedIdentifier.value;
@@ -417,27 +448,22 @@ const handler = async (req: Request): Promise<Response> => {
 
     if (insertError) {
       console.error("Failed to log deletion request:", insertError);
-      // Email was sent, so we continue but log the error
     }
 
     console.log(`Deletion request logged. ID: ${deletionRequest?.id}`);
 
-    // Increment deletion count for usage tracking
-    const { error: incrementError } = await supabase.rpc(
-      "increment_deletion_count",
-      { p_user_id: user.id }
-    );
+    const { error: incrementError } = await supabase.rpc("increment_deletion_count", {
+      p_user_id: user.id,
+    });
 
     if (incrementError) {
       console.error("Error incrementing deletion count:", incrementError);
-      // Non-critical, continue
     } else {
       console.log(`Deletion count incremented for user ${user.id}`);
     }
 
-    // Send confirmation email notification
     try {
-      const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+      const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
       await supabase.functions.invoke("send-deletion-notification", {
         headers: {
           Authorization: `Bearer ${serviceRoleKey}`,
@@ -454,34 +480,24 @@ const handler = async (req: Request): Promise<Response> => {
       console.log("Confirmation email notification sent");
     } catch (notifError) {
       console.error("Failed to send notification email (non-critical):", notifError);
-      // Continue even if notification fails
     }
 
-    return new Response(
-      JSON.stringify({
-        success: true,
-        message: "Deletion request sent successfully",
-        request_id: deletionRequest?.id,
-        email_id: emailId,
-        service_name: service.name,
-        recipient: recipientEmail,
-      }),
-      {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
-    );
+    return jsonResponse({
+      success: true,
+      message: "Deletion request sent successfully",
+      request_id: deletionRequest?.id,
+      email_id: emailId,
+      service_name: service.name,
+      recipient: recipientEmail,
+    });
   } catch (error: any) {
     console.error("Error in send-deletion-request function:", error);
-    return new Response(
-      JSON.stringify({ 
-        error: "Unable to process deletion request. Please try again or contact support.",
-        error_code: "REQUEST_PROCESSING_FAILED"
-      }),
+    return jsonResponse(
       {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
+        error: error?.message || "Unable to process deletion request. Please try again or contact support.",
+        error_code: "REQUEST_PROCESSING_FAILED",
+      },
+      500,
     );
   }
 };
