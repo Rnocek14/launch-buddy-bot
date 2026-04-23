@@ -1040,6 +1040,13 @@ async function trySimpleFetch(
         pageResponse = await withAttemptTimeout(fetchPromise, attemptTimeoutMs);
       }
 
+      // Cloudflare bot-protection challenge — needs T2 (Playwright) to render
+      if (!usedCache && isCloudflareChallenge(pageResponse)) {
+        console.warn(`[Phase 1] Cloudflare challenge (${pageResponse.status}) blocked: ${sanitizeForLog(url)} — flagging for T2`);
+        failedUrls.set(url, 998); // Special code: cloudflare challenge → enqueue T2
+        continue;
+      }
+
       if (pageResponse.ok) {
         // Verify final URL domain after redirects
         const finalUrl = pageResponse.url || url;
