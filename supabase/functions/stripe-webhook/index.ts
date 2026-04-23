@@ -17,12 +17,12 @@ const PRICE_ID_TO_TIER: Record<string, string> = {
   "price_1Smd2MPwo7CiaABemCv3b6Lj": "complete",
   "price_1Smd2NPwo7CiaABeyV6KFls0": "complete",
   "price_1TP42pPwo7CiaABejT1heX0l": "family",
-  // LIVE prices
-  "price_1TPPRrPwo7CiaABeUSPGxN2f": "pro",      // Pro Annual $79
-  "price_1TPPRqPwo7CiaABeVCJnjYis": "pro",      // Pro Monthly $12.99
-  "price_1TPPRuPwo7CiaABek9AhNKNz": "complete", // Complete Annual $129
-  "price_1TPPRtPwo7CiaABeFpIzMmVO": "complete", // Complete Monthly $19.99
-  "price_1TPPRwPwo7CiaABeLNoPh4Zp": "family",   // Family Annual $179
+  // LIVE prices (current Stripe account)
+  "price_1TPSsbPqV14jS5m4p1Z7POVT": "pro",      // Pro Annual $79
+  "price_1TPSsaPqV14jS5m4R73DhbOw": "pro",      // Pro Monthly $12.99
+  "price_1TPSsePqV14jS5m42IQMTKiU": "complete", // Complete Annual $129
+  "price_1TPSsdPqV14jS5m4vx0A5XZJ": "complete", // Complete Monthly $19.99
+  "price_1TPSsfPqV14jS5m4vegF6HJi": "family",   // Family Annual $179
 };
 
 const handler = async (req: Request): Promise<Response> => {
