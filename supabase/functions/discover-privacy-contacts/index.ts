@@ -572,7 +572,13 @@ async function smartValidateUrl(url: string, depth = 0): Promise<ValidateResult>
 
     const contentType = response.headers.get('content-type') || '';
     const isPDF = contentType.toLowerCase().includes('application/pdf');
-    
+
+    // Reject Cloudflare bot-protection challenges — they look like 403/503 with cf-mitigated header
+    if (isCloudflareChallenge(response)) {
+      console.warn(`[Validate] Cloudflare challenge (${response.status}) for ${sanitizeForLog(url)}`);
+      return { valid: false, status: 998, contentType };
+    }
+
     // Phase 1.1 Refinement #4: Accept 206 (partial content) as valid
     const valid = response.ok || response.status === 206;
 
