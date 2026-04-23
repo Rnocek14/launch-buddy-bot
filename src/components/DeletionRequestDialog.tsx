@@ -12,11 +12,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, AlertTriangle, CheckCircle2, Sparkles } from "lucide-react";
+import { Loader2, AlertTriangle, CheckCircle2, Sparkles, Mail } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { EmailPreviewModal } from "@/components/EmailPreviewModal";
 import { ContactDiscoveryDialog } from "@/components/ContactDiscoveryDialog";
 import { UpgradeModal } from "@/components/UpgradeModal";
+import { useNavigate } from "react-router-dom";
 
 interface Service {
   id: string;
@@ -59,7 +60,10 @@ export const DeletionRequestDialog = ({
   const [showDiscovery, setShowDiscovery] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [remainingServices, setRemainingServices] = useState<number>(0);
+  const [showReconnectDialog, setShowReconnectDialog] = useState(false);
+  const [reconnectMessage, setReconnectMessage] = useState<string>("");
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   // Fetch user identifiers and jurisdiction when dialog opens
   useEffect(() => {
@@ -289,6 +293,38 @@ export const DeletionRequestDialog = ({
         return;
       }
 
+      // Detect Gmail reconnect requirement (structured response from edge function)
+      const reconnectFromData = data?.reconnectRequired || data?.error_code === "GMAIL_RECONNECT_REQUIRED";
+      let reconnectFromError = false;
+      let parsedErrorMessage = "";
+      if (error) {
+        try {
+          if ("context" in error && error.context && typeof (error.context as any).json === "function") {
+            const body = await (error.context as any).json();
+            if (body?.reconnectRequired || body?.error_code === "GMAIL_RECONNECT_REQUIRED") {
+              reconnectFromError = true;
+              parsedErrorMessage = body?.error || "";
+            } else if (body?.error) {
+              parsedErrorMessage = body.error;
+            }
+          }
+        } catch (e) {
+          console.warn("Failed to parse send error response", e);
+        }
+      }
+
+      if (reconnectFromData || reconnectFromError) {
+        setReconnectMessage(
+          data?.error || parsedErrorMessage ||
+          "Your connected Gmail account needs to be reconnected before we can send deletion requests."
+        );
+        setShowPreview(false);
+        onOpenChange(false);
+        setShowReconnectDialog(true);
+        setLoading(false);
+        return;
+      }
+
       if (error) {
         // Check if user needs authorization
         if (data?.requiresAuthorization || error.message?.includes("requiresAuthorization")) {
@@ -301,7 +337,7 @@ export const DeletionRequestDialog = ({
           window.location.href = "/authorize";
           return;
         }
-        throw error;
+        throw new Error(parsedErrorMessage || error.message || "Failed to send request");
       }
 
       setShowPreview(false);
@@ -321,9 +357,8 @@ export const DeletionRequestDialog = ({
       }, 2000);
     } catch (error: any) {
       console.error("Error sending deletion request:", error);
-      const needsReconnect = error?.message?.includes("reconnect Gmail") || error?.message?.includes("connected Gmail account needs to be reconnected");
       toast({
-        title: needsReconnect ? "Reconnect Gmail Required" : "Failed to Send Request",
+        title: "Failed to Send Request",
         description: error.message || "An unexpected error occurred. Please try again.",
         variant: "destructive",
       });
@@ -527,6 +562,53 @@ export const DeletionRequestDialog = ({
         onOpenChange={setShowUpgradeModal}
         remainingServices={remainingServices}
       />
+
+      <Dialog open={showReconnectDialog} onOpenChange={setShowReconnectDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Mail className="h-5 w-5 text-primary" />
+              Reconnect Gmail to Continue
+            </DialogTitle>
+            <DialogDescription className="pt-2">
+              {reconnectMessage || "Your Gmail connection has expired or is missing the permission needed to send deletion requests on your behalf."}
+            </DialogDescription>
+          </DialogHeader>
+
+          <Alert className="border-primary/30 bg-primary/5">
+            <AlertTriangle className="h-4 w-4 text-primary" />
+            <AlertDescription className="text-sm">
+              We send deletion requests <strong>from your own email address</strong> so services recognize you as the account owner. This requires an active Gmail connection with send access.
+            </AlertDescription>
+          </Alert>
+
+          <div className="text-sm text-muted-foreground space-y-1">
+            <p className="font-medium text-foreground">What to do:</p>
+            <ol className="list-decimal list-inside space-y-1">
+              <li>Click <strong>Reconnect Gmail</strong> below</li>
+              <li>Sign in with the same Google account</li>
+              <li>Approve the "send email" permission</li>
+              <li>Return here and try again</li>
+            </ol>
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setShowReconnectDialog(false)}>
+              Not now
+            </Button>
+            <Button
+              onClick={() => {
+                setShowReconnectDialog(false);
+                navigate("/settings");
+              }}
+              className="gap-2"
+            >
+              <Mail className="h-4 w-4" />
+              Reconnect Gmail
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 };
