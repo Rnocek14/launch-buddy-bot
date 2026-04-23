@@ -1,4 +1,5 @@
-import { Shield, ScanSearch, Settings, Menu, CreditCard, HelpCircle, BarChart3, LogOut, User, ChevronDown } from "lucide-react";
+import { ScanSearch, Settings, Menu, CreditCard, HelpCircle, BarChart3, LogOut, User, ChevronDown } from "lucide-react";
+import brandIcon from "@/assets/footprint-finder-icon.png";
 import { ThemeToggle } from "./ThemeToggle";
 import { Button } from "./ui/button";
 import { Link, useNavigate } from "react-router-dom";
@@ -94,9 +95,9 @@ export const Navbar = () => {
             }}
             className="flex items-center gap-2 hover:opacity-80 transition-opacity"
           >
-            <Shield className="w-6 h-6 text-primary" />
+            <img src={brandIcon} alt="Footprint Finder" width={28} height={28} className="w-7 h-7 rounded-md" />
             <span className="font-bold text-xl hidden sm:inline">Footprint Finder</span>
-            <span className="font-bold text-lg sm:hidden">FF</span>
+            <span className="font-bold text-lg sm:hidden">Footprint Finder</span>
           </button>
           
           {/* Desktop Menu */}

@@ -1,13 +1,18 @@
-import { Shield } from "lucide-react";
+import brandIcon from "@/assets/footprint-finder-icon.png";
 
 export const Footer = () => {
   return (
     <footer className="border-t border-border/50 py-12 px-4">
       <div className="container max-w-6xl">
         <div className="flex flex-col md:flex-row justify-between items-center gap-6">
-          <div className="flex items-center gap-2">
-            <Shield className="w-6 h-6 text-primary" />
-            <span className="font-bold text-xl">Footprint Finder</span>
+          <div className="flex flex-col items-center md:items-start gap-1">
+            <div className="flex items-center gap-2">
+              <img src={brandIcon} alt="Footprint Finder" width={28} height={28} className="w-7 h-7 rounded-md" loading="lazy" />
+              <span className="font-bold text-xl">Footprint Finder</span>
+            </div>
+            <p className="text-xs text-muted-foreground tracking-wide uppercase">
+              Find it. Remove it. <span className="text-accent font-semibold">Protect</span> your privacy.
+            </p>
           </div>
           
           <div className="flex flex-wrap justify-center gap-6 text-sm text-muted-foreground">
