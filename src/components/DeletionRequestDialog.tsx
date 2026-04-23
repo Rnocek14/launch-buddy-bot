@@ -191,10 +191,20 @@ export const DeletionRequestDialog = ({
   const getTemplateType = (jurisdiction: string): string => {
     if (jurisdiction.includes("EU") || jurisdiction === "GDPR") {
       return "gdpr";
-    } else if (jurisdiction === "US-CA" || jurisdiction === "CCPA") {
+    } else if (jurisdiction === "US-CA" || jurisdiction === "CCPA" || jurisdiction === "US") {
       return "ccpa";
     }
-    return "global";
+    return "general_deletion";
+  };
+
+  // Map jurisdiction codes to the values stored in request_templates table
+  const getTemplateJurisdictions = (jurisdiction: string): string[] => {
+    if (jurisdiction.includes("EU") || jurisdiction === "GDPR") {
+      return ["EU", "GLOBAL", "OTHER"];
+    } else if (jurisdiction === "US-CA" || jurisdiction === "CCPA" || jurisdiction === "US") {
+      return ["US", "GLOBAL", "OTHER"];
+    }
+    return ["OTHER", "GLOBAL"];
   };
 
   const handlePreview = async () => {
