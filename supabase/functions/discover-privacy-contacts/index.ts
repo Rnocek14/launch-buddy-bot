@@ -192,10 +192,23 @@ const KNOWN_PRIVACY_URLS: Record<string, string[]> = {
   'grubhub.com': ['https://www.grubhub.com/privacy'],
   'netflix.com': ['https://help.netflix.com/legal/privacy'],
   'vercel.com': ['https://vercel.com/legal/privacy-policy'],
+  // Roblox routes /info/privacy → help.roblox.com (Cloudflare-protected, requires T2 headless)
+  'roblox.com': ['https://en.help.roblox.com/hc/en-us/articles/115004630823-Roblox-Privacy-and-Cookie-Policy-'],
 };
 const MAX_REDIRECT_DEPTH = 1;
 const VALIDATION_TIMEOUT_MS = 2500; // Reduced from 5000ms to prevent CPU exhaustion
 const FETCH_TIMEOUT_MS = 7000;
+
+// Detect Cloudflare bot-protection challenges (cf-mitigated header, or 403/503 + cf-ray)
+function isCloudflareChallenge(response: Response): boolean {
+  const cfMitigated = response.headers.get('cf-mitigated');
+  if (cfMitigated && cfMitigated.toLowerCase().includes('challenge')) return true;
+  const cfRay = response.headers.get('cf-ray');
+  if (cfRay && (response.status === 403 || response.status === 503 || response.status === 429)) return true;
+  const server = (response.headers.get('server') || '').toLowerCase();
+  if (server === 'cloudflare' && (response.status === 403 || response.status === 503)) return true;
+  return false;
+}
 
 /**
  * Deterministic regex prepass: extracts privacy contacts from policy HTML/text.
