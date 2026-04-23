@@ -61,26 +61,25 @@ export const BrandMark = ({
 
       {/* Footprint — bold, instantly recognizable */}
       <g fill={footColor}>
-        {/* Sole: heel (bottom rounded) tapering up to ball of foot, slightly tilted */}
+        {/* Sole: rounded teardrop, wider at heel */}
         <path d="
-          M 50 36
-          C 57 36, 62 42, 62 50
-          C 62 58, 58 64, 53 67
-          C 50 69, 47 69, 44 67
-          C 39 64, 36 58, 37 51
-          C 38 44, 43 36, 50 36
+          M 50 38
+          C 58 38, 63 45, 63 53
+          C 63 61, 58 67, 50 67
+          C 42 67, 37 61, 37 53
+          C 37 45, 42 38, 50 38
           Z
         " />
-        {/* Big toe (top, largest) */}
-        <ellipse cx="54" cy="30" rx="3.6" ry="4.4" />
+        {/* Big toe */}
+        <ellipse cx="55" cy="31" rx="3.8" ry="4.6" />
         {/* Toe 2 */}
-        <ellipse cx="48" cy="27" rx="2.8" ry="3.5" />
+        <ellipse cx="49" cy="28" rx="3" ry="3.6" />
         {/* Toe 3 */}
-        <ellipse cx="43" cy="27.5" rx="2.5" ry="3.1" />
+        <ellipse cx="44" cy="28.5" rx="2.6" ry="3.2" />
         {/* Toe 4 */}
-        <ellipse cx="38.5" cy="29.5" rx="2.2" ry="2.7" />
+        <ellipse cx="39.5" cy="30.5" rx="2.3" ry="2.8" />
         {/* Pinky toe */}
-        <ellipse cx="35" cy="32.5" rx="1.9" ry="2.3" />
+        <ellipse cx="36" cy="33.5" rx="2" ry="2.4" />
       </g>
     </svg>
   );

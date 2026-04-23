@@ -95,7 +95,7 @@ export const Navbar = () => {
             }}
             className="flex items-center gap-2 hover:opacity-80 transition-opacity"
           >
-            <BrandMark className="w-8 h-8 text-foreground" />
+            <BrandMark className="w-9 h-9 text-foreground" />
             <span className="font-bold text-xl">
               Footprint <span className="text-accent">Finder</span>
             </span>
