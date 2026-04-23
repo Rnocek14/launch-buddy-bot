@@ -117,11 +117,14 @@ const handler = async (req: Request): Promise<Response> => {
     // Get authorization header
     const authHeader = req.headers.get("authorization");
     if (!authHeader) {
+      console.error("[validate-email-contact] Missing authorization header");
       return new Response(
         JSON.stringify({ error: "Unauthorized - missing auth header" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    const token = authHeader.replace(/^Bearer\s+/i, "");
 
     // Initialize Supabase client with auth
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -132,14 +135,17 @@ const handler = async (req: Request): Promise<Response> => {
       },
     });
 
-    // Get authenticated user and verify admin role
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    // Get authenticated user — pass token explicitly for reliability
+    const { data: { user }, error: userError } = await supabase.auth.getUser(token);
     if (userError || !user) {
+      console.error("[validate-email-contact] getUser failed:", userError?.message);
       return new Response(
-        JSON.stringify({ error: "Unauthorized - invalid token" }),
+        JSON.stringify({ error: "Unauthorized - invalid token", detail: userError?.message }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    console.log(`[validate-email-contact] Authenticated user: ${user.id}`);
 
     // Check if user is admin (admins can update shared service_catalog rows)
     const { data: isAdmin } = await supabase.rpc("has_role", {
