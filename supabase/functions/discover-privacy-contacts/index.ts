@@ -192,10 +192,23 @@ const KNOWN_PRIVACY_URLS: Record<string, string[]> = {
   'grubhub.com': ['https://www.grubhub.com/privacy'],
   'netflix.com': ['https://help.netflix.com/legal/privacy'],
   'vercel.com': ['https://vercel.com/legal/privacy-policy'],
+  // Roblox routes /info/privacy → help.roblox.com (Cloudflare-protected, requires T2 headless)
+  'roblox.com': ['https://en.help.roblox.com/hc/en-us/articles/115004630823-Roblox-Privacy-and-Cookie-Policy-'],
 };
 const MAX_REDIRECT_DEPTH = 1;
 const VALIDATION_TIMEOUT_MS = 2500; // Reduced from 5000ms to prevent CPU exhaustion
 const FETCH_TIMEOUT_MS = 7000;
+
+// Detect Cloudflare bot-protection challenges (cf-mitigated header, or 403/503 + cf-ray)
+function isCloudflareChallenge(response: Response): boolean {
+  const cfMitigated = response.headers.get('cf-mitigated');
+  if (cfMitigated && cfMitigated.toLowerCase().includes('challenge')) return true;
+  const cfRay = response.headers.get('cf-ray');
+  if (cfRay && (response.status === 403 || response.status === 503 || response.status === 429)) return true;
+  const server = (response.headers.get('server') || '').toLowerCase();
+  if (server === 'cloudflare' && (response.status === 403 || response.status === 503)) return true;
+  return false;
+}
 
 /**
  * Deterministic regex prepass: extracts privacy contacts from policy HTML/text.
@@ -559,7 +572,13 @@ async function smartValidateUrl(url: string, depth = 0): Promise<ValidateResult>
 
     const contentType = response.headers.get('content-type') || '';
     const isPDF = contentType.toLowerCase().includes('application/pdf');
-    
+
+    // Reject Cloudflare bot-protection challenges — they look like 403/503 with cf-mitigated header
+    if (isCloudflareChallenge(response)) {
+      console.warn(`[Validate] Cloudflare challenge (${response.status}) for ${sanitizeForLog(url)}`);
+      return { valid: false, status: 998, contentType };
+    }
+
     // Phase 1.1 Refinement #4: Accept 206 (partial content) as valid
     const valid = response.ok || response.status === 206;
 
@@ -1025,6 +1044,13 @@ async function trySimpleFetch(
         };
         const fetchPromise = fetchWithH2Fallback(url);
         pageResponse = await withAttemptTimeout(fetchPromise, attemptTimeoutMs);
+      }
+
+      // Cloudflare bot-protection challenge — needs T2 (Playwright) to render
+      if (!usedCache && isCloudflareChallenge(pageResponse)) {
+        console.warn(`[Phase 1] Cloudflare challenge (${pageResponse.status}) blocked: ${sanitizeForLog(url)} — flagging for T2`);
+        failedUrls.set(url, 998); // Special code: cloudflare challenge → enqueue T2
+        continue;
       }
 
       if (pageResponse.ok) {
@@ -1855,6 +1881,12 @@ serve(async (req) => {
 
     // If both phases failed, return error
     if (!result || !result.content) {
+      // If Cloudflare blocked a meaningful portion of attempts, surface as bot_protection so T2 picks it up
+      const failedEntries = result?.failedUrls ? Array.from(result.failedUrls.entries()) : [];
+      const cfBlockedCount = failedEntries.filter(([_, status]) => status === 998).length;
+      if (cfBlockedCount > 0) {
+        throw new Error(`Unable to find privacy policy. Cloudflare bot-protection blocked ${cfBlockedCount} URL(s); escalating to Tier-2 headless retry.`);
+      }
       throw new Error(`Unable to find privacy policy. Tried ${urlsToTry.length} URL(s) with both simple and JavaScript rendering. Please provide a direct URL to the privacy policy.`);
     }
 
@@ -2516,7 +2548,10 @@ Extract all relevant contact methods for data deletion requests.`;
         if (quarantined) {
           console.log(`[T2] Skipped (quarantined) → ${t2Domain}`);
         } else {
-          const seedUrl = urlsToTry.length > 0 ? urlsToTry[0] : `https://${t2Domain}`;
+          // Prefer a known canonical URL or first privacy-pathed candidate over a generic homepage
+          const knownForDomain = KNOWN_PRIVACY_URLS[t2Domain.toLowerCase()] ?? [];
+          const privacyPathed = urlsToTry.find(u => /\/(privacy|legal|datenschutz|info\/privacy|policies)/i.test(u));
+          const seedUrl = knownForDomain[0] || privacyPathed || urlsToTry[0] || `https://${t2Domain}`;
           const requestId = crypto.randomUUID();
           await supabase.from('t2_retries').insert({
             domain: t2Domain.toLowerCase(),
