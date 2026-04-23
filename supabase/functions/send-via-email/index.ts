@@ -9,6 +9,35 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+function getReconnectRequiredResponse(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error ?? 'Unknown error');
+  const normalizedMessage = message.toLowerCase();
+
+  const requiresReconnect =
+    normalizedMessage.includes('invalid_grant') ||
+    normalizedMessage.includes('failed to refresh access token') ||
+    normalizedMessage.includes('insufficient authentication scopes') ||
+    normalizedMessage.includes('gmail.send') ||
+    normalizedMessage.includes('token has been expired or revoked') ||
+    normalizedMessage.includes('invalid credentials');
+
+  if (!requiresReconnect) {
+    return null;
+  }
+
+  return new Response(
+    JSON.stringify({
+      error: 'Your connected Gmail account needs to be reconnected before we can send deletion requests.',
+      error_code: 'GMAIL_RECONNECT_REQUIRED',
+      reconnectRequired: true,
+    }),
+    {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 400,
+    }
+  );
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -139,6 +168,12 @@ serve(async (req) => {
     );
   } catch (error) {
     console.error('Error sending email:', error);
+
+    const reconnectResponse = getReconnectRequiredResponse(error);
+    if (reconnectResponse) {
+      return reconnectResponse;
+    }
+
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
       { 
