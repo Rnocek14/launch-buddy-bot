@@ -367,9 +367,9 @@ const handler = async (req: Request): Promise<Response> => {
     let emailId = null;
 
     if (useGmail) {
-      console.log("Attempting to send via Gmail...");
+      console.log("Attempting to send via user's connected email (Gmail)...");
       try {
-        const gmailResponse = await fetch(`${supabaseUrl}/functions/v1/send-via-gmail`, {
+        const gmailResponse = await fetch(`${supabaseUrl}/functions/v1/send-via-email`, {
           method: "POST",
           headers: {
             Authorization: authHeader,
@@ -379,14 +379,15 @@ const handler = async (req: Request): Promise<Response> => {
             to: recipientEmail,
             subject,
             body: personalizedBody,
+            connectionId: gmailConnection?.id,
           }),
         });
 
         if (gmailResponse.ok) {
           const gmailData = await gmailResponse.json();
           emailSent = true;
-          emailId = gmailData.messageId;
-          console.log("Email sent via Gmail successfully:", emailId);
+          emailId = gmailData.messageId || gmailData.id || `gmail-${Date.now()}`;
+          console.log("Email sent via user's Gmail successfully:", emailId);
         } else {
           const error = await gmailResponse.text();
           console.error("Gmail send failed, falling back to Resend:", error);
