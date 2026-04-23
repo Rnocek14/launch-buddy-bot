@@ -184,9 +184,12 @@ const handler = async (req: Request): Promise<Response> => {
         }
       }
 
-      if (serviceId) {
-        // Update service_catalog table
-        const { error: updateError } = await supabase
+      if (serviceId && isAdmin) {
+        // Update shared service_catalog table — admins only.
+        // Use service-role client to bypass RLS safely (we've already verified admin role).
+        const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+        const adminClient = createClient(supabaseUrl, serviceRoleKey);
+        const { error: updateError } = await adminClient
           .from("service_catalog")
           .update({
             contact_verified: true,
@@ -198,6 +201,8 @@ const handler = async (req: Request): Promise<Response> => {
         } else {
           console.log(`Updated service_catalog record: ${serviceId}`);
         }
+      } else if (serviceId && !isAdmin) {
+        console.log(`Skipping service_catalog update for non-admin user: ${user.id}`);
       }
     }
 
