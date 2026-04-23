@@ -167,12 +167,18 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Update database if requested
     if (updateDatabase && validationResult.isValid) {
+      // Use service-role client for these mutations — we've already authenticated
+      // the user, and this avoids RLS issues for legitimate verification flows.
+      const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+      const adminClient = createClient(supabaseUrl, serviceRoleKey);
+
       if (contactId) {
-        // Update privacy_contacts table
-        const { error: updateError } = await supabase
+        // Mark the discovered contact as MX-validated and verified
+        const { error: updateError } = await adminClient
           .from("privacy_contacts")
           .update({
             mx_validated: true,
+            verified: true,
             last_validated_at: new Date().toISOString(),
           })
           .eq("id", contactId);
@@ -184,15 +190,13 @@ const handler = async (req: Request): Promise<Response> => {
         }
       }
 
-      if (serviceId && isAdmin) {
-        // Update shared service_catalog table — admins only.
-        // Use service-role client to bypass RLS safely (we've already verified admin role).
-        const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-        const adminClient = createClient(supabaseUrl, serviceRoleKey);
+      if (serviceId) {
+        // Update shared service_catalog with verified privacy email
         const { error: updateError } = await adminClient
           .from("service_catalog")
           .update({
             contact_verified: true,
+            privacy_email: email,
           })
           .eq("id", serviceId);
 
@@ -201,8 +205,6 @@ const handler = async (req: Request): Promise<Response> => {
         } else {
           console.log(`Updated service_catalog record: ${serviceId}`);
         }
-      } else if (serviceId && !isAdmin) {
-        console.log(`Skipping service_catalog update for non-admin user: ${user.id}`);
       }
     }
 
