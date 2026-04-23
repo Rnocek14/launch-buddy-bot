@@ -1875,6 +1875,12 @@ serve(async (req) => {
 
     // If both phases failed, return error
     if (!result || !result.content) {
+      // If Cloudflare blocked a meaningful portion of attempts, surface as bot_protection so T2 picks it up
+      const failedEntries = result?.failedUrls ? Array.from(result.failedUrls.entries()) : [];
+      const cfBlockedCount = failedEntries.filter(([_, status]) => status === 998).length;
+      if (cfBlockedCount > 0) {
+        throw new Error(`Unable to find privacy policy. Cloudflare bot-protection blocked ${cfBlockedCount} URL(s); escalating to Tier-2 headless retry.`);
+      }
       throw new Error(`Unable to find privacy policy. Tried ${urlsToTry.length} URL(s) with both simple and JavaScript rendering. Please provide a direct URL to the privacy policy.`);
     }
 
