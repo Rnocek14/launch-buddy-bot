@@ -26,9 +26,9 @@ export const STRIPE_PRICES = {
     interval: "month",
     tier: "pro",
   },
-  // New Pro tier prices
+  // New Pro tier prices (LIVE)
   PRO_ANNUAL: {
-    id: "price_1Smd2JPwo7CiaABexEEYZMFn",
+    id: "price_1TPPRrPwo7CiaABeUSPGxN2f",
     name: "Pro Annual",
     amount: 79,
     currency: "USD",
@@ -38,7 +38,7 @@ export const STRIPE_PRICES = {
     tier: "pro",
   },
   PRO_MONTHLY: {
-    id: "price_1Smd2KPwo7CiaABeBeqI5MAG",
+    id: "price_1TPPRqPwo7CiaABeVCJnjYis",
     name: "Pro Monthly",
     amount: 12.99,
     currency: "USD",
@@ -47,9 +47,9 @@ export const STRIPE_PRICES = {
     monthlyEquivalent: null,
     tier: "pro",
   },
-  // Complete tier prices
+  // Complete tier prices (LIVE)
   COMPLETE_ANNUAL: {
-    id: "price_1Smd2MPwo7CiaABemCv3b6Lj",
+    id: "price_1TPPRuPwo7CiaABek9AhNKNz",
     name: "Complete Annual",
     amount: 129,
     currency: "USD",
@@ -59,7 +59,7 @@ export const STRIPE_PRICES = {
     tier: "complete",
   },
   COMPLETE_MONTHLY: {
-    id: "price_1Smd2NPwo7CiaABeyV6KFls0",
+    id: "price_1TPPRtPwo7CiaABeFpIzMmVO",
     name: "Complete Monthly",
     amount: 19.99,
     currency: "USD",
@@ -68,9 +68,9 @@ export const STRIPE_PRICES = {
     monthlyEquivalent: null,
     tier: "complete",
   },
-  // Family tier — protects up to 5 family members
+  // Family tier — protects up to 5 family members (LIVE)
   FAMILY_ANNUAL: {
-    id: "price_1TP42pPwo7CiaABejT1heX0l",
+    id: "price_1TPPRwPwo7CiaABeLNoPh4Zp",
     name: "Family Annual",
     amount: 179,
     currency: "USD",
@@ -79,9 +79,9 @@ export const STRIPE_PRICES = {
     monthlyEquivalent: "$14.92/month",
     tier: "family",
   },
-  // One-time SKU — Parent Protection Scan
+  // One-time SKU — Parent Protection Scan (LIVE)
   PARENT_SCAN_ONETIME: {
-    id: "price_1TP42rPwo7CiaABegxnVGeL2",
+    id: "price_1TPPRxPwo7CiaABeemDW74M5",
     name: "Parent Protection Scan",
     amount: 39,
     currency: "USD",
