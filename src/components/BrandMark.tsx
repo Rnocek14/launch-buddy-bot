@@ -11,10 +11,11 @@ interface BrandMarkProps {
 
 /**
  * Footprint Finder brand mark.
- * Dashed orange scan ring + footprint silhouette + accent dot (lower-right).
+ * Dashed orange scan ring + bold filled footprint + accent dot.
  *
- * Footprint geometry derived from the Lucide "Footprints" icon (ISC licensed) —
- * proven legible at any size. We use only the front foot, scaled and centered.
+ * Foot is a single chunky silhouette in the style of a baby footprint stamp:
+ * one large rounded sole on the bottom, big toe up-and-slightly-left, four
+ * smaller toes arcing down to the right. Designed to remain recognizable at 24px.
  */
 export const BrandMark = ({
   className,
@@ -60,39 +61,35 @@ export const BrandMark = ({
       <circle cx={dotX} cy={dotY} r="5" fill={ringColor} />
 
       {/*
-        Footprint — from Lucide "Footprints" icon (ISC licensed).
-        Original viewBox 24x24, source paths:
-          <path d="M4 16v-2.38c0-.83.43-1.61 1.13-2.05A8.95 8.95 0 0 1 10 10c1.79 0 3.45.5 4.87 1.34a2.43 2.43 0 0 1 1.13 2.05V16"/>
-          <path d="M4 22v-1a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v1"/>
-          <ellipse cx="6" cy="5" rx="2" ry="2.5"/>
-          <ellipse cx="10" cy="3" rx="1.5" ry="2"/>
-          <ellipse cx="14" cy="3" rx="1.5" ry="2"/>
-          <ellipse cx="18" cy="5" rx="2" ry="2.5"/>
-          <path d="M20 16v-2.38c0-.83-.43-1.61-1.13-2.05a8.95 8.95 0 0 0-9.74 0..."/>
-        We collapse it to a single foot, filled solid, scaled into a 56x56 box centered at (50,50)
-        of our 100x100 viewBox: translate(22,22) scale(2.333).
+        Footprint — single bold "baby footprint stamp" style.
+        Right foot, slightly tilted. Big toe top-left, four smaller toes arcing right.
+        Heel is the wider rounded shape at the bottom.
+        viewBox 100x100 — foot lives in approx x=30..70, y=24..78.
       */}
-      <g transform="translate(22 22) scale(2.333)" fill={footColor} stroke={footColor} strokeWidth="0.6" strokeLinejoin="round">
-        {/* Sole + ankle as one filled shape */}
+      <g fill={footColor}>
+        {/* Sole — heel (bottom oval) + ball (mid) merged into one chunky shape, tilted ~10deg right */}
         <path d="
-          M 4 16
-          v -2.38
-          c 0 -0.83 0.43 -1.61 1.13 -2.05
-          A 8.95 8.95 0 0 1 12 10
-          c 2.5 0 4.85 0.5 6.87 1.57
-          C 19.57 12.01 20 12.79 20 13.62
-          V 16
-          a 2 2 0 0 1 -2 2
-          H 6
-          a 2 2 0 0 1 -2 -2
+          M 47 78
+          C 39 78, 34 73, 34 65
+          C 34 59, 36 54, 39 49
+          C 41 46, 43 43, 44 40
+          C 45 37, 47 35, 50 35
+          C 54 35, 57 38, 58 42
+          C 59 47, 60 52, 61 57
+          C 62 64, 60 72, 56 76
+          C 53 78, 50 78, 47 78
           Z
         " />
-        {/* Toes — 5 round pads above the sole, big toe leftmost */}
-        <ellipse cx="6" cy="5" rx="2" ry="2.5" />
-        <ellipse cx="10" cy="3" rx="1.6" ry="2.2" />
-        <ellipse cx="14" cy="3" rx="1.6" ry="2.2" />
-        <ellipse cx="18" cy="5" rx="2" ry="2.5" />
-        <ellipse cx="21.5" cy="7.5" rx="1.5" ry="2" />
+        {/* Big toe — top left, large, oval tilted */}
+        <ellipse cx="42" cy="29" rx="4" ry="5" transform="rotate(-15 42 29)" />
+        {/* Toe 2 */}
+        <ellipse cx="50" cy="25.5" rx="2.8" ry="3.6" transform="rotate(-8 50 25.5)" />
+        {/* Toe 3 */}
+        <ellipse cx="56" cy="25.5" rx="2.5" ry="3.2" />
+        {/* Toe 4 */}
+        <ellipse cx="61" cy="27.5" rx="2.2" ry="2.8" transform="rotate(8 61 27.5)" />
+        {/* Pinky toe — smallest, lowest right */}
+        <ellipse cx="65" cy="31" rx="1.9" ry="2.4" transform="rotate(15 65 31)" />
       </g>
     </svg>
   );
