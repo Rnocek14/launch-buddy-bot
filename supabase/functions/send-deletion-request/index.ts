@@ -389,8 +389,33 @@ const handler = async (req: Request): Promise<Response> => {
           emailId = gmailData.messageId || gmailData.id || `gmail-${Date.now()}`;
           console.log("Email sent via user's Gmail successfully:", emailId);
         } else {
-          const error = await gmailResponse.text();
-          console.error("Gmail send failed, falling back to Resend:", error);
+          let gmailErrorBody: Record<string, unknown> | null = null;
+          let gmailErrorText = "";
+
+          try {
+            gmailErrorBody = await gmailResponse.json();
+            gmailErrorText = JSON.stringify(gmailErrorBody);
+          } catch {
+            gmailErrorText = await gmailResponse.text();
+          }
+
+          if (
+            gmailErrorBody?.reconnectRequired === true ||
+            gmailErrorBody?.error_code === "GMAIL_RECONNECT_REQUIRED"
+          ) {
+            return jsonResponse(
+              {
+                error:
+                  (typeof gmailErrorBody.error === "string" && gmailErrorBody.error) ||
+                  "Your connected Gmail account needs to be reconnected before we can send deletion requests.",
+                error_code: "GMAIL_RECONNECT_REQUIRED",
+                reconnectRequired: true,
+              },
+              400,
+            );
+          }
+
+          console.error("Gmail send failed, falling back to Resend:", gmailErrorText);
         }
       } catch (error) {
         console.error("Gmail send error, falling back to Resend:", error);
