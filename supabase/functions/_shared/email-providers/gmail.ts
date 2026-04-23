@@ -58,6 +58,7 @@ export class GmailProvider implements EmailProvider {
   getOAuthUrl(userId: string): string {
     const scopes = [
       'https://www.googleapis.com/auth/gmail.readonly',
+      'https://www.googleapis.com/auth/gmail.send',
       'https://www.googleapis.com/auth/userinfo.email',
       'https://www.googleapis.com/auth/userinfo.profile'
     ];
@@ -154,16 +155,16 @@ export class GmailProvider implements EmailProvider {
     if (!response.ok) {
       const errorText = await response.text();
       console.error('Gmail token refresh error:', errorText);
-      
-      // Try to parse the error to get detailed message
+
+      let errorDetail = errorText;
       try {
         const errorData = JSON.parse(errorText);
-        const errorDetail = errorData.error_description || errorData.error || 'Unknown error';
-        throw new Error(`Failed to refresh access token: ${errorDetail}`);
-      } catch (e) {
-        // If parsing fails, throw with the raw error text
-        throw new Error(`Failed to refresh access token: ${errorText}`);
+        errorDetail = errorData.error_description || errorData.error || errorText;
+      } catch {
+        errorDetail = errorText;
       }
+
+      throw new Error(`Failed to refresh access token: ${errorDetail}`);
     }
 
     const tokens = await response.json();
@@ -204,7 +205,7 @@ export class GmailProvider implements EmailProvider {
     if (!response.ok) {
       const error = await response.text();
       console.error('Gmail send error:', error);
-      throw new Error('Failed to send email via Gmail');
+      throw new Error(`Failed to send email via Gmail: ${error}`);
     }
 
     console.log('Gmail: Email sent successfully');
