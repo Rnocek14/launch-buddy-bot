@@ -141,18 +141,11 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Check if user is admin
+    // Check if user is admin (admins can update shared service_catalog rows)
     const { data: isAdmin } = await supabase.rpc("has_role", {
       _user_id: user.id,
       _role: "admin",
     });
-
-    if (!isAdmin) {
-      return new Response(
-        JSON.stringify({ error: "Forbidden - Admin access required" }),
-        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
 
     // Parse request body
     const body: ValidationRequest = await req.json();
