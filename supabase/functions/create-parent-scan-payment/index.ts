@@ -9,7 +9,7 @@ const corsHeaders = {
 };
 
 // Hard-coded one-time Parent Protection Scan price.
-const PARENT_SCAN_PRICE_ID = "price_1TP42rPwo7CiaABegxnVGeL2";
+const PARENT_SCAN_PRICE_ID = "price_1TPSshPqV14jS5m4e5KpiA6o";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
