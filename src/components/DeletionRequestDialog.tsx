@@ -12,11 +12,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, AlertTriangle, CheckCircle2, Sparkles } from "lucide-react";
+import { Loader2, AlertTriangle, CheckCircle2, Sparkles, Mail } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { EmailPreviewModal } from "@/components/EmailPreviewModal";
 import { ContactDiscoveryDialog } from "@/components/ContactDiscoveryDialog";
 import { UpgradeModal } from "@/components/UpgradeModal";
+import { useNavigate } from "react-router-dom";
 
 interface Service {
   id: string;
