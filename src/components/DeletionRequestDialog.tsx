@@ -321,8 +321,9 @@ export const DeletionRequestDialog = ({
       }, 2000);
     } catch (error: any) {
       console.error("Error sending deletion request:", error);
+      const needsReconnect = error?.message?.includes("reconnect Gmail") || error?.message?.includes("connected Gmail account needs to be reconnected");
       toast({
-        title: "Failed to Send Request",
+        title: needsReconnect ? "Reconnect Gmail Required" : "Failed to Send Request",
         description: error.message || "An unexpected error occurred. Please try again.",
         variant: "destructive",
       });

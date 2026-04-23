@@ -410,6 +410,24 @@ const handler = async (req: Request): Promise<Response> => {
 
       if (!emailResponse.data?.id) {
         console.error("Failed to send email:", emailResponse.error);
+
+        const resendMessage = typeof emailResponse.error?.message === "string"
+          ? emailResponse.error.message
+          : "";
+
+        if (useGmail) {
+          return jsonResponse(
+            {
+              error: resendMessage.includes("testing emails")
+                ? "Your connected Gmail account needs to be reconnected before we can send deletion requests. Please reconnect Gmail in Settings, then try again."
+                : "We couldn't send from your connected Gmail account, and backup sending is unavailable right now. Please reconnect Gmail in Settings and try again.",
+              error_code: "GMAIL_RECONNECT_REQUIRED",
+              reconnectRequired: true,
+            },
+            400,
+          );
+        }
+
         return jsonResponse(
           {
             error: "Unable to send deletion request. Please try again or contact support.",
