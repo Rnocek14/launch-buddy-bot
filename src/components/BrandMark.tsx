@@ -23,13 +23,13 @@ export const BrandMark = ({
   const cx = 50;
   const cy = 50;
   const r = 40;
-  // 8 segments, ~32deg each with ~13deg gap
+  // 8 segments around the ring
   const circumference = 2 * Math.PI * r;
   const segLen = (circumference * 32) / 360;
   const gapLen = (circumference * 13) / 360;
   const dashArray = `${segLen} ${gapLen}`;
 
-  // Dot at ~30deg below horizontal on right side
+  // Accent dot at ~35deg below horizontal on right
   const dotAngle = 35;
   const dotX = cx + r * Math.cos((Math.PI / 180) * dotAngle);
   const dotY = cy + r * Math.sin((Math.PI / 180) * dotAngle);
@@ -59,27 +59,35 @@ export const BrandMark = ({
       {/* Accent dot */}
       <circle cx={dotX} cy={dotY} r="5" fill={ringColor} />
 
-      {/* Footprint — bold, instantly recognizable */}
-      <g fill={footColor}>
-        {/* Sole: rounded teardrop, wider at heel */}
+      {/*
+        Footprint — proper anatomical silhouette.
+        Sole is an asymmetric teardrop: wider at the ball (top), narrower at the heel (bottom).
+        Designed at viewBox 100x100, foot occupies roughly y=22 (toes) to y=78 (heel base).
+      */}
+      <g fill={footColor} fillRule="evenodd">
+        {/* Ball + arch + heel as one continuous shape (right-foot orientation, big toe on left) */}
         <path d="
-          M 50 38
-          C 58 38, 63 45, 63 53
-          C 63 61, 58 67, 50 67
-          C 42 67, 37 61, 37 53
-          C 37 45, 42 38, 50 38
+          M 50 36
+          C 58.5 36, 64 41, 64 49
+          C 64 53.5, 62.5 57, 60 60
+          C 57 64, 56 67, 56 70.5
+          C 56 75, 53 78, 50 78
+          C 47 78, 44 75, 44 70.5
+          C 44 67, 43 64, 40 60
+          C 37.5 57, 36 53.5, 36 49
+          C 36 41, 41.5 36, 50 36
           Z
         " />
-        {/* Big toe */}
-        <ellipse cx="55" cy="31" rx="3.8" ry="4.6" />
+        {/* Big toe — leftmost & largest, slightly higher */}
+        <ellipse cx="41.5" cy="27" rx="3.6" ry="4.6" transform="rotate(-8 41.5 27)" />
         {/* Toe 2 */}
-        <ellipse cx="49" cy="28" rx="3" ry="3.6" />
+        <ellipse cx="47" cy="24" rx="2.9" ry="3.7" />
         {/* Toe 3 */}
-        <ellipse cx="44" cy="28.5" rx="2.6" ry="3.2" />
+        <ellipse cx="52.5" cy="24" rx="2.6" ry="3.3" />
         {/* Toe 4 */}
-        <ellipse cx="39.5" cy="30.5" rx="2.3" ry="2.8" />
-        {/* Pinky toe */}
-        <ellipse cx="36" cy="33.5" rx="2" ry="2.4" />
+        <ellipse cx="57" cy="25.5" rx="2.3" ry="2.9" />
+        {/* Pinky toe — smallest, lowest */}
+        <ellipse cx="60.5" cy="28" rx="2" ry="2.5" />
       </g>
     </svg>
   );
