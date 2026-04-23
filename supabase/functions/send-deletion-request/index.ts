@@ -62,8 +62,8 @@ const handler = async (req: Request): Promise<Response> => {
 
   try {
     const authHeader = req.headers.get("authorization");
-    if (!authHeader) {
-      console.error("Missing authorization header");
+    if (!authHeader?.startsWith("Bearer ")) {
+      console.error("Missing or invalid authorization header");
       return jsonResponse({ error: "Unauthorized - missing auth header" }, 401);
     }
 
@@ -75,15 +75,21 @@ const handler = async (req: Request): Promise<Response> => {
       },
     });
 
+    const token = authHeader.replace("Bearer ", "");
     const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
+      data: claimsData,
+      error: claimsError,
+    } = await supabase.auth.getClaims(token);
 
-    if (userError || !user) {
-      console.error("User authentication failed:", userError);
+    if (claimsError || !claimsData?.claims?.sub) {
+      console.error("User authentication failed:", claimsError);
       return jsonResponse({ error: "Unauthorized - invalid token" }, 401);
     }
+
+    const user = {
+      id: claimsData.claims.sub as string,
+      email: (claimsData.claims.email as string | undefined) ?? null,
+    };
 
     console.log(`Processing deletion request for user: ${user.id}`);
 
