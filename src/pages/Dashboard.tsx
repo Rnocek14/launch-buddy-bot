@@ -1681,11 +1681,9 @@ export default function Dashboard() {
         onOpenChange={setDeletionDialogOpen}
         service={selectedService}
         onSuccess={() => {
-          fetchServices(); // Refresh to update contact status badges
-          toast({
-            title: "Success",
-            description: "Deletion request has been sent successfully.",
-          });
+          // DeletionRequestDialog already shows its own success toast.
+          // Just refresh services to update contact/status badges.
+          fetchServices();
         }}
       />
 
