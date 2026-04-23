@@ -60,7 +60,10 @@ export const DeletionRequestDialog = ({
   const [showDiscovery, setShowDiscovery] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [remainingServices, setRemainingServices] = useState<number>(0);
+  const [showReconnectDialog, setShowReconnectDialog] = useState(false);
+  const [reconnectMessage, setReconnectMessage] = useState<string>("");
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   // Fetch user identifiers and jurisdiction when dialog opens
   useEffect(() => {
