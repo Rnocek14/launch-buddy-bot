@@ -62,6 +62,7 @@ export const DeletionRequestDialog = ({
   const [remainingServices, setRemainingServices] = useState<number>(0);
   const [showReconnectDialog, setShowReconnectDialog] = useState(false);
   const [reconnectMessage, setReconnectMessage] = useState<string>("");
+  const [reconnecting, setReconnecting] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -73,6 +74,107 @@ export const DeletionRequestDialog = ({
     setShowPreview(false);
     onOpenChange(false);
     setShowReconnectDialog(true);
+  };
+
+  const handleInlineReconnect = async () => {
+    setReconnecting(true);
+    try {
+      // Snapshot current Gmail connection's token_expires_at so we can detect a refresh
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      const { data: existing } = await supabase
+        .from("email_connections")
+        .select("id, token_expires_at, updated_at")
+        .eq("user_id", user.id)
+        .eq("provider", "gmail")
+        .order("is_primary", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      const previousUpdatedAt = existing?.updated_at || null;
+
+      // Get OAuth URL
+      const { data, error } = await supabase.functions.invoke("get-email-oauth-url", {
+        body: { provider: "gmail" },
+      });
+      if (error || !data?.url) throw new Error("Failed to start Gmail reconnect");
+
+      // Open OAuth in a popup
+      const width = 520;
+      const height = 700;
+      const left = window.screenX + Math.max(0, (window.outerWidth - width) / 2);
+      const top = window.screenY + Math.max(0, (window.outerHeight - height) / 2);
+      const popup = window.open(
+        data.url,
+        "gmail-reconnect",
+        `width=${width},height=${height},left=${left},top=${top}`
+      );
+
+      if (!popup) {
+        toast({
+          title: "Popup blocked",
+          description: "Please allow popups for this site, or use Settings to reconnect.",
+          variant: "destructive",
+        });
+        setReconnecting(false);
+        return;
+      }
+
+      // Poll for either: popup closed, or email_connections updated
+      const start = Date.now();
+      const timeoutMs = 3 * 60 * 1000; // 3 minutes
+      const poll = window.setInterval(async () => {
+        if (Date.now() - start > timeoutMs) {
+          window.clearInterval(poll);
+          setReconnecting(false);
+          return;
+        }
+
+        const { data: refreshed } = await supabase
+          .from("email_connections")
+          .select("id, token_expires_at, updated_at")
+          .eq("user_id", user.id)
+          .eq("provider", "gmail")
+          .order("is_primary", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        const updated =
+          refreshed &&
+          (refreshed.updated_at !== previousUpdatedAt ||
+            (refreshed.token_expires_at &&
+              new Date(refreshed.token_expires_at).getTime() > Date.now() + 60_000));
+
+        if (updated) {
+          window.clearInterval(poll);
+          try { popup.close(); } catch {}
+          setShowReconnectDialog(false);
+          setReconnecting(false);
+          toast({
+            title: "Gmail reconnected",
+            description: "Sending your deletion request now…",
+          });
+          // Re-open the parent dialog and auto-retry the send
+          onOpenChange(true);
+          setTimeout(() => { handleConfirmSend(); }, 250);
+          return;
+        }
+
+        if (popup.closed) {
+          window.clearInterval(poll);
+          setReconnecting(false);
+        }
+      }, 1500);
+    } catch (err: any) {
+      console.error("Inline reconnect failed:", err);
+      toast({
+        title: "Reconnect failed",
+        description: err?.message || "Please try again from Settings.",
+        variant: "destructive",
+      });
+      setReconnecting(false);
+    }
   };
 
   // Fetch user identifiers and jurisdiction when dialog opens
