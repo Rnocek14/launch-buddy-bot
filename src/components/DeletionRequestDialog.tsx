@@ -293,6 +293,38 @@ export const DeletionRequestDialog = ({
         return;
       }
 
+      // Detect Gmail reconnect requirement (structured response from edge function)
+      const reconnectFromData = data?.reconnectRequired || data?.error_code === "GMAIL_RECONNECT_REQUIRED";
+      let reconnectFromError = false;
+      let parsedErrorMessage = "";
+      if (error) {
+        try {
+          if ("context" in error && error.context && typeof (error.context as any).json === "function") {
+            const body = await (error.context as any).json();
+            if (body?.reconnectRequired || body?.error_code === "GMAIL_RECONNECT_REQUIRED") {
+              reconnectFromError = true;
+              parsedErrorMessage = body?.error || "";
+            } else if (body?.error) {
+              parsedErrorMessage = body.error;
+            }
+          }
+        } catch (e) {
+          console.warn("Failed to parse send error response", e);
+        }
+      }
+
+      if (reconnectFromData || reconnectFromError) {
+        setReconnectMessage(
+          data?.error || parsedErrorMessage ||
+          "Your connected Gmail account needs to be reconnected before we can send deletion requests."
+        );
+        setShowPreview(false);
+        onOpenChange(false);
+        setShowReconnectDialog(true);
+        setLoading(false);
+        return;
+      }
+
       if (error) {
         // Check if user needs authorization
         if (data?.requiresAuthorization || error.message?.includes("requiresAuthorization")) {
@@ -305,7 +337,7 @@ export const DeletionRequestDialog = ({
           window.location.href = "/authorize";
           return;
         }
-        throw error;
+        throw new Error(parsedErrorMessage || error.message || "Failed to send request");
       }
 
       setShowPreview(false);
@@ -325,9 +357,8 @@ export const DeletionRequestDialog = ({
       }, 2000);
     } catch (error: any) {
       console.error("Error sending deletion request:", error);
-      const needsReconnect = error?.message?.includes("reconnect Gmail") || error?.message?.includes("connected Gmail account needs to be reconnected");
       toast({
-        title: needsReconnect ? "Reconnect Gmail Required" : "Failed to Send Request",
+        title: "Failed to Send Request",
         description: error.message || "An unexpected error occurred. Please try again.",
         variant: "destructive",
       });
