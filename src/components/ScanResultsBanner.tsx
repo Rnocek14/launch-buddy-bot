@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle, Mail, AlertTriangle, Clock, Shield, ArrowRight, X, Sparkles } from "lucide-react";
+import { CreditCard, Mail, AlertTriangle, Activity, Shield, ArrowRight, X, Sparkles } from "lucide-react";
 
 interface ScanResultsBannerProps {
   scannedEmails: string[];
@@ -12,17 +12,20 @@ interface ScanResultsBannerProps {
   onViewNew: () => void;
   onViewAll: () => void;
   onDismiss: () => void;
-  /** Optional breakdown for richer display */
-  highRiskCount?: number;
-  inactiveCount?: number;
+  /** Real breakdown from activity_status */
+  paidCount?: number;
   activeCount?: number;
+  newsletterCount?: number;
 }
 
 function AnimatedCounter({ target, className }: { target: number; className?: string }) {
   const [count, setCount] = useState(0);
 
   useEffect(() => {
-    if (target === 0) return;
+    if (target === 0) {
+      setCount(0);
+      return;
+    }
     const duration = 1200;
     const steps = 30;
     const increment = target / steps;
@@ -50,15 +53,13 @@ export const ScanResultsBanner = ({
   onViewNew,
   onViewAll,
   onDismiss,
-  highRiskCount = 0,
-  inactiveCount = 0,
+  paidCount = 0,
   activeCount = 0,
+  newsletterCount = 0,
 }: ScanResultsBannerProps) => {
-  // If breakdown not provided, estimate from totals
-  const hasBreakdown = highRiskCount > 0 || inactiveCount > 0 || activeCount > 0;
-  const displayHighRisk = hasBreakdown ? highRiskCount : Math.max(1, Math.floor(totalServices * 0.12));
-  const displayInactive = hasBreakdown ? inactiveCount : Math.floor(totalServices * 0.3);
-  const displayActive = hasBreakdown ? activeCount : totalServices - displayHighRisk - displayInactive;
+  // Every detected service is exposure — that's the honest headline.
+  // The breakdown shows confidence tiers underneath.
+  const totalActive = paidCount + activeCount;
 
   return (
     <Card className="mb-6 border-2 border-destructive/20 bg-gradient-to-br from-destructive/5 via-background to-background overflow-hidden animate-in fade-in slide-in-from-top-2 duration-500">
@@ -84,44 +85,41 @@ export const ScanResultsBanner = ({
               </Badge>
             </div>
             <h2 className="text-2xl sm:text-3xl font-bold text-foreground leading-tight" style={{ lineHeight: '1.1' }}>
-              <AnimatedCounter target={displayHighRisk} className="text-destructive" />
-              {" "}{displayHighRisk === 1 ? "account is" : "accounts are"} exposing your personal data
+              <AnimatedCounter target={totalServices} className="text-destructive" />
+              {" "}{totalServices === 1 ? "account is" : "accounts are"} exposing your data
             </h2>
             <p className="text-muted-foreground text-sm sm:text-base max-w-xl">
-              We found{" "}
-              <span className="font-semibold text-foreground">{totalServices} accounts</span> linked to your email across{" "}
+              Every one of these companies has your email — and likely more. We scanned{" "}
               <span className="font-medium text-foreground">{messagesScanned.toLocaleString()}</span>
-              {" "}messages — and{" "}
-              <span className="font-semibold text-destructive">{displayHighRisk}</span>
-              {" "}of them are leaking sensitive info right now.
+              {" "}messages to find them.
             </p>
           </div>
 
-          {/* Risk breakdown cards */}
+          {/* Confidence breakdown cards */}
           <div className="grid grid-cols-3 gap-3">
             <div className="p-4 rounded-xl bg-destructive/10 border border-destructive/20 text-center space-y-1">
-              <AlertTriangle className="w-5 h-5 text-destructive mx-auto" />
+              <CreditCard className="w-5 h-5 text-destructive mx-auto" />
               <p className="text-2xl sm:text-3xl font-bold text-destructive">
-                <AnimatedCounter target={displayHighRisk} />
+                <AnimatedCounter target={paidCount} />
               </p>
-              <p className="text-xs text-muted-foreground font-medium">High Risk</p>
-              <p className="text-[10px] text-muted-foreground/70 hidden sm:block">Broker exposure, sensitive, or breached</p>
+              <p className="text-xs text-muted-foreground font-medium">Paid / Billing</p>
+              <p className="text-[10px] text-muted-foreground/70 hidden sm:block">Has your payment info — clean up first</p>
             </div>
             <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 text-center space-y-1">
-              <Clock className="w-5 h-5 text-amber-600 dark:text-amber-400 mx-auto" />
+              <Activity className="w-5 h-5 text-amber-600 dark:text-amber-400 mx-auto" />
               <p className="text-2xl sm:text-3xl font-bold text-amber-600 dark:text-amber-400">
-                <AnimatedCounter target={displayInactive} />
+                <AnimatedCounter target={activeCount} />
               </p>
-              <p className="text-xs text-muted-foreground font-medium">Inactive</p>
-              <p className="text-[10px] text-muted-foreground/70 hidden sm:block">Old or unused — may still hold your data</p>
+              <p className="text-xs text-muted-foreground font-medium">Active accounts</p>
+              <p className="text-[10px] text-muted-foreground/70 hidden sm:block">Confirmed logins or security alerts</p>
             </div>
-            <div className="p-4 rounded-xl bg-green-500/10 border border-green-500/20 text-center space-y-1">
-              <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400 mx-auto" />
-              <p className="text-2xl sm:text-3xl font-bold text-green-600 dark:text-green-400">
-                <AnimatedCounter target={displayActive} />
+            <div className="p-4 rounded-xl bg-muted border border-border text-center space-y-1">
+              <Mail className="w-5 h-5 text-muted-foreground mx-auto" />
+              <p className="text-2xl sm:text-3xl font-bold text-foreground">
+                <AnimatedCounter target={Math.max(0, totalServices - totalActive)} />
               </p>
-              <p className="text-xs text-muted-foreground font-medium">Active</p>
-              <p className="text-[10px] text-muted-foreground/70 hidden sm:block">Accounts you likely still use</p>
+              <p className="text-xs text-muted-foreground font-medium">Other detected</p>
+              <p className="text-[10px] text-muted-foreground/70 hidden sm:block">Newsletters, dormant, or unclassified</p>
             </div>
           </div>
 

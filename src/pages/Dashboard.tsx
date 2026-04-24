@@ -64,6 +64,11 @@ interface Service {
   discovery_source?: 'email' | 'extension' | 'manual';
   privacy_action?: 'keep' | 'delete' | 'do_not_sell' | null;
   deletion_requested_at?: string;
+  activity_status?: 'active_paid' | 'active_free' | 'dormant' | 'newsletter_only' | 'unknown';
+  cleanup_priority?: number;
+  confidence_score?: number;
+  last_transaction_at?: string | null;
+  last_activity_at?: string | null;
 }
 
 interface ScanStats {
@@ -1161,6 +1166,9 @@ export default function Dashboard() {
                 totalServices={scanResultsBanner.totalServices}
                 newServices={scanResultsBanner.newServices}
                 messagesScanned={scanResultsBanner.messagesScanned}
+                paidCount={services.filter(s => s.activity_status === 'active_paid').length}
+                activeCount={services.filter(s => s.activity_status === 'active_free').length}
+                newsletterCount={services.filter(s => s.activity_status === 'newsletter_only').length}
                 onViewNew={() => {
                   setFilterMode('new');
                   setSearchQuery("");
