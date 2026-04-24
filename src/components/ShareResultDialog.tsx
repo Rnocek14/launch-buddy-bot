@@ -17,36 +17,47 @@ import { Input } from "@/components/ui/input";
  */
 const SharePreviewFrame = ({ children }: { children: React.ReactNode }) => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [scale, setScale] = useState(0.35);
+  const [size, setSize] = useState(380);
 
   useLayoutEffect(() => {
     const el = containerRef.current;
     if (!el) return;
     const update = () => {
       const width = el.clientWidth;
-      if (width > 0) setScale(width / 1080);
+      // Cap by viewport height so the whole card is visible without scroll.
+      // Reserves space for header, tabs, link section, and action buttons.
+      const maxByHeight = Math.max(280, window.innerHeight - 460);
+      const next = Math.min(width, maxByHeight);
+      if (next > 0) setSize(next);
     };
     update();
     const ro = new ResizeObserver(update);
     ro.observe(el);
-    return () => ro.disconnect();
+    window.addEventListener("resize", update);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", update);
+    };
   }, []);
 
+  const scale = size / 1080;
+
   return (
-    <div
-      ref={containerRef}
-      className="relative w-full border rounded-lg overflow-hidden bg-muted"
-      style={{ aspectRatio: "1 / 1" }}
-    >
+    <div ref={containerRef} className="w-full flex justify-center">
       <div
-        style={{
-          transform: `scale(${scale})`,
-          transformOrigin: "top left",
-          width: 1080,
-          height: 1080,
-        }}
+        className="relative border rounded-lg overflow-hidden bg-muted"
+        style={{ width: size, height: size }}
       >
-        {children}
+        <div
+          style={{
+            transform: `scale(${scale})`,
+            transformOrigin: "top left",
+            width: 1080,
+            height: 1080,
+          }}
+        >
+          {children}
+        </div>
       </div>
     </div>
   );
