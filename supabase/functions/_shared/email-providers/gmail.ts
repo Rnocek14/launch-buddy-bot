@@ -250,12 +250,16 @@ export class GmailProvider implements EmailProvider {
 
     if (data.messages) {
       for (const msg of data.messages.slice(0, filters?.maxResults || 100)) {
-        const detailResponse = await fetch(
-          `https://gmail.googleapis.com/gmail/v1/users/me/messages/${msg.id}`,
-          {
-            headers: { Authorization: `Bearer ${accessToken}` },
-          }
-        );
+        // gmail.metadata scope requires format=metadata + metadataHeaders param.
+        // Body access (incl. snippet) is NOT permitted under this scope.
+        const metadataHeaders = ['From', 'Subject', 'Date', 'List-Unsubscribe', 'List-Unsubscribe-Post'];
+        const detailUrl = new URL(`https://gmail.googleapis.com/gmail/v1/users/me/messages/${msg.id}`);
+        detailUrl.searchParams.set('format', 'metadata');
+        for (const h of metadataHeaders) detailUrl.searchParams.append('metadataHeaders', h);
+
+        const detailResponse = await fetch(detailUrl.toString(), {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
 
         if (detailResponse.ok) {
           const detail = await detailResponse.json();
@@ -276,7 +280,7 @@ export class GmailProvider implements EmailProvider {
             from,
             subject,
             date,
-            snippet: detail.snippet,
+            snippet: undefined, // not available with gmail.metadata scope
             unsubscribeUrl,
             unsubscribeMailto,
             hasOneClick: hasOneClick || undefined,
