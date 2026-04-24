@@ -158,7 +158,7 @@ const handler = async (req: Request): Promise<Response> => {
         if (session.mode === "subscription" && session.subscription) {
           const subscription = await stripe.subscriptions.retrieve(
             session.subscription as string
-          );
+          ) as any;
 
           const userId = session.metadata?.supabase_user_id;
           if (!userId) {
