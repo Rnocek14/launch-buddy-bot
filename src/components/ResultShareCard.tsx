@@ -44,17 +44,17 @@ export const ResultShareCard = ({
     return (
       <div 
         id="share-card-minimalist"
-        className="relative w-[1080px] h-[1080px] bg-gradient-to-br from-primary via-primary/90 to-primary/80 p-16 flex flex-col items-center justify-center"
+        className="relative w-[1080px] h-[1080px] bg-gradient-to-br from-primary via-primary/90 to-primary/80 p-16 flex flex-col items-center justify-center overflow-hidden"
         style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}
       >
         {/* Decorative background elements */}
-        <div className="absolute inset-0 opacity-10">
+        <div className="absolute inset-0 opacity-10 pointer-events-none">
           <div className="absolute top-20 left-20 w-64 h-64 bg-white rounded-full blur-3xl" />
           <div className="absolute bottom-20 right-20 w-64 h-64 bg-white rounded-full blur-3xl" />
         </div>
 
         {/* Content */}
-        <div className="relative z-10 text-center space-y-12">
+        <div className="relative z-10 text-center space-y-10 max-w-2xl">
           {/* Icon */}
           <div className="flex justify-center">
             <div className="bg-white/20 p-8 rounded-full">
@@ -83,7 +83,7 @@ export const ResultShareCard = ({
 
           {/* Top services badges */}
           {topServices.length > 0 && (
-            <div className="flex gap-4 justify-center flex-wrap max-w-3xl">
+            <div className="flex gap-4 justify-center flex-wrap max-w-3xl mx-auto">
               {topServices.slice(0, 3).map((service, i) => (
                 <div key={i} className="bg-white/20 backdrop-blur-sm text-white px-8 py-4 rounded-full text-xl font-medium">
                   {service}
@@ -93,21 +93,21 @@ export const ResultShareCard = ({
           )}
 
           {/* CTA */}
-          <div className="pt-8">
+          <div className="pt-4">
             <div className="text-white text-3xl font-semibold">Scan yours at</div>
             <div className="text-white text-4xl font-bold mt-2">footprintfinder.com</div>
           </div>
+        </div>
 
-          {/* QR Code */}
-          <div className="absolute bottom-16 right-16 bg-white p-4 rounded-2xl shadow-lg">
-            <QRCodeSVG 
-              value="https://footprintfinder.com" 
-              size={128}
-              bgColor="#ffffff"
-              fgColor="#000000"
-              level="M"
-            />
-          </div>
+        {/* QR Code - positioned relative to card, not content stack */}
+        <div className="absolute bottom-16 right-16 bg-white p-4 rounded-2xl shadow-lg z-20">
+          <QRCodeSVG 
+            value="https://footprintfinder.com" 
+            size={128}
+            bgColor="#ffffff"
+            fgColor="#000000"
+            level="M"
+          />
         </div>
       </div>
     );
