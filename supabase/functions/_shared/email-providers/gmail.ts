@@ -56,9 +56,11 @@ export class GmailProvider implements EmailProvider {
   }
 
   getOAuthUrl(userId: string): string {
+    // Using gmail.metadata (sensitive scope) instead of gmail.readonly (restricted scope)
+    // to avoid CASA security assessment requirement. We only read message headers
+    // (From, Subject, Date, List-Unsubscribe) — never message bodies.
     const scopes = [
-      'https://www.googleapis.com/auth/gmail.readonly',
-      'https://www.googleapis.com/auth/gmail.send',
+      'https://www.googleapis.com/auth/gmail.metadata',
       'https://www.googleapis.com/auth/userinfo.email',
       'https://www.googleapis.com/auth/userinfo.profile'
     ];
