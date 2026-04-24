@@ -257,14 +257,32 @@ export default function BrokerScan() {
     // Clear cooldown on successful scan
     setCooldownInfo(null);
 
+    const returnedScan = data.scan;
+    const isStillRunning = returnedScan && (returnedScan.status === 'running' || returnedScan.status === 'pending');
+
+    if (isStillRunning) {
+      // Backend kicked off the scan in the background. Don't claim "complete" —
+      // the polling effect will refresh progress every 5s until status === 'completed'.
+      toast({
+        title: retryFailedOnly ? "Retry started" : "Scan started",
+        description: "Checking brokers in the background. Results will appear here as they finish (1–2 min).",
+      });
+      setScan(returnedScan);
+      await loadScanData();
+      // Leave scanning=false so the UI is interactive; polling effect drives updates.
+      setScanning(false);
+      return;
+    }
+
+    // Synchronous completion (older path / small retry batches)
     toast({
       title: retryFailedOnly ? "Retry complete" : "Scan complete!",
       description: retryFailedOnly
-        ? `Re-checked ${data.scan?.scanned_count ?? expectedTotal} brokers.`
-        : `Found exposures on ${data.scan?.found_count || 0} brokers.`,
+        ? `Re-checked ${returnedScan?.scanned_count ?? expectedTotal} brokers.`
+        : `Found exposures on ${returnedScan?.found_count || 0} brokers.`,
     });
 
-    setScan(data.scan);
+    setScan(returnedScan);
     await loadScanData(); // Refresh results
     setScanning(false);
   };
