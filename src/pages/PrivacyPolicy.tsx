@@ -144,11 +144,13 @@ const PrivacyPolicy = () => {
               <div>
                 <h3 className="font-semibold mb-2">What We Do NOT Do</h3>
                 <ul className="list-disc pl-6 space-y-2">
-                  <li>We do NOT read or store email content, subjects, or bodies</li>
-                  <li>We do NOT access your contacts</li>
+                  <li>We do NOT read or store email bodies, message content, or attachments — the gmail.metadata scope does not grant access to these</li>
+                  <li>We do NOT send emails from your Gmail account</li>
+                  <li>We do NOT access your Google contacts, Drive, Calendar, or any other Google service</li>
                   <li>We do NOT share your Gmail data with any third parties</li>
                   <li>We do NOT use your data for advertising or marketing purposes</li>
                   <li>We do NOT sell your data</li>
+                  <li>We do NOT use your data to train AI/ML models</li>
                 </ul>
               </div>
 
