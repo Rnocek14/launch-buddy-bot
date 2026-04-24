@@ -269,7 +269,7 @@ const handler = async (req: Request): Promise<Response> => {
       }
 
       case "customer.subscription.updated": {
-        const subscription = event.data.object as Stripe.Subscription;
+        const subscription = event.data.object as any;
         console.log(`Subscription updated: ${subscription.id}`);
 
         // Determine tier from price ID
