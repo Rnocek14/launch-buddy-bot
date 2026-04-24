@@ -158,7 +158,7 @@ serve(async (req) => {
     let stripeSubscriptionId = null;
 
     if (hasActiveSub) {
-      const subscription = subscriptions.data[0];
+      const subscription = subscriptions.data[0] as any;
       subscriptionEnd = new Date(subscription.current_period_end * 1000).toISOString();
       stripeSubscriptionId = subscription.id;
       
