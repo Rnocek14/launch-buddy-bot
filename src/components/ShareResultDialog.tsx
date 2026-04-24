@@ -285,7 +285,7 @@ export const ShareResultDialog = ({
 
         {/* Shareable Link Section */}
         {shareUrl && (
-          <div className="border rounded-lg p-4 bg-muted/50 space-y-3">
+          <div className="border rounded-lg p-3 sm:p-4 bg-muted/50 space-y-2 sm:space-y-3">
             <div className="flex items-center gap-2 text-sm font-medium">
               <Link2 className="w-4 h-4 text-primary" />
               Your Shareable Link
@@ -293,27 +293,27 @@ export const ShareResultDialog = ({
             <p className="text-xs text-muted-foreground">
               Share this link on social media - anyone who clicks it will see your anonymized results and be prompted to scan their own inbox.
             </p>
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
               <Input
                 value={shareUrl}
                 readOnly
-                className="flex-1 font-mono text-sm"
+                className="flex-1 font-mono text-xs sm:text-sm min-w-0"
               />
               <Button
                 onClick={handleCopyUrl}
                 variant="outline"
                 size="sm"
-                className="shrink-0"
+                className="shrink-0 w-full sm:w-auto"
               >
                 {urlCopied ? (
                   <>
                     <CheckCircle className="w-4 h-4 mr-1 text-green-600" />
-                    Copied!
+                    <span className="text-xs sm:text-sm">Copied!</span>
                   </>
                 ) : (
                   <>
                     <Copy className="w-4 h-4 mr-1" />
-                    Copy
+                    <span className="text-xs sm:text-sm">Copy</span>
                   </>
                 )}
               </Button>
