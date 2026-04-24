@@ -240,6 +240,13 @@ export default function Dashboard() {
         discovered_at,
         deletion_requested_at,
         privacy_action,
+        activity_status,
+        cleanup_priority,
+        confidence_score,
+        last_transaction_at,
+        last_security_at,
+        last_activity_at,
+        intent_signals,
         service_catalog (
           id,
           name,
@@ -250,6 +257,7 @@ export default function Dashboard() {
           domain
         )
       `)
+      .order("cleanup_priority", { ascending: false })
       .order("discovered_at", { ascending: false });
 
     if (error) {
@@ -301,6 +309,12 @@ export default function Dashboard() {
       discovery_source: item.discovery_source || 'email',
       privacy_action: item.privacy_action || null,
       deletion_requested_at: item.deletion_requested_at || null,
+      // Intelligence signals
+      activity_status: item.activity_status || 'unknown',
+      cleanup_priority: item.cleanup_priority ?? 0,
+      confidence_score: item.confidence_score ?? 0,
+      last_transaction_at: item.last_transaction_at || null,
+      last_activity_at: item.last_activity_at || null,
     }));
 
     setServices(mapped);
