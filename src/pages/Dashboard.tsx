@@ -1315,7 +1315,7 @@ export default function Dashboard() {
         {/* Services Grid Section */}
           <div className="space-y-6">
             {/* View Tabs */}
-            <div className="flex items-center gap-2 border-b border-border" id="services-grid">
+            <div className="flex items-center gap-2 border-b border-border overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" id="services-grid">
               <Button
                 variant={viewTab === 'all' ? 'default' : 'ghost'}
                 size="sm"
