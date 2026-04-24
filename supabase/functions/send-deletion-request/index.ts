@@ -77,18 +77,18 @@ const handler = async (req: Request): Promise<Response> => {
 
     const token = authHeader.replace("Bearer ", "");
     const {
-      data: claimsData,
-      error: claimsError,
-    } = await supabase.auth.getClaims(token);
+      data: userData,
+      error: userError,
+    } = await supabase.auth.getUser(token);
 
-    if (claimsError || !claimsData?.claims?.sub) {
-      console.error("User authentication failed:", claimsError);
+    if (userError || !userData?.user) {
+      console.error("User authentication failed:", userError);
       return jsonResponse({ error: "Unauthorized - invalid token" }, 401);
     }
 
     const user = {
-      id: claimsData.claims.sub as string,
-      email: (claimsData.claims.email as string | undefined) ?? null,
+      id: userData.user.id,
+      email: userData.user.email ?? null,
     };
 
     console.log(`Processing deletion request for user: ${user.id}`);

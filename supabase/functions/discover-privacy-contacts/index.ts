@@ -1832,19 +1832,21 @@ serve(async (req) => {
       });
 
       const insertedFallback = fallbackContacts.length > 0
-        ? await supabase.from('privacy_contacts').insert(
-            fallbackContacts.map(contact => ({
-              service_id,
-              contact_type: contact.contact_type,
-              value: contact.value,
-              confidence: contact.confidence,
-              reasoning: contact.reasoning,
-              verified: false,
-              added_by: 'security_txt_fallback',
-              source_url: securityTxtContact?.url ?? `https://${service.domain}/.well-known/security.txt`,
-            }))
+        ? await supabase
+            .from('privacy_contacts')
+            .insert(
+              fallbackContacts.map(contact => ({
+                service_id,
+                contact_type: contact.contact_type,
+                value: contact.value,
+                confidence: contact.confidence,
+                reasoning: contact.reasoning,
+                verified: false,
+                added_by: 'security_txt_fallback',
+                source_url: securityTxtContact?.url ?? `https://${service.domain}/.well-known/security.txt`,
+              }))
+            )
             .select()
-          )
         : { data: [], error: null };
 
       if (insertedFallback.error) throw insertedFallback.error;
@@ -2217,7 +2219,7 @@ Extract all relevant contact methods for data deletion requests.`;
     // Filter out invalid contacts BEFORE storing
     const validContacts = findings.contacts.filter(contact => {
       // Rule 1: Reject low confidence
-      if (contact.confidence === 'low') {
+      if ((contact.confidence as string) === 'low') {
         console.log(`[Filter] Rejected low confidence: ${contact.value}`);
         return false;
       }
