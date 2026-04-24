@@ -105,41 +105,25 @@ export const ShareResultDialog = ({
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [creatingPublicResult, setCreatingPublicResult] = useState(false);
   const [urlCopied, setUrlCopied] = useState(false);
-  const dialogRef = useRef<HTMLDivElement>(null);
-  const headerRef = useRef<HTMLDivElement>(null);
-  const tabsListRef = useRef<HTMLDivElement>(null);
-  const linkSectionRef = useRef<HTMLDivElement>(null);
-  const statusRef = useRef<HTMLDivElement>(null);
-  const actionsRef = useRef<HTMLDivElement>(null);
+  const previewAreaRef = useRef<HTMLDivElement>(null);
   const [previewMaxSize, setPreviewMaxSize] = useState(380);
 
   useLayoutEffect(() => {
-    const dialog = dialogRef.current;
-    if (!dialog) return;
+    const previewArea = previewAreaRef.current;
+    if (!previewArea || !open) return;
 
     const update = () => {
-      const computed = window.getComputedStyle(dialog);
-      const paddingY = parseFloat(computed.paddingTop) + parseFloat(computed.paddingBottom);
-      const headerHeight = headerRef.current?.offsetHeight ?? 0;
-      const tabsListHeight = tabsListRef.current?.offsetHeight ?? 0;
-      const linkHeight = linkSectionRef.current?.offsetHeight ?? 0;
-      const statusHeight = statusRef.current?.offsetHeight ?? 0;
-      const actionsHeight = actionsRef.current?.offsetHeight ?? 0;
-      const sectionSpacing = 56;
-      const availableHeight = dialog.clientHeight - paddingY - headerHeight - tabsListHeight - linkHeight - statusHeight - actionsHeight - sectionSpacing;
+      const next = Math.floor(Math.min(previewArea.clientWidth, previewArea.clientHeight));
 
-      if (availableHeight > 0) {
-        setPreviewMaxSize(Math.floor(availableHeight));
+      if (next > 0) {
+        setPreviewMaxSize(next);
       }
     };
 
     update();
 
     const ro = new ResizeObserver(update);
-    const observedElements = [dialog, headerRef.current, tabsListRef.current, linkSectionRef.current, statusRef.current, actionsRef.current]
-      .filter(Boolean) as HTMLDivElement[];
-
-    observedElements.forEach((element) => ro.observe(element));
+    ro.observe(previewArea);
 
     window.addEventListener("resize", update);
 
@@ -147,7 +131,7 @@ export const ShareResultDialog = ({
       ro.disconnect();
       window.removeEventListener("resize", update);
     };
-  }, [open, shareUrl, creatingPublicResult]);
+  }, [open, shareUrl, creatingPublicResult, selectedTemplate]);
 
   useEffect(() => {
     if (open && !shareUrl) {
@@ -325,23 +309,24 @@ export const ShareResultDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl w-[calc(100vw-2rem)] sm:w-auto max-h-[90vh] overflow-y-auto p-4 sm:p-6">
-        <DialogHeader className="space-y-2">
+      <DialogContent className="flex h-[90vh] max-h-[90vh] w-[calc(100vw-2rem)] max-w-4xl flex-col overflow-hidden p-4 sm:w-auto sm:p-6">
+        <DialogHeader className="shrink-0 space-y-2">
           <DialogTitle className="text-xl sm:text-2xl">Share Your Digital Footprint Score</DialogTitle>
           <DialogDescription className="text-sm">
             Choose a template and share your results on social media to inspire others to check their digital footprint!
           </DialogDescription>
         </DialogHeader>
 
-        <Tabs value={selectedTemplate} onValueChange={(v) => setSelectedTemplate(v as TemplateType)} className="w-full">
-          <TabsList className="grid w-full grid-cols-3 h-auto">
+        <Tabs value={selectedTemplate} onValueChange={(v) => setSelectedTemplate(v as TemplateType)} className="flex min-h-0 w-full flex-1 flex-col gap-4 sm:gap-6">
+          <TabsList className="grid h-auto w-full shrink-0 grid-cols-3">
             <TabsTrigger value="minimalist" className="text-xs sm:text-sm py-2 px-1">Minimalist</TabsTrigger>
             <TabsTrigger value="detailed" className="text-xs sm:text-sm py-2 px-1">Detailed</TabsTrigger>
             <TabsTrigger value="challenge" className="text-xs sm:text-sm py-2 px-1">Challenge</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="minimalist" className="mt-4 sm:mt-6">
-            <SharePreviewFrame>
+          <div ref={previewAreaRef} className="min-h-0 flex-1 overflow-hidden">
+          <TabsContent value="minimalist" className="mt-0 h-full w-full">
+            <SharePreviewFrame maxSize={previewMaxSize}>
               <ResultShareCard
                 template="minimalist"
                 riskScore={riskScore}
@@ -354,8 +339,8 @@ export const ShareResultDialog = ({
             </SharePreviewFrame>
           </TabsContent>
 
-          <TabsContent value="detailed" className="mt-4 sm:mt-6">
-            <SharePreviewFrame>
+          <TabsContent value="detailed" className="mt-0 h-full w-full">
+            <SharePreviewFrame maxSize={previewMaxSize}>
               <ResultShareCard
                 template="detailed"
                 riskScore={riskScore}
@@ -368,8 +353,8 @@ export const ShareResultDialog = ({
             </SharePreviewFrame>
           </TabsContent>
 
-          <TabsContent value="challenge" className="mt-4 sm:mt-6">
-            <SharePreviewFrame>
+          <TabsContent value="challenge" className="mt-0 h-full w-full">
+            <SharePreviewFrame maxSize={previewMaxSize}>
               <ResultShareCard
                 template="challenge"
                 riskScore={riskScore}
@@ -381,11 +366,12 @@ export const ShareResultDialog = ({
               />
             </SharePreviewFrame>
           </TabsContent>
+          </div>
         </Tabs>
 
         {/* Shareable Link Section */}
         {shareUrl && (
-          <div className="border rounded-lg p-3 sm:p-4 bg-muted/50 space-y-2 sm:space-y-3">
+          <div className="shrink-0 rounded-lg border bg-muted/50 p-3 space-y-2 sm:space-y-3 sm:p-4">
             <div className="flex items-center gap-2 text-sm font-medium">
               <Link2 className="w-4 h-4 text-primary" />
               Your Shareable Link
@@ -422,13 +408,13 @@ export const ShareResultDialog = ({
         )}
 
         {creatingPublicResult && (
-          <div className="text-center text-sm text-muted-foreground">
+          <div className="shrink-0 text-center text-sm text-muted-foreground">
             Creating your shareable link...
           </div>
         )}
 
         {/* Action Buttons */}
-        <div className="space-y-4">
+        <div className="shrink-0 space-y-4">
           <div className="flex flex-col sm:grid sm:grid-cols-2 gap-3">
             <Button
               onClick={handleDownload}
