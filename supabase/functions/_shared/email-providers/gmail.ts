@@ -234,11 +234,10 @@ export class GmailProvider implements EmailProvider {
 
     console.log(`Gmail: Got ${messageIds.length} message IDs, fetching metadata in parallel`);
 
-    // Fetch metadata in parallel batches to avoid sequential round-trip latency.
-    // Gmail allows ~10 QPS per user with comfortable headroom; batches of 25 hit
-    // a good balance between speed and rate-limit safety.
+    // Fetch metadata in parallel batches. Larger batches finish faster, which
+    // matters for staying under edge-function CPU/memory limits on big scans.
     const metadataHeaders = ['From', 'Subject', 'Date', 'List-Unsubscribe', 'List-Unsubscribe-Post'];
-    const BATCH = 25;
+    const BATCH = 50;
     const messages: EmailMessage[] = [];
 
     async function fetchOne(id: string): Promise<EmailMessage | null> {
