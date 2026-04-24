@@ -2566,6 +2566,9 @@ export type Database = {
       }
       user_services: {
         Row: {
+          activity_status: string
+          cleanup_priority: number
+          confidence_score: number
           deletion_notes: string | null
           deletion_requested_at: string | null
           deletion_status: string | null
@@ -2573,15 +2576,23 @@ export type Database = {
           discovered_from_connection_id: string | null
           discovery_source: string | null
           first_seen_date: string | null
+          intent_signals: Json
+          last_activity_at: string | null
           last_scanned_at: string
+          last_security_at: string | null
+          last_transaction_at: string | null
           marked_for_deletion: boolean | null
           privacy_action: string | null
           privacy_action_at: string | null
           reappeared_at: string | null
           service_id: string
+          signals_updated_at: string | null
           user_id: string
         }
         Insert: {
+          activity_status?: string
+          cleanup_priority?: number
+          confidence_score?: number
           deletion_notes?: string | null
           deletion_requested_at?: string | null
           deletion_status?: string | null
@@ -2589,15 +2600,23 @@ export type Database = {
           discovered_from_connection_id?: string | null
           discovery_source?: string | null
           first_seen_date?: string | null
+          intent_signals?: Json
+          last_activity_at?: string | null
           last_scanned_at?: string
+          last_security_at?: string | null
+          last_transaction_at?: string | null
           marked_for_deletion?: boolean | null
           privacy_action?: string | null
           privacy_action_at?: string | null
           reappeared_at?: string | null
           service_id: string
+          signals_updated_at?: string | null
           user_id: string
         }
         Update: {
+          activity_status?: string
+          cleanup_priority?: number
+          confidence_score?: number
           deletion_notes?: string | null
           deletion_requested_at?: string | null
           deletion_status?: string | null
@@ -2605,12 +2624,17 @@ export type Database = {
           discovered_from_connection_id?: string | null
           discovery_source?: string | null
           first_seen_date?: string | null
+          intent_signals?: Json
+          last_activity_at?: string | null
           last_scanned_at?: string
+          last_security_at?: string | null
+          last_transaction_at?: string | null
           marked_for_deletion?: boolean | null
           privacy_action?: string | null
           privacy_action_at?: string | null
           reappeared_at?: string | null
           service_id?: string
+          signals_updated_at?: string | null
           user_id?: string
         }
         Relationships: [
@@ -2808,6 +2832,20 @@ export type Database = {
           n: number
           status: string
         }[]
+      }
+      upsert_service_signals: {
+        Args: {
+          p_activity_status: string
+          p_cleanup_priority: number
+          p_confidence: number
+          p_last_activity_at?: string
+          p_last_security_at?: string
+          p_last_transaction_at?: string
+          p_service_id: string
+          p_signals: Json
+          p_user_id: string
+        }
+        Returns: undefined
       }
       use_referral_code: { Args: { p_code: string }; Returns: Json }
     }
