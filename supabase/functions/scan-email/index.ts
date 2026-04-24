@@ -192,7 +192,7 @@ async function repairTokenState(
   }
 }
 
-async function processConnection(connection: any, user: any, maxResults: number, after: any, query: any, supabase: any) {
+async function processConnection(connection: any, user: any, maxResults: number, after: any, query: any, supabase: any, fullScan: boolean = false) {
   console.log(`Using ${connection.provider} connection: ${connection.email}`);
 
   // === LAYER 2: SMART TOKEN VALIDATION ===
