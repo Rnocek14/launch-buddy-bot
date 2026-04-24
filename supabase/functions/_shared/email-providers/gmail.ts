@@ -188,79 +188,97 @@ export class GmailProvider implements EmailProvider {
   }
 
   async getMessages(accessToken: string, filters?: ScanFilters): Promise<EmailMessage[]> {
-    console.log('Gmail: Fetching messages');
+    const targetCount = filters?.maxResults || 100;
+    console.log(`Gmail: Fetching up to ${targetCount} messages`);
 
-    const params = new URLSearchParams({
-      maxResults: (filters?.maxResults || 100).toString(),
-    });
+    // Gmail caps maxResults per request at 500 — paginate via pageToken for larger scans.
+    const PAGE_SIZE = Math.min(500, targetCount);
+    const messageIds: string[] = [];
+    let pageToken: string | undefined;
 
-    if (filters?.after) {
-      // Convert ISO timestamp to Gmail's YYYY/MM/DD format
-      const date = new Date(filters.after);
-      const gmailDate = `${date.getFullYear()}/${String(date.getMonth() + 1).padStart(2, '0')}/${String(date.getDate()).padStart(2, '0')}`;
-      params.append('q', `after:${gmailDate}`);
-    }
+    while (messageIds.length < targetCount) {
+      const remaining = targetCount - messageIds.length;
+      const params = new URLSearchParams({
+        maxResults: Math.min(PAGE_SIZE, remaining).toString(),
+      });
+      if (pageToken) params.set('pageToken', pageToken);
 
-    if (filters?.query) {
-      const existingQ = params.get('q');
-      params.set('q', existingQ ? `${existingQ} ${filters.query}` : filters.query);
-    }
-
-    const response = await fetch(
-      `https://gmail.googleapis.com/gmail/v1/users/me/messages?${params.toString()}`,
-      {
-        headers: { Authorization: `Bearer ${accessToken}` },
+      if (filters?.after) {
+        const date = new Date(filters.after);
+        const gmailDate = `${date.getFullYear()}/${String(date.getMonth() + 1).padStart(2, '0')}/${String(date.getDate()).padStart(2, '0')}`;
+        params.append('q', `after:${gmailDate}`);
       }
-    );
+      if (filters?.query) {
+        const existingQ = params.get('q');
+        params.set('q', existingQ ? `${existingQ} ${filters.query}` : filters.query);
+      }
 
-    if (!response.ok) {
-      const error = await response.text();
-      console.error('Gmail fetch messages error:', error);
-      throw new Error('Failed to fetch Gmail messages');
+      const response = await fetch(
+        `https://gmail.googleapis.com/gmail/v1/users/me/messages?${params.toString()}`,
+        { headers: { Authorization: `Bearer ${accessToken}` } }
+      );
+
+      if (!response.ok) {
+        const error = await response.text();
+        console.error('Gmail fetch messages error:', error);
+        throw new Error('Failed to fetch Gmail messages');
+      }
+
+      const data = await response.json();
+      if (!data.messages || data.messages.length === 0) break;
+
+      for (const m of data.messages) messageIds.push(m.id);
+      if (!data.nextPageToken) break;
+      pageToken = data.nextPageToken;
     }
 
-    const data = await response.json();
+    console.log(`Gmail: Got ${messageIds.length} message IDs, fetching metadata in parallel`);
+
+    // Fetch metadata in parallel batches to avoid sequential round-trip latency.
+    // Gmail allows ~10 QPS per user with comfortable headroom; batches of 25 hit
+    // a good balance between speed and rate-limit safety.
+    const metadataHeaders = ['From', 'Subject', 'Date', 'List-Unsubscribe', 'List-Unsubscribe-Post'];
+    const BATCH = 25;
     const messages: EmailMessage[] = [];
 
-    if (data.messages) {
-      for (const msg of data.messages.slice(0, filters?.maxResults || 100)) {
-        // gmail.metadata scope requires format=metadata + metadataHeaders param.
-        // Body access (incl. snippet) is NOT permitted under this scope.
-        const metadataHeaders = ['From', 'Subject', 'Date', 'List-Unsubscribe', 'List-Unsubscribe-Post'];
-        const detailUrl = new URL(`https://gmail.googleapis.com/gmail/v1/users/me/messages/${msg.id}`);
-        detailUrl.searchParams.set('format', 'metadata');
-        for (const h of metadataHeaders) detailUrl.searchParams.append('metadataHeaders', h);
+    async function fetchOne(id: string): Promise<EmailMessage | null> {
+      const detailUrl = new URL(`https://gmail.googleapis.com/gmail/v1/users/me/messages/${id}`);
+      detailUrl.searchParams.set('format', 'metadata');
+      for (const h of metadataHeaders) detailUrl.searchParams.append('metadataHeaders', h);
 
-        const detailResponse = await fetch(detailUrl.toString(), {
+      try {
+        const r = await fetch(detailUrl.toString(), {
           headers: { Authorization: `Bearer ${accessToken}` },
         });
-
-        if (detailResponse.ok) {
-          const detail = await detailResponse.json();
-          const headers = detail.payload?.headers || [];
-          const from = headers.find((h: any) => h.name === 'From')?.value || '';
-          const subject = headers.find((h: any) => h.name === 'Subject')?.value || '';
-          const date = headers.find((h: any) => h.name === 'Date')?.value || '';
-
-          // Extract List-Unsubscribe headers for subscription detection
-          const listUnsub = headers.find((h: any) => h.name.toLowerCase() === 'list-unsubscribe')?.value || '';
-          const listUnsubPost = headers.find((h: any) => h.name.toLowerCase() === 'list-unsubscribe-post')?.value || '';
-          
-          const { url: unsubscribeUrl, mailto: unsubscribeMailto } = parseListUnsubscribe(listUnsub);
-          const hasOneClick = listUnsubPost.toLowerCase().includes('list-unsubscribe=one-click');
-
-          messages.push({
-            id: msg.id,
-            from,
-            subject,
-            date,
-            snippet: undefined, // not available with gmail.metadata scope
-            unsubscribeUrl,
-            unsubscribeMailto,
-            hasOneClick: hasOneClick || undefined,
-          });
-        }
+        if (!r.ok) return null;
+        const detail = await r.json();
+        const headers = detail.payload?.headers || [];
+        const from = headers.find((h: any) => h.name === 'From')?.value || '';
+        const subject = headers.find((h: any) => h.name === 'Subject')?.value || '';
+        const date = headers.find((h: any) => h.name === 'Date')?.value || '';
+        const listUnsub = headers.find((h: any) => h.name.toLowerCase() === 'list-unsubscribe')?.value || '';
+        const listUnsubPost = headers.find((h: any) => h.name.toLowerCase() === 'list-unsubscribe-post')?.value || '';
+        const { url: unsubscribeUrl, mailto: unsubscribeMailto } = parseListUnsubscribe(listUnsub);
+        const hasOneClick = listUnsubPost.toLowerCase().includes('list-unsubscribe=one-click');
+        return {
+          id,
+          from,
+          subject,
+          date,
+          snippet: undefined,
+          unsubscribeUrl,
+          unsubscribeMailto,
+          hasOneClick: hasOneClick || undefined,
+        };
+      } catch (_e) {
+        return null;
       }
+    }
+
+    for (let i = 0; i < messageIds.length; i += BATCH) {
+      const slice = messageIds.slice(i, i + BATCH);
+      const results = await Promise.all(slice.map(fetchOne));
+      for (const m of results) if (m) messages.push(m);
     }
 
     console.log(`Gmail: Fetched ${messages.length} messages`);
