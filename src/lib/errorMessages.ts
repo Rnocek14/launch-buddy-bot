@@ -165,6 +165,7 @@ export const getErrorMessage = (error: any): ErrorMessageConfig => {
   if (
     (errorMessage.includes("insufficient") && errorMessage.includes("scope")) ||
     errorMessage.includes("missing scope") ||
+    errorMessage.includes("gmail.metadata") ||
     errorMessage.includes("gmail.readonly") ||
     errorMessage.includes("mail.read")
   ) {
