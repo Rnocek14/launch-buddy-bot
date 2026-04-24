@@ -219,19 +219,19 @@ export const ShareResultDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="text-2xl">Share Your Digital Footprint Score</DialogTitle>
-          <DialogDescription>
+      <DialogContent className="max-w-4xl w-[calc(100vw-2rem)] sm:w-auto max-h-[90vh] overflow-y-auto p-4 sm:p-6">
+        <DialogHeader className="space-y-2">
+          <DialogTitle className="text-xl sm:text-2xl">Share Your Digital Footprint Score</DialogTitle>
+          <DialogDescription className="text-sm">
             Choose a template and share your results on social media to inspire others to check their digital footprint!
           </DialogDescription>
         </DialogHeader>
 
         <Tabs value={selectedTemplate} onValueChange={(v) => setSelectedTemplate(v as TemplateType)} className="w-full">
           <TabsList className="grid w-full grid-cols-3 h-auto">
-            <TabsTrigger value="minimalist" className="text-xs sm:text-sm py-2">Minimalist</TabsTrigger>
-            <TabsTrigger value="detailed" className="text-xs sm:text-sm py-2">Detailed</TabsTrigger>
-            <TabsTrigger value="challenge" className="text-xs sm:text-sm py-2">Challenge</TabsTrigger>
+            <TabsTrigger value="minimalist" className="text-xs sm:text-sm py-2 px-1">Minimalist</TabsTrigger>
+            <TabsTrigger value="detailed" className="text-xs sm:text-sm py-2 px-1">Detailed</TabsTrigger>
+            <TabsTrigger value="challenge" className="text-xs sm:text-sm py-2 px-1">Challenge</TabsTrigger>
           </TabsList>
 
           <TabsContent value="minimalist" className="mt-6">
