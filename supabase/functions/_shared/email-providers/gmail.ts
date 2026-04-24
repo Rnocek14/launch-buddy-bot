@@ -179,38 +179,12 @@ export class GmailProvider implements EmailProvider {
     };
   }
 
-  async sendEmail(accessToken: string, email: EmailData): Promise<void> {
-    console.log('Gmail: Sending email to', email.to);
-
-    const message = [
-      `To: ${email.to}`,
-      `Subject: ${email.subject}`,
-      'Content-Type: text/html; charset=utf-8',
-      '',
-      email.body,
-    ].join('\r\n');
-
-    const encodedMessage = btoa(unescape(encodeURIComponent(message)))
-      .replace(/\+/g, '-')
-      .replace(/\//g, '_')
-      .replace(/=+$/, '');
-
-    const response = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ raw: encodedMessage }),
-    });
-
-    if (!response.ok) {
-      const error = await response.text();
-      console.error('Gmail send error:', error);
-      throw new Error(`Failed to send email via Gmail: ${error}`);
-    }
-
-    console.log('Gmail: Email sent successfully');
+  async sendEmail(_accessToken: string, _email: EmailData): Promise<void> {
+    // Disabled: gmail.send is a restricted scope requiring CASA assessment.
+    // Footprint Finder routes all outbound deletion emails through Resend
+    // with the user's email as reply-to. This method is kept to satisfy the
+    // EmailProvider interface but should never be called.
+    throw new Error('Gmail sending is disabled. Outbound emails are sent via Resend.');
   }
 
   async getMessages(accessToken: string, filters?: ScanFilters): Promise<EmailMessage[]> {
