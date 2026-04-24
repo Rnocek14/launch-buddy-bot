@@ -1161,6 +1161,9 @@ export default function Dashboard() {
                 totalServices={scanResultsBanner.totalServices}
                 newServices={scanResultsBanner.newServices}
                 messagesScanned={scanResultsBanner.messagesScanned}
+                paidCount={services.filter(s => s.activity_status === 'active_paid').length}
+                activeCount={services.filter(s => s.activity_status === 'active_free').length}
+                newsletterCount={services.filter(s => s.activity_status === 'newsletter_only').length}
                 onViewNew={() => {
                   setFilterMode('new');
                   setSearchQuery("");
