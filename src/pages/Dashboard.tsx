@@ -1077,9 +1077,27 @@ export default function Dashboard() {
               )}
               {!scanning ? (
                 <>
-                  <span className="text-xs text-muted-foreground hidden sm:inline">
-                    Takes ~30s · Read-only
-                  </span>
+                  {hasGmailAccess && (
+                    <Select value={scanType} onValueChange={(v) => setScanType(v as 'quick' | 'deep')}>
+                      <SelectTrigger className="h-12 w-full sm:w-[180px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="quick">
+                          <div className="flex flex-col items-start">
+                            <span className="font-medium">Quick Scan</span>
+                            <span className="text-xs text-muted-foreground">1,000 emails · ~30s</span>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="deep">
+                          <div className="flex flex-col items-start">
+                            <span className="font-medium">Deep Scan</span>
+                            <span className="text-xs text-muted-foreground">5,000 emails · ~1–2 min</span>
+                          </div>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
                   <Button
                     onClick={hasGmailAccess ? handleScan : handleConnectGmail}
                     disabled={scanning}
@@ -1087,7 +1105,7 @@ export default function Dashboard() {
                     className="h-12 px-6 text-base w-full sm:w-auto"
                   >
                     <RefreshCw className="w-4 h-4 mr-2" />
-                    {hasGmailAccess ? "Run Scan" : "Connect Gmail to Scan"}
+                    {hasGmailAccess ? (scanType === 'deep' ? "Run Deep Scan" : "Run Scan") : "Connect Gmail to Scan"}
                   </Button>
                 </>
               ) : (
