@@ -425,7 +425,7 @@ export default function BrokerScan() {
                     <span>Scan Status</span>
                     <Badge className="bg-accent text-accent-foreground text-xs">COMPLETE</Badge>
                   </div>
-                {scan?.status === 'completed' && (
+                {(scan?.status === 'completed' || scan?.status === 'failed') && (
                     <div className="flex items-center gap-2">
                       {cooldownInfo && (
                         <span className="text-xs text-muted-foreground">
@@ -439,7 +439,7 @@ export default function BrokerScan() {
                         disabled={scanning || !!cooldownInfo}
                       >
                         <RefreshCw className={`h-4 w-4 mr-2 ${scanning ? 'animate-spin' : ''}`} />
-                        Rescan
+                        {scan?.status === 'failed' ? 'Retry Scan' : 'Rescan'}
                       </Button>
                     </div>
                   )}
@@ -449,6 +449,7 @@ export default function BrokerScan() {
                   {scan?.status === 'pending' && "Your scan is queued and will begin shortly"}
                   {scan?.status === 'running' && `Scanning ${scan.scanned_count} of ${scan.total_brokers} brokers...`}
                   {scan?.status === 'completed' && `Scan completed on ${new Date(scan.completed_at!).toLocaleDateString()}`}
+                  {scan?.status === 'failed' && `Last scan stopped after ${scan.scanned_count} of ${scan.total_brokers} brokers. Click Retry Scan to try again.`}
                 </CardDescription>
               </CardHeader>
               <CardContent>
