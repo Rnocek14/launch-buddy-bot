@@ -404,7 +404,7 @@ export default function Dashboard() {
         const response = await supabase.functions.invoke("scan-email", {
           body: { 
             connectionId: primaryConnection.id,
-            maxResults: scanType === 'quick' ? 1000 : 5000,
+            maxResults: scanType === 'quick' ? 800 : 2000,
             fullScan: scanType === 'deep',
           }
         });
