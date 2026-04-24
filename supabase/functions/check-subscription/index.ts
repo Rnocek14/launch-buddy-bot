@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "npm:stripe@18.5.0";
-import { createClient } from "npm:@supabase/supabase-js@2.57.2";
+import { createClient } from "npm:@supabase/supabase-js@2.79.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -51,15 +51,11 @@ serve(async (req) => {
 
     const token = authHeader.replace("Bearer ", "");
     logStep("Authenticating user with token");
-    
-    const { data: claimsData, error: claimsError } = await supabaseClient.auth.getClaims(token);
-    if (claimsError || !claimsData?.claims) throw new Error(`Authentication error: ${claimsError?.message || 'Invalid token'}`);
-    
-    // Get user details for email
-    const userId = claimsData.claims.sub as string;
-    const userEmail = claimsData.claims.email as string;
-    if (!userEmail) throw new Error("User not authenticated or email not available");
-    const user = { id: userId, email: userEmail };
+
+    const { data: userData, error: userError } = await supabaseClient.auth.getUser(token);
+    const user = userData.user;
+    if (userError || !user?.email) throw new Error(`Authentication error: ${userError?.message || 'Invalid token'}`);
+
     logStep("User authenticated", { userId: user.id, email: user.email });
 
     // Check for manual override FIRST - before requiring Stripe key

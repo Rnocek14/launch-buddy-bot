@@ -1,6 +1,6 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "npm:@supabase/supabase-js@2.79.0";
 import { DOMParser } from "https://esm.sh/linkedom@0.16.7/worker";
 import type { VendorDetection } from '../_shared/probes.ts';
 import {
@@ -1422,11 +1422,11 @@ serve(async (req) => {
     );
 
     const token = authHeader.replace('Bearer ', '');
-    const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
-    if (claimsError || !claimsData?.claims) {
+    const { data: userData, error: userError } = await supabase.auth.getUser(token);
+    if (userError || !userData.user) {
       throw new Error('Authentication failed');
     }
-    user = { id: claimsData.claims.sub as string } as any;
+    user = { id: userData.user.id } as any;
 
     const requestBody = await req.json();
     service_id = requestBody.service_id;
