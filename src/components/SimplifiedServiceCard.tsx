@@ -3,7 +3,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Checkbox } from "@/components/ui/checkbox";
-import { CheckCircle, Clock, AlertTriangle } from "lucide-react";
+import { CheckCircle, Clock, AlertTriangle, CreditCard, Shield, Mail } from "lucide-react";
+import type { ActivityStatus } from "@/lib/serviceSignals";
 import { ServiceActionButtons } from "./ServiceActionButtons";
 
 type PrivacyAction = "keep" | "delete" | "do_not_sell" | null;
@@ -19,6 +20,12 @@ interface Service {
   domain: string;
   deletion_requested_at?: string;
   privacy_action?: PrivacyAction;
+  // Intelligence signals (optional — gracefully degrade if missing)
+  activity_status?: ActivityStatus;
+  cleanup_priority?: number;
+  confidence_score?: number;
+  last_transaction_at?: string | null;
+  last_activity_at?: string | null;
 }
 
 interface SimplifiedServiceCardProps {
@@ -150,8 +157,50 @@ export function SimplifiedServiceCard({
               </span>
             </div>
 
-            {/* Inactive chip */}
-            {activity.isInactive && !hasDeletion && currentAction !== "keep" && (
+            {/* Intelligence badge — activity status from subject classifier */}
+            {service.activity_status && service.activity_status !== "unknown" && !hasDeletion && (
+              <div className="flex justify-center">
+                {service.activity_status === "active_paid" && (
+                  <Badge
+                    variant="outline"
+                    className="text-[10px] px-2 py-0.5 bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/30"
+                  >
+                    <CreditCard className="w-2.5 h-2.5 mr-1" />
+                    Active subscription
+                  </Badge>
+                )}
+                {service.activity_status === "active_free" && (
+                  <Badge
+                    variant="outline"
+                    className="text-[10px] px-2 py-0.5 bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/30"
+                  >
+                    <Shield className="w-2.5 h-2.5 mr-1" />
+                    Active account
+                  </Badge>
+                )}
+                {service.activity_status === "dormant" && (
+                  <Badge
+                    variant="outline"
+                    className="text-[10px] px-2 py-0.5 bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30"
+                  >
+                    <Clock className="w-2.5 h-2.5 mr-1" />
+                    Dormant
+                  </Badge>
+                )}
+                {service.activity_status === "newsletter_only" && (
+                  <Badge
+                    variant="outline"
+                    className="text-[10px] px-2 py-0.5 bg-muted text-muted-foreground border-border"
+                  >
+                    <Mail className="w-2.5 h-2.5 mr-1" />
+                    Newsletter only
+                  </Badge>
+                )}
+              </div>
+            )}
+
+            {/* Inactive chip (legacy fallback when no signals) */}
+            {!service.activity_status && activity.isInactive && !hasDeletion && currentAction !== "keep" && (
               <Badge
                 variant="outline"
                 className="text-[10px] px-2 py-0.5 bg-amber-500/5 text-amber-600 dark:text-amber-400 border-amber-500/20"

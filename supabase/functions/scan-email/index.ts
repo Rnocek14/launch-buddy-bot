@@ -4,6 +4,13 @@ import { getEmailProvider } from "../_shared/email-providers/factory.ts";
 import { ProviderType } from "../_shared/email-providers/types.ts";
 import { decrypt, encrypt } from "../_shared/encryption.ts";
 import { detectTokenEncryption, validateTokenState } from "../_shared/token-validator.ts";
+import {
+  classifySubject,
+  emptySignals,
+  addSignal,
+  computeProfile,
+  type ServiceSignals,
+} from "../_shared/subject-classifier.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -329,6 +336,8 @@ async function processConnection(connection: any, user: any, maxResults: number,
 
   // Process messages to discover services AND subscriptions
   const emailDomains = new Map<string, { from: string; count: number }>();
+  // Per-domain aggregated subject-line signals (intelligence layer)
+  const domainSignals = new Map<string, ServiceSignals>();
   const subscriptionMap = new Map<string, {
     senderEmail: string;
     senderName: string;
@@ -356,6 +365,15 @@ async function processConnection(connection: any, user: any, maxResults: number,
     } else {
       emailDomains.set(domain, { from: message.from, count: 1 });
     }
+
+    // === SUBJECT-LINE CLASSIFICATION (intelligence layer) ===
+    // Pattern-match subject to detect signup/transaction/security/newsletter signals.
+    // Pure regex, zero cost. Aggregated per sender domain.
+    const classification = classifySubject(message.subject);
+    const messageDate = message.date ? new Date(message.date).toISOString() : new Date().toISOString();
+    const sigs = domainSignals.get(domain) ?? emptySignals();
+    addSignal(sigs, classification, messageDate, message.subject ?? '');
+    domainSignals.set(domain, sigs);
 
     // Subscription detection: if message has List-Unsubscribe header, track it
     if (message.unsubscribeUrl || message.unsubscribeMailto) {
@@ -490,7 +508,36 @@ async function processConnection(connection: any, user: any, maxResults: number,
     }
   }
 
-  // Update last scan date
+  // === SIGNAL ENRICHMENT (intelligence layer) ===
+  // For each matched service, compute aggregated signals + activity status + cleanup priority
+  // and persist via the upsert_service_signals RPC.
+  let signalsEnriched = 0;
+  for (const match of matchedServices) {
+    const sigs = domainSignals.get(match.domain.toLowerCase());
+    if (!sigs || sigs.total === 0) continue;
+
+    const profile = computeProfile(sigs);
+
+    const { error: sigErr } = await supabaseAdmin.rpc('upsert_service_signals', {
+      p_user_id: user.id,
+      p_service_id: match.service_id,
+      p_signals: sigs as unknown as Record<string, unknown>,
+      p_confidence: profile.confidence,
+      p_activity_status: profile.activity_status,
+      p_cleanup_priority: profile.cleanup_priority,
+      p_last_transaction_at: sigs.last_transaction_at ?? null,
+      p_last_security_at: sigs.last_security_at ?? null,
+      p_last_activity_at: sigs.last_activity_at ?? null,
+    });
+
+    if (sigErr) {
+      console.error(`Failed to upsert signals for ${match.name}:`, sigErr.message);
+    } else {
+      signalsEnriched++;
+    }
+  }
+  console.log(`Enriched ${signalsEnriched}/${matchedServices.length} services with classification signals`);
+
   await supabase
     .from('profiles')
     .update({ last_email_scan_date: new Date().toISOString() })
@@ -558,6 +605,7 @@ async function processConnection(connection: any, user: any, maxResults: number,
       servicesFound: servicesAdded,
       servicesReappeared,
       subscriptionsDetected,
+      signalsEnriched,
       emailsScanned: messages.length,
       unmatchedCount: unmatchedDomains.length,
       message: `Scanned ${messages.length} emails and discovered ${servicesAdded} services${servicesReappeared > 0 ? ` (${servicesReappeared} reappeared after deletion)` : ''}${subscriptionsDetected > 0 ? `, ${subscriptionsDetected} subscriptions` : ''}`,

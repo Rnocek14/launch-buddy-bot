@@ -3,6 +3,13 @@ import { createClient } from "npm:@supabase/supabase-js@2.79.0";
 import { getEmailProvider } from "../_shared/email-providers/factory.ts";
 import { ProviderType } from "../_shared/email-providers/types.ts";
 import { decrypt } from "../_shared/encryption.ts";
+import {
+  classifySubject,
+  emptySignals,
+  addSignal,
+  computeProfile,
+  type ServiceSignals,
+} from "../_shared/subject-classifier.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -234,8 +241,9 @@ async function processConnection(connection: any, user: any, maxResults: number,
   const messages = await provider.getMessages(accessToken, filters);
   console.log(`Fetched ${messages.length} messages`);
 
-  // Extract unique domains from email senders
+  // Extract unique domains AND classify subjects per domain (intelligence layer)
   const emailDomains = new Set<string>();
+  const domainSignals = new Map<string, ServiceSignals>();
   for (const message of messages) {
     const emailMatch = message.from.match(/<(.+?)>/) || message.from.match(/([^\s<>]+@[^\s<>]+)/);
     if (emailMatch) {
@@ -243,6 +251,12 @@ async function processConnection(connection: any, user: any, maxResults: number,
       const domain = email.split('@')[1]?.toLowerCase();
       if (domain) {
         emailDomains.add(domain);
+        // Aggregate per-domain signals from subject classification
+        const classification = classifySubject(message.subject);
+        const messageDate = message.date ? new Date(message.date).toISOString() : new Date().toISOString();
+        const sigs = domainSignals.get(domain) ?? emptySignals();
+        addSignal(sigs, classification, messageDate, message.subject ?? '');
+        domainSignals.set(domain, sigs);
       }
     }
   }
@@ -295,7 +309,30 @@ async function processConnection(connection: any, user: any, maxResults: number,
     }
   }
 
-  // Insert unmatched domains
+  // === SIGNAL ENRICHMENT (intelligence layer) ===
+  if (matchedServices && matchedServices.length > 0) {
+    const supabaseAdmin = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
+    for (const service of matchedServices) {
+      const sigs = domainSignals.get(service.domain.toLowerCase());
+      if (!sigs || sigs.total === 0) continue;
+      const profile = computeProfile(sigs);
+      await supabaseAdmin.rpc('upsert_service_signals', {
+        p_user_id: user.id,
+        p_service_id: service.id,
+        p_signals: sigs as unknown as Record<string, unknown>,
+        p_confidence: profile.confidence,
+        p_activity_status: profile.activity_status,
+        p_cleanup_priority: profile.cleanup_priority,
+        p_last_transaction_at: sigs.last_transaction_at ?? null,
+        p_last_security_at: sigs.last_security_at ?? null,
+        p_last_activity_at: sigs.last_activity_at ?? null,
+      });
+    }
+  }
+
   if (unmatchedDomains.length > 0) {
     for (const domain of unmatchedDomains) {
       const emailFrom = messages.find(m => m.from.toLowerCase().includes(domain))?.from || '';
