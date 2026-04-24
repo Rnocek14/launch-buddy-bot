@@ -78,11 +78,11 @@ const PrivacyPolicy = () => {
                 We implement industry-standard security measures to protect your data:
               </p>
               <ul className="list-disc pl-6 space-y-2">
-                <li>All Gmail tokens are encrypted using AES-256-GCM encryption</li>
+                <li>All data is encrypted in transit (HTTPS/TLS) and stored securely using industry-standard encryption at rest</li>
                 <li>Row-Level Security (RLS) policies on all database tables</li>
-                <li>Secure HTTPS connections for all data transmission</li>
-                <li>Regular security audits and updates</li>
-                <li>Access controls and authentication requirements</li>
+                <li>OAuth credentials are stored in a secure, access-controlled database and never exposed to the client</li>
+                <li>Regular security reviews and dependency updates</li>
+                <li>Strict access controls and authentication requirements</li>
               </ul>
               <p className="mt-4">
                 However, no method of transmission over the Internet is 100% secure. While we strive to protect your information, we cannot guarantee absolute security.
@@ -134,10 +134,10 @@ const PrivacyPolicy = () => {
               <div>
                 <h3 className="font-semibold mb-2">How We Use Your Gmail Data</h3>
                 <ul className="list-disc pl-6 space-y-2">
-                  <li>Scan email metadata (sender addresses) to identify online services you use</li>
-                  <li>Extract domain names from email senders to match against our service catalog</li>
-                  <li>Detect unsubscribe headers to enable one-click unsubscribe where available</li>
-                  <li>Track which services have been discovered from which email account</li>
+                  <li>Extract the sender domain from the <code>From</code> header to match against our catalog of online services</li>
+                  <li>Analyze subject line patterns (e.g., "Welcome", "Verify your email", "Your receipt") to classify service-related messages. No message content or body text is accessed or stored.</li>
+                  <li>Detect <code>List-Unsubscribe</code> headers (RFC 2369/8058) to enable one-click unsubscribe where available</li>
+                  <li>Track which services have been discovered from which email account so you can manage them</li>
                 </ul>
               </div>
 
@@ -157,10 +157,10 @@ const PrivacyPolicy = () => {
               <div>
                 <h3 className="font-semibold mb-2">Data Storage & Security</h3>
                 <ul className="list-disc pl-6 space-y-2">
-                  <li>Gmail access tokens are encrypted using AES-256-GCM encryption before storage</li>
-                  <li>Tokens are stored in a secure database with Row-Level Security (RLS)</li>
-                  <li>Only you can access your own Gmail connection data</li>
-                  <li>Tokens are automatically refreshed to maintain secure access</li>
+                  <li>OAuth credentials are stored server-side in a secure, access-controlled database — never exposed to the browser</li>
+                  <li>All data is encrypted in transit (HTTPS) and stored using industry-standard encryption at rest</li>
+                  <li>Row-Level Security (RLS) ensures only you can access your own connection data</li>
+                  <li>We do NOT use AI or machine learning models to read, analyze, or train on your Gmail data</li>
                   <li>We only store: your email address, token expiration times, and which email account discovered which services</li>
                 </ul>
               </div>
