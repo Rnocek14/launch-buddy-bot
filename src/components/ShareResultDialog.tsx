@@ -329,7 +329,7 @@ export const ShareResultDialog = ({
 
         {/* Action Buttons */}
         <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="flex flex-col sm:grid sm:grid-cols-2 gap-3">
             <Button
               onClick={handleDownload}
               disabled={isGenerating}
