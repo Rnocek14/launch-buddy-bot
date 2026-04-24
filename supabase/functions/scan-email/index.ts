@@ -433,7 +433,11 @@ async function processConnection(connection: any, user: any, maxResults: number,
 
   const matchedServices: any[] = [];
   const unmatchedDomains: any[] = [];
-  
+  // Track which raw sender domains were merged into each catalog entry
+  // so we can aggregate intelligence signals correctly even when matching
+  // via subdomain (e.g. support.netflix.com -> netflix.com).
+  const serviceSenderDomains = new Map<string, Set<string>>(); // service_id -> sender domains
+
   for (const [domain, info] of emailDomains.entries()) {
     const service = catalogServices?.find(s => {
       const catalogDomain = s.domain.toLowerCase();
@@ -441,11 +445,16 @@ async function processConnection(connection: any, user: any, maxResults: number,
     });
 
     if (service) {
-      matchedServices.push({
-        service_id: service.id,
-        domain: service.domain,
-        name: service.name,
-      });
+      // Only push the service once even if multiple sender subdomains matched
+      if (!serviceSenderDomains.has(service.id)) {
+        matchedServices.push({
+          service_id: service.id,
+          domain: service.domain,
+          name: service.name,
+        });
+        serviceSenderDomains.set(service.id, new Set());
+      }
+      serviceSenderDomains.get(service.id)!.add(domain);
     } else {
       unmatchedDomains.push({
         domain,
