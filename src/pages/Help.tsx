@@ -46,11 +46,11 @@ export default function Help() {
         </div>
 
         <Tabs defaultValue="getting-started" className="mb-16">
-          <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4 mb-8">
-            <TabsTrigger value="getting-started">Getting Started</TabsTrigger>
-            <TabsTrigger value="videos">Guides</TabsTrigger>
-            <TabsTrigger value="troubleshooting">Troubleshooting</TabsTrigger>
-            <TabsTrigger value="faq">FAQs</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4 mb-8 h-auto gap-1 p-1">
+            <TabsTrigger value="getting-started" className="text-xs sm:text-sm whitespace-normal py-2 h-auto">Getting Started</TabsTrigger>
+            <TabsTrigger value="videos" className="text-xs sm:text-sm whitespace-normal py-2 h-auto">Guides</TabsTrigger>
+            <TabsTrigger value="troubleshooting" className="text-xs sm:text-sm whitespace-normal py-2 h-auto">Troubleshooting</TabsTrigger>
+            <TabsTrigger value="faq" className="text-xs sm:text-sm whitespace-normal py-2 h-auto">FAQs</TabsTrigger>
           </TabsList>
 
           <TabsContent value="getting-started" className="space-y-12">

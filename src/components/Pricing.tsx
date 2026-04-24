@@ -232,8 +232,9 @@ export const Pricing = () => {
             There are several privacy services out there. Here's how Footprint Finder stacks up — honestly.
           </p>
 
-          <div className="overflow-hidden rounded-2xl border">
-            <div className="grid grid-cols-4 bg-muted/40 text-xs font-medium uppercase tracking-wide py-3 px-4">
+          {/* Desktop table */}
+          <div className="hidden md:block overflow-hidden rounded-2xl border">
+            <div className="grid grid-cols-4 bg-muted/40 text-xs font-medium uppercase tracking-wide py-3 px-4 gap-3">
               <div>Service</div>
               <div>Price</div>
               <div>Focus</div>
@@ -243,11 +244,11 @@ export const Pricing = () => {
             {competitors.map((comp, index) => (
               <div 
                 key={index} 
-                className={`grid grid-cols-4 border-t px-4 py-4 text-sm ${
+                className={`grid grid-cols-4 border-t px-4 py-4 text-sm gap-3 ${
                   comp.highlight ? "bg-accent/5" : ""
                 }`}
               >
-                <div className="font-semibold flex items-center gap-2">
+                <div className="font-semibold flex items-center gap-2 flex-wrap">
                   {comp.name}
                   {comp.highlight && (
                     <Badge className="text-xs bg-accent/20 text-accent-foreground hover:bg-accent/20">
@@ -260,6 +261,36 @@ export const Pricing = () => {
                 </div>
                 <div className="text-muted-foreground">{comp.focus}</div>
                 <div className="text-muted-foreground">{comp.description}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Mobile card stack */}
+          <div className="md:hidden space-y-3">
+            {competitors.map((comp, index) => (
+              <div
+                key={index}
+                className={`rounded-2xl border p-4 ${comp.highlight ? "bg-accent/5 border-accent/40" : ""}`}
+              >
+                <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-semibold">{comp.name}</span>
+                    {comp.highlight && (
+                      <Badge className="text-xs bg-accent/20 text-accent-foreground hover:bg-accent/20">
+                        You are here
+                      </Badge>
+                    )}
+                  </div>
+                  <span className={`text-sm ${comp.highlight ? "text-accent font-semibold" : "text-muted-foreground"}`}>
+                    {comp.price}
+                  </span>
+                </div>
+                <div className="text-xs uppercase tracking-wide text-muted-foreground mb-1">
+                  {comp.focus}
+                </div>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  {comp.description}
+                </p>
               </div>
             ))}
           </div>
