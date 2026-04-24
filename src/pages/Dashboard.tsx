@@ -1058,13 +1058,13 @@ export default function Dashboard() {
                   : "Scan your connected inbox to discover which services have your data."}
               </p>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full sm:w-auto">
               {services.length > 0 && (
                 <Button
                   onClick={() => setShowCleanUpWizard(true)}
                   variant="outline"
                   size="lg"
-                  className="h-12 px-6 text-base"
+                  className="h-12 px-6 text-base w-full sm:w-auto"
                 >
                   <Trash2 className="w-4 h-4 mr-2" />
                   Clean Up My Accounts
@@ -1079,14 +1079,14 @@ export default function Dashboard() {
                     onClick={hasGmailAccess ? handleScan : handleConnectGmail}
                     disabled={scanning}
                     size="lg"
-                    className="h-12 px-6 text-base"
+                    className="h-12 px-6 text-base w-full sm:w-auto"
                   >
                     <RefreshCw className="w-4 h-4 mr-2" />
                     {hasGmailAccess ? "Run Scan" : "Connect Gmail to Scan"}
                   </Button>
                 </>
               ) : (
-                <Button disabled size="lg" className="h-12 px-6">
+                <Button disabled size="lg" className="h-12 px-6 w-full sm:w-auto">
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                   Scanning...
                 </Button>
@@ -1315,7 +1315,7 @@ export default function Dashboard() {
         {/* Services Grid Section */}
           <div className="space-y-6">
             {/* View Tabs */}
-            <div className="flex items-center gap-2 border-b border-border" id="services-grid">
+            <div className="flex items-center gap-2 border-b border-border overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" id="services-grid">
               <Button
                 variant={viewTab === 'all' ? 'default' : 'ghost'}
                 size="sm"
@@ -1379,7 +1379,7 @@ export default function Dashboard() {
                   </span>
                 </div>
               </div>
-              <div className="flex items-center gap-3 w-full sm:w-auto">
+              <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
                 <Button
                   variant={bulkMode ? "default" : "ghost"}
                   size="sm"
@@ -1387,6 +1387,7 @@ export default function Dashboard() {
                     setBulkMode(!bulkMode);
                     if (bulkMode) setSelectedServices(new Set());
                   }}
+                  className="flex-shrink-0"
                 >
                   {bulkMode ? "Done selecting" : "Select multiple"}
                 </Button>

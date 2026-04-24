@@ -157,17 +157,17 @@ export const Pricing = () => {
                 key={index}
                 className={`relative ${
                   plan.popular 
-                    ? "border-primary shadow-lg shadow-primary/10 scale-105 z-10" 
+                    ? "border-primary shadow-lg shadow-primary/10 md:scale-105 md:z-10" 
                     : "border-border/50"
                 }`}
               >
                 {plan.popular ? (
-                  <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary whitespace-nowrap">
+                  <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary whitespace-nowrap text-[10px] sm:text-xs px-2 max-w-[90%] truncate">
                     Most Popular {plan.badge ? `• ${plan.badge}` : ""}
                   </Badge>
                 ) : (
                   plan.badge && (
-                    <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-primary to-accent whitespace-nowrap">
+                    <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-primary to-accent whitespace-nowrap text-[10px] sm:text-xs px-2 max-w-[90%] truncate">
                       {plan.badge}
                     </Badge>
                   )
