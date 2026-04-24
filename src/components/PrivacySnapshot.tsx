@@ -543,17 +543,17 @@ export function PrivacySnapshot() {
       <Card className={`transition-all ${brokerStyle.border}`}>
         <CardContent className="p-6 space-y-4">
           {/* Header row */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className={`p-2 rounded-lg ${brokerStyle.iconBg}`}>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="flex items-start gap-3 min-w-0 flex-1">
+              <div className={`p-2 rounded-lg shrink-0 ${brokerStyle.iconBg}`}>
                 {isRunningBroker ? (
                   <Loader2 className={`w-5 h-5 ${brokerStyle.iconColor} animate-spin`} />
                 ) : (
                   <UserSearch className={`w-5 h-5 ${brokerStyle.iconColor}`} />
                 )}
               </div>
-              <div>
-                <div className="flex items-center gap-2">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2 flex-wrap">
                   <span className="font-semibold text-foreground">Broker Exposure</span>
                   {(inlineBrokers.length > 0 ? actionNeeded.length : data.brokers.found) > 0 && (
                     <Badge variant="destructive" className="text-xs">
@@ -561,7 +561,7 @@ export function PrivacySnapshot() {
                     </Badge>
                   )}
                 </div>
-                <div className="flex items-center gap-2 mt-0.5">
+                <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                   {lastCheckedAt ? (
                     <span className="text-[11px] text-muted-foreground">
                       Checked {formatDistanceToNow(new Date(lastCheckedAt), { addSuffix: true })}
@@ -577,7 +577,7 @@ export function PrivacySnapshot() {
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
               {data.brokers.last_scan && data.brokers.found > 0 && (
                 <Button
                   variant="ghost"
@@ -597,6 +597,7 @@ export function PrivacySnapshot() {
                 onClick={() => navigate("/broker-scan")}
                 variant={brokerSeverity === "danger" ? "default" : "outline"}
                 size="sm"
+                className="flex-1 sm:flex-none"
               >
                 {brokerActionLabel}
                 <ArrowRight className="w-3.5 h-3.5 ml-1" />
