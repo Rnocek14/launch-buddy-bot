@@ -362,7 +362,7 @@ const handler = async (req: Request): Promise<Response> => {
       }
 
       case "invoice.payment_failed": {
-        const invoice = event.data.object as Stripe.Invoice;
+        const invoice = event.data.object as any;
         console.log(`Payment failed for invoice: ${invoice.id}`);
 
         if (invoice.subscription) {
