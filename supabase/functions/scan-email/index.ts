@@ -43,9 +43,9 @@ serve(async (req) => {
     }
 
     // Get parameters from request
-    const { connectionId, maxResults = 100, after, query } = await req.json().catch(() => ({}));
+    const { connectionId, maxResults = 100, after, query, fullScan = false } = await req.json().catch(() => ({}));
 
-    console.log(`Scanning email for user: ${user.id}, connectionId: ${connectionId || 'primary'}`);
+    console.log(`Scanning email for user: ${user.id}, connectionId: ${connectionId || 'primary'}, fullScan: ${fullScan}`);
 
     // Get the email connection
     let connectionQuery = supabase
@@ -67,7 +67,7 @@ serve(async (req) => {
         throw new Error('No email connections found');
       }
       
-      return await processConnection(connection, user, maxResults, after, query, supabase);
+      return await processConnection(connection, user, maxResults, after, query, supabase, fullScan);
     }
 
     const { data: connection, error: connectionError } = await connectionQuery.maybeSingle();
@@ -76,7 +76,7 @@ serve(async (req) => {
       throw new Error('Email connection not found');
     }
 
-    return await processConnection(connection, user, maxResults, after, query, supabase);
+    return await processConnection(connection, user, maxResults, after, query, supabase, fullScan);
   } catch (error) {
     console.error('Error scanning email:', error);
     return new Response(
@@ -192,7 +192,7 @@ async function repairTokenState(
   }
 }
 
-async function processConnection(connection: any, user: any, maxResults: number, after: any, query: any, supabase: any) {
+async function processConnection(connection: any, user: any, maxResults: number, after: any, query: any, supabase: any, fullScan: boolean = false) {
   console.log(`Using ${connection.provider} connection: ${connection.email}`);
 
   // === LAYER 2: SMART TOKEN VALIDATION ===
@@ -312,9 +312,14 @@ async function processConnection(connection: any, user: any, maxResults: number,
   // Get the provider and scan messages
   const provider = getEmailProvider(connection.provider as ProviderType);
   
-  // Use incremental scanning if we have a last scan date
-  const scanAfter = lastScanDate || after;
-  
+  // Use incremental scanning if we have a last scan date — UNLESS this is an
+  // explicit deep/full scan, in which case we ignore the cutoff and scan
+  // back across the user's full Gmail history (up to maxResults).
+  const scanAfter = fullScan ? after : (lastScanDate || after);
+  if (fullScan) {
+    console.log(`🔍 Full scan requested — ignoring last_email_scan_date cutoff`);
+  }
+
   const messages = await provider.getMessages(accessToken, {
     maxResults,
     after: scanAfter,
