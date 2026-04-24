@@ -154,7 +154,7 @@ serve(async (req) => {
   }
 });
 
-async function processConnection(connection: any, user: any, maxResults: number, after: any, query: any, supabase: any) {
+async function processConnection(connection: any, user: any, maxResults: number, after: any, query: any, supabase: any, fullScan: boolean = false) {
   console.log(`Processing ${connection.provider} connection: ${connection.email}`);
 
   // Fetch user's last email scan date for incremental scanning
