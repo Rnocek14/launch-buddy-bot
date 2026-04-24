@@ -15,30 +15,39 @@ import { Input } from "@/components/ui/input";
  * container width while preserving the square aspect ratio. This makes the
  * preview fill the dialog properly on both mobile and desktop.
  */
-const SharePreviewFrame = ({ children }: { children: React.ReactNode }) => {
+const SharePreviewFrame = ({
+  children,
+  maxSize,
+}: {
+  children: React.ReactNode;
+  maxSize?: number;
+}) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState(380);
 
   useLayoutEffect(() => {
     const el = containerRef.current;
     if (!el) return;
+
     const update = () => {
       const width = el.clientWidth;
-      // Cap by viewport height so the whole card is visible without scroll.
-      // Reserves space for header, tabs, link section, and action buttons.
-      const maxByHeight = Math.max(280, window.innerHeight - 460);
-      const next = Math.min(width, maxByHeight);
+      const next = Math.floor(Math.min(width, maxSize ?? width));
       if (next > 0) setSize(next);
     };
+
     update();
     const ro = new ResizeObserver(update);
     ro.observe(el);
+    if (el.parentElement) {
+      ro.observe(el.parentElement);
+    }
     window.addEventListener("resize", update);
+
     return () => {
       ro.disconnect();
       window.removeEventListener("resize", update);
     };
-  }, []);
+  }, [maxSize]);
 
   const scale = size / 1080;
 
@@ -96,6 +105,49 @@ export const ShareResultDialog = ({
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [creatingPublicResult, setCreatingPublicResult] = useState(false);
   const [urlCopied, setUrlCopied] = useState(false);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const headerRef = useRef<HTMLDivElement>(null);
+  const tabsListRef = useRef<HTMLDivElement>(null);
+  const linkSectionRef = useRef<HTMLDivElement>(null);
+  const statusRef = useRef<HTMLDivElement>(null);
+  const actionsRef = useRef<HTMLDivElement>(null);
+  const [previewMaxSize, setPreviewMaxSize] = useState(380);
+
+  useLayoutEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+
+    const update = () => {
+      const computed = window.getComputedStyle(dialog);
+      const paddingY = parseFloat(computed.paddingTop) + parseFloat(computed.paddingBottom);
+      const headerHeight = headerRef.current?.offsetHeight ?? 0;
+      const tabsListHeight = tabsListRef.current?.offsetHeight ?? 0;
+      const linkHeight = linkSectionRef.current?.offsetHeight ?? 0;
+      const statusHeight = statusRef.current?.offsetHeight ?? 0;
+      const actionsHeight = actionsRef.current?.offsetHeight ?? 0;
+      const sectionSpacing = 56;
+      const availableHeight = dialog.clientHeight - paddingY - headerHeight - tabsListHeight - linkHeight - statusHeight - actionsHeight - sectionSpacing;
+
+      if (availableHeight > 0) {
+        setPreviewMaxSize(Math.floor(availableHeight));
+      }
+    };
+
+    update();
+
+    const ro = new ResizeObserver(update);
+    const observedElements = [dialog, headerRef.current, tabsListRef.current, linkSectionRef.current, statusRef.current, actionsRef.current]
+      .filter(Boolean) as HTMLDivElement[];
+
+    observedElements.forEach((element) => ro.observe(element));
+
+    window.addEventListener("resize", update);
+
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", update);
+    };
+  }, [open, shareUrl, creatingPublicResult]);
 
   useEffect(() => {
     if (open && !shareUrl) {
