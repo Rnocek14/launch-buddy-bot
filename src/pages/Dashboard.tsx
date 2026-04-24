@@ -64,6 +64,11 @@ interface Service {
   discovery_source?: 'email' | 'extension' | 'manual';
   privacy_action?: 'keep' | 'delete' | 'do_not_sell' | null;
   deletion_requested_at?: string;
+  activity_status?: 'active_paid' | 'active_free' | 'dormant' | 'newsletter_only' | 'unknown';
+  cleanup_priority?: number;
+  confidence_score?: number;
+  last_transaction_at?: string | null;
+  last_activity_at?: string | null;
 }
 
 interface ScanStats {
