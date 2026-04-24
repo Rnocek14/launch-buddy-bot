@@ -309,7 +309,30 @@ async function processConnection(connection: any, user: any, maxResults: number,
     }
   }
 
-  // Insert unmatched domains
+  // === SIGNAL ENRICHMENT (intelligence layer) ===
+  if (matchedServices && matchedServices.length > 0) {
+    const supabaseAdmin = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
+    for (const service of matchedServices) {
+      const sigs = domainSignals.get(service.domain.toLowerCase());
+      if (!sigs || sigs.total === 0) continue;
+      const profile = computeProfile(sigs);
+      await supabaseAdmin.rpc('upsert_service_signals', {
+        p_user_id: user.id,
+        p_service_id: service.id,
+        p_signals: sigs as unknown as Record<string, unknown>,
+        p_confidence: profile.confidence,
+        p_activity_status: profile.activity_status,
+        p_cleanup_priority: profile.cleanup_priority,
+        p_last_transaction_at: sigs.last_transaction_at ?? null,
+        p_last_security_at: sigs.last_security_at ?? null,
+        p_last_activity_at: sigs.last_activity_at ?? null,
+      });
+    }
+  }
+
   if (unmatchedDomains.length > 0) {
     for (const domain of unmatchedDomains) {
       const emailFrom = messages.find(m => m.from.toLowerCase().includes(domain))?.from || '';
