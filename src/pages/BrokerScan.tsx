@@ -209,7 +209,36 @@ export default function BrokerScan() {
           remainingSeconds: data.remaining_seconds || 0,
         });
       }
-      
+
+      // Edge function may have timed out at the gateway (~150s) while the scan
+      // is still running in the background. Check DB before declaring failure.
+      const errMsg = (data?.error || error?.message || "").toLowerCase();
+      const looksLikeTimeout =
+        !data?.error && (errMsg.includes("timeout") || errMsg.includes("failed to fetch") || errMsg.includes("network") || errMsg.includes("load failed") || errMsg === "");
+
+      if (looksLikeTimeout && !retryFailedOnly) {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          const { data: latestScan } = await supabase
+            .from("broker_scans")
+            .select("*")
+            .eq("user_id", session.user.id)
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          if (latestScan && (latestScan.status === "running" || latestScan.status === "pending")) {
+            toast({
+              title: "Scan still running",
+              description: "This is taking longer than expected. Results will appear here as they finish.",
+            });
+            setScan(latestScan as typeof scan);
+            await loadScanData();
+            // Keep scanning=true so the polling effect picks it up
+            return;
+          }
+        }
+      }
+
       toast({
         variant: "destructive",
         title: retryFailedOnly ? "Retry failed" : "Scan failed",
