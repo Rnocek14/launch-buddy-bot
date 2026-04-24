@@ -234,9 +234,9 @@ export const ShareResultDialog = ({
             <TabsTrigger value="challenge" className="text-xs sm:text-sm py-2 px-1">Challenge</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="minimalist" className="mt-6">
+          <TabsContent value="minimalist" className="mt-4 sm:mt-6">
             <div className="border rounded-lg overflow-hidden bg-muted">
-              <div className="transform scale-[0.35] origin-top-left">
+              <div className="transform scale-[0.28] sm:scale-[0.35] origin-top-left">
                 <ResultShareCard
                   template="minimalist"
                   riskScore={riskScore}
@@ -250,9 +250,9 @@ export const ShareResultDialog = ({
             </div>
           </TabsContent>
 
-          <TabsContent value="detailed" className="mt-6">
+          <TabsContent value="detailed" className="mt-4 sm:mt-6">
             <div className="border rounded-lg overflow-hidden bg-muted">
-              <div className="transform scale-[0.35] origin-top-left">
+              <div className="transform scale-[0.28] sm:scale-[0.35] origin-top-left">
                 <ResultShareCard
                   template="detailed"
                   riskScore={riskScore}
@@ -266,9 +266,9 @@ export const ShareResultDialog = ({
             </div>
           </TabsContent>
 
-          <TabsContent value="challenge" className="mt-6">
+          <TabsContent value="challenge" className="mt-4 sm:mt-6">
             <div className="border rounded-lg overflow-hidden bg-muted">
-              <div className="transform scale-[0.35] origin-top-left">
+              <div className="transform scale-[0.28] sm:scale-[0.35] origin-top-left">
                 <ResultShareCard
                   template="challenge"
                   riskScore={riskScore}
