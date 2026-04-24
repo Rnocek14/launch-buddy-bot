@@ -41,7 +41,7 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Initialize Stripe
-    const stripe = new Stripe(stripeKey, { apiVersion: "2024-06-20" });
+    const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
 
     // Get the signature from headers
     const signature = req.headers.get("stripe-signature");
