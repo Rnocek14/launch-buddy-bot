@@ -263,22 +263,40 @@ async function processConnection(connection: any, user: any, maxResults: number,
 
   console.log(`Found ${emailDomains.size} unique domains`);
 
-  // Query service catalog for matching domains
-  const { data: matchedServices } = await supabase
+  // Query full service catalog (small table) and match with subdomain support
+  // for parity with scan-email. e.g. order-update.amazon.com -> amazon.com.
+  const { data: catalog } = await supabase
     .from('service_catalog')
-    .select('id, domain, name')
-    .in('domain', Array.from(emailDomains));
+    .select('id, domain, name');
 
-  console.log(`Matched ${matchedServices?.length || 0} services from catalog`);
+  const matchedServices: Array<{ id: string; domain: string; name: string }> = [];
+  const serviceSenderDomains = new Map<string, Set<string>>(); // service_id -> raw sender domains
+  const matchedSenderDomains = new Set<string>();
 
-  const matchedDomains = new Set(matchedServices?.map((s: any) => s.domain) || []);
-  const unmatchedDomains = Array.from(emailDomains).filter(d => !matchedDomains.has(d));
+  for (const senderDomain of emailDomains) {
+    const service = catalog?.find((s: any) => {
+      const cd = (s.domain || '').toLowerCase();
+      return cd === senderDomain || senderDomain.endsWith('.' + cd);
+    });
+    if (service) {
+      matchedSenderDomains.add(senderDomain);
+      if (!serviceSenderDomains.has(service.id)) {
+        matchedServices.push({ id: service.id, domain: service.domain, name: service.name });
+        serviceSenderDomains.set(service.id, new Set());
+      }
+      serviceSenderDomains.get(service.id)!.add(senderDomain);
+    }
+  }
+
+  console.log(`Matched ${matchedServices.length} services from catalog`);
+
+  const unmatchedDomains = Array.from(emailDomains).filter(d => !matchedSenderDomains.has(d));
 
   // Update or insert user_services
   let newServicesCount = 0;
   let reappearedServicesCount = 0;
 
-  if (matchedServices && matchedServices.length > 0) {
+  if (matchedServices.length > 0) {
     for (const service of matchedServices) {
       const { data: existingService } = await supabase
         .from('user_services')
@@ -310,26 +328,62 @@ async function processConnection(connection: any, user: any, maxResults: number,
   }
 
   // === SIGNAL ENRICHMENT (intelligence layer) ===
-  if (matchedServices && matchedServices.length > 0) {
+  // Merge per-sender-domain signals into the catalog service they matched.
+  if (matchedServices.length > 0) {
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
     for (const service of matchedServices) {
-      const sigs = domainSignals.get(service.domain.toLowerCase());
-      if (!sigs || sigs.total === 0) continue;
-      const profile = computeProfile(sigs);
-      await supabaseAdmin.rpc('upsert_service_signals', {
+      const senderDomains = serviceSenderDomains.get(service.id);
+      if (!senderDomains) continue;
+
+      const merged = emptySignals();
+      for (const sd of senderDomains) {
+        const sigs = domainSignals.get(sd);
+        if (!sigs) continue;
+        merged.signup_count      += sigs.signup_count;
+        merged.transaction_count += sigs.transaction_count;
+        merged.security_count    += sigs.security_count;
+        merged.newsletter_count  += sigs.newsletter_count;
+        merged.policy_count      += sigs.policy_count;
+        merged.shipping_count    += sigs.shipping_count;
+        merged.social_count      += sigs.social_count;
+        merged.unknown_count     += sigs.unknown_count;
+        merged.total             += sigs.total;
+        const pickLatest = (a?: string, b?: string) => (!a ? b : !b ? a : (a > b ? a : b));
+        const lt = pickLatest(merged.last_transaction_at, sigs.last_transaction_at);
+        if (lt === sigs.last_transaction_at && sigs.last_transaction_at) {
+          merged.last_transaction_at = sigs.last_transaction_at;
+          merged.transaction_sample = sigs.transaction_sample;
+        } else if (lt) merged.last_transaction_at = lt;
+        const ls = pickLatest(merged.last_security_at, sigs.last_security_at);
+        if (ls === sigs.last_security_at && sigs.last_security_at) {
+          merged.last_security_at = sigs.last_security_at;
+          merged.security_sample = sigs.security_sample;
+        } else if (ls) merged.last_security_at = ls;
+        const lsg = pickLatest(merged.last_signup_at, sigs.last_signup_at);
+        if (lsg === sigs.last_signup_at && sigs.last_signup_at) {
+          merged.last_signup_at = sigs.last_signup_at;
+          merged.signup_sample = sigs.signup_sample;
+        } else if (lsg) merged.last_signup_at = lsg;
+        merged.last_activity_at = pickLatest(merged.last_activity_at, sigs.last_activity_at);
+      }
+
+      if (merged.total === 0) continue;
+      const profile = computeProfile(merged);
+      const { error: sigErr } = await supabaseAdmin.rpc('upsert_service_signals', {
         p_user_id: user.id,
         p_service_id: service.id,
-        p_signals: sigs as unknown as Record<string, unknown>,
+        p_signals: merged as unknown as Record<string, unknown>,
         p_confidence: profile.confidence,
         p_activity_status: profile.activity_status,
         p_cleanup_priority: profile.cleanup_priority,
-        p_last_transaction_at: sigs.last_transaction_at ?? null,
-        p_last_security_at: sigs.last_security_at ?? null,
-        p_last_activity_at: sigs.last_activity_at ?? null,
+        p_last_transaction_at: merged.last_transaction_at ?? null,
+        p_last_security_at: merged.last_security_at ?? null,
+        p_last_activity_at: merged.last_activity_at ?? null,
       });
+      if (sigErr) console.error(`Failed to upsert signals for ${service.name}:`, sigErr.message);
     }
   }
 
