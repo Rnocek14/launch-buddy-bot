@@ -4,6 +4,13 @@ import { getEmailProvider } from "../_shared/email-providers/factory.ts";
 import { ProviderType } from "../_shared/email-providers/types.ts";
 import { decrypt, encrypt } from "../_shared/encryption.ts";
 import { detectTokenEncryption, validateTokenState } from "../_shared/token-validator.ts";
+import {
+  classifySubject,
+  emptySignals,
+  addSignal,
+  computeProfile,
+  type ServiceSignals,
+} from "../_shared/subject-classifier.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -329,6 +336,8 @@ async function processConnection(connection: any, user: any, maxResults: number,
 
   // Process messages to discover services AND subscriptions
   const emailDomains = new Map<string, { from: string; count: number }>();
+  // Per-domain aggregated subject-line signals (intelligence layer)
+  const domainSignals = new Map<string, ServiceSignals>();
   const subscriptionMap = new Map<string, {
     senderEmail: string;
     senderName: string;
@@ -356,6 +365,15 @@ async function processConnection(connection: any, user: any, maxResults: number,
     } else {
       emailDomains.set(domain, { from: message.from, count: 1 });
     }
+
+    // === SUBJECT-LINE CLASSIFICATION (intelligence layer) ===
+    // Pattern-match subject to detect signup/transaction/security/newsletter signals.
+    // Pure regex, zero cost. Aggregated per sender domain.
+    const classification = classifySubject(message.subject);
+    const messageDate = message.date ? new Date(message.date).toISOString() : new Date().toISOString();
+    const sigs = domainSignals.get(domain) ?? emptySignals();
+    addSignal(sigs, classification, messageDate, message.subject ?? '');
+    domainSignals.set(domain, sigs);
 
     // Subscription detection: if message has List-Unsubscribe header, track it
     if (message.unsubscribeUrl || message.unsubscribeMailto) {
