@@ -48,6 +48,7 @@ import Compare from "./pages/Compare";
 import CompareIndex from "./pages/CompareIndex";
 import Affiliates from "./pages/Affiliates";
 import AffiliateDashboard from "./pages/AffiliateDashboard";
+import PricingPage from "./pages/PricingPage";
 import { captureAffiliateRef } from "./lib/affiliateTracking";
 
 if (typeof window !== "undefined") {
@@ -106,6 +107,7 @@ const App = () => (
               <Route path="/vs/:competitor" element={<Compare />} />
               <Route path="/affiliates" element={<Affiliates />} />
               <Route path="/affiliates/dashboard" element={<AffiliateDashboard />} />
+              <Route path="/pricing" element={<PricingPage />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
