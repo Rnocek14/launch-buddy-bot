@@ -219,24 +219,24 @@ export const ShareResultDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="text-2xl">Share Your Digital Footprint Score</DialogTitle>
-          <DialogDescription>
+      <DialogContent className="max-w-4xl w-[calc(100vw-2rem)] sm:w-auto max-h-[90vh] overflow-y-auto p-4 sm:p-6">
+        <DialogHeader className="space-y-2">
+          <DialogTitle className="text-xl sm:text-2xl">Share Your Digital Footprint Score</DialogTitle>
+          <DialogDescription className="text-sm">
             Choose a template and share your results on social media to inspire others to check their digital footprint!
           </DialogDescription>
         </DialogHeader>
 
         <Tabs value={selectedTemplate} onValueChange={(v) => setSelectedTemplate(v as TemplateType)} className="w-full">
           <TabsList className="grid w-full grid-cols-3 h-auto">
-            <TabsTrigger value="minimalist" className="text-xs sm:text-sm py-2">Minimalist</TabsTrigger>
-            <TabsTrigger value="detailed" className="text-xs sm:text-sm py-2">Detailed</TabsTrigger>
-            <TabsTrigger value="challenge" className="text-xs sm:text-sm py-2">Challenge</TabsTrigger>
+            <TabsTrigger value="minimalist" className="text-xs sm:text-sm py-2 px-1">Minimalist</TabsTrigger>
+            <TabsTrigger value="detailed" className="text-xs sm:text-sm py-2 px-1">Detailed</TabsTrigger>
+            <TabsTrigger value="challenge" className="text-xs sm:text-sm py-2 px-1">Challenge</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="minimalist" className="mt-6">
+          <TabsContent value="minimalist" className="mt-4 sm:mt-6">
             <div className="border rounded-lg overflow-hidden bg-muted">
-              <div className="transform scale-[0.35] origin-top-left">
+              <div className="transform scale-[0.28] sm:scale-[0.35] origin-top-left">
                 <ResultShareCard
                   template="minimalist"
                   riskScore={riskScore}
@@ -250,9 +250,9 @@ export const ShareResultDialog = ({
             </div>
           </TabsContent>
 
-          <TabsContent value="detailed" className="mt-6">
+          <TabsContent value="detailed" className="mt-4 sm:mt-6">
             <div className="border rounded-lg overflow-hidden bg-muted">
-              <div className="transform scale-[0.35] origin-top-left">
+              <div className="transform scale-[0.28] sm:scale-[0.35] origin-top-left">
                 <ResultShareCard
                   template="detailed"
                   riskScore={riskScore}
@@ -266,9 +266,9 @@ export const ShareResultDialog = ({
             </div>
           </TabsContent>
 
-          <TabsContent value="challenge" className="mt-6">
+          <TabsContent value="challenge" className="mt-4 sm:mt-6">
             <div className="border rounded-lg overflow-hidden bg-muted">
-              <div className="transform scale-[0.35] origin-top-left">
+              <div className="transform scale-[0.28] sm:scale-[0.35] origin-top-left">
                 <ResultShareCard
                   template="challenge"
                   riskScore={riskScore}
@@ -285,7 +285,7 @@ export const ShareResultDialog = ({
 
         {/* Shareable Link Section */}
         {shareUrl && (
-          <div className="border rounded-lg p-4 bg-muted/50 space-y-3">
+          <div className="border rounded-lg p-3 sm:p-4 bg-muted/50 space-y-2 sm:space-y-3">
             <div className="flex items-center gap-2 text-sm font-medium">
               <Link2 className="w-4 h-4 text-primary" />
               Your Shareable Link
@@ -293,27 +293,27 @@ export const ShareResultDialog = ({
             <p className="text-xs text-muted-foreground">
               Share this link on social media - anyone who clicks it will see your anonymized results and be prompted to scan their own inbox.
             </p>
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
               <Input
                 value={shareUrl}
                 readOnly
-                className="flex-1 font-mono text-sm"
+                className="flex-1 font-mono text-xs sm:text-sm min-w-0"
               />
               <Button
                 onClick={handleCopyUrl}
                 variant="outline"
                 size="sm"
-                className="shrink-0"
+                className="shrink-0 w-full sm:w-auto"
               >
                 {urlCopied ? (
                   <>
                     <CheckCircle className="w-4 h-4 mr-1 text-green-600" />
-                    Copied!
+                    <span className="text-xs sm:text-sm">Copied!</span>
                   </>
                 ) : (
                   <>
                     <Copy className="w-4 h-4 mr-1" />
-                    Copy
+                    <span className="text-xs sm:text-sm">Copy</span>
                   </>
                 )}
               </Button>
@@ -329,7 +329,7 @@ export const ShareResultDialog = ({
 
         {/* Action Buttons */}
         <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="flex flex-col sm:grid sm:grid-cols-2 gap-3">
             <Button
               onClick={handleDownload}
               disabled={isGenerating}
@@ -351,7 +351,7 @@ export const ShareResultDialog = ({
 
           <div className="border-t pt-4">
             <p className="text-sm text-muted-foreground mb-3 text-center">Share directly to:</p>
-            <div className="grid grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               <Button
                 onClick={() => handleShareToSocial("twitter")}
                 variant="outline"
@@ -359,7 +359,7 @@ export const ShareResultDialog = ({
                 className="w-full"
               >
                 <Twitter className="w-4 h-4 mr-1" />
-                Twitter
+                <span className="text-xs sm:text-sm">Twitter</span>
               </Button>
               <Button
                 onClick={() => handleShareToSocial("linkedin")}
@@ -368,7 +368,7 @@ export const ShareResultDialog = ({
                 className="w-full"
               >
                 <Linkedin className="w-4 h-4 mr-1" />
-                LinkedIn
+                <span className="text-xs sm:text-sm">LinkedIn</span>
               </Button>
               <Button
                 onClick={() => handleShareToSocial("facebook")}
@@ -377,7 +377,7 @@ export const ShareResultDialog = ({
                 className="w-full"
               >
                 <Facebook className="w-4 h-4 mr-1" />
-                Facebook
+                <span className="text-xs sm:text-sm">Facebook</span>
               </Button>
               <Button
                 onClick={() => handleShareToSocial("instagram")}
@@ -386,7 +386,7 @@ export const ShareResultDialog = ({
                 className="w-full"
               >
                 <Instagram className="w-4 h-4 mr-1" />
-                Instagram
+                <span className="text-xs sm:text-sm">Instagram</span>
               </Button>
             </div>
           </div>
