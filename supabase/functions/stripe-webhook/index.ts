@@ -41,7 +41,7 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Initialize Stripe
-    const stripe = new Stripe(stripeKey, { apiVersion: "2024-06-20" });
+    const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
 
     // Get the signature from headers
     const signature = req.headers.get("stripe-signature");
@@ -158,7 +158,7 @@ const handler = async (req: Request): Promise<Response> => {
         if (session.mode === "subscription" && session.subscription) {
           const subscription = await stripe.subscriptions.retrieve(
             session.subscription as string
-          );
+          ) as any;
 
           const userId = session.metadata?.supabase_user_id;
           if (!userId) {
@@ -269,7 +269,7 @@ const handler = async (req: Request): Promise<Response> => {
       }
 
       case "customer.subscription.updated": {
-        const subscription = event.data.object as Stripe.Subscription;
+        const subscription = event.data.object as any;
         console.log(`Subscription updated: ${subscription.id}`);
 
         // Determine tier from price ID
@@ -362,7 +362,7 @@ const handler = async (req: Request): Promise<Response> => {
       }
 
       case "invoice.payment_failed": {
-        const invoice = event.data.object as Stripe.Invoice;
+        const invoice = event.data.object as any;
         console.log(`Payment failed for invoice: ${invoice.id}`);
 
         if (invoice.subscription) {
