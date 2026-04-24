@@ -136,9 +136,10 @@ export const ShareResultDialog = ({
     update();
 
     const ro = new ResizeObserver(update);
-    [dialog, headerRef.current, tabsListRef.current, linkSectionRef.current, statusRef.current, actionsRef.current]
-      .filter((element): element is Element => Boolean(element))
-      .forEach((element) => ro.observe(element));
+    const observedElements = [dialog, headerRef.current, tabsListRef.current, linkSectionRef.current, statusRef.current, actionsRef.current]
+      .filter(Boolean) as HTMLDivElement[];
+
+    observedElements.forEach((element) => ro.observe(element));
 
     window.addEventListener("resize", update);
 
