@@ -508,7 +508,36 @@ async function processConnection(connection: any, user: any, maxResults: number,
     }
   }
 
-  // Update last scan date
+  // === SIGNAL ENRICHMENT (intelligence layer) ===
+  // For each matched service, compute aggregated signals + activity status + cleanup priority
+  // and persist via the upsert_service_signals RPC.
+  let signalsEnriched = 0;
+  for (const match of matchedServices) {
+    const sigs = domainSignals.get(match.domain.toLowerCase());
+    if (!sigs || sigs.total === 0) continue;
+
+    const profile = computeProfile(sigs);
+
+    const { error: sigErr } = await supabaseAdmin.rpc('upsert_service_signals', {
+      p_user_id: user.id,
+      p_service_id: match.service_id,
+      p_signals: sigs as unknown as Record<string, unknown>,
+      p_confidence: profile.confidence,
+      p_activity_status: profile.activity_status,
+      p_cleanup_priority: profile.cleanup_priority,
+      p_last_transaction_at: sigs.last_transaction_at ?? null,
+      p_last_security_at: sigs.last_security_at ?? null,
+      p_last_activity_at: sigs.last_activity_at ?? null,
+    });
+
+    if (sigErr) {
+      console.error(`Failed to upsert signals for ${match.name}:`, sigErr.message);
+    } else {
+      signalsEnriched++;
+    }
+  }
+  console.log(`Enriched ${signalsEnriched}/${matchedServices.length} services with classification signals`);
+
   await supabase
     .from('profiles')
     .update({ last_email_scan_date: new Date().toISOString() })
