@@ -1379,7 +1379,7 @@ export default function Dashboard() {
                   </span>
                 </div>
               </div>
-              <div className="flex items-center gap-3 w-full sm:w-auto">
+              <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
                 <Button
                   variant={bulkMode ? "default" : "ghost"}
                   size="sm"
@@ -1387,6 +1387,7 @@ export default function Dashboard() {
                     setBulkMode(!bulkMode);
                     if (bulkMode) setSelectedServices(new Set());
                   }}
+                  className="flex-shrink-0"
                 >
                   {bulkMode ? "Done selecting" : "Select multiple"}
                 </Button>
