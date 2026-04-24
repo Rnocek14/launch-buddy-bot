@@ -451,7 +451,26 @@ export const DeletionRequestDialog = ({
 
       setShowPreview(false);
       setSuccess(true);
-      
+
+      // Mark this service as having a sent deletion request so the dashboard card
+      // can show the "Deletion sent" indicator immediately.
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          await supabase
+            .from("user_services")
+            .update({
+              deletion_requested_at: new Date().toISOString(),
+              privacy_action: "delete",
+              privacy_action_at: new Date().toISOString(),
+            })
+            .eq("user_id", user.id)
+            .eq("service_id", service.id);
+        }
+      } catch (markErr) {
+        console.warn("Failed to mark service as deletion-requested", markErr);
+      }
+
       console.log('[DeletionRequest] Showing Deletion Request Sent toast');
       toast({
         title: "Deletion Request Sent!",
