@@ -94,7 +94,8 @@ serve(async (req) => {
     console.log(`Scanning ${connectionsToScan.length} email(s): ${connectionsToScan.map(c => c.email).join(', ')}`);
 
     // Get parameters from request
-    const { maxResults = 100, after, query } = await req.json().catch(() => ({}));
+    const { maxResults = 100, after, query, fullScan = false } = await req.json().catch(() => ({}));
+    console.log(`fullScan: ${fullScan}, maxResults: ${maxResults}`);
 
     // Aggregate results
     let totalNewServices = 0;
@@ -107,7 +108,7 @@ serve(async (req) => {
     for (const connection of connectionsToScan) {
       try {
         console.log(`Scanning email: ${connection.email}`);
-        const result = await processConnection(connection, user, maxResults, after, query, supabase);
+        const result = await processConnection(connection, user, maxResults, after, query, supabase, fullScan);
         
         scannedEmails.push(connection.email);
         totalNewServices += result.newServices || 0;
