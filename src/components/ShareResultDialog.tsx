@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useLayoutEffect } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -9,6 +9,49 @@ import { Download, Copy, Share2, Twitter, Linkedin, Facebook, Instagram, Link2, 
 import { trackEvent, TRACKING_EVENTS } from "@/lib/analytics";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
+
+/**
+ * Wraps the 1080x1080 share card and scales it down to fit the available
+ * container width while preserving the square aspect ratio. This makes the
+ * preview fill the dialog properly on both mobile and desktop.
+ */
+const SharePreviewFrame = ({ children }: { children: React.ReactNode }) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(0.35);
+
+  useLayoutEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const update = () => {
+      const width = el.clientWidth;
+      if (width > 0) setScale(width / 1080);
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  return (
+    <div
+      ref={containerRef}
+      className="relative w-full border rounded-lg overflow-hidden bg-muted"
+      style={{ aspectRatio: "1 / 1" }}
+    >
+      <div
+        style={{
+          transform: `scale(${scale})`,
+          transformOrigin: "top left",
+          width: 1080,
+          height: 1080,
+        }}
+      >
+        {children}
+      </div>
+    </div>
+  );
+};
+
 
 interface ShareResultDialogProps {
   open: boolean;
