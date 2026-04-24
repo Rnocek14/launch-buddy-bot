@@ -379,7 +379,7 @@ export default function Dashboard() {
         // Scan all connected emails (up to 3 for Pro)
         const response = await supabase.functions.invoke("scan-all-emails", {
           body: { 
-            maxResults: scanType === 'quick' ? 500 : 2000,
+            maxResults: scanType === 'quick' ? 1000 : 5000,
           }
         });
         
