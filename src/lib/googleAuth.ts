@@ -32,7 +32,7 @@ export async function validateGmailScope(accessToken: string): Promise<boolean> 
     const requiredScopes = [
       'openid',
       'https://www.googleapis.com/auth/userinfo.email',
-      'https://www.googleapis.com/auth/gmail.readonly'
+      'https://www.googleapis.com/auth/gmail.metadata'
     ];
     
     const hasAllScopes = requiredScopes.every(scope => scopes.includes(scope));
