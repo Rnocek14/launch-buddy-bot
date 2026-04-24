@@ -101,12 +101,34 @@ const PrivacyPolicy = () => {
                   When you connect your Gmail account, we request the following permissions:
                 </p>
                 <ul className="list-disc pl-6 space-y-2">
-                  <li><strong>gmail.readonly</strong> - Read-only access to scan email metadata (sender addresses) for service identification</li>
-                  <li><strong>userinfo.email</strong> and <strong>userinfo.profile</strong> - Basic account information</li>
+                  <li><strong>gmail.metadata</strong> — Read-only access to email <em>headers only</em> (From, Subject, Date, and List-Unsubscribe). This scope does <strong>not</strong> grant access to email bodies, attachments, or content.</li>
+                  <li><strong>userinfo.email</strong> and <strong>userinfo.profile</strong> — Basic account information (your email address and name).</li>
                 </ul>
                 <p className="text-sm text-muted-foreground mt-2">
-                  We do not request permission to send emails from your Gmail account. All deletion request emails are sent via our own email service (Resend), not through your Gmail.
+                  We do not request permission to send emails from your Gmail account. All deletion request emails are sent via our own email service (Resend) with your email address as the reply-to.
                 </p>
+              </div>
+
+              <div className="rounded-md border border-primary/30 bg-primary/5 p-4">
+                <h3 className="font-semibold mb-2">Google API Services Limited Use Disclosure</h3>
+                <p className="text-sm">
+                  Footprint Finder's use and transfer of information received from Google APIs to any other app will adhere to the{" "}
+                  <a
+                    href="https://developers.google.com/terms/api-services-user-data-policy"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary underline"
+                  >
+                    Google API Services User Data Policy
+                  </a>
+                  , including the Limited Use requirements. Specifically:
+                </p>
+                <ul className="list-disc pl-6 space-y-1 mt-2 text-sm">
+                  <li>We only use Google user data to provide and improve user-facing features visible in our app (privacy-account discovery and unsubscribe detection).</li>
+                  <li>We do not transfer Google user data to third parties except as necessary to provide our service, comply with applicable law, or as part of a merger/acquisition with adequate notice to users.</li>
+                  <li>We do not use Google user data for advertising, including retargeting, personalized, or interest-based advertising.</li>
+                  <li>We do not allow humans to read Google user data unless we have explicit user consent for specific messages, do so for security investigations, to comply with applicable law, or for internal operations where data has been aggregated and anonymized.</li>
+                </ul>
               </div>
 
               <div>
@@ -122,11 +144,13 @@ const PrivacyPolicy = () => {
               <div>
                 <h3 className="font-semibold mb-2">What We Do NOT Do</h3>
                 <ul className="list-disc pl-6 space-y-2">
-                  <li>We do NOT read or store email content, subjects, or bodies</li>
-                  <li>We do NOT access your contacts</li>
+                  <li>We do NOT read or store email bodies, message content, or attachments — the gmail.metadata scope does not grant access to these</li>
+                  <li>We do NOT send emails from your Gmail account</li>
+                  <li>We do NOT access your Google contacts, Drive, Calendar, or any other Google service</li>
                   <li>We do NOT share your Gmail data with any third parties</li>
                   <li>We do NOT use your data for advertising or marketing purposes</li>
                   <li>We do NOT sell your data</li>
+                  <li>We do NOT use your data to train AI/ML models</li>
                 </ul>
               </div>
 

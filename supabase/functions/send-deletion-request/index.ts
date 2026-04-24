@@ -155,8 +155,10 @@ const handler = async (req: Request): Promise<Response> => {
       .eq("is_primary", true)
       .single();
 
-    const useGmail = !!gmailConnection;
-    console.log(`User ${user.id} Gmail connection status:`, useGmail);
+    // Gmail send scope removed for Google verification (CASA-free path).
+    // All deletion emails now go through Resend with the user's email as reply-to.
+    const useGmail = false;
+    console.log(`User ${user.id} Gmail connection detected: ${!!gmailConnection}, but routing via Resend.`);
 
     let selectedIdentifier: any = null;
     let identifierValue = account_identifier;

@@ -56,9 +56,11 @@ export class GmailProvider implements EmailProvider {
   }
 
   getOAuthUrl(userId: string): string {
+    // Using gmail.metadata (sensitive scope) instead of gmail.readonly (restricted scope)
+    // to avoid CASA security assessment requirement. We only read message headers
+    // (From, Subject, Date, List-Unsubscribe) — never message bodies.
     const scopes = [
-      'https://www.googleapis.com/auth/gmail.readonly',
-      'https://www.googleapis.com/auth/gmail.send',
+      'https://www.googleapis.com/auth/gmail.metadata',
       'https://www.googleapis.com/auth/userinfo.email',
       'https://www.googleapis.com/auth/userinfo.profile'
     ];
@@ -177,38 +179,12 @@ export class GmailProvider implements EmailProvider {
     };
   }
 
-  async sendEmail(accessToken: string, email: EmailData): Promise<void> {
-    console.log('Gmail: Sending email to', email.to);
-
-    const message = [
-      `To: ${email.to}`,
-      `Subject: ${email.subject}`,
-      'Content-Type: text/html; charset=utf-8',
-      '',
-      email.body,
-    ].join('\r\n');
-
-    const encodedMessage = btoa(unescape(encodeURIComponent(message)))
-      .replace(/\+/g, '-')
-      .replace(/\//g, '_')
-      .replace(/=+$/, '');
-
-    const response = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ raw: encodedMessage }),
-    });
-
-    if (!response.ok) {
-      const error = await response.text();
-      console.error('Gmail send error:', error);
-      throw new Error(`Failed to send email via Gmail: ${error}`);
-    }
-
-    console.log('Gmail: Email sent successfully');
+  async sendEmail(_accessToken: string, _email: EmailData): Promise<void> {
+    // Disabled: gmail.send is a restricted scope requiring CASA assessment.
+    // Footprint Finder routes all outbound deletion emails through Resend
+    // with the user's email as reply-to. This method is kept to satisfy the
+    // EmailProvider interface but should never be called.
+    throw new Error('Gmail sending is disabled. Outbound emails are sent via Resend.');
   }
 
   async getMessages(accessToken: string, filters?: ScanFilters): Promise<EmailMessage[]> {
@@ -248,12 +224,16 @@ export class GmailProvider implements EmailProvider {
 
     if (data.messages) {
       for (const msg of data.messages.slice(0, filters?.maxResults || 100)) {
-        const detailResponse = await fetch(
-          `https://gmail.googleapis.com/gmail/v1/users/me/messages/${msg.id}`,
-          {
-            headers: { Authorization: `Bearer ${accessToken}` },
-          }
-        );
+        // gmail.metadata scope requires format=metadata + metadataHeaders param.
+        // Body access (incl. snippet) is NOT permitted under this scope.
+        const metadataHeaders = ['From', 'Subject', 'Date', 'List-Unsubscribe', 'List-Unsubscribe-Post'];
+        const detailUrl = new URL(`https://gmail.googleapis.com/gmail/v1/users/me/messages/${msg.id}`);
+        detailUrl.searchParams.set('format', 'metadata');
+        for (const h of metadataHeaders) detailUrl.searchParams.append('metadataHeaders', h);
+
+        const detailResponse = await fetch(detailUrl.toString(), {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
 
         if (detailResponse.ok) {
           const detail = await detailResponse.json();
@@ -274,7 +254,7 @@ export class GmailProvider implements EmailProvider {
             from,
             subject,
             date,
-            snippet: detail.snippet,
+            snippet: undefined, // not available with gmail.metadata scope
             unsubscribeUrl,
             unsubscribeMailto,
             hasOneClick: hasOneClick || undefined,
