@@ -1,0 +1,2 @@
+ALTER TABLE public.public_results DROP CONSTRAINT IF EXISTS public_results_risk_level_check;
+ALTER TABLE public.public_results ADD CONSTRAINT public_results_risk_level_check CHECK (risk_level = ANY (ARRAY['low'::text, 'medium'::text, 'high'::text, 'critical'::text]));
