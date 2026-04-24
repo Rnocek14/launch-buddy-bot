@@ -43,9 +43,9 @@ serve(async (req) => {
     }
 
     // Get parameters from request
-    const { connectionId, maxResults = 100, after, query } = await req.json().catch(() => ({}));
+    const { connectionId, maxResults = 100, after, query, fullScan = false } = await req.json().catch(() => ({}));
 
-    console.log(`Scanning email for user: ${user.id}, connectionId: ${connectionId || 'primary'}`);
+    console.log(`Scanning email for user: ${user.id}, connectionId: ${connectionId || 'primary'}, fullScan: ${fullScan}`);
 
     // Get the email connection
     let connectionQuery = supabase
@@ -67,7 +67,7 @@ serve(async (req) => {
         throw new Error('No email connections found');
       }
       
-      return await processConnection(connection, user, maxResults, after, query, supabase);
+      return await processConnection(connection, user, maxResults, after, query, supabase, fullScan);
     }
 
     const { data: connection, error: connectionError } = await connectionQuery.maybeSingle();
@@ -76,7 +76,7 @@ serve(async (req) => {
       throw new Error('Email connection not found');
     }
 
-    return await processConnection(connection, user, maxResults, after, query, supabase);
+    return await processConnection(connection, user, maxResults, after, query, supabase, fullScan);
   } catch (error) {
     console.error('Error scanning email:', error);
     return new Response(
