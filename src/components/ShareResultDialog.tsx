@@ -351,7 +351,7 @@ export const ShareResultDialog = ({
 
           <div className="border-t pt-4">
             <p className="text-sm text-muted-foreground mb-3 text-center">Share directly to:</p>
-            <div className="grid grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               <Button
                 onClick={() => handleShareToSocial("twitter")}
                 variant="outline"
@@ -359,7 +359,7 @@ export const ShareResultDialog = ({
                 className="w-full"
               >
                 <Twitter className="w-4 h-4 mr-1" />
-                Twitter
+                <span className="text-xs sm:text-sm">Twitter</span>
               </Button>
               <Button
                 onClick={() => handleShareToSocial("linkedin")}
@@ -368,7 +368,7 @@ export const ShareResultDialog = ({
                 className="w-full"
               >
                 <Linkedin className="w-4 h-4 mr-1" />
-                LinkedIn
+                <span className="text-xs sm:text-sm">LinkedIn</span>
               </Button>
               <Button
                 onClick={() => handleShareToSocial("facebook")}
@@ -377,7 +377,7 @@ export const ShareResultDialog = ({
                 className="w-full"
               >
                 <Facebook className="w-4 h-4 mr-1" />
-                Facebook
+                <span className="text-xs sm:text-sm">Facebook</span>
               </Button>
               <Button
                 onClick={() => handleShareToSocial("instagram")}
@@ -386,7 +386,7 @@ export const ShareResultDialog = ({
                 className="w-full"
               >
                 <Instagram className="w-4 h-4 mr-1" />
-                Instagram
+                <span className="text-xs sm:text-sm">Instagram</span>
               </Button>
             </div>
           </div>
