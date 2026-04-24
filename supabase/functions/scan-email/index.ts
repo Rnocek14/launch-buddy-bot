@@ -312,9 +312,14 @@ async function processConnection(connection: any, user: any, maxResults: number,
   // Get the provider and scan messages
   const provider = getEmailProvider(connection.provider as ProviderType);
   
-  // Use incremental scanning if we have a last scan date
-  const scanAfter = lastScanDate || after;
-  
+  // Use incremental scanning if we have a last scan date — UNLESS this is an
+  // explicit deep/full scan, in which case we ignore the cutoff and scan
+  // back across the user's full Gmail history (up to maxResults).
+  const scanAfter = fullScan ? after : (lastScanDate || after);
+  if (fullScan) {
+    console.log(`🔍 Full scan requested — ignoring last_email_scan_date cutoff`);
+  }
+
   const messages = await provider.getMessages(accessToken, {
     maxResults,
     after: scanAfter,
