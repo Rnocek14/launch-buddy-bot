@@ -241,8 +241,9 @@ async function processConnection(connection: any, user: any, maxResults: number,
   const messages = await provider.getMessages(accessToken, filters);
   console.log(`Fetched ${messages.length} messages`);
 
-  // Extract unique domains from email senders
+  // Extract unique domains AND classify subjects per domain (intelligence layer)
   const emailDomains = new Set<string>();
+  const domainSignals = new Map<string, ServiceSignals>();
   for (const message of messages) {
     const emailMatch = message.from.match(/<(.+?)>/) || message.from.match(/([^\s<>]+@[^\s<>]+)/);
     if (emailMatch) {
@@ -250,6 +251,12 @@ async function processConnection(connection: any, user: any, maxResults: number,
       const domain = email.split('@')[1]?.toLowerCase();
       if (domain) {
         emailDomains.add(domain);
+        // Aggregate per-domain signals from subject classification
+        const classification = classifySubject(message.subject);
+        const messageDate = message.date ? new Date(message.date).toISOString() : new Date().toISOString();
+        const sigs = domainSignals.get(domain) ?? emptySignals();
+        addSignal(sigs, classification, messageDate, message.subject ?? '');
+        domainSignals.set(domain, sigs);
       }
     }
   }
