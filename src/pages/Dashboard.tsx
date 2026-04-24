@@ -1088,13 +1088,13 @@ export default function Dashboard() {
                         <SelectItem value="quick">
                           <div className="flex flex-col items-start">
                             <span className="font-medium">Quick Scan</span>
-                            <span className="text-xs text-muted-foreground">1,000 emails · ~30s</span>
+                            <span className="text-xs text-muted-foreground">800 emails · ~30s</span>
                           </div>
                         </SelectItem>
                         <SelectItem value="deep">
                           <div className="flex flex-col items-start">
                             <span className="font-medium">Deep Scan</span>
-                            <span className="text-xs text-muted-foreground">5,000 emails · ~1–2 min</span>
+                            <span className="text-xs text-muted-foreground">2,000 emails · ~1 min</span>
                           </div>
                         </SelectItem>
                       </SelectContent>
