@@ -433,7 +433,11 @@ async function processConnection(connection: any, user: any, maxResults: number,
 
   const matchedServices: any[] = [];
   const unmatchedDomains: any[] = [];
-  
+  // Track which raw sender domains were merged into each catalog entry
+  // so we can aggregate intelligence signals correctly even when matching
+  // via subdomain (e.g. support.netflix.com -> netflix.com).
+  const serviceSenderDomains = new Map<string, Set<string>>(); // service_id -> sender domains
+
   for (const [domain, info] of emailDomains.entries()) {
     const service = catalogServices?.find(s => {
       const catalogDomain = s.domain.toLowerCase();
@@ -441,11 +445,16 @@ async function processConnection(connection: any, user: any, maxResults: number,
     });
 
     if (service) {
-      matchedServices.push({
-        service_id: service.id,
-        domain: service.domain,
-        name: service.name,
-      });
+      // Only push the service once even if multiple sender subdomains matched
+      if (!serviceSenderDomains.has(service.id)) {
+        matchedServices.push({
+          service_id: service.id,
+          domain: service.domain,
+          name: service.name,
+        });
+        serviceSenderDomains.set(service.id, new Set());
+      }
+      serviceSenderDomains.get(service.id)!.add(domain);
     } else {
       unmatchedDomains.push({
         domain,
@@ -509,25 +518,66 @@ async function processConnection(connection: any, user: any, maxResults: number,
   }
 
   // === SIGNAL ENRICHMENT (intelligence layer) ===
-  // For each matched service, compute aggregated signals + activity status + cleanup priority
-  // and persist via the upsert_service_signals RPC.
+  // For each matched service, merge signals from every sender subdomain that
+  // mapped to it (e.g. order-update.amazon.com + amazon.com -> amazon.com).
   let signalsEnriched = 0;
   for (const match of matchedServices) {
-    const sigs = domainSignals.get(match.domain.toLowerCase());
-    if (!sigs || sigs.total === 0) continue;
+    const senderDomains = serviceSenderDomains.get(match.service_id);
+    if (!senderDomains || senderDomains.size === 0) continue;
 
-    const profile = computeProfile(sigs);
+    // Merge signals across all sender domains that matched this catalog service
+    const merged = emptySignals();
+    for (const sd of senderDomains) {
+      const sigs = domainSignals.get(sd);
+      if (!sigs) continue;
+      merged.signup_count      += sigs.signup_count;
+      merged.transaction_count += sigs.transaction_count;
+      merged.security_count    += sigs.security_count;
+      merged.newsletter_count  += sigs.newsletter_count;
+      merged.policy_count      += sigs.policy_count;
+      merged.shipping_count    += sigs.shipping_count;
+      merged.social_count      += sigs.social_count;
+      merged.unknown_count     += sigs.unknown_count;
+      merged.total             += sigs.total;
+      // Take latest dates + samples across subdomains
+      const pickLatest = (a?: string, b?: string) => (!a ? b : !b ? a : (a > b ? a : b));
+      const latestSignup = pickLatest(merged.last_signup_at, sigs.last_signup_at);
+      if (latestSignup === sigs.last_signup_at && sigs.last_signup_at) {
+        merged.last_signup_at = sigs.last_signup_at;
+        merged.signup_sample = sigs.signup_sample;
+      } else if (latestSignup) {
+        merged.last_signup_at = latestSignup;
+      }
+      const latestTxn = pickLatest(merged.last_transaction_at, sigs.last_transaction_at);
+      if (latestTxn === sigs.last_transaction_at && sigs.last_transaction_at) {
+        merged.last_transaction_at = sigs.last_transaction_at;
+        merged.transaction_sample = sigs.transaction_sample;
+      } else if (latestTxn) {
+        merged.last_transaction_at = latestTxn;
+      }
+      const latestSec = pickLatest(merged.last_security_at, sigs.last_security_at);
+      if (latestSec === sigs.last_security_at && sigs.last_security_at) {
+        merged.last_security_at = sigs.last_security_at;
+        merged.security_sample = sigs.security_sample;
+      } else if (latestSec) {
+        merged.last_security_at = latestSec;
+      }
+      merged.last_activity_at = pickLatest(merged.last_activity_at, sigs.last_activity_at);
+    }
+
+    if (merged.total === 0) continue;
+    const profile = computeProfile(merged);
 
     const { error: sigErr } = await supabaseAdmin.rpc('upsert_service_signals', {
       p_user_id: user.id,
       p_service_id: match.service_id,
-      p_signals: sigs as unknown as Record<string, unknown>,
+      p_signals: merged as unknown as Record<string, unknown>,
       p_confidence: profile.confidence,
       p_activity_status: profile.activity_status,
       p_cleanup_priority: profile.cleanup_priority,
-      p_last_transaction_at: sigs.last_transaction_at ?? null,
-      p_last_security_at: sigs.last_security_at ?? null,
-      p_last_activity_at: sigs.last_activity_at ?? null,
+      p_last_transaction_at: merged.last_transaction_at ?? null,
+      p_last_security_at: merged.last_security_at ?? null,
+      p_last_activity_at: merged.last_activity_at ?? null,
     });
 
     if (sigErr) {
