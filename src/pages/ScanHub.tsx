@@ -115,7 +115,13 @@ export default function ScanHub() {
             description: data?.error || error?.message || "Failed to start rescan",
           });
         } else {
-          toast({ title: "Rescan complete", description: `Found exposures on ${data.scan?.found_count || 0} brokers.` });
+          const stillRunning = data?.scan && (data.scan.status === 'running' || data.scan.status === 'pending');
+          toast({
+            title: stillRunning ? "Rescan started" : "Rescan complete",
+            description: stillRunning
+              ? "Checking brokers in the background. Refresh in 1–2 minutes to see results."
+              : `Found exposures on ${data.scan?.found_count || 0} brokers.`,
+          });
           await loadStatus();
         }
       } else if (scanType === 'exposure') {
