@@ -172,7 +172,7 @@ serve(async (req) => {
             result = 'success';
           } else {
             result = 'failed';
-            errorMessage = `One-click POST returned ${response.status}`;
+            errorMessage = `One-click POST returned ${response?.status ?? 'no response'}`;
           }
         } catch (fetchError) {
           result = 'failed';
