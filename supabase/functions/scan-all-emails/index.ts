@@ -232,8 +232,12 @@ async function processConnection(connection: any, user: any, maxResults: number,
   const provider = getEmailProvider(connection.provider as ProviderType);
   
   const filters: any = { maxResults };
-  if (after || lastScanDate) {
+  // Deep/full scan ignores last_email_scan_date so we can dig back across history
+  if (after || (lastScanDate && !fullScan)) {
     filters.after = after || (lastScanDate ? lastScanDate.toISOString() : undefined);
+  }
+  if (fullScan) {
+    console.log(`🔍 Full scan requested — ignoring last_email_scan_date cutoff`);
   }
   if (query) {
     filters.query = query;
