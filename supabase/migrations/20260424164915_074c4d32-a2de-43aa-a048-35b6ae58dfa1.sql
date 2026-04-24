@@ -1,0 +1,1 @@
+UPDATE public.broker_scans SET status = 'failed', completed_at = now(), updated_at = now() WHERE id = 'bf8c5049-c0fd-44d7-ba70-cf2e5f476f65' AND status IN ('running','pending');
