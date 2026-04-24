@@ -1368,105 +1368,133 @@ Deno.serve(async (req) => {
 
       console.log(`Created broker scan ${newScan.id} for user ${userId} (${userProfile.firstName} ${userProfile.lastName}), SERP API: ${serpApiKey ? 'configured' : 'not configured'}`);
 
-      // Scan sequentially with jitter (concurrency=1 for reliability)
-      let scannedCount = 0;
-      let foundCount = 0;
-      let cleanCount = 0;
-      let errorCount = 0;
+      // Run the scan in the background so the HTTP gateway timeout (~150s)
+      // does not kill the loop mid-flight. The client polls broker_scans for progress.
+      const runScan = async () => {
+        let scannedCount = 0;
+        let foundCount = 0;
+        let cleanCount = 0;
+        let errorCount = 0;
 
-      for (const broker of brokers || []) {
-        // Add jitter delay between brokers
-        if (scannedCount > 0) {
-          await new Promise(resolve => setTimeout(resolve, getJitterDelay()));
-        }
-        
-        const result = await scanBrokerV2(broker.slug, userProfile, serpApiKey, supabase, user.id);
-        result.brokerId = broker.id;
-        
-        scannedCount++;
-        
-        // Count by status
-        if (result.status_v2 === 'found' || result.status_v2 === 'possible_match') {
-          foundCount++;
-        } else if (result.status_v2 === 'not_found') {
-          cleanCount++;
-        } else {
-          errorCount++;
-        }
-
-        // Upsert result with v2 fields
-        await supabase
-          .from('broker_scan_results')
-          .upsert({
-            user_id: userId,
-            broker_id: broker.id,
-            status: (result.status_v2 === 'found' || result.status_v2 === 'possible_match') ? 'found' : result.status_v2 === 'not_found' ? 'clean' : 'error', // Legacy field
-            status_v2: result.status_v2,
-            error_code: result.error_code,
-            http_status: result.http_status,
-            error_detail: result.error_detail,
-            detection_method: result.detection_method,
-            confidence: result.confidence,
-            confidence_breakdown: result.confidence_breakdown,
-            evidence_snippet: result.evidence_snippet,
-            evidence_url: result.evidence_url,
-            profile_url: result.profile_url,
-            extracted_data: result.extracted_data,
-            evidence_query: result.evidence_query,
-            scoring_version: result.scoring_version,
-            error_message: result.error_detail,
-            match_confidence: result.confidence,
-            scanned_at: new Date().toISOString(),
-          }, {
-            onConflict: 'user_id,broker_id',
-          });
-
-        // Update progress
-        await supabase
-          .from('broker_scans')
-          .update({
-            scanned_count: scannedCount,
-            found_count: foundCount,
-            clean_count: cleanCount,
-            error_count: errorCount,
-          })
-          .eq('id', newScan.id);
-      }
-
-      // Mark complete
-      const { data: completedScan } = await supabase
-        .from('broker_scans')
-        .update({
-          status: 'completed',
-          completed_at: new Date().toISOString(),
-          scanned_count: scannedCount,
-          found_count: foundCount,
-          clean_count: cleanCount,
-          error_count: errorCount,
-        })
-        .eq('id', newScan.id)
-        .select()
-        .single();
-
-      console.log(`Completed scan ${newScan.id}: found=${foundCount}, clean=${cleanCount}, errors=${errorCount}`);
-
-      // Fire-and-forget alert (only sends if diff > 0 vs last alert)
-      if (foundCount > 0) {
         try {
-          await supabase.functions.invoke('send-exposure-alert', {
-            body: { userId, triggerSource: 'broker_scan' },
-          });
-        } catch (alertErr) {
-          console.error('[SCAN-BROKERS] Alert dispatch failed:', alertErr);
+          for (const broker of brokers || []) {
+            // Add jitter delay between brokers
+            if (scannedCount > 0) {
+              await new Promise(resolve => setTimeout(resolve, getJitterDelay()));
+            }
+
+            try {
+              const result = await scanBrokerV2(broker.slug, userProfile, serpApiKey, supabase, user.id);
+              result.brokerId = broker.id;
+
+              scannedCount++;
+
+              if (result.status_v2 === 'found' || result.status_v2 === 'possible_match') {
+                foundCount++;
+              } else if (result.status_v2 === 'not_found') {
+                cleanCount++;
+              } else {
+                errorCount++;
+              }
+
+              await supabase
+                .from('broker_scan_results')
+                .upsert({
+                  user_id: userId,
+                  broker_id: broker.id,
+                  status: (result.status_v2 === 'found' || result.status_v2 === 'possible_match') ? 'found' : result.status_v2 === 'not_found' ? 'clean' : 'error',
+                  status_v2: result.status_v2,
+                  error_code: result.error_code,
+                  http_status: result.http_status,
+                  error_detail: result.error_detail,
+                  detection_method: result.detection_method,
+                  confidence: result.confidence,
+                  confidence_breakdown: result.confidence_breakdown,
+                  evidence_snippet: result.evidence_snippet,
+                  evidence_url: result.evidence_url,
+                  profile_url: result.profile_url,
+                  extracted_data: result.extracted_data,
+                  evidence_query: result.evidence_query,
+                  scoring_version: result.scoring_version,
+                  error_message: result.error_detail,
+                  match_confidence: result.confidence,
+                  scanned_at: new Date().toISOString(),
+                }, {
+                  onConflict: 'user_id,broker_id',
+                });
+            } catch (brokerErr) {
+              // Never let one broker kill the whole loop
+              scannedCount++;
+              errorCount++;
+              console.error(`[SCAN-BROKERS] broker ${broker.slug} threw:`, brokerErr);
+            }
+
+            await supabase
+              .from('broker_scans')
+              .update({
+                scanned_count: scannedCount,
+                found_count: foundCount,
+                clean_count: cleanCount,
+                error_count: errorCount,
+                updated_at: new Date().toISOString(),
+              })
+              .eq('id', newScan.id);
+          }
+
+          await supabase
+            .from('broker_scans')
+            .update({
+              status: 'completed',
+              completed_at: new Date().toISOString(),
+              scanned_count: scannedCount,
+              found_count: foundCount,
+              clean_count: cleanCount,
+              error_count: errorCount,
+            })
+            .eq('id', newScan.id);
+
+          console.log(`Completed scan ${newScan.id}: found=${foundCount}, clean=${cleanCount}, errors=${errorCount}`);
+
+          if (foundCount > 0) {
+            try {
+              await supabase.functions.invoke('send-exposure-alert', {
+                body: { userId, triggerSource: 'broker_scan' },
+              });
+            } catch (alertErr) {
+              console.error('[SCAN-BROKERS] Alert dispatch failed:', alertErr);
+            }
+          }
+        } catch (loopErr) {
+          console.error(`[SCAN-BROKERS] Background scan ${newScan.id} crashed:`, loopErr);
+          await supabase
+            .from('broker_scans')
+            .update({
+              status: 'failed',
+              completed_at: new Date().toISOString(),
+              scanned_count: scannedCount,
+              found_count: foundCount,
+              clean_count: cleanCount,
+              error_count: errorCount,
+            })
+            .eq('id', newScan.id);
         }
+      };
+
+      // @ts-ignore — EdgeRuntime is a Supabase/Deno deploy global
+      if (typeof EdgeRuntime !== 'undefined' && typeof EdgeRuntime.waitUntil === 'function') {
+        // @ts-ignore
+        EdgeRuntime.waitUntil(runScan());
+      } else {
+        // Fallback for local/test runs
+        runScan();
       }
 
       return new Response(
-        JSON.stringify({ 
-          message: 'Scan completed',
-          scan: completedScan,
+        JSON.stringify({
+          message: 'Scan started',
+          scan: newScan,
         }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 202, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
