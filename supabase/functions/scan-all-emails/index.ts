@@ -3,6 +3,13 @@ import { createClient } from "npm:@supabase/supabase-js@2.79.0";
 import { getEmailProvider } from "../_shared/email-providers/factory.ts";
 import { ProviderType } from "../_shared/email-providers/types.ts";
 import { decrypt } from "../_shared/encryption.ts";
+import {
+  classifySubject,
+  emptySignals,
+  addSignal,
+  computeProfile,
+  type ServiceSignals,
+} from "../_shared/subject-classifier.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
