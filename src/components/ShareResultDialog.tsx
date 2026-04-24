@@ -235,51 +235,45 @@ export const ShareResultDialog = ({
           </TabsList>
 
           <TabsContent value="minimalist" className="mt-4 sm:mt-6">
-            <div className="border rounded-lg overflow-hidden bg-muted">
-              <div className="transform scale-[0.28] sm:scale-[0.35] origin-top-left">
-                <ResultShareCard
-                  template="minimalist"
-                  riskScore={riskScore}
-                  riskLevel={riskLevel}
-                  serviceCount={serviceCount}
-                  topServices={topServices}
-                  avgAccountAge={avgAccountAge}
-                  unmatchedCount={unmatchedCount}
-                />
-              </div>
-            </div>
+            <SharePreviewFrame>
+              <ResultShareCard
+                template="minimalist"
+                riskScore={riskScore}
+                riskLevel={riskLevel}
+                serviceCount={serviceCount}
+                topServices={topServices}
+                avgAccountAge={avgAccountAge}
+                unmatchedCount={unmatchedCount}
+              />
+            </SharePreviewFrame>
           </TabsContent>
 
           <TabsContent value="detailed" className="mt-4 sm:mt-6">
-            <div className="border rounded-lg overflow-hidden bg-muted">
-              <div className="transform scale-[0.28] sm:scale-[0.35] origin-top-left">
-                <ResultShareCard
-                  template="detailed"
-                  riskScore={riskScore}
-                  riskLevel={riskLevel}
-                  serviceCount={serviceCount}
-                  topServices={topServices}
-                  avgAccountAge={avgAccountAge}
-                  unmatchedCount={unmatchedCount}
-                />
-              </div>
-            </div>
+            <SharePreviewFrame>
+              <ResultShareCard
+                template="detailed"
+                riskScore={riskScore}
+                riskLevel={riskLevel}
+                serviceCount={serviceCount}
+                topServices={topServices}
+                avgAccountAge={avgAccountAge}
+                unmatchedCount={unmatchedCount}
+              />
+            </SharePreviewFrame>
           </TabsContent>
 
           <TabsContent value="challenge" className="mt-4 sm:mt-6">
-            <div className="border rounded-lg overflow-hidden bg-muted">
-              <div className="transform scale-[0.28] sm:scale-[0.35] origin-top-left">
-                <ResultShareCard
-                  template="challenge"
-                  riskScore={riskScore}
-                  riskLevel={riskLevel}
-                  serviceCount={serviceCount}
-                  topServices={topServices}
-                  avgAccountAge={avgAccountAge}
-                  unmatchedCount={unmatchedCount}
-                />
-              </div>
-            </div>
+            <SharePreviewFrame>
+              <ResultShareCard
+                template="challenge"
+                riskScore={riskScore}
+                riskLevel={riskLevel}
+                serviceCount={serviceCount}
+                topServices={topServices}
+                avgAccountAge={avgAccountAge}
+                unmatchedCount={unmatchedCount}
+              />
+            </SharePreviewFrame>
           </TabsContent>
         </Tabs>
 
