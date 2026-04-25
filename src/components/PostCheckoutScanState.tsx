@@ -44,7 +44,7 @@ function buildSteps(includeBrokers: boolean, breachCount: number, discoveredAcco
         to: accountMax,
         suffix: "potential accounts",
         // Ownership cue — anchors the abstract number to the user's identity.
-        ownership: "Likely tied to this email",
+        ownership: "Likely tied to this email address",
       },
     },
     ...(includeBrokers
