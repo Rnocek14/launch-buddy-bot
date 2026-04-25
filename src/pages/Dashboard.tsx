@@ -54,6 +54,7 @@ import { PrivacyScoreGauge } from "@/components/PrivacyScoreGauge";
 import { PostCheckoutScanState } from "@/components/PostCheckoutScanState";
 import { PostCheckoutNextSteps } from "@/components/PostCheckoutNextSteps";
 import { PostCheckoutScanProgressStrip } from "@/components/PostCheckoutScanProgressStrip";
+import { LiveFindingsPreview } from "@/components/LiveFindingsPreview";
 
 interface Service {
   id: string;
