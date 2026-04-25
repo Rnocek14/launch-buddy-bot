@@ -42,7 +42,7 @@ export function IcebergPanel({ email, breachCount, estimate }: IcebergPanelProps
           <div className="flex items-center gap-2">
             <EyeOff className="w-4 h-4 text-primary" />
             <span className="text-xs font-semibold uppercase tracking-wide text-primary">
-              What's still hidden below
+              What we couldn't see without deeper access
             </span>
           </div>
 
@@ -125,11 +125,11 @@ export function IcebergPanel({ email, breachCount, estimate }: IcebergPanelProps
 }
 
 const LOCKED_PLACEHOLDERS = [
-  "subscription · finance",
-  "shopping account",
-  "newsletter · 4 yrs old",
-  "broker site · public profile",
-  "social · dormant",
+  "subscription · likely from newsletter activity",
+  "shopping account · seen in receipts",
+  "broker site · public listing detected",
+  "newsletter · long-running sender",
+  "social · dormant signup",
   "free trial · never canceled",
 ];
 
