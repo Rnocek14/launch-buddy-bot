@@ -1068,6 +1068,14 @@ export default function Dashboard() {
         />
       )}
       
+      {/* Post-checkout full-screen scan state — replaces gap-after-purchase */}
+      {showPostCheckoutScan && (
+        <PostCheckoutScanState
+          includeBrokers={subscriptionTier === "complete" || subscriptionTier === "family"}
+          onDismiss={() => setShowPostCheckoutScan(false)}
+        />
+      )}
+
       {/* Success Animation */}
       {showSuccessAnimation && (
         <SuccessAnimation
