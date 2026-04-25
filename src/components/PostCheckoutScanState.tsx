@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Shield, Mail, Database, Activity, CheckCircle2, Loader2 } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Shield, Mail, Database, Activity, CheckCircle2, Loader2, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface PostCheckoutScanStateProps {
@@ -7,46 +7,80 @@ interface PostCheckoutScanStateProps {
   onDismiss: () => void;
   /** Whether to show the broker-sweep step (Complete/Family tiers). */
   includeBrokers?: boolean;
+  /** Number of breaches we've already seen for this user (used to scale counters). */
+  breachCount?: number;
+  /** Accounts already discovered for this user (used to scale counters). */
+  discoveredAccounts?: number;
 }
 
-const STEPS = (includeBrokers: boolean) => [
-  {
-    icon: Mail,
-    label: "Scanning inbox for hidden accounts",
-    detail: "Accounts we'll help you shut down immediately",
-    duration: 4500,
-    // Live counter — quantifies footprint before results land.
-    counter: { from: 12, to: 137, suffix: "potential accounts" },
-  },
-  ...(includeBrokers
-    ? [
-        {
-          icon: Database,
-          label: "Sweeping data brokers",
-          detail: "Sites currently exposing your personal info",
-          duration: 5500,
-          counter: { from: 0, to: 214, suffix: "broker sites checked" },
-        },
-      ]
-    : []),
-  {
-    icon: Activity,
-    label: "Mapping your exposure",
-    detail: "Where your data is most at risk",
-    duration: 4000,
-    counter: { from: 0, to: 18, suffix: "risk signals correlated" },
-  },
-];
+/**
+ * Build the step list, with counters seeded from real user signal so the
+ * numbers don't feel templated. Higher signal → larger ranges.
+ */
+function buildSteps(includeBrokers: boolean, breachCount: number, discoveredAccounts: number) {
+  // Account ceiling scales with breaches + already-found accounts.
+  // Floor ~60 so a low-signal user still sees something meaningful;
+  // ceiling jumps as breaches/accounts grow.
+  const accountMax = Math.min(
+    260,
+    Math.max(60, 60 + breachCount * 18 + Math.round(discoveredAccounts * 1.5)),
+  );
+  const accountMin = Math.max(8, Math.round(accountMax * 0.08));
+
+  // Brokers: heavier presence implied by 3+ breaches.
+  const brokerMax = breachCount >= 3 ? 214 : 128;
+
+  // Risk signals correlate with everything we've seen.
+  const riskMax = Math.min(42, 8 + breachCount * 4 + Math.round(discoveredAccounts * 0.2));
+
+  return [
+    {
+      icon: Mail,
+      label: "Scanning inbox for hidden accounts",
+      detail: "Accounts we'll help you shut down immediately",
+      duration: 4500,
+      counter: { from: accountMin, to: accountMax, suffix: "potential accounts" },
+    },
+    ...(includeBrokers
+      ? [
+          {
+            icon: Database,
+            label: "Sweeping data brokers",
+            detail: "Sites currently exposing your personal info",
+            duration: 5500,
+            counter: { from: 0, to: brokerMax, suffix: "broker sites checked" },
+          },
+        ]
+      : []),
+    {
+      icon: Activity,
+      label: "Mapping your exposure",
+      detail: "Where your data is most at risk",
+      duration: 4000,
+      counter: { from: 0, to: riskMax, suffix: "risk signals correlated" },
+    },
+  ];
+}
 
 /**
  * Full-screen "we're working" state that fires immediately after checkout.
  * Removes the "gap after purchase" by making the value loop visible
  * before the user has to act.
  */
-export function PostCheckoutScanState({ onDismiss, includeBrokers = false }: PostCheckoutScanStateProps) {
-  const steps = STEPS(includeBrokers);
+export function PostCheckoutScanState({
+  onDismiss,
+  includeBrokers = false,
+  breachCount = 0,
+  discoveredAccounts = 0,
+}: PostCheckoutScanStateProps) {
+  const steps = useMemo(
+    () => buildSteps(includeBrokers, breachCount, discoveredAccounts),
+    [includeBrokers, breachCount, discoveredAccounts],
+  );
   const [currentStep, setCurrentStep] = useState(0);
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);
+  const [showSpike, setShowSpike] = useState(false);
+  const [spikeDismissed, setSpikeDismissed] = useState(false);
 
   useEffect(() => {
     if (currentStep >= steps.length) return;
@@ -57,7 +91,31 @@ export function PostCheckoutScanState({ onDismiss, includeBrokers = false }: Pos
     return () => clearTimeout(t);
   }, [currentStep, steps]);
 
+  // Escalation moment — fires once at ~70% through the scan to create tension.
+  useEffect(() => {
+    if (spikeDismissed) return;
+    const total = steps.reduce((acc, s) => acc + s.duration, 0);
+    const spikeAt = Math.round(total * 0.7);
+    const t = setTimeout(() => setShowSpike(true), spikeAt);
+    const t2 = setTimeout(() => {
+      setShowSpike(false);
+      setSpikeDismissed(true);
+    }, spikeAt + 3200);
+    return () => {
+      clearTimeout(t);
+      clearTimeout(t2);
+    };
+  }, [steps, spikeDismissed]);
+
   const allDone = currentStep >= steps.length;
+
+  // Pick the spike message based on what signal we have.
+  const spikeMessage =
+    includeBrokers && breachCount >= 2
+      ? "Your data appears on multiple broker sites"
+      : breachCount >= 1
+        ? "Multiple exposures detected in your history"
+        : "Multiple hidden accounts detected";
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/95 backdrop-blur-sm animate-fade-in">
@@ -76,6 +134,22 @@ export function PostCheckoutScanState({ onDismiss, includeBrokers = false }: Pos
               : "Starting your deep scan — uncovering hidden accounts, brokers, and active risks."}
           </p>
         </div>
+
+        {/* Escalation spike — appears once mid-scan */}
+        {showSpike && !allDone && (
+          <div
+            role="alert"
+            className="mb-4 flex items-start gap-3 rounded-lg border border-destructive/40 bg-destructive/10 p-3 animate-fade-in"
+          >
+            <AlertTriangle className="h-5 w-5 shrink-0 text-destructive mt-0.5" />
+            <div className="text-sm">
+              <div className="font-semibold text-destructive">{spikeMessage}</div>
+              <div className="text-xs text-muted-foreground mt-0.5">
+                We're correlating these now — full breakdown in your dashboard.
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Steps */}
         <div className="space-y-3 mb-8">
@@ -129,7 +203,7 @@ export function PostCheckoutScanState({ onDismiss, includeBrokers = false }: Pos
           className="w-full h-12 text-base"
           variant={allDone ? "default" : "outline"}
         >
-          {allDone ? "Show my exposed data" : "See what we found"}
+          {allDone ? "Reveal my exposed data" : "Show what's exposed"}
         </Button>
 
         <p className="text-center text-xs text-muted-foreground mt-3">
