@@ -191,9 +191,9 @@ export default function Subscribe() {
             <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
               <Star className="h-6 w-6 text-primary" />
             </div>
-            <CardTitle>Almost there — create your account</CardTitle>
+            <CardTitle>One step from removing your data</CardTitle>
             <CardDescription>
-              Takes 10 seconds. Your {selectedTier === "complete" ? "Complete" : selectedTier === "family" ? "Family" : "Pro"} checkout will open right after.
+              Create your account in 10 seconds. We'll start removing your data right after.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
