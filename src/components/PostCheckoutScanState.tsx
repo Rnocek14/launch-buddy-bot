@@ -13,24 +13,28 @@ const STEPS = (includeBrokers: boolean) => [
   {
     icon: Mail,
     label: "Scanning inbox for hidden accounts",
-    detail: "Newsletters, old subscriptions, dormant signups",
+    detail: "Accounts we'll help you shut down immediately",
     duration: 4500,
+    // Live counter — quantifies footprint before results land.
+    counter: { from: 12, to: 137, suffix: "potential accounts" },
   },
   ...(includeBrokers
     ? [
         {
           icon: Database,
           label: "Sweeping data brokers",
-          detail: "200+ sites publishing your address & phone",
+          detail: "Sites currently exposing your personal info",
           duration: 5500,
+          counter: { from: 0, to: 214, suffix: "broker sites checked" },
         },
       ]
     : []),
   {
     icon: Activity,
     label: "Mapping your exposure",
-    detail: "Building your personal risk profile",
+    detail: "Where your data is most at risk",
     duration: 4000,
+    counter: { from: 0, to: 18, suffix: "risk signals correlated" },
   },
 ];
 
