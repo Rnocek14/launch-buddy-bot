@@ -1213,6 +1213,18 @@ export default function Dashboard() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+        {/* Post-checkout next-steps — auto-triggers scans on input. */}
+        {showNextSteps && !showPostCheckoutScan && (
+          <PostCheckoutNextSteps
+            hasEmailConnection={hasGmailAccess}
+            hasBrokerScan={hasBrokerScan}
+            brokerScanEnabled={subscriptionTier === "complete" || subscriptionTier === "family"}
+            onTriggerInboxScan={handleScan}
+            onTriggerBrokerScan={handleBrokerScanFromPanel}
+            onConnectGmail={handleConnectGmail}
+          />
+        )}
+
         {/* Show empty state when no services and not scanning */}
         {services.length === 0 && !scanning ? (
           <DashboardEmptyState
