@@ -1072,6 +1072,7 @@ export default function Dashboard() {
       {showPostCheckoutScan && (
         <PostCheckoutScanState
           includeBrokers={subscriptionTier === "complete" || subscriptionTier === "family"}
+          discoveredAccounts={scanStats?.servicesFound ?? 0}
           onDismiss={() => setShowPostCheckoutScan(false)}
         />
       )}
