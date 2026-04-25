@@ -267,6 +267,16 @@ export default function Dashboard() {
       .limit(1);
     
     setHasGmailAccess(connections && connections.length > 0);
+
+    // Track whether a broker scan exists so the next-steps panel knows
+    // whether the broker card still needs filling.
+    const { data: brokerScans } = await supabase
+      .from('broker_scans')
+      .select('id')
+      .eq('user_id', session.user.id)
+      .limit(1);
+    setHasBrokerScan(!!brokerScans && brokerScans.length > 0);
+
     await fetchServices();
     await fetchUnmatchedDomains();
     setLoading(false);
