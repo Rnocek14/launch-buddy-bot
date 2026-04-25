@@ -99,28 +99,40 @@ export function LiveFindingsPreview({
 
     let cancelled = false;
     async function pullBrokers() {
-      const { data } = await supabase
+      const { data: rows } = await supabase
         .from("broker_scan_results")
-        .select("id, status_v2, status, broker_id, data_brokers(name)")
+        .select("id, status_v2, status, broker_id")
         .eq("user_id", userId)
         .order("created_at", { ascending: false })
-        .limit(4);
-      if (cancelled || !data) return;
-      const found = data
+        .limit(8);
+      if (cancelled || !rows) return;
+      const hits = (rows as Array<{ id: string; status_v2: string | null; status: string; broker_id: string }>)
         .filter(
-          (r: any) =>
+          (r) =>
             r.status_v2 === "found" ||
             r.status_v2 === "possible_match" ||
             r.status === "found",
         )
-        .slice(0, 2)
-        .map((r: any) => ({
+        .slice(0, 2);
+      if (hits.length === 0) {
+        setBrokerHits([]);
+        return;
+      }
+      const { data: brokerRows } = await supabase
+        .from("data_brokers")
+        .select("id, name")
+        .in("id", hits.map((h) => h.broker_id));
+      const nameById = new Map(
+        (brokerRows ?? []).map((b: { id: string; name: string }) => [b.id, b.name]),
+      );
+      setBrokerHits(
+        hits.map((r) => ({
           id: `broker-${r.id}`,
           source: "broker" as const,
-          name: r.data_brokers?.name || "Broker site",
+          name: nameById.get(r.broker_id) || "Broker site",
           status: "found" as const,
-        }));
-      setBrokerHits(found);
+        })),
+      );
     }
 
     pullBrokers();
