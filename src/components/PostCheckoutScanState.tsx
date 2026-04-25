@@ -118,10 +118,10 @@ export function PostCheckoutScanState({
   // Pick the spike message based on what signal we have — observational, not "alert UI" tone.
   const spikeMessage =
     includeBrokers && breachCount >= 2
-      ? "Your data is appearing in more places than expected"
+      ? "⚠️ Your data is appearing in more places than expected"
       : breachCount >= 1
-        ? "We're seeing your data across multiple sources"
-        : "We're finding more accounts than typical";
+        ? "⚠️ We're seeing your data across multiple sources"
+        : "⚠️ We're finding more accounts than typical";
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/95 backdrop-blur-sm animate-fade-in">
