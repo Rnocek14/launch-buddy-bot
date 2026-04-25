@@ -179,11 +179,51 @@ export default function Subscribe() {
       ? "text-accent"
       : "text-primary";
 
+  // Friendly auth gate — shown inline instead of a destructive toast + bounce.
+  // Preserves intent so post-signup we land back here with autostart=1.
+  if (authChecked && needsAuth) {
+    const intervalParam = billingInterval;
+    const redirectUrl = `/subscribe?tier=${selectedTier}&interval=${intervalParam}&autostart=1`;
+    return (
+      <div className="container max-w-md py-16">
+        <Card className="border-primary/20">
+          <CardHeader className="text-center">
+            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+              <Star className="h-6 w-6 text-primary" />
+            </div>
+            <CardTitle>Almost there — create your account</CardTitle>
+            <CardDescription>
+              Takes 10 seconds. Your {selectedTier === "complete" ? "Complete" : selectedTier === "family" ? "Family" : "Pro"} checkout will open right after.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <Button
+              className="w-full h-12 text-base"
+              onClick={() => navigate(`/auth?intent=signup&redirect=${encodeURIComponent(redirectUrl)}`)}
+            >
+              Continue with email
+            </Button>
+            <Button
+              variant="outline"
+              className="w-full h-12 text-base"
+              onClick={() => navigate(`/auth?redirect=${encodeURIComponent(redirectUrl)}`)}
+            >
+              I already have an account
+            </Button>
+            <p className="text-center text-xs text-muted-foreground pt-2">
+              ✓ Cancel anytime · ✓ Secure checkout via Stripe · ✓ 30-day refund
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="container max-w-4xl py-8">
       <Button
         variant="ghost"
-        onClick={() => navigate(-1)}
+        onClick={handleSmartBack}
         className="mb-6"
       >
         ← Back
@@ -202,39 +242,61 @@ export default function Subscribe() {
         </p>
       </div>
 
-      {/* Tier Toggle */}
-      <div className="flex flex-wrap justify-center gap-3 mb-6">
-        <Button
-          variant={selectedTier === "pro" ? "default" : "outline"}
-          onClick={() => setSelectedTier("pro")}
-          className="flex items-center gap-2"
-        >
-          <Star className="w-4 h-4" />
-          Pro
-        </Button>
-        <Button
-          variant={selectedTier === "complete" ? "default" : "outline"}
-          onClick={() => setSelectedTier("complete")}
-          className="flex items-center gap-2"
-        >
-          <Crown className="w-4 h-4" />
-          Complete
-        </Button>
-        <Button
-          variant={selectedTier === "family" ? "default" : "outline"}
-          onClick={() => {
-            setSelectedTier("family");
-            setBillingInterval("year");
-          }}
-          className="flex items-center gap-2"
-        >
-          <Users className="w-4 h-4" />
-          Family
-          <Badge className="ml-1 bg-primary/15 text-primary text-[10px] px-1.5 py-0">
-            5 members
-          </Badge>
-        </Button>
-      </div>
+      {/* Tier Toggle — de-emphasized when user arrived with explicit ?tier= intent */}
+      {cameWithTierIntent ? (
+        <div className="text-center mb-6">
+          <span className="text-xs text-muted-foreground">Need a different plan? </span>
+          {(["pro", "complete", "family"] as SelectableTier[])
+            .filter((t) => t !== selectedTier)
+            .map((t, i, arr) => (
+              <span key={t}>
+                <button
+                  onClick={() => {
+                    setSelectedTier(t);
+                    if (t === "family") setBillingInterval("year");
+                  }}
+                  className="text-xs text-primary underline hover:text-primary/80"
+                >
+                  Switch to {t === "pro" ? "Pro" : t === "complete" ? "Complete" : "Family"}
+                </button>
+                {i < arr.length - 1 && <span className="text-xs text-muted-foreground"> · </span>}
+              </span>
+            ))}
+        </div>
+      ) : (
+        <div className="flex flex-wrap justify-center gap-3 mb-6">
+          <Button
+            variant={selectedTier === "pro" ? "default" : "outline"}
+            onClick={() => setSelectedTier("pro")}
+            className="flex items-center gap-2"
+          >
+            <Star className="w-4 h-4" />
+            Pro
+          </Button>
+          <Button
+            variant={selectedTier === "complete" ? "default" : "outline"}
+            onClick={() => setSelectedTier("complete")}
+            className="flex items-center gap-2"
+          >
+            <Crown className="w-4 h-4" />
+            Complete
+          </Button>
+          <Button
+            variant={selectedTier === "family" ? "default" : "outline"}
+            onClick={() => {
+              setSelectedTier("family");
+              setBillingInterval("year");
+            }}
+            className="flex items-center gap-2"
+          >
+            <Users className="w-4 h-4" />
+            Family
+            <Badge className="ml-1 bg-primary/15 text-primary text-[10px] px-1.5 py-0">
+              5 members
+            </Badge>
+          </Button>
+        </div>
+      )}
 
       {!isFamily && <BillingToggle value={billingInterval} onChange={setBillingInterval} />}
       {isFamily && (
