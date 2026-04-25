@@ -136,8 +136,8 @@ export function PostCheckoutScanState({
           </h2>
           <p className="text-muted-foreground">
             {allDone
-              ? "Here's what surfaced in your initial sweep."
-              : "Running real checks across your inbox and public data sources."}
+              ? "Some of this data is publicly accessible. Data like this can continue to spread if left unchecked."
+              : "Checking inbox activity and public records in real time."}
           </p>
         </div>
 
