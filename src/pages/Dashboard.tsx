@@ -219,6 +219,13 @@ export default function Dashboard() {
     next.delete("connected");
     setSearchParams(next, { replace: true });
 
+    // Close the loop instantly — confirms the connect action worked
+    // before the scan UI takes over.
+    toast({
+      title: "Inbox connected",
+      description: "Scanning your inbox now — results appear below.",
+    });
+
     trackEvent("auto_scan_post_oauth", { provider: "gmail" });
     handleScan();
     // eslint-disable-next-line react-hooks/exhaustive-deps
