@@ -52,6 +52,7 @@ import { CleanUpWizard } from "@/components/CleanUpWizard";
 import { ServiceCard } from "@/components/ServiceCard";
 import { PrivacyScoreGauge } from "@/components/PrivacyScoreGauge";
 import { PostCheckoutScanState } from "@/components/PostCheckoutScanState";
+import { PostCheckoutNextSteps } from "@/components/PostCheckoutNextSteps";
 
 interface Service {
   id: string;
@@ -137,6 +138,8 @@ export default function Dashboard() {
   const [successMessage, setSuccessMessage] = useState("");
   const [subscriptionTier, setSubscriptionTier] = useState<string>('free');
   const [showPostCheckoutScan, setShowPostCheckoutScan] = useState(false);
+  const [showNextSteps, setShowNextSteps] = useState(false);
+  const [hasBrokerScan, setHasBrokerScan] = useState(false);
   const [scanResultsBanner, setScanResultsBanner] = useState<{
     scannedEmails: string[];
     totalServices: number;
@@ -190,6 +193,7 @@ export default function Dashboard() {
     if (searchParams.get("upgrade") !== "success") return;
 
     setShowPostCheckoutScan(true);
+    setShowNextSteps(true); // panel persists after the animation dismisses
     trackEvent("checkout_success_landed", { source: "dashboard_redirect" });
 
     // Re-verify subscription so the UI flips to Pro immediately.
@@ -203,6 +207,22 @@ export default function Dashboard() {
     window.scrollTo({ top: 0, behavior: "smooth" });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Input = trigger: when the user returns from Gmail OAuth (?connected=gmail),
+  // auto-fire the inbox scan so they never have to press "Scan" themselves.
+  useEffect(() => {
+    if (searchParams.get("connected") !== "gmail") return;
+    if (!user || scanning) return;
+
+    // Clean the URL first so a refresh doesn't re-trigger.
+    const next = new URLSearchParams(searchParams);
+    next.delete("connected");
+    setSearchParams(next, { replace: true });
+
+    trackEvent("auto_scan_post_oauth", { provider: "gmail" });
+    handleScan();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
 
   useEffect(() => {
     if (services.length > 0) {
@@ -247,6 +267,16 @@ export default function Dashboard() {
       .limit(1);
     
     setHasGmailAccess(connections && connections.length > 0);
+
+    // Track whether a broker scan exists so the next-steps panel knows
+    // whether the broker card still needs filling.
+    const { data: brokerScans } = await supabase
+      .from('broker_scans')
+      .select('id')
+      .eq('user_id', session.user.id)
+      .limit(1);
+    setHasBrokerScan(!!brokerScans && brokerScans.length > 0);
+
     await fetchServices();
     await fetchUnmatchedDomains();
     setLoading(false);
@@ -758,6 +788,33 @@ export default function Dashboard() {
     }
   };
 
+  /**
+   * Triggered by the post-checkout panel as soon as the broker profile is saved.
+   * Input = trigger — no separate "Start Scan" button.
+   */
+  const handleBrokerScanFromPanel = async (profile: { firstName: string; lastName: string; city: string; state: string }) => {
+    try {
+      const { data, error } = await supabase.functions.invoke("scan-brokers", {
+        method: "POST",
+        body: { city: profile.city, state: profile.state },
+      });
+      if (error || data?.error) {
+        const msg = data?.error || error?.message || "Could not start broker scan";
+        toast({ variant: "destructive", title: "Broker scan failed", description: msg });
+        return;
+      }
+      setHasBrokerScan(true);
+      trackEvent("broker_scan_auto_triggered", { source: "post_checkout_panel" });
+      toast({
+        title: "Broker scan started",
+        description: "Results will appear below as each site responds.",
+      });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Could not start broker scan";
+      toast({ variant: "destructive", title: "Broker scan failed", description: msg });
+    }
+  };
+
   const selectedServicesArray = Array.from(selectedServices)
     .map(id => services.find(s => s.id === id))
     .filter((s): s is Service => s !== undefined);
@@ -1156,6 +1213,18 @@ export default function Dashboard() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+        {/* Post-checkout next-steps — auto-triggers scans on input. */}
+        {showNextSteps && !showPostCheckoutScan && (
+          <PostCheckoutNextSteps
+            hasEmailConnection={hasGmailAccess}
+            hasBrokerScan={hasBrokerScan}
+            brokerScanEnabled={subscriptionTier === "complete" || subscriptionTier === "family"}
+            onTriggerInboxScan={handleScan}
+            onTriggerBrokerScan={handleBrokerScanFromPanel}
+            onConnectGmail={handleConnectGmail}
+          />
+        )}
+
         {/* Show empty state when no services and not scanning */}
         {services.length === 0 && !scanning ? (
           <DashboardEmptyState
