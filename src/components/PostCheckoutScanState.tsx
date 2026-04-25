@@ -39,7 +39,13 @@ function buildSteps(includeBrokers: boolean, breachCount: number, discoveredAcco
       label: "Scanning inbox for hidden accounts",
       detail: "Accounts we'll help you shut down immediately",
       duration: 4500,
-      counter: { from: accountMin, to: accountMax, suffix: "potential accounts" },
+      counter: {
+        from: accountMin,
+        to: accountMax,
+        suffix: "potential accounts",
+        // Ownership cue — anchors the abstract number to the user's identity.
+        ownership: "Likely tied to this email",
+      },
     },
     ...(includeBrokers
       ? [
@@ -109,13 +115,13 @@ export function PostCheckoutScanState({
 
   const allDone = currentStep >= steps.length;
 
-  // Pick the spike message based on what signal we have.
+  // Pick the spike message based on what signal we have — observational, not "alert UI" tone.
   const spikeMessage =
     includeBrokers && breachCount >= 2
-      ? "Your data appears on multiple broker sites"
+      ? "Your data is appearing in more places than expected"
       : breachCount >= 1
-        ? "Multiple exposures detected in your history"
-        : "Multiple hidden accounts detected";
+        ? "We're seeing your data across multiple sources"
+        : "We're finding more accounts than typical";
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/95 backdrop-blur-sm animate-fade-in">
@@ -126,12 +132,12 @@ export function PostCheckoutScanState({
             <Shield className="h-8 w-8 text-primary" />
           </div>
           <h2 className="text-2xl font-bold mb-2">
-            {allDone ? "Your protection is active" : "Protection is now active"}
+            {allDone ? "We found your data across multiple sources" : "Protection is now active"}
           </h2>
           <p className="text-muted-foreground">
             {allDone
-              ? "Here's what we found in your initial sweep."
-              : "Starting your deep scan — uncovering hidden accounts, brokers, and active risks."}
+              ? "Here's what surfaced in your initial sweep."
+              : "Running real checks across your inbox and public data sources."}
           </p>
         </div>
 
@@ -145,7 +151,7 @@ export function PostCheckoutScanState({
             <div className="text-sm">
               <div className="font-semibold text-destructive">{spikeMessage}</div>
               <div className="text-xs text-muted-foreground mt-0.5">
-                We're correlating these now — full breakdown in your dashboard.
+                Example: shopping, subscriptions, public listings.
               </div>
             </div>
           </div>
@@ -187,6 +193,7 @@ export function PostCheckoutScanState({
                       to={step.counter.to}
                       duration={step.duration}
                       suffix={step.counter.suffix}
+                      ownership={(step.counter as { ownership?: string }).ownership}
                       finalized={isDone}
                     />
                   )}
@@ -225,12 +232,14 @@ function LiveCounter({
   to,
   duration,
   suffix,
+  ownership,
   finalized,
 }: {
   from: number;
   to: number;
   duration: number;
   suffix: string;
+  ownership?: string;
   finalized: boolean;
 }) {
   const [value, setValue] = useState(from);
@@ -254,9 +263,14 @@ function LiveCounter({
   }, [from, to, duration, finalized]);
 
   return (
-    <div className="mt-1.5 text-xs font-mono text-primary tabular-nums">
-      {value.toLocaleString()} {suffix}
-      {!finalized && <span className="ml-1 animate-pulse">…</span>}
+    <div className="mt-1.5">
+      <div className="text-xs font-mono text-primary tabular-nums">
+        {value.toLocaleString()} {suffix}
+        {!finalized && <span className="ml-1 animate-pulse">…</span>}
+      </div>
+      {ownership && (
+        <div className="text-[11px] text-muted-foreground mt-0.5">{ownership}</div>
+      )}
     </div>
   );
 }
