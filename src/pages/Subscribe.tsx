@@ -23,8 +23,12 @@ type SelectableTier = "pro" | "complete" | "family";
 
 export default function Subscribe() {
   const [loading, setLoading] = useState(false);
+  const [authChecked, setAuthChecked] = useState(false);
+  const [needsAuth, setNeedsAuth] = useState(false);
   const [searchParams] = useSearchParams();
   const initialTier = (searchParams.get("tier") as SelectableTier) || "pro";
+  const cameWithTierIntent = !!searchParams.get("tier");
+  const autostart = searchParams.get("autostart") === "1";
   const [billingInterval, setBillingInterval] = useState<BillingInterval>(
     initialTier === "family" ? "year" : ((searchParams.get("interval") as BillingInterval) || "year")
   );
@@ -51,17 +55,31 @@ export default function Subscribe() {
 
   useEffect(() => {
     checkAuth();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const checkAuth = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
-      toast({
-        title: "Authentication required",
-        description: "Please sign in to upgrade",
-        variant: "destructive",
-      });
-      navigate(`/auth?intent=signup&redirect=${encodeURIComponent(`/subscribe?tier=${selectedTier}&interval=${billingInterval}`)}`);
+      setNeedsAuth(true);
+      setAuthChecked(true);
+      return;
+    }
+    setNeedsAuth(false);
+    setAuthChecked(true);
+
+    // Auto-resume checkout if user came back from auth (or via direct CTA with intent)
+    if (autostart) {
+      // small delay so price/state is settled
+      setTimeout(() => void runCheckout(), 100);
+    }
+  };
+
+  const handleSmartBack = () => {
+    if (window.history.length > 1) {
+      navigate(-1);
+    } else {
+      navigate("/pricing");
     }
   };
 
