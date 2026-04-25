@@ -232,12 +232,14 @@ function LiveCounter({
   to,
   duration,
   suffix,
+  ownership,
   finalized,
 }: {
   from: number;
   to: number;
   duration: number;
   suffix: string;
+  ownership?: string;
   finalized: boolean;
 }) {
   const [value, setValue] = useState(from);
@@ -261,9 +263,14 @@ function LiveCounter({
   }, [from, to, duration, finalized]);
 
   return (
-    <div className="mt-1.5 text-xs font-mono text-primary tabular-nums">
-      {value.toLocaleString()} {suffix}
-      {!finalized && <span className="ml-1 animate-pulse">…</span>}
+    <div className="mt-1.5">
+      <div className="text-xs font-mono text-primary tabular-nums">
+        {value.toLocaleString()} {suffix}
+        {!finalized && <span className="ml-1 animate-pulse">…</span>}
+      </div>
+      {ownership && (
+        <div className="text-[11px] text-muted-foreground mt-0.5">{ownership}</div>
+      )}
     </div>
   );
 }
