@@ -42,7 +42,7 @@ export function IcebergPanel({ email, breachCount, estimate }: IcebergPanelProps
           <div className="flex items-center gap-2">
             <EyeOff className="w-4 h-4 text-primary" />
             <span className="text-xs font-semibold uppercase tracking-wide text-primary">
-              What's still hidden below
+              What we couldn't see without deeper access
             </span>
           </div>
 
@@ -95,7 +95,7 @@ export function IcebergPanel({ email, breachCount, estimate }: IcebergPanelProps
           <div className="flex items-start gap-2 pt-2 text-xs text-muted-foreground border-t border-border/50">
             <AlertTriangle className="w-3 h-3 mt-0.5 shrink-0" />
             <p>
-              Estimate based on: {estimate.reasoning || "average US adult footprint"}.
+              Estimate based on {estimate.reasoning}.
               Actual numbers vary — only a real inbox + broker scan reveals the truth.
             </p>
           </div>
@@ -125,11 +125,11 @@ export function IcebergPanel({ email, breachCount, estimate }: IcebergPanelProps
 }
 
 const LOCKED_PLACEHOLDERS = [
-  "subscription · finance",
-  "shopping account",
-  "newsletter · 4 yrs old",
-  "broker site · public profile",
-  "social · dormant",
+  "subscription · likely from newsletter activity",
+  "shopping account · seen in receipts",
+  "broker site · public listing detected",
+  "newsletter · long-running sender",
+  "social · dormant signup",
   "free trial · never canceled",
 ];
 
