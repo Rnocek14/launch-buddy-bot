@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Check, Loader2, Crown, Star, Users } from "lucide-react";
+import { Check, Loader2, Crown, Star, Users, Shield } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
   STRIPE_PRICES,
@@ -191,9 +191,9 @@ export default function Subscribe() {
             <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
               <Star className="h-6 w-6 text-primary" />
             </div>
-            <CardTitle>Almost there — create your account</CardTitle>
+            <CardTitle>One step from removing your data</CardTitle>
             <CardDescription>
-              Takes 10 seconds. Your {selectedTier === "complete" ? "Complete" : selectedTier === "family" ? "Family" : "Pro"} checkout will open right after.
+              Create your account in 10 seconds. We'll start removing your data right after.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -231,14 +231,18 @@ export default function Subscribe() {
 
       <div className="text-center mb-8">
         <h1 className="text-4xl font-bold mb-2">
-          Upgrade to {tierLabel}
+          {isFamily
+            ? "Protect your whole family"
+            : selectedTier === "complete"
+              ? "Remove your data — everywhere"
+              : "Start protecting your data"}
         </h1>
         <p className="text-xl text-muted-foreground">
           {isFamily
-            ? "Protect up to 5 family members with one subscription"
+            ? "One subscription covers up to 5 family members"
             : selectedTier === "complete"
-              ? "Full privacy protection with data broker removal"
-              : "Unlimited deletions + deep AI scanning"}
+              ? "Inbox accounts + 200+ data brokers, all in one place"
+              : "Find every hidden account and shut it down"}
         </p>
       </div>
 
@@ -401,6 +405,15 @@ export default function Subscribe() {
             ))}
           </div>
 
+          {/* Moment of inevitability — what happens the second they click */}
+          <div className="mb-3 flex items-start gap-2 rounded-lg bg-primary/5 border border-primary/20 px-3 py-2.5">
+            <Shield className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+            <p className="text-xs text-foreground">
+              <span className="font-semibold">We start removing your data the moment you check out.</span>{" "}
+              Deep inbox scan{selectedTier !== "pro" ? " + data broker sweep" : ""} kicks off automatically.
+            </p>
+          </div>
+
           <Button
             onClick={handleSubscribeClick}
             disabled={loading}
@@ -416,16 +429,19 @@ export default function Subscribe() {
             {loading ? (
               <>
                 <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                Processing...
+                Opening secure checkout...
               </>
             ) : (
-              `Subscribe to ${tierLabel} - ${selectedPrice.displayPrice}`
+              <>
+                <Shield className="mr-2 h-5 w-5" />
+                Start protecting my data — {selectedPrice.displayPrice}
+              </>
             )}
           </Button>
 
           <div className="mt-6 text-center space-y-2">
             <p className="text-sm text-muted-foreground">
-              ✓ Cancel anytime • ✓ 100% secure checkout via Stripe
+              ✓ Cancel anytime • ✓ Secure checkout via Stripe • ✓ 30-day refund
             </p>
           </div>
         </CardContent>
