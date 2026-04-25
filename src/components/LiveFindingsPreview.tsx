@@ -68,7 +68,7 @@ export function LiveFindingsPreview({
     let cancelled = false;
 
     async function pull() {
-      const { data } = await supabase
+      const { data } = await (supabase as any)
         .from("services")
         .select("id, name")
         .eq("user_id", userId)
@@ -76,7 +76,7 @@ export function LiveFindingsPreview({
         .limit(2);
       if (cancelled || !data) return;
       setInboxHits(
-        data.map((s) => ({
+        (data as Array<{ id: string; name: string }>).map((s) => ({
           id: `inbox-${s.id}`,
           source: "inbox" as const,
           name: s.name,
