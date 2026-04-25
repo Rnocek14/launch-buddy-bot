@@ -46,6 +46,13 @@ export function IcebergPanel({ email, breachCount, estimate }: IcebergPanelProps
             </span>
           </div>
 
+          {/* Scan limitation disclosure — honest, specific, urgency-preserving */}
+          <div className="p-3 rounded-lg bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800">
+            <p className="text-sm text-amber-800 dark:text-amber-300">
+              <strong>This check only looks at public breach data.</strong> It cannot see your accounts, data broker listings, or what's in your inbox.
+            </p>
+          </div>
+
           {/* Three concrete estimates */}
           <div className="grid sm:grid-cols-3 gap-3">
             <HiddenStat
@@ -105,7 +112,7 @@ export function IcebergPanel({ email, breachCount, estimate }: IcebergPanelProps
             <Link to="/auth?intent=signup" className="block">
               <Button size="lg" className="w-full gap-2 cta-shimmer">
                 <Shield className="w-4 h-4" />
-                Run Full Scan — Free
+                Sign up free → see everything
                 <ArrowRight className="w-4 h-4" />
               </Button>
             </Link>
@@ -115,8 +122,33 @@ export function IcebergPanel({ email, breachCount, estimate }: IcebergPanelProps
               </Button>
             </Link>
           </div>
-          <p className="text-[11px] text-center text-muted-foreground">
-            Free scan: connect Gmail or run broker scan in your dashboard. No card required.
+
+          {/* What happens after signup — clarity without slowing momentum */}
+          <div className="pt-4 pb-2">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
+              What happens after signup:
+            </p>
+            <ul className="space-y-1.5 text-sm text-foreground">
+              <li className="flex items-start gap-2">
+                <span className="text-primary">→</span>
+                <span>Connect your inbox to uncover hidden accounts</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-primary">→</span>
+                <span>Scan data brokers exposing your information</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-primary">→</span>
+                <span>See everything tied to your email in one place</span>
+              </li>
+            </ul>
+            <p className="text-xs text-muted-foreground mt-2">No card required for free scan</p>
+          </div>
+
+          {/* Free vs Pro clarification — one line, no decision paralysis */}
+          <p className="text-[11px] text-center text-muted-foreground pt-2 border-t border-border/50">
+            <span className="font-medium">Free:</span> see your accounts + run initial scans · 
+            <span className="font-medium"> Pro:</span> continuous monitoring + automatic removals
           </p>
         </div>
       </CardContent>
