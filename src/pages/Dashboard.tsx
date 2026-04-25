@@ -138,6 +138,8 @@ export default function Dashboard() {
   const [successMessage, setSuccessMessage] = useState("");
   const [subscriptionTier, setSubscriptionTier] = useState<string>('free');
   const [showPostCheckoutScan, setShowPostCheckoutScan] = useState(false);
+  const [showNextSteps, setShowNextSteps] = useState(false);
+  const [hasBrokerScan, setHasBrokerScan] = useState(false);
   const [scanResultsBanner, setScanResultsBanner] = useState<{
     scannedEmails: string[];
     totalServices: number;
