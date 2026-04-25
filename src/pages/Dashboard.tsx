@@ -1233,6 +1233,17 @@ export default function Dashboard() {
           />
         )}
 
+        {/* "Progress bleed" strip — proves scans are actually moving so the
+            user never wonders if anything happened after the next-steps panel. */}
+        {showNextSteps && !showPostCheckoutScan && (scanning || hasBrokerScan) && (
+          <PostCheckoutScanProgressStrip
+            inboxScanning={scanning}
+            brokerScanning={hasBrokerScan}
+            inboxHasResults={services.length > 0}
+            brokerHasResults={false}
+          />
+        )}
+
         {/* Show empty state when no services and not scanning */}
         {services.length === 0 && !scanning ? (
           <DashboardEmptyState
