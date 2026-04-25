@@ -193,6 +193,7 @@ export default function Dashboard() {
     if (searchParams.get("upgrade") !== "success") return;
 
     setShowPostCheckoutScan(true);
+    setShowNextSteps(true); // panel persists after the animation dismisses
     trackEvent("checkout_success_landed", { source: "dashboard_redirect" });
 
     // Re-verify subscription so the UI flips to Pro immediately.
@@ -206,6 +207,22 @@ export default function Dashboard() {
     window.scrollTo({ top: 0, behavior: "smooth" });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Input = trigger: when the user returns from Gmail OAuth (?connected=gmail),
+  // auto-fire the inbox scan so they never have to press "Scan" themselves.
+  useEffect(() => {
+    if (searchParams.get("connected") !== "gmail") return;
+    if (!user || scanning) return;
+
+    // Clean the URL first so a refresh doesn't re-trigger.
+    const next = new URLSearchParams(searchParams);
+    next.delete("connected");
+    setSearchParams(next, { replace: true });
+
+    trackEvent("auto_scan_post_oauth", { provider: "gmail" });
+    handleScan();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
 
   useEffect(() => {
     if (services.length > 0) {
