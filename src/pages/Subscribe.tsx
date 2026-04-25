@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Check, Loader2, Crown, Star, Users } from "lucide-react";
+import { Check, Loader2, Crown, Star, Users, Shield } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
   STRIPE_PRICES,
