@@ -193,6 +193,7 @@ export function PostCheckoutScanState({
                       to={step.counter.to}
                       duration={step.duration}
                       suffix={step.counter.suffix}
+                      ownership={(step.counter as { ownership?: string }).ownership}
                       finalized={isDone}
                     />
                   )}
