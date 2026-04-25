@@ -405,6 +405,15 @@ export default function Subscribe() {
             ))}
           </div>
 
+          {/* Moment of inevitability — what happens the second they click */}
+          <div className="mb-3 flex items-start gap-2 rounded-lg bg-primary/5 border border-primary/20 px-3 py-2.5">
+            <Shield className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+            <p className="text-xs text-foreground">
+              <span className="font-semibold">We start removing your data the moment you check out.</span>{" "}
+              Deep inbox scan{selectedTier !== "pro" ? " + data broker sweep" : ""} kicks off automatically.
+            </p>
+          </div>
+
           <Button
             onClick={handleSubscribeClick}
             disabled={loading}
@@ -420,16 +429,19 @@ export default function Subscribe() {
             {loading ? (
               <>
                 <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                Processing...
+                Opening secure checkout...
               </>
             ) : (
-              `Subscribe to ${tierLabel} - ${selectedPrice.displayPrice}`
+              <>
+                <Shield className="mr-2 h-5 w-5" />
+                Start protecting my data — {selectedPrice.displayPrice}
+              </>
             )}
           </Button>
 
           <div className="mt-6 text-center space-y-2">
             <p className="text-sm text-muted-foreground">
-              ✓ Cancel anytime • ✓ 100% secure checkout via Stripe
+              ✓ Cancel anytime • ✓ Secure checkout via Stripe • ✓ 30-day refund
             </p>
           </div>
         </CardContent>
