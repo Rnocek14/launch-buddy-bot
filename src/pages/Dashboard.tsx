@@ -51,6 +51,7 @@ import { SimplifiedServiceCard } from "@/components/SimplifiedServiceCard";
 import { CleanUpWizard } from "@/components/CleanUpWizard";
 import { ServiceCard } from "@/components/ServiceCard";
 import { PrivacyScoreGauge } from "@/components/PrivacyScoreGauge";
+import { PostCheckoutScanState } from "@/components/PostCheckoutScanState";
 
 interface Service {
   id: string;
@@ -135,6 +136,7 @@ export default function Dashboard() {
   const [showSuccessAnimation, setShowSuccessAnimation] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
   const [subscriptionTier, setSubscriptionTier] = useState<string>('free');
+  const [showPostCheckoutScan, setShowPostCheckoutScan] = useState(false);
   const [scanResultsBanner, setScanResultsBanner] = useState<{
     scannedEmails: string[];
     totalServices: number;
@@ -181,17 +183,13 @@ export default function Dashboard() {
     checkSubscription();
   }, []);
 
-  // Post-checkout success celebration — fires once on ?upgrade=success
+  // Post-checkout success — fires once on ?upgrade=success.
+  // Replaces the weak toast with a full-screen "we're already working on it" state
+  // so the value loop is visible before the user has to act.
   useEffect(() => {
     if (searchParams.get("upgrade") !== "success") return;
 
-    toast({
-      title: "🎉 Welcome to Pro — you're protected!",
-      description:
-        "Your subscription is active. Refreshing your account... Connect an email to start your full scan.",
-      duration: 7000,
-    });
-
+    setShowPostCheckoutScan(true);
     trackEvent("checkout_success_landed", { source: "dashboard_redirect" });
 
     // Re-verify subscription so the UI flips to Pro immediately.
@@ -202,7 +200,6 @@ export default function Dashboard() {
     next.delete("upgrade");
     setSearchParams(next, { replace: true });
 
-    // Smooth scroll to top so they see the new status card.
     window.scrollTo({ top: 0, behavior: "smooth" });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
