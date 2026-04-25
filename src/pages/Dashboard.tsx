@@ -268,6 +268,7 @@ export default function Dashboard() {
     }
 
     setUser(session.user);
+    setUserId(session.user.id);
     
     // Check for stored email connections instead of session.provider_token
     const { data: connections } = await supabase
