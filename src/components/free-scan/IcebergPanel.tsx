@@ -130,15 +130,15 @@ export function IcebergPanel({ email, breachCount, estimate }: IcebergPanelProps
             </p>
             <ul className="space-y-1.5 text-sm text-foreground">
               <li className="flex items-start gap-2">
-                <span className="text-primary">→</span>
+                <span className="text-primary">•</span>
                 <span>Connect your inbox to uncover hidden accounts</span>
               </li>
               <li className="flex items-start gap-2">
-                <span className="text-primary">→</span>
+                <span className="text-primary">•</span>
                 <span>Scan data brokers exposing your information</span>
               </li>
               <li className="flex items-start gap-2">
-                <span className="text-primary">→</span>
+                <span className="text-primary">•</span>
                 <span>See everything tied to your email in one place</span>
               </li>
             </ul>
