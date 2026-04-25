@@ -20,7 +20,7 @@ export function WhatWeChecked({ breachCount, breachError }: WhatWeCheckedProps) 
       name: "Email exposure",
       detail: "Public mention scanning",
       status: "checked",
-      result: "Surface-level scan complete",
+      result: "Email-only check complete (no inbox access)",
     },
   ];
 
