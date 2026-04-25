@@ -163,7 +163,7 @@ function StepStatusLabel({ state }: { state: StepState }) {
     running: { text: "Running", cls: "text-primary" },
     done: { text: "Done", cls: "text-emerald-600" },
     pending: { text: "Waiting", cls: "text-muted-foreground" },
-    skipped: { text: "Not in plan", cls: "text-muted-foreground" },
+    skipped: { text: "Upgrade required", cls: "text-amber-600" },
   } as const;
   const { text, cls } = map[state];
   return <span className={`text-[11px] font-medium ${cls}`}>{text}</span>;
