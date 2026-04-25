@@ -95,7 +95,7 @@ export function IcebergPanel({ email, breachCount, estimate }: IcebergPanelProps
           <div className="flex items-start gap-2 pt-2 text-xs text-muted-foreground border-t border-border/50">
             <AlertTriangle className="w-3 h-3 mt-0.5 shrink-0" />
             <p>
-              Estimate based on: {estimate.reasoning || "average US adult footprint"}.
+              Estimate based on {estimate.reasoning}.
               Actual numbers vary — only a real inbox + broker scan reveals the truth.
             </p>
           </div>
