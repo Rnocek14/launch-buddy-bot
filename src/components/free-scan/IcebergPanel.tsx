@@ -46,6 +46,13 @@ export function IcebergPanel({ email, breachCount, estimate }: IcebergPanelProps
             </span>
           </div>
 
+          {/* Scan limitation disclosure — honest, specific, urgency-preserving */}
+          <div className="p-3 rounded-lg bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800">
+            <p className="text-sm text-amber-800 dark:text-amber-300">
+              <strong>This check only looks at public breach data.</strong> It cannot see your accounts, data broker listings, or what's in your inbox.
+            </p>
+          </div>
+
           {/* Three concrete estimates */}
           <div className="grid sm:grid-cols-3 gap-3">
             <HiddenStat
