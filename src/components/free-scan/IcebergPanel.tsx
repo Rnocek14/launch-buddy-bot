@@ -109,7 +109,7 @@ export function IcebergPanel({ email, breachCount, estimate }: IcebergPanelProps
                 <ArrowRight className="w-4 h-4" />
               </Button>
             </Link>
-            <Link to="/subscribe?tier=pro&interval=annual" className="block">
+            <Link to="/subscribe?tier=pro&interval=year&autostart=1" className="block">
               <Button size="lg" variant="outline" className="w-full gap-2">
                 Skip to Pro · $79/yr
               </Button>

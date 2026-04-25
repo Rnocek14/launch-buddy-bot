@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -174,9 +174,37 @@ export default function Dashboard() {
     lastScanDate: string | null;
   } | null>(null);
 
+  const [searchParams, setSearchParams] = useSearchParams();
+
   useEffect(() => {
     checkAuth();
     checkSubscription();
+  }, []);
+
+  // Post-checkout success celebration — fires once on ?upgrade=success
+  useEffect(() => {
+    if (searchParams.get("upgrade") !== "success") return;
+
+    toast({
+      title: "🎉 Welcome to Pro — you're protected!",
+      description:
+        "Your subscription is active. Refreshing your account... Connect an email to start your full scan.",
+      duration: 7000,
+    });
+
+    trackEvent("checkout_success_landed", { source: "dashboard_redirect" });
+
+    // Re-verify subscription so the UI flips to Pro immediately.
+    checkSubscription();
+
+    // Clean the URL so refresh/back doesn't re-trigger.
+    const next = new URLSearchParams(searchParams);
+    next.delete("upgrade");
+    setSearchParams(next, { replace: true });
+
+    // Smooth scroll to top so they see the new status card.
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
