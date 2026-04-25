@@ -231,14 +231,18 @@ export default function Subscribe() {
 
       <div className="text-center mb-8">
         <h1 className="text-4xl font-bold mb-2">
-          Upgrade to {tierLabel}
+          {isFamily
+            ? "Protect your whole family"
+            : selectedTier === "complete"
+              ? "Remove your data — everywhere"
+              : "Start protecting your data"}
         </h1>
         <p className="text-xl text-muted-foreground">
           {isFamily
-            ? "Protect up to 5 family members with one subscription"
+            ? "One subscription covers up to 5 family members"
             : selectedTier === "complete"
-              ? "Full privacy protection with data broker removal"
-              : "Unlimited deletions + deep AI scanning"}
+              ? "Inbox accounts + 200+ data brokers, all in one place"
+              : "Find every hidden account and shut it down"}
         </p>
       </div>
 
