@@ -1239,14 +1239,25 @@ export default function Dashboard() {
         {/* Unified "Scanning your digital footprint…" stack — proves the
             system is moving as one coherent pipeline, not three separate tools. */}
         {showNextSteps && !showPostCheckoutScan && (
-          <PostCheckoutScanProgressStrip
-            inboxScanning={scanning}
-            brokerScanning={hasBrokerScan}
-            inboxHasResults={services.length > 0}
-            brokerHasResults={false}
-            breachComplete={!!riskData}
-            brokerEnabled={subscriptionTier === "complete" || subscriptionTier === "family"}
-          />
+          <>
+            <PostCheckoutScanProgressStrip
+              inboxScanning={scanning}
+              brokerScanning={hasBrokerScan}
+              inboxHasResults={services.length > 0}
+              brokerHasResults={false}
+              breachComplete={!!riskData}
+              brokerEnabled={subscriptionTier === "complete" || subscriptionTier === "family"}
+            />
+            {/* Live findings preview — proves the pipeline is producing real,
+                named results, not just spinning. Mixes done + checking. */}
+            <LiveFindingsPreview
+              userId={userId}
+              inboxScanning={scanning}
+              brokerScanning={hasBrokerScan}
+              brokerEnabled={subscriptionTier === "complete" || subscriptionTier === "family"}
+              active={scanning || hasBrokerScan || services.length > 0}
+            />
+          </>
         )}
 
         {/* Show empty state when no services and not scanning */}
