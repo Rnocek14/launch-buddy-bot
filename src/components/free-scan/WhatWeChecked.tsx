@@ -59,14 +59,16 @@ export function WhatWeChecked({ breachCount, breachError }: WhatWeCheckedProps) 
         })}
       </div>
 
-      <Card className="bg-muted/30 border-dashed">
+      <Card className="bg-amber-50/50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800">
         <CardContent className="p-4 flex items-start gap-3">
-          <Shield className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
-          <div className="text-xs text-muted-foreground">
-            <p className="font-medium text-foreground mb-1">Want a deeper scan?</p>
-            <p>
-              Connect Gmail or Outlook to find the actual accounts tied to your email — newsletters,
-              shopping accounts, forgotten signups, and data brokers listing your information.
+          <Shield className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+          <div className="text-sm">
+            <p className="font-medium text-amber-800 dark:text-amber-300 mb-1">
+              This check only looks at public breach data
+            </p>
+            <p className="text-amber-700 dark:text-amber-400/80">
+              It cannot see your accounts, data broker listings, or what's in your inbox. 
+              Sign up free to run a full scan.
             </p>
           </div>
         </CardContent>
