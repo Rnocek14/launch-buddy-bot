@@ -52,6 +52,7 @@ import { CleanUpWizard } from "@/components/CleanUpWizard";
 import { ServiceCard } from "@/components/ServiceCard";
 import { PrivacyScoreGauge } from "@/components/PrivacyScoreGauge";
 import { PostCheckoutScanState } from "@/components/PostCheckoutScanState";
+import { PostCheckoutNextSteps } from "@/components/PostCheckoutNextSteps";
 
 interface Service {
   id: string;
