@@ -13,24 +13,28 @@ const STEPS = (includeBrokers: boolean) => [
   {
     icon: Mail,
     label: "Scanning inbox for hidden accounts",
-    detail: "Newsletters, old subscriptions, dormant signups",
+    detail: "Accounts we'll help you shut down immediately",
     duration: 4500,
+    // Live counter — quantifies footprint before results land.
+    counter: { from: 12, to: 137, suffix: "potential accounts" },
   },
   ...(includeBrokers
     ? [
         {
           icon: Database,
           label: "Sweeping data brokers",
-          detail: "200+ sites publishing your address & phone",
+          detail: "Sites currently exposing your personal info",
           duration: 5500,
+          counter: { from: 0, to: 214, suffix: "broker sites checked" },
         },
       ]
     : []),
   {
     icon: Activity,
     label: "Mapping your exposure",
-    detail: "Building your personal risk profile",
+    detail: "Where your data is most at risk",
     duration: 4000,
+    counter: { from: 0, to: 18, suffix: "risk signals correlated" },
   },
 ];
 
@@ -68,7 +72,7 @@ export function PostCheckoutScanState({ onDismiss, includeBrokers = false }: Pos
           </h2>
           <p className="text-muted-foreground">
             {allDone
-              ? "We've started the deep scan. Here's what we're looking at."
+              ? "Here's what we found in your initial sweep."
               : "Starting your deep scan — uncovering hidden accounts, brokers, and active risks."}
           </p>
         </div>
@@ -102,6 +106,16 @@ export function PostCheckoutScanState({ onDismiss, includeBrokers = false }: Pos
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-medium">{step.label}</div>
                   <div className="text-xs text-muted-foreground mt-0.5">{step.detail}</div>
+                  {/* Live counter — quantifies footprint before results land */}
+                  {(isActive || isDone) && (
+                    <LiveCounter
+                      from={step.counter.from}
+                      to={step.counter.to}
+                      duration={step.duration}
+                      suffix={step.counter.suffix}
+                      finalized={isDone}
+                    />
+                  )}
                 </div>
               </div>
             );
@@ -115,15 +129,60 @@ export function PostCheckoutScanState({ onDismiss, includeBrokers = false }: Pos
           className="w-full h-12 text-base"
           variant={allDone ? "default" : "outline"}
         >
-          {allDone ? "See my exposure dashboard" : "Continue to dashboard"}
+          {allDone ? "Show my exposed data" : "See what we found"}
         </Button>
 
         <p className="text-center text-xs text-muted-foreground mt-3">
           {allDone
             ? "Connect your inbox to surface every account."
-            : "You can keep using the app while this runs."}
+            : "Skip ahead — your scan keeps running in the background."}
         </p>
       </div>
+    </div>
+  );
+}
+
+/**
+ * Animates a number from `from` to `to` over `duration` ms.
+ * Once the parent step completes, the number locks at `to`.
+ */
+function LiveCounter({
+  from,
+  to,
+  duration,
+  suffix,
+  finalized,
+}: {
+  from: number;
+  to: number;
+  duration: number;
+  suffix: string;
+  finalized: boolean;
+}) {
+  const [value, setValue] = useState(from);
+
+  useEffect(() => {
+    if (finalized) {
+      setValue(to);
+      return;
+    }
+    const start = performance.now();
+    let raf = 0;
+    const tick = (now: number) => {
+      const t = Math.min(1, (now - start) / duration);
+      // ease-out cubic for a more natural settling feel
+      const eased = 1 - Math.pow(1 - t, 3);
+      setValue(Math.round(from + (to - from) * eased));
+      if (t < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [from, to, duration, finalized]);
+
+  return (
+    <div className="mt-1.5 text-xs font-mono text-primary tabular-nums">
+      {value.toLocaleString()} {suffix}
+      {!finalized && <span className="ml-1 animate-pulse">…</span>}
     </div>
   );
 }
