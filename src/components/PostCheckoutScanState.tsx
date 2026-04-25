@@ -39,7 +39,13 @@ function buildSteps(includeBrokers: boolean, breachCount: number, discoveredAcco
       label: "Scanning inbox for hidden accounts",
       detail: "Accounts we'll help you shut down immediately",
       duration: 4500,
-      counter: { from: accountMin, to: accountMax, suffix: "potential accounts" },
+      counter: {
+        from: accountMin,
+        to: accountMax,
+        suffix: "potential accounts",
+        // Ownership cue — anchors the abstract number to the user's identity.
+        ownership: "Likely tied to this email",
+      },
     },
     ...(includeBrokers
       ? [
