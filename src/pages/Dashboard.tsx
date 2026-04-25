@@ -53,6 +53,7 @@ import { ServiceCard } from "@/components/ServiceCard";
 import { PrivacyScoreGauge } from "@/components/PrivacyScoreGauge";
 import { PostCheckoutScanState } from "@/components/PostCheckoutScanState";
 import { PostCheckoutNextSteps } from "@/components/PostCheckoutNextSteps";
+import { PostCheckoutScanProgressStrip } from "@/components/PostCheckoutScanProgressStrip";
 
 interface Service {
   id: string;
@@ -218,6 +219,13 @@ export default function Dashboard() {
     const next = new URLSearchParams(searchParams);
     next.delete("connected");
     setSearchParams(next, { replace: true });
+
+    // Close the loop instantly — confirms the connect action worked
+    // before the scan UI takes over.
+    toast({
+      title: "Inbox connected",
+      description: "Scanning your inbox now — results appear below.",
+    });
 
     trackEvent("auto_scan_post_oauth", { provider: "gmail" });
     handleScan();
@@ -1222,6 +1230,17 @@ export default function Dashboard() {
             onTriggerInboxScan={handleScan}
             onTriggerBrokerScan={handleBrokerScanFromPanel}
             onConnectGmail={handleConnectGmail}
+          />
+        )}
+
+        {/* "Progress bleed" strip — proves scans are actually moving so the
+            user never wonders if anything happened after the next-steps panel. */}
+        {showNextSteps && !showPostCheckoutScan && (scanning || hasBrokerScan) && (
+          <PostCheckoutScanProgressStrip
+            inboxScanning={scanning}
+            brokerScanning={hasBrokerScan}
+            inboxHasResults={services.length > 0}
+            brokerHasResults={false}
           />
         )}
 
