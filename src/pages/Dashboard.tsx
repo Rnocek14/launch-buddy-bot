@@ -788,7 +788,32 @@ export default function Dashboard() {
     }
   };
 
-  const selectedServicesArray = Array.from(selectedServices)
+  /**
+   * Triggered by the post-checkout panel as soon as the broker profile is saved.
+   * Input = trigger — no separate "Start Scan" button.
+   */
+  const handleBrokerScanFromPanel = async (profile: { firstName: string; lastName: string; city: string; state: string }) => {
+    try {
+      const { data, error } = await supabase.functions.invoke("scan-brokers", {
+        method: "POST",
+        body: { city: profile.city, state: profile.state },
+      });
+      if (error || data?.error) {
+        const msg = data?.error || error?.message || "Could not start broker scan";
+        toast({ variant: "destructive", title: "Broker scan failed", description: msg });
+        return;
+      }
+      setHasBrokerScan(true);
+      trackEvent("broker_scan_auto_triggered", { source: "post_checkout_panel" });
+      toast({
+        title: "Broker scan started",
+        description: "Results will appear below as each site responds.",
+      });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Could not start broker scan";
+      toast({ variant: "destructive", title: "Broker scan failed", description: msg });
+    }
+  };
     .map(id => services.find(s => s.id === id))
     .filter((s): s is Service => s !== undefined);
 
