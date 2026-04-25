@@ -814,6 +814,8 @@ export default function Dashboard() {
       toast({ variant: "destructive", title: "Broker scan failed", description: msg });
     }
   };
+
+  const selectedServicesArray = Array.from(selectedServices)
     .map(id => services.find(s => s.id === id))
     .filter((s): s is Service => s !== undefined);
 
