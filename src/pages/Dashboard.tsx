@@ -54,6 +54,7 @@ import { PrivacyScoreGauge } from "@/components/PrivacyScoreGauge";
 import { PostCheckoutScanState } from "@/components/PostCheckoutScanState";
 import { PostCheckoutNextSteps } from "@/components/PostCheckoutNextSteps";
 import { PostCheckoutScanProgressStrip } from "@/components/PostCheckoutScanProgressStrip";
+import { LiveFindingsPreview } from "@/components/LiveFindingsPreview";
 
 interface Service {
   id: string;
@@ -141,6 +142,7 @@ export default function Dashboard() {
   const [showPostCheckoutScan, setShowPostCheckoutScan] = useState(false);
   const [showNextSteps, setShowNextSteps] = useState(false);
   const [hasBrokerScan, setHasBrokerScan] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
   const [scanResultsBanner, setScanResultsBanner] = useState<{
     scannedEmails: string[];
     totalServices: number;
@@ -266,6 +268,7 @@ export default function Dashboard() {
     }
 
     setUser(session.user);
+    setUserId(session.user.id);
     
     // Check for stored email connections instead of session.provider_token
     const { data: connections } = await supabase
@@ -1236,14 +1239,25 @@ export default function Dashboard() {
         {/* Unified "Scanning your digital footprint…" stack — proves the
             system is moving as one coherent pipeline, not three separate tools. */}
         {showNextSteps && !showPostCheckoutScan && (
-          <PostCheckoutScanProgressStrip
-            inboxScanning={scanning}
-            brokerScanning={hasBrokerScan}
-            inboxHasResults={services.length > 0}
-            brokerHasResults={false}
-            breachComplete={!!riskData}
-            brokerEnabled={subscriptionTier === "complete" || subscriptionTier === "family"}
-          />
+          <>
+            <PostCheckoutScanProgressStrip
+              inboxScanning={scanning}
+              brokerScanning={hasBrokerScan}
+              inboxHasResults={services.length > 0}
+              brokerHasResults={false}
+              breachComplete={!!riskData}
+              brokerEnabled={subscriptionTier === "complete" || subscriptionTier === "family"}
+            />
+            {/* Live findings preview — proves the pipeline is producing real,
+                named results, not just spinning. Mixes done + checking. */}
+            <LiveFindingsPreview
+              userId={userId}
+              inboxScanning={scanning}
+              brokerScanning={hasBrokerScan}
+              brokerEnabled={subscriptionTier === "complete" || subscriptionTier === "family"}
+              active={scanning || hasBrokerScan || services.length > 0}
+            />
+          </>
         )}
 
         {/* Show empty state when no services and not scanning */}
