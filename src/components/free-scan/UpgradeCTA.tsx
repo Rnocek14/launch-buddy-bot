@@ -73,7 +73,7 @@ export function UpgradeCTA({ hasBreaches }: UpgradeCTAProps) {
             <p className="text-xs text-muted-foreground mt-1">No hidden fees · Cancel anytime · 30-day money-back guarantee</p>
           </div>
 
-          <Link to="/subscribe?tier=pro&interval=annual">
+          <Link to="/subscribe?tier=pro&interval=year&autostart=1">
             <Button size="lg" className="gap-2 mb-4 cta-shimmer">
               <Shield className="w-5 h-5" />
               Start Protecting My Data
