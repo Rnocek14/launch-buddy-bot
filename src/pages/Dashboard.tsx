@@ -1233,14 +1233,16 @@ export default function Dashboard() {
           />
         )}
 
-        {/* "Progress bleed" strip — proves scans are actually moving so the
-            user never wonders if anything happened after the next-steps panel. */}
-        {showNextSteps && !showPostCheckoutScan && (scanning || hasBrokerScan) && (
+        {/* Unified "Scanning your digital footprint…" stack — proves the
+            system is moving as one coherent pipeline, not three separate tools. */}
+        {showNextSteps && !showPostCheckoutScan && (
           <PostCheckoutScanProgressStrip
             inboxScanning={scanning}
             brokerScanning={hasBrokerScan}
             inboxHasResults={services.length > 0}
             brokerHasResults={false}
+            breachComplete={!!riskData}
+            brokerEnabled={subscriptionTier === "complete" || subscriptionTier === "family"}
           />
         )}
 
