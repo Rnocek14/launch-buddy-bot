@@ -142,6 +142,7 @@ export default function Dashboard() {
   const [showPostCheckoutScan, setShowPostCheckoutScan] = useState(false);
   const [showNextSteps, setShowNextSteps] = useState(false);
   const [hasBrokerScan, setHasBrokerScan] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
   const [scanResultsBanner, setScanResultsBanner] = useState<{
     scannedEmails: string[];
     totalServices: number;
