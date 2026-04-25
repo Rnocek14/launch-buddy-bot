@@ -53,6 +53,7 @@ import { ServiceCard } from "@/components/ServiceCard";
 import { PrivacyScoreGauge } from "@/components/PrivacyScoreGauge";
 import { PostCheckoutScanState } from "@/components/PostCheckoutScanState";
 import { PostCheckoutNextSteps } from "@/components/PostCheckoutNextSteps";
+import { PostCheckoutScanProgressStrip } from "@/components/PostCheckoutScanProgressStrip";
 
 interface Service {
   id: string;
