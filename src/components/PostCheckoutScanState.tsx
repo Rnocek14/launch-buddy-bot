@@ -1,0 +1,129 @@
+import { useEffect, useState } from "react";
+import { Shield, Mail, Database, Activity, CheckCircle2, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+
+interface PostCheckoutScanStateProps {
+  /** Called when the user dismisses (either via continue button or auto). */
+  onDismiss: () => void;
+  /** Whether to show the broker-sweep step (Complete/Family tiers). */
+  includeBrokers?: boolean;
+}
+
+const STEPS = (includeBrokers: boolean) => [
+  {
+    icon: Mail,
+    label: "Scanning inbox for hidden accounts",
+    detail: "Newsletters, old subscriptions, dormant signups",
+    duration: 4500,
+  },
+  ...(includeBrokers
+    ? [
+        {
+          icon: Database,
+          label: "Sweeping data brokers",
+          detail: "200+ sites publishing your address & phone",
+          duration: 5500,
+        },
+      ]
+    : []),
+  {
+    icon: Activity,
+    label: "Mapping your exposure",
+    detail: "Building your personal risk profile",
+    duration: 4000,
+  },
+];
+
+/**
+ * Full-screen "we're working" state that fires immediately after checkout.
+ * Removes the "gap after purchase" by making the value loop visible
+ * before the user has to act.
+ */
+export function PostCheckoutScanState({ onDismiss, includeBrokers = false }: PostCheckoutScanStateProps) {
+  const steps = STEPS(includeBrokers);
+  const [currentStep, setCurrentStep] = useState(0);
+  const [completedSteps, setCompletedSteps] = useState<number[]>([]);
+
+  useEffect(() => {
+    if (currentStep >= steps.length) return;
+    const t = setTimeout(() => {
+      setCompletedSteps((prev) => [...prev, currentStep]);
+      setCurrentStep((s) => s + 1);
+    }, steps[currentStep].duration);
+    return () => clearTimeout(t);
+  }, [currentStep, steps]);
+
+  const allDone = currentStep >= steps.length;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/95 backdrop-blur-sm animate-fade-in">
+      <div className="w-full max-w-lg px-6">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
+            <Shield className="h-8 w-8 text-primary" />
+          </div>
+          <h2 className="text-2xl font-bold mb-2">
+            {allDone ? "Your protection is active" : "Protection is now active"}
+          </h2>
+          <p className="text-muted-foreground">
+            {allDone
+              ? "We've started the deep scan. Here's what we're looking at."
+              : "Starting your deep scan — uncovering hidden accounts, brokers, and active risks."}
+          </p>
+        </div>
+
+        {/* Steps */}
+        <div className="space-y-3 mb-8">
+          {steps.map((step, i) => {
+            const Icon = step.icon;
+            const isDone = completedSteps.includes(i);
+            const isActive = currentStep === i;
+            return (
+              <div
+                key={i}
+                className={`flex items-start gap-3 p-4 rounded-lg border transition-colors ${
+                  isActive
+                    ? "border-primary/40 bg-primary/5"
+                    : isDone
+                      ? "border-emerald-500/30 bg-emerald-500/5"
+                      : "border-border bg-muted/20 opacity-60"
+                }`}
+              >
+                <div className="shrink-0 mt-0.5">
+                  {isDone ? (
+                    <CheckCircle2 className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                  ) : isActive ? (
+                    <Loader2 className="h-5 w-5 text-primary animate-spin" />
+                  ) : (
+                    <Icon className="h-5 w-5 text-muted-foreground" />
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium">{step.label}</div>
+                  <div className="text-xs text-muted-foreground mt-0.5">{step.detail}</div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* CTA */}
+        <Button
+          onClick={onDismiss}
+          size="lg"
+          className="w-full h-12 text-base"
+          variant={allDone ? "default" : "outline"}
+        >
+          {allDone ? "See my exposure dashboard" : "Continue to dashboard"}
+        </Button>
+
+        <p className="text-center text-xs text-muted-foreground mt-3">
+          {allDone
+            ? "Connect your inbox to surface every account."
+            : "You can keep using the app while this runs."}
+        </p>
+      </div>
+    </div>
+  );
+}
