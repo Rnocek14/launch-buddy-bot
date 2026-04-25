@@ -10,6 +10,8 @@ import { BreachResults } from "@/components/free-scan/BreachResults";
 import { WhatWeChecked } from "@/components/free-scan/WhatWeChecked";
 import { UpgradeCTA } from "@/components/free-scan/UpgradeCTA";
 import { ParentScanUpsell } from "@/components/free-scan/ParentScanUpsell";
+import { IcebergPanel } from "@/components/free-scan/IcebergPanel";
+import { estimateIceberg } from "@/lib/icebergEstimate";
 import { supabase } from "@/integrations/supabase/client";
 import { trackEvent } from "@/lib/analytics";
 import { useSEO } from "@/hooks/useSEO";
@@ -209,22 +211,33 @@ export default function FreeScan() {
                 />
               </section>
 
-              {/* Layer 2: What we checked (honest framing) */}
+              {/* Layer 2: The Iceberg — personalized hidden-exposure estimate + primary CTA */}
               <section>
-                <WhatWeChecked
+                <IcebergPanel
+                  email={email}
                   breachCount={results.breachCount}
-                  breachError={results.breachError}
+                  estimate={estimateIceberg(email, results.breachCount)}
                 />
               </section>
 
-              {/* Layer 3: Upgrade CTA */}
+              {/* Layer 3: Parent Scan upsell — emotional pivot at peak intent */}
+              {results.breachCount > 0 && (
+                <section>
+                  <ParentScanUpsell exposureCount={results.breachCount} />
+                </section>
+              )}
+
+              {/* Layer 4: Supporting upgrade card (pricing detail for users who want it) */}
               <section>
                 <UpgradeCTA hasBreaches={results.breachCount > 0} />
               </section>
 
-              {/* Layer 4: Parent Scan upsell — emotional pivot at peak intent */}
-              <section>
-                <ParentScanUpsell exposureCount={results.breachCount} />
+              {/* Footer: methodology — demoted, no longer steals attention */}
+              <section className="pt-4 border-t border-border">
+                <WhatWeChecked
+                  breachCount={results.breachCount}
+                  breachError={results.breachError}
+                />
               </section>
 
               {/* Try Again */}
