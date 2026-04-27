@@ -34,7 +34,7 @@ import Enterprise from "./pages/Enterprise";
 import Organization from "./pages/Organization";
 import Offboarding from "./pages/Offboarding";
 import Authorize from "./pages/Authorize";
-import ExposureScan from "./pages/ExposureScan";
+// ExposureScan deprecated — /exposure-scan now redirects to /dashboard
 import { Navigate } from "react-router-dom";
 import Extension from "./pages/Extension";
 import ResetPassword from "./pages/ResetPassword";
@@ -95,7 +95,7 @@ const App = () => (
               <Route path="/broker-scan" element={<BrokerScan />} />
               <Route path="/organization" element={<Organization />} />
               <Route path="/offboarding" element={<Offboarding />} />
-              <Route path="/exposure-scan" element={<ExposureScan />} />
+              <Route path="/exposure-scan" element={<Navigate to="/dashboard" replace />} />
               <Route path="/extension" element={<Extension />} />
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/email-subscriptions" element={<EmailSubscriptions />} />

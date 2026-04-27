@@ -8,18 +8,8 @@ import { BillingToggle } from "./BillingToggle";
 import type { BillingInterval } from "@/config/pricing";
 import { FREE_FEATURES, PRO_FEATURES, COMPLETE_FEATURES, FAMILY_FEATURES, STRIPE_PRICES } from "@/config/pricing";
 
-const getPlans = (billingInterval: BillingInterval) => [
-  {
-    name: "Free",
-    price: "$0",
-    period: "",
-    description: "Perfect for getting started",
-    features: [...FREE_FEATURES],
-    cta: "Get Started Free",
-    ctaLink: "/auth",
-    popular: false,
-    icon: Shield,
-  },
+// Two primary plans shown at decision moment — Pro (most popular) + Complete (recommended)
+const getPrimaryPlans = (billingInterval: BillingInterval) => [
   {
     name: "Pro",
     price: billingInterval === "year" ? "$79" : "$12.99",
@@ -46,6 +36,20 @@ const getPlans = (billingInterval: BillingInterval) => [
     badge: billingInterval === "year" ? "Best Value" : null,
     monthlyEquivalent: billingInterval === "year" ? "Just $10.75/month" : null,
   },
+];
+
+// Secondary plans shown in a smaller "Other options" row
+const getSecondaryPlans = () => [
+  {
+    name: "Free",
+    price: "$0",
+    period: "",
+    description: "Basic scan to see your exposure",
+    features: [...FREE_FEATURES],
+    cta: "Start Free",
+    ctaLink: "/free-scan",
+    icon: Shield,
+  },
   {
     name: "Family",
     price: "$179",
@@ -54,10 +58,8 @@ const getPlans = (billingInterval: BillingInterval) => [
     features: [...FAMILY_FEATURES],
     cta: "Protect My Family",
     ctaLink: `/subscribe?tier=family&interval=year`,
-    popular: false,
     icon: Users,
-    badge: "Best for Families",
-    monthlyEquivalent: "Just $2.98/member/month",
+    badge: "For Families",
   },
 ];
 
@@ -122,42 +124,33 @@ const competitors = [
 
 export const Pricing = () => {
   const [billingInterval, setBillingInterval] = useState<BillingInterval>("year");
-  const plans = getPlans(billingInterval);
+  const primaryPlans = getPrimaryPlans(billingInterval);
+  const secondaryPlans = getSecondaryPlans();
 
   return (
     <section id="pricing" className="py-24 px-4">
       <div className="container max-w-6xl">
-        {/* Launch Pricing Banner */}
-        <div className="mb-8 rounded-xl border border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950/30 px-4 py-3 text-xs md:text-sm flex flex-col md:flex-row md:items-center md:justify-between gap-2">
-          <div>
-            <span className="font-medium">Simple plans for every need:</span>{" "}
-            Free to start, <span className="font-semibold">Pro at $79/year</span>, <span className="font-semibold">Complete at $129/year</span>, or <span className="font-semibold">Family at $179/year</span>.
-          </div>
-          <div className="text-emerald-700 dark:text-emerald-400 font-medium">
-            No hidden fees • Cancel anytime
-          </div>
-        </div>
-
         <div className="text-center mb-8">
           <h2 className="text-4xl md:text-5xl font-bold mb-4">
-            Subscribe to Stay Protected
+            Pick your protection
           </h2>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Your exposure changes every month. So does your protection. Cancel anytime.
+            Two plans cover almost everyone. Cancel anytime.
           </p>
         </div>
 
         <BillingToggle value={billingInterval} onChange={setBillingInterval} />
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
-          {plans.map((plan, index) => {
+        {/* Primary plans — Pro + Complete, side by side */}
+        <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto">
+          {primaryPlans.map((plan, index) => {
             const Icon = plan.icon;
             return (
-              <Card 
+              <Card
                 key={index}
                 className={`relative ${
-                  plan.popular 
-                    ? "border-primary shadow-lg shadow-primary/10 md:scale-105 md:z-10" 
+                  plan.popular
+                    ? "border-primary shadow-lg shadow-primary/10 md:scale-105 md:z-10"
                     : "border-border/50"
                 }`}
               >
@@ -194,10 +187,10 @@ export const Pricing = () => {
                 </CardHeader>
                 <CardContent>
                   <Link to={plan.ctaLink || "/auth"} className="w-full">
-                    <Button 
+                    <Button
                       className={`w-full mb-6 ${
-                        plan.popular 
-                          ? "bg-primary hover:bg-primary/90" 
+                        plan.popular
+                          ? "bg-primary hover:bg-primary/90"
                           : ""
                       }`}
                       variant={plan.popular ? "default" : "outline"}
@@ -219,9 +212,48 @@ export const Pricing = () => {
           })}
         </div>
 
-        <p className="text-center text-muted-foreground mt-12">
-          ✨ All plans include our core privacy features. Cancel anytime.
+        <p className="text-center text-muted-foreground mt-8 text-sm">
+          No hidden fees • Cancel anytime • {billingInterval === "year" ? "Billed annually" : "Billed monthly"}
         </p>
+
+        {/* Secondary plans — smaller, less visual weight */}
+        <div className="mt-16 pt-10 border-t">
+          <h3 className="text-center text-sm uppercase tracking-wide text-muted-foreground mb-6">
+            Other options
+          </h3>
+          <div className="grid sm:grid-cols-2 gap-4 max-w-3xl mx-auto">
+            {secondaryPlans.map((plan, index) => {
+              const Icon = plan.icon;
+              return (
+                <Card key={index} className="border-border/50">
+                  <CardContent className="p-5">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <Icon className="w-4 h-4 text-muted-foreground" />
+                        <span className="font-semibold">{plan.name}</span>
+                        {plan.badge && (
+                          <Badge variant="outline" className="text-[10px]">{plan.badge}</Badge>
+                        )}
+                      </div>
+                      <div className="text-right">
+                        <span className="font-semibold">{plan.price}</span>
+                        {plan.period && (
+                          <span className="text-xs text-muted-foreground">{plan.period}</span>
+                        )}
+                      </div>
+                    </div>
+                    <p className="text-sm text-muted-foreground mb-3">{plan.description}</p>
+                    <Link to={plan.ctaLink}>
+                      <Button variant="outline" size="sm" className="w-full">
+                        {plan.cta}
+                      </Button>
+                    </Link>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        </div>
 
         {/* Named Competitor Comparison */}
         <section className="mt-16">
