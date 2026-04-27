@@ -8,18 +8,8 @@ import { BillingToggle } from "./BillingToggle";
 import type { BillingInterval } from "@/config/pricing";
 import { FREE_FEATURES, PRO_FEATURES, COMPLETE_FEATURES, FAMILY_FEATURES, STRIPE_PRICES } from "@/config/pricing";
 
-const getPlans = (billingInterval: BillingInterval) => [
-  {
-    name: "Free",
-    price: "$0",
-    period: "",
-    description: "Perfect for getting started",
-    features: [...FREE_FEATURES],
-    cta: "Get Started Free",
-    ctaLink: "/auth",
-    popular: false,
-    icon: Shield,
-  },
+// Two primary plans shown at decision moment — Pro (most popular) + Complete (recommended)
+const getPrimaryPlans = (billingInterval: BillingInterval) => [
   {
     name: "Pro",
     price: billingInterval === "year" ? "$79" : "$12.99",
@@ -46,6 +36,20 @@ const getPlans = (billingInterval: BillingInterval) => [
     badge: billingInterval === "year" ? "Best Value" : null,
     monthlyEquivalent: billingInterval === "year" ? "Just $10.75/month" : null,
   },
+];
+
+// Secondary plans shown in a smaller "Other options" row
+const getSecondaryPlans = () => [
+  {
+    name: "Free",
+    price: "$0",
+    period: "",
+    description: "Basic scan to see your exposure",
+    features: [...FREE_FEATURES],
+    cta: "Start Free",
+    ctaLink: "/free-scan",
+    icon: Shield,
+  },
   {
     name: "Family",
     price: "$179",
@@ -54,10 +58,8 @@ const getPlans = (billingInterval: BillingInterval) => [
     features: [...FAMILY_FEATURES],
     cta: "Protect My Family",
     ctaLink: `/subscribe?tier=family&interval=year`,
-    popular: false,
     icon: Users,
-    badge: "Best for Families",
-    monthlyEquivalent: "Just $2.98/member/month",
+    badge: "For Families",
   },
 ];
 
