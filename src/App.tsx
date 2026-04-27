@@ -49,6 +49,7 @@ import CompareIndex from "./pages/CompareIndex";
 import Affiliates from "./pages/Affiliates";
 import AffiliateDashboard from "./pages/AffiliateDashboard";
 import PricingPage from "./pages/PricingPage";
+import PaymentSuccess from "./pages/PaymentSuccess";
 import { captureAffiliateRef } from "./lib/affiliateTracking";
 
 if (typeof window !== "undefined") {
@@ -108,6 +109,7 @@ const App = () => (
               <Route path="/affiliates" element={<Affiliates />} />
               <Route path="/affiliates/dashboard" element={<AffiliateDashboard />} />
               <Route path="/pricing" element={<PricingPage />} />
+              <Route path="/payment-success" element={<PaymentSuccess />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>

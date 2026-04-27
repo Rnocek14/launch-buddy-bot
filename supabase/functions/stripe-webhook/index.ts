@@ -160,9 +160,43 @@ const handler = async (req: Request): Promise<Response> => {
             session.subscription as string
           ) as any;
 
-          const userId = session.metadata?.supabase_user_id;
+          // Resolve user id — either from metadata (auth'd checkout) or by email (guest checkout)
+          let userId = session.metadata?.supabase_user_id as string | undefined;
+          const guestEmail = (
+            session.customer_details?.email ||
+            (session.metadata?.guest_email as string | undefined) ||
+            ""
+          ).toLowerCase().trim();
+
+          if (!userId && guestEmail) {
+            try {
+              const { data: list } = await supabase.auth.admin.listUsers({ page: 1, perPage: 200 });
+              const match = list?.users?.find((u) => (u.email ?? "").toLowerCase() === guestEmail);
+              if (match) {
+                userId = match.id;
+              } else {
+                const { data: created, error: createErr } = await supabase.auth.admin.createUser({
+                  email: guestEmail,
+                  email_confirm: true,
+                  user_metadata: {
+                    source: "stripe_webhook_guest",
+                    stripe_customer_id: session.customer as string,
+                  },
+                });
+                if (createErr) {
+                  console.error("Failed to create guest user:", createErr);
+                } else {
+                  userId = created.user?.id;
+                  console.log(`Created user ${userId} from webhook for ${guestEmail}`);
+                }
+              }
+            } catch (err) {
+              console.error("Guest user resolution failed:", err);
+            }
+          }
+
           if (!userId) {
-            console.error("No supabase_user_id in session metadata");
+            console.error("No supabase_user_id and could not resolve from email");
             break;
           }
 
