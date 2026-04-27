@@ -95,7 +95,7 @@ const App = () => (
               <Route path="/broker-scan" element={<BrokerScan />} />
               <Route path="/organization" element={<Organization />} />
               <Route path="/offboarding" element={<Offboarding />} />
-              <Route path="/exposure-scan" element={<ExposureScan />} />
+              <Route path="/exposure-scan" element={<Navigate to="/dashboard" replace />} />
               <Route path="/extension" element={<Extension />} />
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/email-subscriptions" element={<EmailSubscriptions />} />
