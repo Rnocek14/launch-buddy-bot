@@ -158,48 +158,70 @@ export function IcebergPanel({ email, breachCount, estimate }: IcebergPanelProps
             </p>
           </div>
 
-          {/* Two-button CTA */}
-          <div className="grid sm:grid-cols-2 gap-3 pt-2">
-            <Link to="/auth?intent=signup" className="block">
-              <Button size="lg" className="w-full gap-2 cta-shimmer">
-                <Shield className="w-4 h-4" />
-                Sign up free → see everything
-                <ArrowRight className="w-4 h-4" />
-              </Button>
-            </Link>
-            <Link to="/subscribe?tier=pro&interval=year&autostart=1" className="block">
-              <Button size="lg" variant="outline" className="w-full gap-2">
-                Skip to Pro · $79/yr
-              </Button>
-            </Link>
+          {/* Primary CTA — instant checkout, no auth wall.
+              Defaults to Complete because brokers (the iceberg's hook) are Complete-only. */}
+          <div className="space-y-3 pt-2">
+            <Button
+              size="lg"
+              onClick={startInstantCheckout}
+              disabled={loading}
+              className="w-full gap-2 cta-shimmer h-14 text-base"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  Opening secure checkout…
+                </>
+              ) : (
+                <>
+                  <Shield className="w-5 h-5" />
+                  Unlock full scan — $129/yr
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              )}
+            </Button>
+
+            <p className="text-[11px] text-center text-muted-foreground">
+              Pay first · account auto-created · 30-day refund · cancel anytime
+            </p>
+
+            {/* Secondary, low-emphasis path */}
+            <div className="flex flex-wrap items-center justify-center gap-3 text-xs text-muted-foreground pt-1">
+              <Link to="/auth?intent=signup" className="underline hover:text-foreground">
+                Or just create a free account
+              </Link>
+              <span>·</span>
+              <Link to="/pricing" className="underline hover:text-foreground">
+                Compare plans
+              </Link>
+            </div>
           </div>
 
-          {/* What happens after signup — clarity without slowing momentum */}
+          {/* What happens after payment — keep momentum, set expectation */}
           <div className="pt-4 pb-2">
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
-              What happens after signup:
+              The moment you pay:
             </p>
             <ul className="space-y-1.5 text-sm text-foreground">
               <li className="flex items-start gap-2">
                 <span className="text-primary">•</span>
-                <span>Connect your inbox to uncover hidden accounts</span>
+                <span>Account created automatically — no signup form</span>
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-primary">•</span>
-                <span>Scan data brokers exposing your information</span>
+                <span>Inbox scan + 200+ broker sweep starts immediately</span>
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-primary">•</span>
-                <span>See everything tied to your email in one place</span>
+                <span>Continuous monitoring + monthly auto-rescans</span>
               </li>
             </ul>
-            <p className="text-xs text-muted-foreground mt-2">No card required for free scan</p>
           </div>
 
-          {/* Free vs Pro clarification — one line, no decision paralysis */}
+          {/* Honest Free vs Complete framing — no more "free already shows everything" */}
           <p className="text-[11px] text-center text-muted-foreground pt-2 border-t border-border/50">
-            <span className="font-medium">Free:</span> see your accounts + run initial scans · 
-            <span className="font-medium"> Pro:</span> continuous monitoring + automatic removals
+            <span className="font-medium">Free:</span> 1 inbox + light scan ·{" "}
+            <span className="font-medium">Complete:</span> deep scan + 200+ data brokers + removals
           </p>
         </div>
       </CardContent>
