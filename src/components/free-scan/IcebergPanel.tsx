@@ -1,8 +1,13 @@
+import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Eye, EyeOff, Lock, AlertTriangle, ArrowRight, Shield } from "lucide-react";
+import { Eye, EyeOff, Lock, AlertTriangle, ArrowRight, Shield, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { IcebergEstimate } from "@/lib/icebergEstimate";
+import { supabase } from "@/integrations/supabase/client";
+import { STRIPE_PRICES } from "@/config/pricing";
+import { trackEvent } from "@/lib/analytics";
+import { useToast } from "@/hooks/use-toast";
 
 interface IcebergPanelProps {
   email: string;
@@ -11,6 +16,49 @@ interface IcebergPanelProps {
 }
 
 export function IcebergPanel({ email, breachCount, estimate }: IcebergPanelProps) {
+  const { toast } = useToast();
+  const [loading, setLoading] = useState(false);
+
+  const startInstantCheckout = async () => {
+    if (!email || !email.includes("@")) {
+      toast({
+        title: "Email needed",
+        description: "We need your email to start checkout.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setLoading(true);
+    trackEvent("instant_checkout_started", {
+      source: "iceberg_panel",
+      tier: "complete",
+    });
+    try {
+      const { getStoredAffiliateRef } = await import("@/lib/affiliateTracking");
+      const ref = getStoredAffiliateRef();
+      const { data, error } = await supabase.functions.invoke("instant-checkout", {
+        body: {
+          email,
+          priceId: STRIPE_PRICES.COMPLETE_ANNUAL.id,
+          source: "iceberg_panel",
+          ...(ref?.code ? { affiliateCode: ref.code } : {}),
+        },
+      });
+      if (error || !data?.url) {
+        throw new Error(data?.error || error?.message || "Checkout failed");
+      }
+      window.location.href = data.url;
+    } catch (err: any) {
+      console.error("instant-checkout error", err);
+      toast({
+        title: "Couldn't start checkout",
+        description: err?.message || "Please try again in a moment.",
+        variant: "destructive",
+      });
+      setLoading(false);
+    }
+  };
+
   return (
     <Card className="overflow-hidden border-2 border-primary/30 bg-gradient-to-b from-background to-primary/5">
       <CardContent className="p-0">
