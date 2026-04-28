@@ -8,7 +8,7 @@ const PrivacyPolicy = () => {
       <Navbar />
       <div className="container max-w-4xl py-16 px-4">
         <h1 className="text-4xl font-bold mb-8">Privacy Policy</h1>
-        <p className="text-muted-foreground mb-8">Last updated: January 14, 2025</p>
+        <p className="text-muted-foreground mb-8">Last updated: April 28, 2026</p>
 
         <div className="space-y-8">
           <Card>
@@ -92,20 +92,27 @@ const PrivacyPolicy = () => {
 
           <Card>
             <CardHeader>
-              <CardTitle>Gmail Integration & Data Handling</CardTitle>
+              <CardTitle>Email Provider Integration (Gmail & Outlook) — Data Handling</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
                 <h3 className="font-semibold mb-2">What We Access</h3>
                 <p className="mb-2">
-                  When you connect your Gmail account, we request the following permissions:
+                  When you connect your Gmail or Outlook account, we request the following permissions:
                 </p>
+                <p className="font-semibold mt-3 mb-1">Google / Gmail</p>
                 <ul className="list-disc pl-6 space-y-2">
                   <li><strong>gmail.metadata</strong> — Read-only access to email <em>headers only</em> (From, Subject, Date, and List-Unsubscribe). This scope does <strong>not</strong> grant access to email bodies, attachments, or content.</li>
                   <li><strong>userinfo.email</strong> and <strong>userinfo.profile</strong> — Basic account information (your email address and name).</li>
                 </ul>
+                <p className="font-semibold mt-3 mb-1">Microsoft / Outlook</p>
+                <ul className="list-disc pl-6 space-y-2">
+                  <li><strong>Mail.Read</strong> — Read-only access used solely to enumerate message headers (From, Subject, Date, List-Unsubscribe). We do not store, index, or display message bodies.</li>
+                  <li><strong>User.Read</strong> — Basic account information (your email address and name).</li>
+                  <li><strong>offline_access</strong> — Allows token refresh so you don't have to reconnect on every scan.</li>
+                </ul>
                 <p className="text-sm text-muted-foreground mt-2">
-                  We do not request permission to send emails from your Gmail account. All deletion request emails are sent via our own email service (Resend) with your email address as the reply-to.
+                  We never request permission to send emails from your inbox. All deletion request emails are sent via our own email service (Resend) with your email address as the reply-to.
                 </p>
               </div>
 
