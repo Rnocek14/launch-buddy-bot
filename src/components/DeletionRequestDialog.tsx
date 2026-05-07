@@ -310,6 +310,30 @@ export const DeletionRequestDialog = ({
     return "general_deletion";
   };
 
+  const redirectToLogin = (reason: string) => {
+    const returnTo = window.location.pathname + window.location.search;
+    toast({
+      title: "Please sign in to continue",
+      description: reason,
+    });
+    onOpenChange(false);
+    navigate(`/auth?redirect=${encodeURIComponent(returnTo)}`);
+  };
+
+  const isAuthError = (err: any, data?: any): boolean => {
+    const msg = String(err?.message || data?.error || "").toLowerCase();
+    const status = err?.status || err?.context?.status;
+    return (
+      status === 401 ||
+      status === 403 ||
+      msg.includes("not authenticated") ||
+      msg.includes("unauthorized") ||
+      msg.includes("jwt") ||
+      msg.includes("invalid token") ||
+      msg.includes("session")
+    );
+  };
+
   const handlePreview = async () => {
     if (!service || (!selectedIdentifierId && !accountIdentifier)) {
       toast({
@@ -322,6 +346,13 @@ export const DeletionRequestDialog = ({
 
     setLoading(true);
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        redirectToLogin("Your session expired. Sign in again to send your request.");
+        setLoading(false);
+        return;
+      }
+
       const { data, error } = await supabase.functions.invoke("send-deletion-request", {
         body: {
           service_id: service.id,
