@@ -536,12 +536,15 @@ export const DeletionRequestDialog = ({
           "Your connected Gmail session expired. Reconnect Gmail in Settings, then resend the deletion request."
         );
         return;
+      }
 
       if (isAuthError(error)) {
         redirectToLogin("Your session expired. Sign in again to send your request.");
         return;
       }
 
+      toast({
+        title: "Failed to Send Request",
         description: error.message || "An unexpected error occurred. Please try again.",
         variant: "destructive",
       });
