@@ -1,73 +1,54 @@
-# Welcome to your Lovable project
+# Deleteist (Footprint Finder)
 
-## Project info
+**Live site:** [https://footprintfinder.co](https://footprintfinder.co)  
+**Privacy policy:** [https://footprintfinder.co/privacy](https://footprintfinder.co/privacy)
 
-**URL**: https://lovable.dev/projects/dfe42208-8d74-4979-91fc-51fc7484ff76
+## What it does
 
-## How can I edit this code?
+Deleteist helps you find and remove your personal data from online services. Connect your Gmail or Outlook inbox and we scan email headers (sender, subject, date) to discover which companies have your data — no email bodies are ever read or stored. From there you can unsubscribe from marketing emails and send deletion requests in a few clicks.
 
-There are several ways of editing your application.
+## Why it exists
 
-**Use Lovable**
+Most people have hundreds of accounts they forgot about. Deleting them manually means finding contact info, writing emails, and following up. Deleteist automates the discovery and outreach so you can actually finish the job.
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/dfe42208-8d74-4979-91fc-51fc7484ff76) and start prompting.
+## Key features
 
-Changes made via Lovable will be committed automatically to this repo.
+- **Inbox scan** — OAuth-connected scan of Gmail or Outlook headers only (not content)
+- **Privacy risk score** — See how exposed you are based on discovered accounts
+- **One-click unsubscribe** — Detect and execute RFC 8058 List-Unsubscribe requests
+- **Deletion requests** — Generate and send GDPR/CCPA deletion requests via email
+- **Broker exposure scan** — Check if your info appears on people-search sites
+- **Continuous monitoring** — Re-scan periodically to catch new exposures
 
-**Use your preferred IDE**
+## Tech stack
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+- React 18 + TypeScript + Vite
+- Tailwind CSS + shadcn/ui
+- Supabase (Auth, Postgres, Edge Functions, RLS)
+- Resend (transactional emails)
+- Stripe (subscriptions)
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+## Security & privacy
 
-Follow these steps:
+- All data encrypted in transit (TLS) and at rest
+- Row-Level Security on all database tables
+- OAuth tokens stored server-side only, never exposed to the client
+- No email content is read, stored, or indexed — only metadata (From, Subject, Date)
+- No AI/ML training on user data
+- Google API Services Limited Use Policy compliant
+
+## Local development
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+npm install
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+Environment variables (see `.env`):
+- `VITE_SUPABASE_URL` — Supabase project URL
+- `VITE_SUPABASE_ANON_KEY` — Supabase anon/public key
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+## Contact
 
-**Use GitHub Codespaces**
-
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/dfe42208-8d74-4979-91fc-51fc7484ff76) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+- Support: support@footprintfinder.co
+- Privacy questions: privacy@footprintfinder.co
