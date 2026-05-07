@@ -455,9 +455,22 @@ const handler = async (req: Request): Promise<Response> => {
           );
         }
 
+        // Resend is in testing mode (no verified domain) — surface this clearly
+        // so it doesn't masquerade as a generic 500.
+        if (resendMessage.includes("testing emails") || resendMessage.includes("verify a domain")) {
+          return jsonResponse(
+            {
+              error: "Email sending is in test mode. A verified sender domain must be configured at resend.com/domains before deletion requests can be sent to third parties.",
+              error_code: "RESEND_DOMAIN_NOT_VERIFIED",
+              details: resendMessage,
+            },
+            503,
+          );
+        }
+
         return jsonResponse(
           {
-            error: "Unable to send deletion request. Please try again or contact support.",
+            error: resendMessage || "Unable to send deletion request. Please try again or contact support.",
             error_code: "EMAIL_SEND_FAILED",
           },
           500,
