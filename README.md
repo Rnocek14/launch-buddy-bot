@@ -34,7 +34,14 @@ Most people have hundreds of accounts they forgot about. Deleting them manually 
 - No email content is read, stored, indexed, or used for any purpose beyond displaying results to you
 - Google API Services Limited Use Policy compliant
 
-## Local development
+## OAuth scope usage
+
+We request the minimum scopes necessary for each provider:
+
+- **Google** — `openid email profile` for identity and `gmail.readonly` for header-only metadata scans. We do not request `gmail.send`; deletion request emails are sent via Resend on the user's behalf.
+- **Microsoft** — `openid email profile` for identity and `Mail.Read` for header-only metadata scans. We do not request `Mail.Send`.
+
+No other scopes are requested.
 
 ```sh
 npm install
