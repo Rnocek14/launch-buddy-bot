@@ -412,7 +412,9 @@ export const DeletionRequestDialog = ({
       const { data: { session } } = await supabase.auth.getSession();
       
       if (!session) {
-        throw new Error("Not authenticated");
+        redirectToLogin("Your session expired. Sign in again to send your request.");
+        setLoading(false);
+        return;
       }
 
       const { data, error } = await supabase.functions.invoke(
