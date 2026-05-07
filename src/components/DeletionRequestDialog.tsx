@@ -375,6 +375,11 @@ export const DeletionRequestDialog = ({
           console.warn("Failed to parse preview error response", parseError);
         }
 
+        if (isAuthError(error)) {
+          redirectToLogin("Your session expired. Sign in again to send your request.");
+          return;
+        }
+
         throw new Error(message);
       }
 
