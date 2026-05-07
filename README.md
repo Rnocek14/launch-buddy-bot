@@ -17,34 +17,38 @@ Most people have hundreds of accounts they forgot about. Deleting them manually 
 - **Privacy risk score** — See how exposed you are based on discovered accounts
 - **One-click unsubscribe** — Detect and execute RFC 8058 List-Unsubscribe requests
 - **Deletion requests** — Generate and send GDPR/CCPA deletion requests via email
-- **Broker exposure scan** — Check if your info appears on people-search sites
+- **Broker exposure scan** — Check if your name and email appear on people-search sites using a curated broker list
 - **Continuous monitoring** — Re-scan periodically to catch new exposures
 
-## Tech stack
+## Infrastructure
 
-- React 18 + TypeScript + Vite
-- Tailwind CSS + shadcn/ui
-- Supabase (Auth, Postgres, Edge Functions, RLS)
-- Resend (transactional emails)
-- Stripe (subscriptions)
+- Supabase (SOC 2 Type II compliant) for auth, database, and edge functions
+- Stripe for subscription billing
+- Resend for transactional email delivery
 
 ## Security & privacy
 
 - All data encrypted in transit (TLS) and at rest
 - Row-Level Security on all database tables
 - OAuth tokens stored server-side only, never exposed to the client
-- No email content is read, stored, or indexed — only metadata (From, Subject, Date)
-- No AI/ML training on user data
+- No email content is read, stored, indexed, or used for any purpose beyond displaying results to you
 - Google API Services Limited Use Policy compliant
 
-## Local development
+## OAuth scope usage
+
+We request the minimum scopes necessary for each provider:
+
+- **Google** — `openid email profile` for identity and `gmail.readonly` for header-only metadata scans. We do not request `gmail.send`; deletion request emails are sent via Resend on the user's behalf.
+- **Microsoft** — `openid email profile` for identity and `Mail.Read` for header-only metadata scans. We do not request `Mail.Send`.
+
+No other scopes are requested.
 
 ```sh
 npm install
 npm run dev
 ```
 
-Environment variables (see `.env`):
+Environment variables (see `.env.example`):
 - `VITE_SUPABASE_URL` — Supabase project URL
 - `VITE_SUPABASE_ANON_KEY` — Supabase anon/public key
 
