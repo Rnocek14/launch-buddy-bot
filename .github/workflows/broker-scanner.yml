@@ -1,8 +1,9 @@
 name: Broker-Scanner
 
 on:
-  schedule:
-    - cron: '0 */4 * * *'   # every 4 hours
+  # Scheduled runs disabled — re-enable by uncommenting the schedule block below.
+  # schedule:
+  #   - cron: '0 */4 * * *'   # every 4 hours
   workflow_dispatch:
 
 jobs:
