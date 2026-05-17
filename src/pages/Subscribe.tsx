@@ -61,6 +61,38 @@ export default function Subscribe() {
   const checkAuth = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
+      // Guest path: if they arrived with explicit ?tier= intent, route them
+      // straight to the guest instant-checkout flow (email modal → Stripe).
+      // No more auth wall / email-roundtrip detour for cold traffic.
+      if (cameWithTierIntent) {
+        const priceId = getSelectedPrice().id;
+        const tierLabel = selectedTier;
+        // Lazy import to keep initial bundle small
+        const { startCheckout } = await import("@/lib/checkout");
+        const { QuickCheckoutEmailDialog: _Dialog } = await import(
+          "@/components/QuickCheckoutEmailDialog"
+        );
+        const result = await startCheckout({
+          priceId,
+          source: "subscribe_page",
+          tier: tierLabel,
+        });
+        if (result.status === "needs_email") {
+          setGuestNeedsEmail(true);
+          setAuthChecked(true);
+          return;
+        }
+        if (result.status === "error") {
+          toast({
+            title: "Couldn't start checkout",
+            description: result.message,
+            variant: "destructive",
+          });
+        }
+        // redirecting → stop here
+        setAuthChecked(true);
+        return;
+      }
       setNeedsAuth(true);
       setAuthChecked(true);
       return;
