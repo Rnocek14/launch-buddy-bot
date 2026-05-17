@@ -22,6 +22,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { useSEO } from "@/hooks/useSEO";
 
 interface Identifier {
   id: string;
