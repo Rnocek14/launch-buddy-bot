@@ -117,15 +117,20 @@ export function TierUpgradePrompt({ remainingDeletions, currentTier }: TierUpgra
           <div className="flex items-start gap-2 shrink-0">
             <div className="flex flex-col items-end gap-2">
               <Button
-                onClick={() => navigate('/subscribe?tier=pro')}
+                onClick={handleUpgrade}
+                disabled={loading}
                 size="sm"
                 className={`${
-                  isHighUrgency 
-                    ? 'bg-destructive hover:bg-destructive/90' 
+                  isHighUrgency
+                    ? 'bg-destructive hover:bg-destructive/90'
                     : 'bg-gradient-to-r from-primary to-accent hover:opacity-90'
                 } text-primary-foreground`}
               >
-                <Crown className="w-4 h-4 mr-2" />
+                {loading ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Crown className="w-4 h-4 mr-2" />
+                )}
                 Upgrade to Pro
               </Button>
               <span className="text-xs text-muted-foreground">
@@ -143,6 +148,13 @@ export function TierUpgradePrompt({ remainingDeletions, currentTier }: TierUpgra
           </div>
         </div>
       </CardContent>
+      <QuickCheckoutEmailDialog
+        open={emailDialogOpen}
+        onOpenChange={setEmailDialogOpen}
+        priceId={STRIPE_PRICES.PRO_ANNUAL.id}
+        source="tier_upgrade_prompt"
+        tier="pro"
+      />
     </Card>
   );
 }
