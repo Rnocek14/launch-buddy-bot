@@ -8,6 +8,8 @@ import { useNavigate } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { TierUpgradePrompt } from "./TierUpgradePrompt";
+import { startCheckout } from "@/lib/checkout";
+import { STRIPE_PRICES } from "@/config/pricing";
 
 interface SubscriptionData {
   tier: string;
