@@ -90,6 +90,17 @@ export default function BrokerScan() {
   const [isComplete, setIsComplete] = useState(false);
   const [currentTier, setCurrentTier] = useState<'free' | 'pro' | 'complete'>('free');
   const [profileData, setProfileData] = useState<{ firstName: string; lastName: string; city: string; state: string } | null>(null);
+
+  const handleUpgrade = async (tier: "complete") => {
+    const result = await startCheckout({
+      priceId: STRIPE_PRICES.COMPLETE_ANNUAL.id,
+      tier,
+      source: "broker_exposure",
+    });
+    if (result.status === "error") {
+      toast({ title: "Couldn't start checkout", description: result.message, variant: "destructive" });
+    }
+  };
   const [cooldownInfo, setCooldownInfo] = useState<{ nextScanAt: Date; remainingSeconds: number } | null>(null);
 
   useEffect(() => {
