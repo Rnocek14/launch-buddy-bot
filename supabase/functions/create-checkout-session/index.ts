@@ -106,6 +106,7 @@ const handler = async (req: Request): Promise<Response> => {
         },
       ],
       mode: "subscription",
+      allow_promotion_codes: true,
       success_url: `${origin}/dashboard?upgrade=success`,
       cancel_url: `${origin}/pricing?upgrade=cancelled`,
       metadata: {
