@@ -25,6 +25,7 @@ export default function Subscribe() {
   const [loading, setLoading] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
   const [needsAuth, setNeedsAuth] = useState(false);
+  const [guestNeedsEmail, setGuestNeedsEmail] = useState(false);
   const [searchParams] = useSearchParams();
   const initialTier = (searchParams.get("tier") as SelectableTier) || "pro";
   const cameWithTierIntent = !!searchParams.get("tier");
