@@ -159,7 +159,7 @@ export const ShareResultDialog = ({
           top_categories: categories,
           insights: [],
         })
-        .select()
+        .select("share_id")
         .single();
 
       if (error) throw error;
