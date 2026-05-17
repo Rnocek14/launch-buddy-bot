@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
+import { useSEO } from "@/hooks/useSEO";
 
 type OverallStatus = "operational" | "degraded" | "major_outage" | "unknown";
 
@@ -91,6 +92,12 @@ const statusLabel = (status: OverallStatus) => {
 };
 
 export default function Status() {
+  useSEO({
+    title: "System Status — Footprint Finder",
+    description: "Live operational status for Footprint Finder's scan pipeline, broker removal queue, and API services.",
+    canonical: "https://footprintfinder.co/status",
+    ogType: "website",
+  });
   const [snapshot, setSnapshot] = useState<StatusSnapshot | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

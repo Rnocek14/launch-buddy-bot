@@ -403,4 +403,29 @@
     <changefreq>yearly</changefreq>
     <priority>0.1</priority>
   </url>
+  <url>
+    <loc>https://footprintfinder.co/deletion-requests</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.1</priority>
+  </url>
+  <url>
+    <loc>https://footprintfinder.co/cleanup</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.1</priority>
+  </url>
+  <url>
+    <loc>https://footprintfinder.co/alpha</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.1</priority>
+  </url>
+  <url>
+    <loc>https://footprintfinder.co/unsubscribe</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.1</priority>
+  </url>
+  <url>
+    <loc>https://footprintfinder.co/preferences</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.1</priority>
+  </url>
 </urlset>
