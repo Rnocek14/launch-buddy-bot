@@ -4,6 +4,9 @@ import { Button } from "@/components/ui/button";
 import { X, Sparkles, Zap, Shield, Clock } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { startCheckout } from "@/lib/checkout";
+import { STRIPE_PRICES } from "@/config/pricing";
+import { useToast } from "@/hooks/use-toast";
 
 interface OnboardingBannerProps {
   remainingDeletions?: number;
