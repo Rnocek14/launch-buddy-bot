@@ -395,6 +395,16 @@ export const Pricing = () => {
           </div>
         </section>
       </div>
+
+      {emailDialogPlan && (
+        <QuickCheckoutEmailDialog
+          open={!!emailDialogPlan}
+          onOpenChange={(open) => !open && setEmailDialogPlan(null)}
+          priceId={emailDialogPlan.priceId}
+          source="pricing_page"
+          tier={emailDialogPlan.tier}
+        />
+      )}
     </section>
   );
 };
