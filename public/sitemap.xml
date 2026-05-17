@@ -91,16 +91,22 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://footprintfinder.co/privacy-policy</loc>
-    <lastmod>2026-04-22</lastmod>
+    <loc>https://footprintfinder.co/privacy</loc>
+    <lastmod>2026-05-17</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.4</priority>
   </url>
   <url>
-    <loc>https://footprintfinder.co/terms-of-service</loc>
-    <lastmod>2026-04-22</lastmod>
+    <loc>https://footprintfinder.co/terms</loc>
+    <lastmod>2026-05-17</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.4</priority>
+  </url>
+  <url>
+    <loc>https://footprintfinder.co/demo</loc>
+    <lastmod>2026-05-17</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://footprintfinder.co/remove-from/addresses</loc>

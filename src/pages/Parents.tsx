@@ -33,7 +33,7 @@ export default function Parents() {
   const { toast } = useToast();
 
   useSEO({
-    title: "Protect Your Elderly Parents from Online Scams — $39 Parent Scan",
+    title: "Protect Parents from Online Scams — $39 Parent Scan",
     description:
       "Adult children: scan your parent's email for scams, breaches, and shady subscriptions in 60 seconds. One-time $39, no recurring fee. Built for non-technical seniors.",
     canonical: "https://footprintfinder.co/parents",

@@ -56,9 +56,11 @@ export default function AffiliateDashboard() {
   const navigate = useNavigate();
   const { toast } = useToast();
   useSEO({
-    title: "Affiliate Dashboard | Deleteist",
-    description: "Track your referral clicks, conversions, and commission earnings.",
+    title: "Affiliate Dashboard | Footprint Finder",
+    description: "Track your Footprint Finder referral clicks, conversions, and commission earnings.",
     canonical: "https://footprintfinder.co/affiliates/dashboard",
+    ogType: "website",
+    noindex: true,
   });
 
   const [loading, setLoading] = useState(true);

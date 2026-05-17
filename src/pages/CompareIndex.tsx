@@ -20,6 +20,7 @@ export default function CompareIndex() {
     description:
       "Compare Footprint Finder against DeleteMe, Incogni, Optery, Kanary, and Mine. Side-by-side pricing, features, and coverage. Find the best privacy tool for you.",
     canonical: "https://footprintfinder.co/vs",
+    ogType: "website",
   });
 
   return (

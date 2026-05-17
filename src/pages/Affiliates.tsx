@@ -31,10 +31,11 @@ const MONTHLY_PRICE = 15;
 export default function Affiliates() {
   const { toast } = useToast();
   useSEO({
-    title: "Affiliate Program — Earn 40% Recurring | Deleteist",
+    title: "Affiliate Program — Earn 40% Recurring | Footprint Finder",
     description:
-      "Promote Deleteist privacy protection and earn 40% recurring commission on every subscription. Join the affiliate program.",
+      "Promote Footprint Finder privacy protection and earn 40% recurring commission on every subscription. Join the affiliate program.",
     canonical: "https://footprintfinder.co/affiliates",
+    ogType: "website",
   });
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);

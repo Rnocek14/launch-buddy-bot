@@ -30,7 +30,7 @@ const Index = () => {
   }, []);
 
   useSEO({
-    title: "Footprint Finder — Continuously Monitor Your Digital Exposure",
+    title: "Footprint Finder — Monitor Your Digital Exposure",
     description:
       "Scan your inbox, find every account, breach, and broker listing tied to your email. Monthly rescans + real-time alerts. Free scan, no credit card.",
     canonical: "https://footprintfinder.co/",

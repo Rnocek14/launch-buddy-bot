@@ -26,10 +26,11 @@ export default function RemoveBrokerIndex() {
   const [loading, setLoading] = useState(true);
 
   useSEO({
-    title: "Remove Yourself from Data Brokers — Free Guides for 45+ Sites",
+    title: "Remove Yourself from Data Brokers — Free Opt-Out Guides",
     description:
-      "Free, step-by-step opt-out guides for 45+ US data brokers — Spokeo, Whitepages, BeenVerified, Radaris, Acxiom, LexisNexis, ZoomInfo and more. Or let Footprint Finder remove you from all of them automatically.",
+      "Free step-by-step opt-out guides for 45+ US data brokers — Spokeo, Whitepages, BeenVerified, Radaris, LexisNexis and more.",
     canonical: "https://footprintfinder.co/remove-from",
+    ogType: "website",
   });
 
   useEffect(() => {
