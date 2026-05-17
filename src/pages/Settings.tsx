@@ -22,6 +22,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { useSEO } from "@/hooks/useSEO";
 
 interface Identifier {
   id: string;
@@ -39,6 +40,12 @@ interface EmailPrefs {
 }
 
 export default function Settings() {
+  useSEO({
+    title: "Account Settings — Footprint Finder",
+    description: "Manage your identifiers, email preferences, and account settings.",
+    canonical: "https://footprintfinder.co/settings",
+    noindex: true,
+  });
   const navigate = useNavigate();
   const { toast } = useToast();
   const [user, setUser] = useState<any>(null);

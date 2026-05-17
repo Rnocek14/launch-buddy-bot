@@ -14,6 +14,7 @@ import { ShareResultDialog } from "@/components/ShareResultDialog";
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { trackEvent } from "@/lib/analytics";
+import { useSEO } from "@/hooks/useSEO";
 import { validateGmailScope, isTokenValid } from "@/lib/googleAuth";
 import { Progress } from "@/components/ui/progress";
 import { useAuthorization } from "@/hooks/useAuthorization";
@@ -102,6 +103,12 @@ interface UnmatchedDomain {
 }
 
 export default function Dashboard() {
+  useSEO({
+    title: "Dashboard — Footprint Finder",
+    description: "Your digital exposure dashboard: services, breaches, brokers, and cleanup progress.",
+    canonical: "https://footprintfinder.co/dashboard",
+    noindex: true,
+  });
   const navigate = useNavigate();
   const { toast } = useToast();
   const isMobile = useIsMobile();

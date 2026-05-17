@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 import { TRACKING_EVENTS } from "@/config/pricing";
 import { trackConversion } from "@/lib/analytics";
+import { useSEO } from "@/hooks/useSEO";
 
 const emailSchema = z.string().email("Invalid email address");
 const passwordSchema = z.string().min(6, "Password must be at least 6 characters");
@@ -50,6 +51,12 @@ const isInIframe = () => {
 };
 
 export default function Auth() {
+  useSEO({
+    title: "Sign In — Footprint Finder",
+    description: "Sign in or create your Footprint Finder account to scan your digital exposure.",
+    canonical: "https://footprintfinder.co/auth",
+    noindex: true,
+  });
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
