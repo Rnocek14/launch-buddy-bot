@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Check, Crown, Shield, Star, Users } from "lucide-react";
+import { Check, Crown, Shield, Star, Users, Loader2 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
@@ -7,6 +7,9 @@ import { Link } from "react-router-dom";
 import { BillingToggle } from "./BillingToggle";
 import type { BillingInterval } from "@/config/pricing";
 import { FREE_FEATURES, PRO_FEATURES, COMPLETE_FEATURES, FAMILY_FEATURES, STRIPE_PRICES } from "@/config/pricing";
+import { startCheckout, type CheckoutSource } from "@/lib/checkout";
+import { QuickCheckoutEmailDialog } from "./QuickCheckoutEmailDialog";
+import { useToast } from "@/hooks/use-toast";
 
 // Two primary plans shown at decision moment — Pro (most popular) + Complete (recommended)
 const getPrimaryPlans = (billingInterval: BillingInterval) => [
