@@ -1,13 +1,35 @@
-import { Shield, ArrowRight, CheckCircle, AlertTriangle, Home, Database, Bell } from "lucide-react";
+import { useState } from "react";
+import { Shield, ArrowRight, CheckCircle, AlertTriangle, Home, Database, Bell, Loader2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
+import { STRIPE_PRICES } from "@/config/pricing";
+import { startCheckout } from "@/lib/checkout";
+import { QuickCheckoutEmailDialog } from "@/components/QuickCheckoutEmailDialog";
+import { useToast } from "@/hooks/use-toast";
 
 interface UpgradeCTAProps {
   hasBreaches: boolean;
 }
 
 export function UpgradeCTA({ hasBreaches }: UpgradeCTAProps) {
+  const { toast } = useToast();
+  const [loading, setLoading] = useState(false);
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
+
+  const handleUpgrade = async () => {
+    setLoading(true);
+    const result = await startCheckout({
+      priceId: STRIPE_PRICES.PRO_ANNUAL.id,
+      source: "free_scan_upgrade_cta",
+      tier: "pro",
+    });
+    if (result.status === "needs_email") setEmailDialogOpen(true);
+    else if (result.status === "error") {
+      toast({ title: "Couldn't start checkout", description: result.message, variant: "destructive" });
+    }
+    setLoading(false);
+  };
   return (
     <div className="space-y-6">
       {/* Tension / curiosity gap */}
