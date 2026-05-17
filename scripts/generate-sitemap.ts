@@ -96,6 +96,21 @@ async function getBrokerSlugs() {
   }
 }
 
+async function getPublicResultEntries() {
+  try {
+    const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+    const { data, error } = await supabase.rpc("get_public_result_sitemap_entries");
+
+    if (error) throw error;
+    return (data ?? []) as Array<{ share_id: string; created_at: string | null }>;
+  } catch (error) {
+    console.warn("Skipping public result sitemap entries:", error instanceof Error ? error.message : error);
+    return [];
+  }
+}
+
 function addEntry(entries: Map<string, SitemapEntry>, entry: SitemapEntry) {
   entries.set(entry.path, {
     lastmod: LASTMOD,
@@ -155,6 +170,15 @@ async function main() {
 
   for (const slug of await getBrokerSlugs()) {
     addEntry(entries, { path: `/remove-from/${slug}`, changefreq: "monthly", priority: "0.75" });
+  }
+
+  for (const result of await getPublicResultEntries()) {
+    addEntry(entries, {
+      path: `/results/${result.share_id}`,
+      lastmod: result.created_at?.slice(0, 10) ?? LASTMOD,
+      changefreq: "monthly",
+      priority: "0.4",
+    });
   }
 
   const ordered = Array.from(entries.values()).sort((a, b) => {
