@@ -228,12 +228,13 @@ export default function Billing() {
                   
                   {isPro && !isComplete && (
                     <Button
-                      onClick={() => navigate('/subscribe?tier=complete')}
+                      onClick={() => handleUpgrade('complete')}
+                      disabled={upgradingTier === 'complete'}
                       size="lg"
                       className="bg-gradient-to-r from-accent to-primary"
                     >
                       <Crown className="w-4 h-4 mr-2" />
-                      Upgrade to Complete
+                      {upgradingTier === 'complete' ? 'Opening checkout…' : 'Upgrade to Complete'}
                     </Button>
                   )}
                 </div>
