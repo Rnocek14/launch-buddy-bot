@@ -21,7 +21,7 @@ export const BLOG_POSTS: BlogPost[] = [
   {
     slug: "footprint-finder-vs-incogni",
     competitor: "Incogni",
-    title: "Footprint Finder vs Incogni: Which Privacy Service Actually Removes More?",
+    title: "Footprint Finder vs Incogni: Which Removes More?",
     description:
       "Honest comparison of Footprint Finder and Incogni in 2026. Pricing, data broker coverage, account discovery, and which one fits your situation best.",
     publishedAt: "2026-04-22",
@@ -147,7 +147,7 @@ export const BLOG_POSTS: BlogPost[] = [
   {
     slug: "footprint-finder-vs-optery",
     competitor: "Optery",
-    title: "Footprint Finder vs Optery: Which Privacy Tool Is Right for You?",
+    title: "Footprint Finder vs Optery: Which Is Right for You?",
     description:
       "Optery offers a free people-search opt-out service. Here's how it compares to Footprint Finder's broader privacy platform in 2026.",
     publishedAt: "2026-04-20",
