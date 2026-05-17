@@ -43,9 +43,9 @@ export default function FreeScan() {
   const [error, setError] = useState("");
 
   useSEO({
-    title: "Free Email Exposure Scan — Check Breaches & Data Leaks Instantly",
+    title: "Free Email Breach Scan — Footprint Finder",
     description:
-      "Find out instantly if your email has been exposed in data breaches. 100% free, no credit card, no signup. Powered by HaveIBeenPwned + Footprint Finder.",
+      "Check instantly if your email has appeared in known data breaches. 100% free, no signup. Powered by HaveIBeenPwned + Footprint Finder.",
     canonical: "https://footprintfinder.co/free-scan",
     ogType: "website",
   });
