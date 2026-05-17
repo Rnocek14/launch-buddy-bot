@@ -28,7 +28,31 @@ serve(async (req: Request): Promise<Response> => {
       });
     }
 
-    console.log("Processing OAuth callback for user:", state);
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+
+    // Validate CSRF state and resolve user_id
+    const { data: stateRow } = await supabase
+      .from("oauth_states")
+      .select("user_id, expires_at")
+      .eq("state", state)
+      .eq("provider", "gmail")
+      .maybeSingle();
+
+    if (!stateRow || new Date(stateRow.expires_at).getTime() < Date.now()) {
+      console.warn("Invalid or expired OAuth state");
+      return new Response(null, {
+        status: 302,
+        headers: { Location: `${baseUrl}/settings?error=${encodeURIComponent('Invalid or expired authorization. Please try again.')}` },
+      });
+    }
+    // Single-use: delete the state row
+    await supabase.from("oauth_states").delete().eq("state", state);
+    const userId = stateRow.user_id as string;
+
+    console.log("Processing OAuth callback for user:", userId);
 
     const clientId = Deno.env.get("GOOGLE_OAUTH_CLIENT_ID");
     const clientSecret = Deno.env.get("GOOGLE_OAUTH_CLIENT_SECRET");
