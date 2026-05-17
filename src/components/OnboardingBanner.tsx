@@ -16,6 +16,7 @@ export function OnboardingBanner({ remainingDeletions: propRemainingDeletions }:
   const [dismissed, setDismissed] = useState(false);
   const [remainingDeletions, setRemainingDeletions] = useState(propRemainingDeletions || 3);
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   useEffect(() => {
     // Check if user has already dismissed the onboarding
