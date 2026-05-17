@@ -293,7 +293,7 @@ export function BrokerExposureSection() {
                 </p>
               </div>
               <Button
-                onClick={() => navigate("/subscribe?tier=complete")}
+                onClick={() => handleUpgrade()}
                 className="bg-gradient-to-r from-accent to-primary shrink-0"
               >
                 <Crown className="h-4 w-4 mr-2" />
