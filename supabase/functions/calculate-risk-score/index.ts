@@ -303,7 +303,7 @@ Be conversational, empathetic, and avoid jargon. Each insight should be 2-3 sent
   } catch (error: any) {
     console.error('Error calculating risk score:', error);
     return new Response(
-      JSON.stringify({ error: error.message || 'Internal server error' }),
+      JSON.stringify({ error: 'Internal server error' }),
       {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
