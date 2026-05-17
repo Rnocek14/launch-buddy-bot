@@ -137,6 +137,35 @@ export const Pricing = () => {
   const [billingInterval, setBillingInterval] = useState<BillingInterval>("year");
   const primaryPlans = getPrimaryPlans(billingInterval);
   const secondaryPlans = getSecondaryPlans();
+  const { toast } = useToast();
+  const [loadingPriceId, setLoadingPriceId] = useState<string | null>(null);
+  const [emailDialogPlan, setEmailDialogPlan] = useState<{
+    priceId: string;
+    tier: string;
+  } | null>(null);
+
+  const handlePlanClick = async (
+    priceId: string,
+    tier: string,
+    source: CheckoutSource = "pricing_page"
+  ) => {
+    setLoadingPriceId(priceId);
+    const result = await startCheckout({ priceId, source, tier });
+    if (result.status === "needs_email") {
+      setEmailDialogPlan({ priceId, tier });
+      setLoadingPriceId(null);
+      return;
+    }
+    if (result.status === "error") {
+      toast({
+        title: "Couldn't start checkout",
+        description: result.message,
+        variant: "destructive",
+      });
+      setLoadingPriceId(null);
+    }
+    // redirecting -> page unloads
+  };
 
   return (
     <section id="pricing" className="py-24 px-4">
@@ -197,18 +226,23 @@ export const Pricing = () => {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <Link to={plan.ctaLink || "/auth"} className="w-full">
-                    <Button
-                      className={`w-full mb-6 ${
-                        plan.popular
-                          ? "bg-primary hover:bg-primary/90"
-                          : ""
-                      }`}
-                      variant={plan.popular ? "default" : "outline"}
-                    >
-                      {plan.cta}
-                    </Button>
-                  </Link>
+                  <Button
+                    onClick={() => handlePlanClick(plan.priceId, plan.tier)}
+                    disabled={loadingPriceId === plan.priceId}
+                    className={`w-full mb-6 ${
+                      plan.popular ? "bg-primary hover:bg-primary/90" : ""
+                    }`}
+                    variant={plan.popular ? "default" : "outline"}
+                  >
+                    {loadingPriceId === plan.priceId ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Opening checkout…
+                      </>
+                    ) : (
+                      plan.cta
+                    )}
+                  </Button>
                   <ul className="space-y-3">
                     {plan.features.map((feature, i) => (
                       <li key={i} className="flex items-start gap-2">
