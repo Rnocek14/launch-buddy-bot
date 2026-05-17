@@ -151,8 +151,20 @@ export function UpgradeModal({
         </div>
 
         <DialogFooter className="flex-col sm:flex-col gap-2">
-          <Button onClick={handleUpgrade} size="lg" className={`w-full ${isUpgradeToComplete ? 'bg-gradient-to-r from-accent to-primary' : ''}`}>
-            Upgrade to {tierName}
+          <Button
+            onClick={handleUpgrade}
+            disabled={loading}
+            size="lg"
+            className={`w-full ${isUpgradeToComplete ? 'bg-gradient-to-r from-accent to-primary' : ''}`}
+          >
+            {loading ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Opening secure checkout…
+              </>
+            ) : (
+              <>Upgrade to {tierName} — {tierPrice}</>
+            )}
           </Button>
           <Button
             variant="ghost"
@@ -163,6 +175,13 @@ export function UpgradeModal({
           </Button>
         </DialogFooter>
       </DialogContent>
+      <QuickCheckoutEmailDialog
+        open={emailDialogOpen}
+        onOpenChange={setEmailDialogOpen}
+        priceId={priceId}
+        source="upgrade_modal"
+        tier={tierKey}
+      />
     </Dialog>
   );
 }
