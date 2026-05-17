@@ -256,7 +256,7 @@ export const BLOG_POSTS: BlogPost[] = [
     competitor: "Aura",
     title: "Footprint Finder vs Aura: Specialist vs All-in-One",
     description:
-      "Aura bundles privacy with identity theft protection, antivirus, VPN, and more. Footprint Finder focuses purely on digital footprint cleanup. Which is right for you?",
+      "Aura bundles privacy with identity theft, antivirus, and VPN. Footprint Finder focuses purely on digital footprint cleanup. Which is right for you?",
     publishedAt: "2026-04-18",
     readMinutes: 7,
     tldr:
