@@ -167,8 +167,8 @@ export default function Compare() {
   const data = competitor ? COMPETITORS[competitor.toLowerCase()] : undefined;
 
   const seoTitle = data
-    ? `Footprint Finder vs ${data.name} (${new Date().getFullYear()}): Honest Comparison`
-    : "Compare Privacy Tools";
+    ? `Footprint Finder vs ${data.name} — Honest Comparison`
+    : "Compare Privacy Tools — Footprint Finder";
   const seoDescription = data
     ? `Compare Footprint Finder and ${data.name} side-by-side. Pricing, features, broker coverage, breach monitoring. Which privacy service is right for you?`
     : "Compare digital privacy tools.";
