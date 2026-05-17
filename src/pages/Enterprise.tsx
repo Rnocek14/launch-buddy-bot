@@ -18,6 +18,7 @@ import {
   Headphones
 } from "lucide-react";
 import { useState, useRef } from "react";
+import { useSEO } from "@/hooks/useSEO";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { EnterpriseROICalculator } from "@/components/EnterpriseROICalculator";
