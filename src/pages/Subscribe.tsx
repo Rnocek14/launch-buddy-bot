@@ -212,6 +212,24 @@ export default function Subscribe() {
       ? "text-accent"
       : "text-primary";
 
+  // Guest with ?tier= intent but no persisted email — show quick email modal.
+  if (authChecked && guestNeedsEmail) {
+    return (
+      <div className="container max-w-md py-16">
+        <QuickCheckoutEmailDialog
+          open={guestNeedsEmail}
+          onOpenChange={(open) => {
+            if (!open) navigate("/pricing");
+          }}
+          priceId={selectedPrice.id}
+          source="subscribe_page"
+          tier={selectedTier}
+          title={`Start ${selectedTier === "complete" ? "Complete" : selectedTier === "family" ? "Family" : "Pro"} protection`}
+        />
+      </div>
+    );
+  }
+
   // Friendly auth gate — shown inline instead of a destructive toast + bounce.
   // Preserves intent so post-signup we land back here with autostart=1.
   if (authChecked && needsAuth) {
