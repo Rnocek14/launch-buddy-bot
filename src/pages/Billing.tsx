@@ -7,13 +7,27 @@ import { Badge } from "@/components/ui/badge";
 import { Loader2, CreditCard, Calendar, AlertCircle, Crown, Star, Shield } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { startCheckout } from "@/lib/checkout";
+import { STRIPE_PRICES } from "@/config/pricing";
 
 export default function Billing() {
   const [loading, setLoading] = useState(true);
   const [portalLoading, setPortalLoading] = useState(false);
+  const [upgradingTier, setUpgradingTier] = useState<string | null>(null);
   const [subscriptionData, setSubscriptionData] = useState<any>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  const handleUpgrade = async (tier: "pro" | "complete") => {
+    setUpgradingTier(tier);
+    const priceId =
+      tier === "pro" ? STRIPE_PRICES.PRO_ANNUAL.id : STRIPE_PRICES.COMPLETE_ANNUAL.id;
+    const result = await startCheckout({ priceId, tier, source: "subscription_status_card" });
+    if (result.status === "error") {
+      toast({ title: "Couldn't start checkout", description: result.message, variant: "destructive" });
+      setUpgradingTier(null);
+    }
+  };
 
   useEffect(() => {
     checkAuth();
