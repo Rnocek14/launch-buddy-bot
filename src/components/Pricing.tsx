@@ -15,12 +15,16 @@ import { useToast } from "@/hooks/use-toast";
 const getPrimaryPlans = (billingInterval: BillingInterval) => [
   {
     name: "Pro",
+    tier: "pro" as const,
+    priceId:
+      billingInterval === "year"
+        ? STRIPE_PRICES.PRO_ANNUAL.id
+        : STRIPE_PRICES.PRO_MONTHLY.id,
     price: billingInterval === "year" ? "$79" : "$12.99",
     period: billingInterval === "year" ? "/year" : "/month",
     description: "Continuous monitoring + unlimited cleanup",
     features: [...PRO_FEATURES],
     cta: "Start Monitoring",
-    ctaLink: `/subscribe?tier=pro&interval=${billingInterval}`,
     popular: true,
     icon: Star,
     badge: billingInterval === "year" ? "Save 39%" : null,
@@ -28,12 +32,16 @@ const getPrimaryPlans = (billingInterval: BillingInterval) => [
   },
   {
     name: "Complete",
+    tier: "complete" as const,
+    priceId:
+      billingInterval === "year"
+        ? STRIPE_PRICES.COMPLETE_ANNUAL.id
+        : STRIPE_PRICES.COMPLETE_MONTHLY.id,
     price: billingInterval === "year" ? "$129" : "$19.99",
     period: billingInterval === "year" ? "/year" : "/month",
     description: "Full monitoring + data broker removal",
     features: [...COMPLETE_FEATURES],
     cta: "Get Complete Protection",
-    ctaLink: `/subscribe?tier=complete&interval=${billingInterval}`,
     popular: false,
     icon: Crown,
     badge: billingInterval === "year" ? "Best Value" : null,
