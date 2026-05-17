@@ -256,20 +256,22 @@ export default function Billing() {
                   </p>
                   <div className="flex gap-3 justify-center">
                     <Button
-                      onClick={() => navigate('/subscribe?tier=pro')}
+                      onClick={() => handleUpgrade('pro')}
+                      disabled={upgradingTier === 'pro'}
                       size="lg"
                       variant="outline"
                     >
                       <Star className="w-4 h-4 mr-2" />
-                      Pro - $79/year
+                      {upgradingTier === 'pro' ? 'Opening checkout…' : 'Pro - $79/year'}
                     </Button>
                     <Button
-                      onClick={() => navigate('/subscribe?tier=complete')}
+                      onClick={() => handleUpgrade('complete')}
+                      disabled={upgradingTier === 'complete'}
                       size="lg"
                       className="bg-gradient-to-r from-accent to-primary"
                     >
                       <Crown className="w-4 h-4 mr-2" />
-                      Complete - $129/year
+                      {upgradingTier === 'complete' ? 'Opening checkout…' : 'Complete - $129/year'}
                     </Button>
                   </div>
                 </div>
