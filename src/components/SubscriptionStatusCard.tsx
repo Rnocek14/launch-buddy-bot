@@ -39,6 +39,15 @@ export function SubscriptionStatusCard() {
     return () => clearInterval(interval);
   }, []);
 
+  const handleUpgrade = async (tier: "pro" | "complete") => {
+    const priceId =
+      tier === "pro" ? STRIPE_PRICES.PRO_ANNUAL.id : STRIPE_PRICES.COMPLETE_ANNUAL.id;
+    const result = await startCheckout({ priceId, tier, source: "subscription_status_card" });
+    if (result.status === "error") {
+      toast({ title: "Couldn't start checkout", description: result.message, variant: "destructive" });
+    }
+  };
+
   const fetchSubscriptionStatus = async (silent = false) => {
     if (!silent) setLoading(true);
     else setRefreshing(true);
