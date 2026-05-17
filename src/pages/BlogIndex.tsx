@@ -15,6 +15,7 @@ export default function BlogIndex() {
     description:
       "Honest comparisons of privacy services: Incogni, DeleteMe, Optery, Mine, Aura. Pick the right tool for your digital footprint cleanup.",
     canonical: `${SITE_URL}/blog`,
+    ogType: "website",
     jsonLd: {
       "@context": "https://schema.org",
       "@type": "Blog",
