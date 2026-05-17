@@ -1,7 +1,12 @@
+import { useState } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Check, Sparkles, Crown, Star } from "lucide-react";
+import { Check, Crown, Star, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { STRIPE_PRICES } from "@/config/pricing";
+import { startCheckout } from "@/lib/checkout";
+import { QuickCheckoutEmailDialog } from "./QuickCheckoutEmailDialog";
+import { useToast } from "@/hooks/use-toast";
 
 interface UpgradeModalProps {
   open: boolean;
@@ -23,14 +28,39 @@ export function UpgradeModal({
   currentTier = 'free'
 }: UpgradeModalProps) {
   const navigate = useNavigate();
+  const { toast } = useToast();
+  const [loading, setLoading] = useState(false);
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
 
   // Determine the target tier based on context
   const targetTier = context === 'broker-scanning' ? 'complete' : 'pro';
   const isUpgradeToComplete = targetTier === 'complete' || currentTier === 'pro';
+  const priceId = isUpgradeToComplete
+    ? STRIPE_PRICES.COMPLETE_ANNUAL.id
+    : STRIPE_PRICES.PRO_ANNUAL.id;
+  const tierKey = isUpgradeToComplete ? "complete" : "pro";
 
-  const handleUpgrade = () => {
-    navigate(`/subscribe?tier=${isUpgradeToComplete ? 'complete' : 'pro'}`);
-    onOpenChange(false);
+  const handleUpgrade = async () => {
+    setLoading(true);
+    const result = await startCheckout({
+      priceId,
+      source: "upgrade_modal",
+      tier: tierKey,
+    });
+    if (result.status === "needs_email") {
+      setEmailDialogOpen(true);
+      onOpenChange(false);
+      setLoading(false);
+      return;
+    }
+    if (result.status === "error") {
+      toast({
+        title: "Couldn't start checkout",
+        description: result.message,
+        variant: "destructive",
+      });
+      setLoading(false);
+    }
   };
 
   const proFeatures = [
