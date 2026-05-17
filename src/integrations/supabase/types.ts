@@ -2758,6 +2758,19 @@ export type Database = {
         }[]
       }
       get_privacy_snapshot: { Args: { p_user_id: string }; Returns: Json }
+      get_public_result: {
+        Args: { p_share_id: string }
+        Returns: {
+          conversion_count: number
+          insights: Json
+          risk_level: string
+          risk_score: number
+          service_count: number
+          share_id: string
+          top_categories: Json
+          view_count: number
+        }[]
+      }
       get_remaining_deletions: { Args: { p_user_id: string }; Returns: number }
       get_serp_budget_status: {
         Args: never
@@ -2782,6 +2795,14 @@ export type Database = {
       increment_deletion_count: {
         Args: { p_user_id: string }
         Returns: boolean
+      }
+      increment_public_result_conversion: {
+        Args: { p_share_id: string }
+        Returns: undefined
+      }
+      increment_public_result_view: {
+        Args: { p_share_id: string }
+        Returns: undefined
       }
       increment_subscription_count:
         | {
@@ -2848,6 +2869,7 @@ export type Database = {
         Returns: undefined
       }
       use_referral_code: { Args: { p_code: string }; Returns: Json }
+      validate_referral_code: { Args: { p_code: string }; Returns: Json }
     }
     Enums: {
       alpha_status: "pending" | "approved" | "rejected"
