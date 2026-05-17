@@ -14,7 +14,7 @@ export default function BlogPost() {
   const post = slug ? getPostBySlug(slug) : undefined;
 
   useSEO({
-    title: post ? `${post.title} | Footprint Finder` : "Article | Footprint Finder",
+    title: post ? post.title : "Article — Footprint Finder",
     description: post?.description ?? "Privacy tool comparison.",
     canonical: post ? `${SITE_URL}/blog/${post.slug}` : `${SITE_URL}/blog`,
     jsonLd: post
