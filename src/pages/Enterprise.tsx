@@ -58,6 +58,12 @@ const features = [
 ];
 
 export default function Enterprise() {
+  useSEO({
+    title: "Enterprise Privacy Monitoring — Footprint Finder",
+    description: "Shadow IT audits, employee data exposure monitoring, and broker removal for teams. SOC 2 ready, SSO, volume pricing.",
+    canonical: "https://footprintfinder.co/enterprise",
+    ogType: "website",
+  });
   const formRef = useRef<HTMLDivElement>(null);
   const [formData, setFormData] = useState({
     name: "",
