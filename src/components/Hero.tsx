@@ -86,7 +86,7 @@ export const Hero = () => {
               </p>
             </div>
 
-            <p className="text-sm text-muted-foreground/70 mb-6 italic">
+            <p className="text-sm text-muted-foreground mb-6 italic">
               Free scan in 30 seconds. No signup required to see your exposure.
             </p>
 
