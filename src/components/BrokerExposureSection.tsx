@@ -19,6 +19,9 @@ import {
 } from "lucide-react";
 import { getBrokerResultState, brokerResultPriority, type BrokerResultState } from "@/lib/brokerResultState";
 import { formatDistanceToNow } from "date-fns";
+import { startCheckout } from "@/lib/checkout";
+import { STRIPE_PRICES } from "@/config/pricing";
+import { useToast } from "@/hooks/use-toast";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -91,12 +94,24 @@ function getDataTypes(b: ExposedBroker) {
 
 export function BrokerExposureSection() {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [brokers, setBrokers] = useState<ExposedBroker[]>([]);
   const [scanCompleted, setScanCompleted] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
   const [sessionReady, setSessionReady] = useState(false);
   const [lastCheckedAt, setLastCheckedAt] = useState<string | null>(null);
+
+  const handleUpgrade = async () => {
+    const result = await startCheckout({
+      priceId: STRIPE_PRICES.COMPLETE_ANNUAL.id,
+      tier: "complete",
+      source: "broker_exposure",
+    });
+    if (result.status === "error") {
+      toast({ title: "Couldn't start checkout", description: result.message, variant: "destructive" });
+    }
+  };
 
   // Subscribe to auth state so we re-load when the user logs in after mount
   useEffect(() => {
@@ -293,7 +308,7 @@ export function BrokerExposureSection() {
                 </p>
               </div>
               <Button
-                onClick={() => navigate("/subscribe?tier=complete")}
+                onClick={() => handleUpgrade()}
                 className="bg-gradient-to-r from-accent to-primary shrink-0"
               >
                 <Crown className="h-4 w-4 mr-2" />

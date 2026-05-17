@@ -4,6 +4,9 @@ import { Button } from "@/components/ui/button";
 import { X, Sparkles, Zap, Shield, Clock } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { startCheckout } from "@/lib/checkout";
+import { STRIPE_PRICES } from "@/config/pricing";
+import { useToast } from "@/hooks/use-toast";
 
 interface OnboardingBannerProps {
   remainingDeletions?: number;
@@ -13,6 +16,7 @@ export function OnboardingBanner({ remainingDeletions: propRemainingDeletions }:
   const [dismissed, setDismissed] = useState(false);
   const [remainingDeletions, setRemainingDeletions] = useState(propRemainingDeletions || 3);
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   useEffect(() => {
     // Check if user has already dismissed the onboarding
@@ -47,8 +51,16 @@ export function OnboardingBanner({ remainingDeletions: propRemainingDeletions }:
     setDismissed(true);
   };
 
-  const handleUpgrade = () => {
-    navigate("/subscribe");
+  const handleUpgrade = async () => {
+    const result = await startCheckout({
+      priceId: STRIPE_PRICES.PRO_ANNUAL.id,
+      tier: "pro",
+      source: "other",
+    });
+    if (result.status === "error") {
+      toast({ title: "Couldn't start checkout", description: result.message, variant: "destructive" });
+      return;
+    }
     handleDismiss();
   };
 

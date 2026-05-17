@@ -14,6 +14,8 @@ import { OptOutInstructions } from "@/components/OptOutInstructions";
 import { ExposureDetailsModal } from "@/components/ExposureDetailsModal";
 import { Badge } from "@/components/ui/badge";
 import { BrokerScanProfileForm } from "@/components/BrokerScanProfileForm";
+import { startCheckout } from "@/lib/checkout";
+import { STRIPE_PRICES } from "@/config/pricing";
 
 interface ExtractedData {
   name?: string;
@@ -88,6 +90,17 @@ export default function BrokerScan() {
   const [isComplete, setIsComplete] = useState(false);
   const [currentTier, setCurrentTier] = useState<'free' | 'pro' | 'complete'>('free');
   const [profileData, setProfileData] = useState<{ firstName: string; lastName: string; city: string; state: string } | null>(null);
+
+  const handleUpgrade = async (tier: "complete") => {
+    const result = await startCheckout({
+      priceId: STRIPE_PRICES.COMPLETE_ANNUAL.id,
+      tier,
+      source: "broker_exposure",
+    });
+    if (result.status === "error") {
+      toast({ title: "Couldn't start checkout", description: result.message, variant: "destructive" });
+    }
+  };
   const [cooldownInfo, setCooldownInfo] = useState<{ nextScanAt: Date; remainingSeconds: number } | null>(null);
 
   useEffect(() => {
@@ -411,7 +424,7 @@ export default function BrokerScan() {
               </p>
               <div className="space-y-2">
                 <Button 
-                  onClick={() => navigate('/subscribe?tier=complete')}
+                  onClick={() => handleUpgrade('complete')}
                   className="bg-gradient-to-r from-accent to-primary"
                 >
                   <Crown className="h-4 w-4 mr-2" />

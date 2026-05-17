@@ -7,13 +7,27 @@ import { Badge } from "@/components/ui/badge";
 import { Loader2, CreditCard, Calendar, AlertCircle, Crown, Star, Shield } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { startCheckout } from "@/lib/checkout";
+import { STRIPE_PRICES } from "@/config/pricing";
 
 export default function Billing() {
   const [loading, setLoading] = useState(true);
   const [portalLoading, setPortalLoading] = useState(false);
+  const [upgradingTier, setUpgradingTier] = useState<string | null>(null);
   const [subscriptionData, setSubscriptionData] = useState<any>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  const handleUpgrade = async (tier: "pro" | "complete") => {
+    setUpgradingTier(tier);
+    const priceId =
+      tier === "pro" ? STRIPE_PRICES.PRO_ANNUAL.id : STRIPE_PRICES.COMPLETE_ANNUAL.id;
+    const result = await startCheckout({ priceId, tier, source: "subscription_status_card" });
+    if (result.status === "error") {
+      toast({ title: "Couldn't start checkout", description: result.message, variant: "destructive" });
+      setUpgradingTier(null);
+    }
+  };
 
   useEffect(() => {
     checkAuth();
@@ -214,12 +228,13 @@ export default function Billing() {
                   
                   {isPro && !isComplete && (
                     <Button
-                      onClick={() => navigate('/subscribe?tier=complete')}
+                      onClick={() => handleUpgrade('complete')}
+                      disabled={upgradingTier === 'complete'}
                       size="lg"
                       className="bg-gradient-to-r from-accent to-primary"
                     >
                       <Crown className="w-4 h-4 mr-2" />
-                      Upgrade to Complete
+                      {upgradingTier === 'complete' ? 'Opening checkout…' : 'Upgrade to Complete'}
                     </Button>
                   )}
                 </div>
@@ -241,20 +256,22 @@ export default function Billing() {
                   </p>
                   <div className="flex gap-3 justify-center">
                     <Button
-                      onClick={() => navigate('/subscribe?tier=pro')}
+                      onClick={() => handleUpgrade('pro')}
+                      disabled={upgradingTier === 'pro'}
                       size="lg"
                       variant="outline"
                     >
                       <Star className="w-4 h-4 mr-2" />
-                      Pro - $79/year
+                      {upgradingTier === 'pro' ? 'Opening checkout…' : 'Pro - $79/year'}
                     </Button>
                     <Button
-                      onClick={() => navigate('/subscribe?tier=complete')}
+                      onClick={() => handleUpgrade('complete')}
+                      disabled={upgradingTier === 'complete'}
                       size="lg"
                       className="bg-gradient-to-r from-accent to-primary"
                     >
                       <Crown className="w-4 h-4 mr-2" />
-                      Complete - $129/year
+                      {upgradingTier === 'complete' ? 'Opening checkout…' : 'Complete - $129/year'}
                     </Button>
                   </div>
                 </div>
