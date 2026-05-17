@@ -2771,6 +2771,13 @@ export type Database = {
           view_count: number
         }[]
       }
+      get_public_result_sitemap_entries: {
+        Args: never
+        Returns: {
+          created_at: string
+          share_id: string
+        }[]
+      }
       get_remaining_deletions: { Args: { p_user_id: string }; Returns: number }
       get_serp_budget_status: {
         Args: never
