@@ -219,32 +219,32 @@ export function BrokerResultCard({
                     {confidence_breakdown.name_match ? (
                       <span className="text-green-600">✅ Name</span>
                     ) : (
-                      <span className="text-muted-foreground/50">○ Name</span>
+                      <span className="text-muted-foreground">○ Name</span>
                     )}
                     {confidence_breakdown.city_match ? (
                       <span className="text-green-600">✅ City</span>
                     ) : (
-                      <span className="text-muted-foreground/50">○ City</span>
+                      <span className="text-muted-foreground">○ City</span>
                     )}
                     {confidence_breakdown.state_match ? (
                       <span className="text-green-600">✅ State</span>
                     ) : (
-                      <span className="text-muted-foreground/50">○ State</span>
+                      <span className="text-muted-foreground">○ State</span>
                     )}
                     {confidence_breakdown.age_hint ? (
                       <span className="text-green-600">✅ Age</span>
                     ) : (
-                      <span className="text-muted-foreground/50">○ Age</span>
+                      <span className="text-muted-foreground">○ Age</span>
                     )}
                     {confidence_breakdown.phone_hint ? (
                       <span className="text-green-600">✅ Phone</span>
                     ) : (
-                      <span className="text-muted-foreground/50">○ Phone</span>
+                      <span className="text-muted-foreground">○ Phone</span>
                     )}
                     {confidence_breakdown.address_hint ? (
                       <span className="text-green-600">✅ Address</span>
                     ) : (
-                      <span className="text-muted-foreground/50">○ Address</span>
+                      <span className="text-muted-foreground">○ Address</span>
                     )}
                   </div>
                   

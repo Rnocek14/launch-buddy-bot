@@ -59,7 +59,7 @@ function SectionHeader({ badge, cta, lastChecked }: { badge?: React.ReactNode; c
         </h2>
         {badge}
         {lastChecked && (
-          <span className="text-[10px] text-muted-foreground/60">
+          <span className="text-[10px] text-muted-foreground">
             Checked {formatDistanceToNow(new Date(lastChecked), { addSuffix: true })}
           </span>
         )}
