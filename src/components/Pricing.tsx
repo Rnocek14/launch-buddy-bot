@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Check, Crown, Shield, Star, Users } from "lucide-react";
+import { Check, Crown, Shield, Star, Users, Loader2 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
@@ -7,17 +7,24 @@ import { Link } from "react-router-dom";
 import { BillingToggle } from "./BillingToggle";
 import type { BillingInterval } from "@/config/pricing";
 import { FREE_FEATURES, PRO_FEATURES, COMPLETE_FEATURES, FAMILY_FEATURES, STRIPE_PRICES } from "@/config/pricing";
+import { startCheckout, type CheckoutSource } from "@/lib/checkout";
+import { QuickCheckoutEmailDialog } from "./QuickCheckoutEmailDialog";
+import { useToast } from "@/hooks/use-toast";
 
 // Two primary plans shown at decision moment — Pro (most popular) + Complete (recommended)
 const getPrimaryPlans = (billingInterval: BillingInterval) => [
   {
     name: "Pro",
+    tier: "pro" as const,
+    priceId:
+      billingInterval === "year"
+        ? STRIPE_PRICES.PRO_ANNUAL.id
+        : STRIPE_PRICES.PRO_MONTHLY.id,
     price: billingInterval === "year" ? "$79" : "$12.99",
     period: billingInterval === "year" ? "/year" : "/month",
     description: "Continuous monitoring + unlimited cleanup",
     features: [...PRO_FEATURES],
     cta: "Start Monitoring",
-    ctaLink: `/subscribe?tier=pro&interval=${billingInterval}`,
     popular: true,
     icon: Star,
     badge: billingInterval === "year" ? "Save 39%" : null,
@@ -25,12 +32,16 @@ const getPrimaryPlans = (billingInterval: BillingInterval) => [
   },
   {
     name: "Complete",
+    tier: "complete" as const,
+    priceId:
+      billingInterval === "year"
+        ? STRIPE_PRICES.COMPLETE_ANNUAL.id
+        : STRIPE_PRICES.COMPLETE_MONTHLY.id,
     price: billingInterval === "year" ? "$129" : "$19.99",
     period: billingInterval === "year" ? "/year" : "/month",
     description: "Full monitoring + data broker removal",
     features: [...COMPLETE_FEATURES],
     cta: "Get Complete Protection",
-    ctaLink: `/subscribe?tier=complete&interval=${billingInterval}`,
     popular: false,
     icon: Crown,
     badge: billingInterval === "year" ? "Best Value" : null,
@@ -126,6 +137,35 @@ export const Pricing = () => {
   const [billingInterval, setBillingInterval] = useState<BillingInterval>("year");
   const primaryPlans = getPrimaryPlans(billingInterval);
   const secondaryPlans = getSecondaryPlans();
+  const { toast } = useToast();
+  const [loadingPriceId, setLoadingPriceId] = useState<string | null>(null);
+  const [emailDialogPlan, setEmailDialogPlan] = useState<{
+    priceId: string;
+    tier: string;
+  } | null>(null);
+
+  const handlePlanClick = async (
+    priceId: string,
+    tier: string,
+    source: CheckoutSource = "pricing_page"
+  ) => {
+    setLoadingPriceId(priceId);
+    const result = await startCheckout({ priceId, source, tier });
+    if (result.status === "needs_email") {
+      setEmailDialogPlan({ priceId, tier });
+      setLoadingPriceId(null);
+      return;
+    }
+    if (result.status === "error") {
+      toast({
+        title: "Couldn't start checkout",
+        description: result.message,
+        variant: "destructive",
+      });
+      setLoadingPriceId(null);
+    }
+    // redirecting -> page unloads
+  };
 
   return (
     <section id="pricing" className="py-24 px-4">
@@ -186,18 +226,23 @@ export const Pricing = () => {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <Link to={plan.ctaLink || "/auth"} className="w-full">
-                    <Button
-                      className={`w-full mb-6 ${
-                        plan.popular
-                          ? "bg-primary hover:bg-primary/90"
-                          : ""
-                      }`}
-                      variant={plan.popular ? "default" : "outline"}
-                    >
-                      {plan.cta}
-                    </Button>
-                  </Link>
+                  <Button
+                    onClick={() => handlePlanClick(plan.priceId, plan.tier)}
+                    disabled={loadingPriceId === plan.priceId}
+                    className={`w-full mb-6 ${
+                      plan.popular ? "bg-primary hover:bg-primary/90" : ""
+                    }`}
+                    variant={plan.popular ? "default" : "outline"}
+                  >
+                    {loadingPriceId === plan.priceId ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Opening checkout…
+                      </>
+                    ) : (
+                      plan.cta
+                    )}
+                  </Button>
                   <ul className="space-y-3">
                     {plan.features.map((feature, i) => (
                       <li key={i} className="flex items-start gap-2">
@@ -350,6 +395,16 @@ export const Pricing = () => {
           </div>
         </section>
       </div>
+
+      {emailDialogPlan && (
+        <QuickCheckoutEmailDialog
+          open={!!emailDialogPlan}
+          onOpenChange={(open) => !open && setEmailDialogPlan(null)}
+          priceId={emailDialogPlan.priceId}
+          source="pricing_page"
+          tier={emailDialogPlan.tier}
+        />
+      )}
     </section>
   );
 };

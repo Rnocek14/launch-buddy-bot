@@ -1,13 +1,35 @@
-import { Shield, ArrowRight, CheckCircle, AlertTriangle, Home, Database, Bell } from "lucide-react";
+import { useState } from "react";
+import { Shield, ArrowRight, CheckCircle, AlertTriangle, Home, Database, Bell, Loader2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
+import { STRIPE_PRICES } from "@/config/pricing";
+import { startCheckout } from "@/lib/checkout";
+import { QuickCheckoutEmailDialog } from "@/components/QuickCheckoutEmailDialog";
+import { useToast } from "@/hooks/use-toast";
 
 interface UpgradeCTAProps {
   hasBreaches: boolean;
 }
 
 export function UpgradeCTA({ hasBreaches }: UpgradeCTAProps) {
+  const { toast } = useToast();
+  const [loading, setLoading] = useState(false);
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
+
+  const handleUpgrade = async () => {
+    setLoading(true);
+    const result = await startCheckout({
+      priceId: STRIPE_PRICES.PRO_ANNUAL.id,
+      source: "free_scan_upgrade_cta",
+      tier: "pro",
+    });
+    if (result.status === "needs_email") setEmailDialogOpen(true);
+    else if (result.status === "error") {
+      toast({ title: "Couldn't start checkout", description: result.message, variant: "destructive" });
+    }
+    setLoading(false);
+  };
   return (
     <div className="space-y-6">
       {/* Tension / curiosity gap */}
@@ -73,13 +95,16 @@ export function UpgradeCTA({ hasBreaches }: UpgradeCTAProps) {
             <p className="text-xs text-muted-foreground mt-1">No hidden fees · Cancel anytime · 30-day money-back guarantee</p>
           </div>
 
-          <Link to="/subscribe?tier=pro&interval=year&autostart=1">
-            <Button size="lg" className="gap-2 mb-4 cta-shimmer">
-              <Shield className="w-5 h-5" />
-              Start Protecting My Data
-              <ArrowRight className="w-4 h-4" />
-            </Button>
-          </Link>
+          <Button
+            size="lg"
+            onClick={handleUpgrade}
+            disabled={loading}
+            className="gap-2 mb-4 cta-shimmer"
+          >
+            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Shield className="w-5 h-5" />}
+            Start Protecting My Data
+            <ArrowRight className="w-4 h-4" />
+          </Button>
 
           <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-xs text-muted-foreground mb-4">
             {["Read-only access", "No email content stored", "Disconnect anytime"].map((item) => (
@@ -101,6 +126,14 @@ export function UpgradeCTA({ hasBreaches }: UpgradeCTAProps) {
           </div>
         </CardContent>
       </Card>
+
+      <QuickCheckoutEmailDialog
+        open={emailDialogOpen}
+        onOpenChange={setEmailDialogOpen}
+        priceId={STRIPE_PRICES.PRO_ANNUAL.id}
+        source="free_scan_upgrade_cta"
+        tier="pro"
+      />
     </div>
   );
 }

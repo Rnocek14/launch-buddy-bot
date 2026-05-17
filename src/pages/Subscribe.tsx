@@ -18,6 +18,7 @@ import { trackConversion, trackEvent } from "@/lib/analytics";
 import { BillingToggle } from "@/components/BillingToggle";
 import { Badge } from "@/components/ui/badge";
 import { AnnualUpsellModal } from "@/components/AnnualUpsellModal";
+import { QuickCheckoutEmailDialog } from "@/components/QuickCheckoutEmailDialog";
 
 type SelectableTier = "pro" | "complete" | "family";
 
@@ -25,6 +26,7 @@ export default function Subscribe() {
   const [loading, setLoading] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
   const [needsAuth, setNeedsAuth] = useState(false);
+  const [guestNeedsEmail, setGuestNeedsEmail] = useState(false);
   const [searchParams] = useSearchParams();
   const initialTier = (searchParams.get("tier") as SelectableTier) || "pro";
   const cameWithTierIntent = !!searchParams.get("tier");
@@ -61,6 +63,38 @@ export default function Subscribe() {
   const checkAuth = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
+      // Guest path: if they arrived with explicit ?tier= intent, route them
+      // straight to the guest instant-checkout flow (email modal → Stripe).
+      // No more auth wall / email-roundtrip detour for cold traffic.
+      if (cameWithTierIntent) {
+        const priceId = getSelectedPrice().id;
+        const tierLabel = selectedTier;
+        // Lazy import to keep initial bundle small
+        const { startCheckout } = await import("@/lib/checkout");
+        const { QuickCheckoutEmailDialog: _Dialog } = await import(
+          "@/components/QuickCheckoutEmailDialog"
+        );
+        const result = await startCheckout({
+          priceId,
+          source: "subscribe_page",
+          tier: tierLabel,
+        });
+        if (result.status === "needs_email") {
+          setGuestNeedsEmail(true);
+          setAuthChecked(true);
+          return;
+        }
+        if (result.status === "error") {
+          toast({
+            title: "Couldn't start checkout",
+            description: result.message,
+            variant: "destructive",
+          });
+        }
+        // redirecting → stop here
+        setAuthChecked(true);
+        return;
+      }
       setNeedsAuth(true);
       setAuthChecked(true);
       return;
@@ -178,6 +212,24 @@ export default function Subscribe() {
     : selectedTier === "complete"
       ? "text-accent"
       : "text-primary";
+
+  // Guest with ?tier= intent but no persisted email — show quick email modal.
+  if (authChecked && guestNeedsEmail) {
+    return (
+      <div className="container max-w-md py-16">
+        <QuickCheckoutEmailDialog
+          open={guestNeedsEmail}
+          onOpenChange={(open) => {
+            if (!open) navigate("/pricing");
+          }}
+          priceId={selectedPrice.id}
+          source="subscribe_page"
+          tier={selectedTier}
+          title={`Start ${selectedTier === "complete" ? "Complete" : selectedTier === "family" ? "Family" : "Pro"} protection`}
+        />
+      </div>
+    );
+  }
 
   // Friendly auth gate — shown inline instead of a destructive toast + bounce.
   // Preserves intent so post-signup we land back here with autostart=1.

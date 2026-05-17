@@ -38,7 +38,10 @@ export const Hero = () => {
     }
 
     trackEvent("hero_cta_click");
-    navigate(`/free-scan?email=${encodeURIComponent(email.trim())}`);
+    const trimmed = email.trim();
+    // Persist for downstream quick-checkout (one less keystroke at upgrade time)
+    import("@/lib/checkout").then((m) => m.persistGuestEmail(trimmed));
+    navigate(`/free-scan?email=${encodeURIComponent(trimmed)}`);
   };
 
   const handleFaqToggle = useCallback((value: string) => {

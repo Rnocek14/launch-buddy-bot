@@ -1,8 +1,11 @@
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { X, Zap, TrendingUp, Shield, Crown } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { X, Zap, TrendingUp, Shield, Crown, Loader2 } from "lucide-react";
+import { STRIPE_PRICES } from "@/config/pricing";
+import { startCheckout } from "@/lib/checkout";
+import { QuickCheckoutEmailDialog } from "./QuickCheckoutEmailDialog";
+import { useToast } from "@/hooks/use-toast";
 
 interface TierUpgradePromptProps {
   remainingDeletions: number;
@@ -10,8 +13,29 @@ interface TierUpgradePromptProps {
 }
 
 export function TierUpgradePrompt({ remainingDeletions, currentTier }: TierUpgradePromptProps) {
-  const navigate = useNavigate();
+  const { toast } = useToast();
   const [dismissed, setDismissed] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
+
+  const handleUpgrade = async () => {
+    setLoading(true);
+    const result = await startCheckout({
+      priceId: STRIPE_PRICES.PRO_ANNUAL.id,
+      source: "tier_upgrade_prompt",
+      tier: "pro",
+    });
+    if (result.status === "needs_email") {
+      setEmailDialogOpen(true);
+    } else if (result.status === "error") {
+      toast({
+        title: "Couldn't start checkout",
+        description: result.message,
+        variant: "destructive",
+      });
+    }
+    setLoading(false);
+  };
 
   // Only show for free tier users who are low on deletions
   if (currentTier !== 'free' || remainingDeletions > 1 || dismissed) {
@@ -93,15 +117,20 @@ export function TierUpgradePrompt({ remainingDeletions, currentTier }: TierUpgra
           <div className="flex items-start gap-2 shrink-0">
             <div className="flex flex-col items-end gap-2">
               <Button
-                onClick={() => navigate('/subscribe?tier=pro')}
+                onClick={handleUpgrade}
+                disabled={loading}
                 size="sm"
                 className={`${
-                  isHighUrgency 
-                    ? 'bg-destructive hover:bg-destructive/90' 
+                  isHighUrgency
+                    ? 'bg-destructive hover:bg-destructive/90'
                     : 'bg-gradient-to-r from-primary to-accent hover:opacity-90'
                 } text-primary-foreground`}
               >
-                <Crown className="w-4 h-4 mr-2" />
+                {loading ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Crown className="w-4 h-4 mr-2" />
+                )}
                 Upgrade to Pro
               </Button>
               <span className="text-xs text-muted-foreground">
@@ -119,6 +148,13 @@ export function TierUpgradePrompt({ remainingDeletions, currentTier }: TierUpgra
           </div>
         </div>
       </CardContent>
+      <QuickCheckoutEmailDialog
+        open={emailDialogOpen}
+        onOpenChange={setEmailDialogOpen}
+        priceId={STRIPE_PRICES.PRO_ANNUAL.id}
+        source="tier_upgrade_prompt"
+        tier="pro"
+      />
     </Card>
   );
 }
