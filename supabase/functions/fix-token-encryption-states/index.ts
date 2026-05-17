@@ -38,7 +38,25 @@ serve(async (req) => {
 
     const { data: { user }, error: userError } = await supabaseUser.auth.getUser();
     if (userError || !user) {
-      throw new Error('Unauthorized');
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Admin role required
+    const { data: roleRow } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id)
+      .eq('role', 'admin')
+      .maybeSingle();
+
+    if (!roleRow) {
+      return new Response(JSON.stringify({ error: 'Forbidden' }), {
+        status: 403,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     console.log('🔍 Starting token encryption state migration...');
@@ -159,9 +177,7 @@ serve(async (req) => {
       } catch (fixError: any) {
         results.errors.push({
           connectionId: connection.id,
-          email: connection.email,
-          error: fixError.message,
-          stack: fixError.stack
+          error: 'fix_failed',
         });
         console.error(`❌ Failed to fix connection ${connection.id} (${connection.email}):`, fixError);
       }
@@ -184,11 +200,7 @@ serve(async (req) => {
   } catch (error: any) {
     console.error('❌ Migration error:', error);
     return new Response(
-      JSON.stringify({
-        success: false,
-        error: error.message,
-        stack: error.stack
-      }),
+      JSON.stringify({ success: false, error: 'Internal error' }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500,

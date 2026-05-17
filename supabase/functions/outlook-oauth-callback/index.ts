@@ -30,15 +30,34 @@ serve(async (req) => {
     }
 
     if (!code || !state) {
-      throw new Error('Missing code or state parameter');
+      return new Response(null, {
+        status: 302,
+        headers: { 'Location': `${baseUrl}/settings?error=${encodeURIComponent('Missing authorization code')}` },
+      });
     }
-
-    const userId = state;
-    console.log('Processing Outlook OAuth callback for user:', userId);
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Validate CSRF state and resolve user_id
+    const { data: stateRow } = await supabase
+      .from('oauth_states')
+      .select('user_id, expires_at')
+      .eq('state', state)
+      .eq('provider', 'outlook')
+      .maybeSingle();
+
+    if (!stateRow || new Date(stateRow.expires_at).getTime() < Date.now()) {
+      console.warn('Invalid or expired OAuth state');
+      return new Response(null, {
+        status: 302,
+        headers: { 'Location': `${baseUrl}/settings?error=${encodeURIComponent('Invalid or expired authorization. Please try again.')}` },
+      });
+    }
+    await supabase.from('oauth_states').delete().eq('state', state);
+    const userId = stateRow.user_id as string;
+    console.log('Processing Outlook OAuth callback for user:', userId);
 
     const outlookProvider = new OutlookProvider();
     const connectionData = await outlookProvider.handleCallback(code, userId);

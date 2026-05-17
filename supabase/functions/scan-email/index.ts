@@ -80,7 +80,7 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error scanning email:', error);
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
+      JSON.stringify({ error: 'Internal error' }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500,

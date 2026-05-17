@@ -1446,6 +1446,30 @@ export type Database = {
           },
         ]
       }
+      oauth_states: {
+        Row: {
+          created_at: string
+          expires_at: string
+          provider: string
+          state: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string
+          provider: string
+          state: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          provider?: string
+          state?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       offboarding_reports: {
         Row: {
           completed_at: string | null
