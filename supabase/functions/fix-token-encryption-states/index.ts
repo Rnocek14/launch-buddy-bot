@@ -200,11 +200,7 @@ serve(async (req) => {
   } catch (error: any) {
     console.error('❌ Migration error:', error);
     return new Response(
-      JSON.stringify({
-        success: false,
-        error: error.message,
-        stack: error.stack
-      }),
+      JSON.stringify({ success: false, error: 'Internal error' }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500,
