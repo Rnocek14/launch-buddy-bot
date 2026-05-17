@@ -108,10 +108,7 @@ serve(async (req: Request): Promise<Response> => {
 
     console.log("Retrieved user email:", profile.email);
 
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
+    // supabase client already created above for CSRF state lookup
 
     const expiresAt = new Date(Date.now() + tokens.expires_in * 1000);
 
