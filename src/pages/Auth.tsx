@@ -51,6 +51,12 @@ const isInIframe = () => {
 };
 
 export default function Auth() {
+  useSEO({
+    title: "Sign In — Footprint Finder",
+    description: "Sign in or create your Footprint Finder account to scan your digital exposure.",
+    canonical: "https://footprintfinder.co/auth",
+    noindex: true,
+  });
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
