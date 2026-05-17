@@ -1,8 +1,15 @@
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useSEO } from "@/hooks/useSEO";
 
 const PrivacyPolicy = () => {
+  useSEO({
+    title: "Privacy Policy — Footprint Finder",
+    description: "How Footprint Finder collects, uses, and protects your information. Server-side email metadata only — we never read or store message contents.",
+    canonical: "https://footprintfinder.co/privacy",
+    ogType: "website",
+  });
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
