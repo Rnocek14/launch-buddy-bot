@@ -14,6 +14,8 @@ import { OptOutInstructions } from "@/components/OptOutInstructions";
 import { ExposureDetailsModal } from "@/components/ExposureDetailsModal";
 import { Badge } from "@/components/ui/badge";
 import { BrokerScanProfileForm } from "@/components/BrokerScanProfileForm";
+import { startCheckout } from "@/lib/checkout";
+import { STRIPE_PRICES } from "@/config/pricing";
 
 interface ExtractedData {
   name?: string;
