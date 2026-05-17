@@ -1,8 +1,15 @@
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useSEO } from "@/hooks/useSEO";
 
 const TermsOfService = () => {
+  useSEO({
+    title: "Terms of Service — Footprint Finder",
+    description: "Terms governing use of Footprint Finder's digital privacy monitoring service, including subscriptions, deletion requests, and account responsibilities.",
+    canonical: "https://footprintfinder.co/terms",
+    ogType: "website",
+  });
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
