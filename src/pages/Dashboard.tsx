@@ -103,6 +103,12 @@ interface UnmatchedDomain {
 }
 
 export default function Dashboard() {
+  useSEO({
+    title: "Dashboard — Footprint Finder",
+    description: "Your digital exposure dashboard: services, breaches, brokers, and cleanup progress.",
+    canonical: "https://footprintfinder.co/dashboard",
+    noindex: true,
+  });
   const navigate = useNavigate();
   const { toast } = useToast();
   const isMobile = useIsMobile();
