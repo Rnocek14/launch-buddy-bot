@@ -411,7 +411,7 @@ export default function BrokerScan() {
               </p>
               <div className="space-y-2">
                 <Button 
-                  onClick={() => navigate('/subscribe?tier=complete')}
+                  onClick={() => handleUpgrade('complete')}
                   className="bg-gradient-to-r from-accent to-primary"
                 >
                   <Crown className="h-4 w-4 mr-2" />
