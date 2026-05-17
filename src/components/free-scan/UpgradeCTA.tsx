@@ -95,13 +95,16 @@ export function UpgradeCTA({ hasBreaches }: UpgradeCTAProps) {
             <p className="text-xs text-muted-foreground mt-1">No hidden fees · Cancel anytime · 30-day money-back guarantee</p>
           </div>
 
-          <Link to="/subscribe?tier=pro&interval=year&autostart=1">
-            <Button size="lg" className="gap-2 mb-4 cta-shimmer">
-              <Shield className="w-5 h-5" />
-              Start Protecting My Data
-              <ArrowRight className="w-4 h-4" />
-            </Button>
-          </Link>
+          <Button
+            size="lg"
+            onClick={handleUpgrade}
+            disabled={loading}
+            className="gap-2 mb-4 cta-shimmer"
+          >
+            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Shield className="w-5 h-5" />}
+            Start Protecting My Data
+            <ArrowRight className="w-4 h-4" />
+          </Button>
 
           <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-xs text-muted-foreground mb-4">
             {["Read-only access", "No email content stored", "Disconnect anytime"].map((item) => (
@@ -123,6 +126,14 @@ export function UpgradeCTA({ hasBreaches }: UpgradeCTAProps) {
           </div>
         </CardContent>
       </Card>
+
+      <QuickCheckoutEmailDialog
+        open={emailDialogOpen}
+        onOpenChange={setEmailDialogOpen}
+        priceId={STRIPE_PRICES.PRO_ANNUAL.id}
+        source="free_scan_upgrade_cta"
+        tier="pro"
+      />
     </div>
   );
 }
