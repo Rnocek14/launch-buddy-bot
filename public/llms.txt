@@ -1,0 +1,25 @@
+# Footprint Finder
+
+> Footprint Finder scans your inbox to find every account, breach, and data-broker listing tied to your email — then helps you delete or opt out. Free scan, monthly rescans, real-time alerts.
+
+Footprint Finder is a privacy management service for individuals. It uses read-only OAuth metadata (sender, subject, date — never message body) to discover services where your email is registered, classifies them by activity and risk, and provides one-click cleanup actions (delete account, unsubscribe, opt out under CCPA). Data-broker scans surface where your name, address, and phone are publicly listed across 45+ US people-search sites.
+
+## Pages
+
+- [Home](/): Overview, free scan entry point, pricing summary.
+- [Free Scan](/free-scan): Instant breach + exposure check by email (no account required).
+- [Pricing](/pricing): Plans — $15/mo or $79/yr.
+- [Parent Scan](/parents): One-time $39 scan for an elderly parent's email (scam-focused).
+- [Enterprise](/enterprise): Shadow IT audits and B2B offering.
+- [Compare](/vs): Footprint Finder vs DeleteMe, Incogni, Optery, Kanary, Mine.
+- [Data-Broker Removal Guides](/remove-from): Free opt-out instructions for 45+ US brokers.
+- [Blog](/blog): Privacy tool comparisons and guides.
+- [Browser Extension](/extension): Chrome extension for in-context cleanup.
+- [Help](/help): FAQ explaining server-side metadata scanning.
+- [Demo](/demo): Interactive demo with sample data.
+
+## Optional
+
+- [Privacy Policy](/privacy)
+- [Terms of Service](/terms)
+- [Affiliate Program](/affiliates): 40% recurring commission.
