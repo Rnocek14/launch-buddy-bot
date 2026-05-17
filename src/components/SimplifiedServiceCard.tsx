@@ -148,7 +148,7 @@ export function SimplifiedServiceCard({
               <span className="text-xs text-muted-foreground">
                 {service.category || "Other"}
               </span>
-              <span className="text-muted-foreground/40">·</span>
+              <span className="text-muted-foreground/70">·</span>
               <span className={`text-xs flex items-center gap-1 ${
                 activity.isInactive ? "text-amber-600 dark:text-amber-400" : "text-muted-foreground"
               }`}>
