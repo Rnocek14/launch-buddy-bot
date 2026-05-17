@@ -36,10 +36,8 @@ export default function PublicResult() {
 
   const fetchPublicResult = async (id: string) => {
     try {
-      const { data, error } = await supabase
-        .from("public_results")
-        .select("*")
-        .eq("share_id", id)
+      const { data, error } = await (supabase as any)
+        .rpc("get_public_result", { p_share_id: id })
         .single();
 
       if (error) {
@@ -55,11 +53,9 @@ export default function PublicResult() {
           top_categories: data.top_categories as string[],
           insights: data.insights as string[],
         });
-        // Increment view count
-        await supabase
-          .from("public_results")
-          .update({ view_count: (data.view_count || 0) + 1 })
-          .eq("share_id", id);
+        await (supabase as any).rpc("increment_public_result_view", {
+          p_share_id: id,
+        });
       }
     } catch (error) {
       console.error("Error:", error);
@@ -85,10 +81,9 @@ export default function PublicResult() {
 
       // Increment conversion count
       if (result) {
-        await supabase
-          .from("public_results")
-          .update({ conversion_count: (result.conversion_count || 0) + 1 })
-          .eq("share_id", shareId);
+        await (supabase as any).rpc("increment_public_result_conversion", {
+          p_share_id: shareId,
+        });
       }
     }
 
