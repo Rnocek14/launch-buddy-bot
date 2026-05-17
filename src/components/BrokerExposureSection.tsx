@@ -94,12 +94,24 @@ function getDataTypes(b: ExposedBroker) {
 
 export function BrokerExposureSection() {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [brokers, setBrokers] = useState<ExposedBroker[]>([]);
   const [scanCompleted, setScanCompleted] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
   const [sessionReady, setSessionReady] = useState(false);
   const [lastCheckedAt, setLastCheckedAt] = useState<string | null>(null);
+
+  const handleUpgrade = async () => {
+    const result = await startCheckout({
+      priceId: STRIPE_PRICES.COMPLETE_ANNUAL.id,
+      tier: "complete",
+      source: "broker_exposure",
+    });
+    if (result.status === "error") {
+      toast({ title: "Couldn't start checkout", description: result.message, variant: "destructive" });
+    }
+  };
 
   // Subscribe to auth state so we re-load when the user logs in after mount
   useEffect(() => {
