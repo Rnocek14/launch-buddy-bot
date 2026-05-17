@@ -18,6 +18,7 @@ import { trackConversion, trackEvent } from "@/lib/analytics";
 import { BillingToggle } from "@/components/BillingToggle";
 import { Badge } from "@/components/ui/badge";
 import { AnnualUpsellModal } from "@/components/AnnualUpsellModal";
+import { QuickCheckoutEmailDialog } from "@/components/QuickCheckoutEmailDialog";
 
 type SelectableTier = "pro" | "complete" | "family";
 
