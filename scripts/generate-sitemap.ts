@@ -63,6 +63,7 @@ const lowPriorityRoutes = new Set([
 
 const fallbackBrokerSlugs = ["411", "acxiom", "addresses", "advancedbackgroundchecks", "apollo", "beenverified", "checkpeople", "clustrmaps", "cocofinder", "cyberbackgroundchecks", "epsilon", "familytreenow", "fastpeoplesearch", "idtrue", "infotracer", "instantcheckmate", "intelius", "lead411", "lexisnexis", "mylife", "nuwber", "peekyou", "peoplebyname", "peoplefinders", "peoplelooker", "peoplesearchnow", "persopo", "publicrecords360", "publicrecordsnow", "radaris", "rocketreach", "searchpeoplefree", "smartbackgroundchecks", "spokeo", "thatsthem", "truepeoplesearch", "truthfinder", "usa-people-search", "usphonebook", "voterrecords", "whitepages", "xlek", "yellowpages", "zabasearch", "zoominfo"];
 const compareSlugs = ["deleteme", "incogni", "optery", "kanary", "mine"];
+const deleteGuideSlugs = ["facebook", "instagram", "amazon", "linkedin", "spotify", "twitter", "tiktok", "snapchat", "reddit", "pinterest"];
 
 function getStaticRoutesFromApp() {
   const app = readFileSync(resolve("src/App.tsx"), "utf8");
@@ -166,6 +167,10 @@ async function main() {
 
   for (const slug of compareSlugs) {
     addEntry(entries, { path: `/vs/${slug}`, changefreq: "monthly", priority: slug === "deleteme" || slug === "incogni" ? "0.9" : "0.85" });
+  }
+
+  for (const slug of deleteGuideSlugs) {
+    addEntry(entries, { path: `/delete/${slug}`, changefreq: "monthly", priority: "0.75" });
   }
 
   for (const slug of await getBrokerSlugs()) {

@@ -1,6 +1,6 @@
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { useSEO } from "@/hooks/useSEO";
 
 const PrivacyPolicy = () => {
@@ -20,7 +20,7 @@ const PrivacyPolicy = () => {
         <div className="space-y-8">
           <Card>
             <CardHeader>
-              <CardTitle>Introduction</CardTitle>
+              <h2 className="text-2xl font-semibold leading-none tracking-tight">Introduction</h2>
             </CardHeader>
             <CardContent className="space-y-4">
               <p>
@@ -34,7 +34,7 @@ const PrivacyPolicy = () => {
 
           <Card>
             <CardHeader>
-              <CardTitle>Information We Collect</CardTitle>
+              <h2 className="text-2xl font-semibold leading-none tracking-tight">Information We Collect</h2>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
@@ -60,7 +60,7 @@ const PrivacyPolicy = () => {
 
           <Card>
             <CardHeader>
-              <CardTitle>How We Use Your Information</CardTitle>
+              <h2 className="text-2xl font-semibold leading-none tracking-tight">How We Use Your Information</h2>
             </CardHeader>
             <CardContent className="space-y-4">
               <p>We use the information we collect to:</p>
@@ -78,7 +78,7 @@ const PrivacyPolicy = () => {
 
           <Card>
             <CardHeader>
-              <CardTitle>Data Security</CardTitle>
+              <h2 className="text-2xl font-semibold leading-none tracking-tight">Data Security</h2>
             </CardHeader>
             <CardContent className="space-y-4">
               <p>
@@ -99,7 +99,7 @@ const PrivacyPolicy = () => {
 
           <Card>
             <CardHeader>
-              <CardTitle>Email Provider Integration (Gmail & Outlook) — Data Handling</CardTitle>
+              <h2 className="text-2xl font-semibold leading-none tracking-tight">Email Provider Integration (Gmail & Outlook) — Data Handling</h2>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
@@ -206,7 +206,7 @@ const PrivacyPolicy = () => {
 
           <Card>
             <CardHeader>
-              <CardTitle>Your Rights (GDPR & CCPA)</CardTitle>
+              <h2 className="text-2xl font-semibold leading-none tracking-tight">Your Rights (GDPR & CCPA)</h2>
             </CardHeader>
             <CardContent className="space-y-4">
               <p>You have the right to:</p>
@@ -226,7 +226,7 @@ const PrivacyPolicy = () => {
 
           <Card>
             <CardHeader>
-              <CardTitle>Data Retention</CardTitle>
+              <h2 className="text-2xl font-semibold leading-none tracking-tight">Data Retention</h2>
             </CardHeader>
             <CardContent className="space-y-4">
               <p>
@@ -237,7 +237,7 @@ const PrivacyPolicy = () => {
 
           <Card>
             <CardHeader>
-              <CardTitle>Third-Party Services</CardTitle>
+              <h2 className="text-2xl font-semibold leading-none tracking-tight">Third-Party Services</h2>
             </CardHeader>
             <CardContent className="space-y-4">
               <p>We use the following third-party services:</p>
@@ -254,7 +254,7 @@ const PrivacyPolicy = () => {
 
           <Card>
             <CardHeader>
-              <CardTitle>Changes to This Policy</CardTitle>
+              <h2 className="text-2xl font-semibold leading-none tracking-tight">Changes to This Policy</h2>
             </CardHeader>
             <CardContent className="space-y-4">
               <p>
@@ -265,7 +265,7 @@ const PrivacyPolicy = () => {
 
           <Card>
             <CardHeader>
-              <CardTitle>Contact Us</CardTitle>
+              <h2 className="text-2xl font-semibold leading-none tracking-tight">Contact Us</h2>
             </CardHeader>
             <CardContent className="space-y-4">
               <p>
