@@ -81,32 +81,23 @@ export const Hero = () => {
               Data brokers publish your home address, phone number, age, and relatives' names — and sell them to anyone with $20. We find every site exposing you, and monitor as new ones appear.
             </p>
 
-            {/* Concrete example */}
-            <div className="mb-6 rounded-lg border border-destructive/30 bg-destructive/5 backdrop-blur px-4 py-3">
-              <p className="text-xs uppercase tracking-wide text-destructive/80 mb-1 font-semibold">What we found for the average user last month</p>
-              <p className="text-sm text-foreground/90">
-                <span className="text-destructive font-semibold">Address on 47 broker sites</span> · <span className="text-destructive font-semibold">Email in 8 data leaks</span> · <span className="text-destructive font-semibold">Phone listed publicly</span>
-              </p>
-            </div>
-
-            <p className="text-sm text-muted-foreground mb-6 italic">
-              Free scan in 30 seconds. No signup required to see your exposure.
-            </p>
-
-            {/* Email scan form */}
-            <form onSubmit={handleScan} className="mb-4">
-              <div className="flex flex-col sm:flex-row gap-3">
-                <Input
-                  type="email"
-                  placeholder="your@email.com"
-                  value={email}
-                  onChange={(e) => { setEmail(e.target.value); setError(""); }}
-                  className="flex-1 h-14 text-lg px-5 bg-background border-border"
-                />
-                <Button type="submit" size="lg" className="relative overflow-hidden gap-2 h-14 text-lg px-8 bg-accent hover:bg-accent/90 text-accent-foreground whitespace-nowrap cta-shimmer focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
-                  <Search className="w-5 h-5" />
-                  Check My Exposure
-                </Button>
+            {/* Elevated scan form — primary focal action */}
+            <div className="relative group max-w-xl mx-auto lg:mx-0 mb-4">
+              <div className="absolute -inset-1 bg-gradient-to-r from-accent to-primary rounded-2xl blur opacity-20 group-hover:opacity-30 group-focus-within:opacity-40 transition duration-1000" aria-hidden />
+              <div className="relative bg-card border border-border rounded-2xl shadow-xl p-2">
+                <form onSubmit={handleScan} className="flex flex-col sm:flex-row gap-2">
+                  <Input
+                    type="email"
+                    placeholder="Enter your email to start scan"
+                    value={email}
+                    onChange={(e) => { setEmail(e.target.value); setError(""); }}
+                    className="flex-1 h-14 text-lg px-5 bg-transparent border-0 shadow-none focus-visible:ring-0"
+                  />
+                  <Button type="submit" size="lg" className="relative overflow-hidden gap-2 h-14 text-lg px-8 bg-accent hover:bg-accent/90 text-accent-foreground whitespace-nowrap rounded-xl cta-shimmer focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+                    <Search className="w-5 h-5" />
+                    Check My Exposure
+                  </Button>
+                </form>
               </div>
               {error && (
                 <p className="text-sm text-destructive flex items-center gap-2 mt-3 justify-center lg:justify-start">
@@ -114,11 +105,38 @@ export const Hero = () => {
                   {error}
                 </p>
               )}
-            </form>
+            </div>
 
-            <div className="flex items-center gap-2 text-xs text-muted-foreground mb-8 justify-center lg:justify-start">
-              <Lock className="w-3 h-3" />
-              <span>Email-only scan · No inbox access · No content stored</span>
+            <p className="text-sm text-muted-foreground mb-3 flex items-center gap-2 justify-center lg:justify-start">
+              <Lock className="w-4 h-4 text-primary shrink-0" />
+              Free scan in 30 seconds. No signup required. Email-only — no inbox access.
+            </p>
+
+            {/* Calm typographic stat strip (non-alarmist) */}
+            <div className="mb-8 pt-6 border-t border-border flex flex-wrap gap-x-8 gap-y-4 justify-center lg:justify-start">
+              <div className="space-y-1 text-left">
+                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Average exposure</p>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-2xl font-semibold text-foreground">47</span>
+                  <span className="text-sm text-muted-foreground">broker sites</span>
+                </div>
+              </div>
+              <div className="w-px h-10 bg-border hidden sm:block self-center" aria-hidden />
+              <div className="space-y-1 text-left">
+                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Data leaks</p>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-2xl font-semibold text-foreground">8</span>
+                  <span className="text-sm text-muted-foreground">breaches found</span>
+                </div>
+              </div>
+              <div className="w-px h-10 bg-border hidden sm:block self-center" aria-hidden />
+              <div className="space-y-1 text-left">
+                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Public records</p>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-2xl font-semibold text-foreground">120+</span>
+                  <span className="text-sm text-muted-foreground">data points</span>
+                </div>
+              </div>
             </div>
 
             <div className="flex flex-wrap gap-x-4 gap-y-2 mb-6 justify-center lg:justify-start items-center">
