@@ -68,7 +68,7 @@ export function ErrorAlert({
                 onClick={onAction}
                 variant={error.type === "payment_required" ? "default" : "outline"}
               >
-                {error.action || "Learn More"}
+                {error.action || "View Error Details"}
               </Button>
             )}
           </div>
