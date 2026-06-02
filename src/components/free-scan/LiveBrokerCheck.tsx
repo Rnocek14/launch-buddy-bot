@@ -66,7 +66,11 @@ export function LiveBrokerCheck({ email, onResults }: LiveBrokerCheckProps) {
       if (fnError || !data?.results) {
         throw new Error(fnError?.message || "Check failed");
       }
-      setResults(data.results as BrokerResult[]);
+      const brokerResults = data.results as BrokerResult[];
+      setResults(brokerResults);
+      const confirmedCount = brokerResults.filter((r) => r.status === "found").length;
+      const possibleCount = brokerResults.filter((r) => r.status === "possible_match").length;
+      onResults?.({ confirmedCount, possibleCount });
       trackEvent("broker_check_completed", {
         source: "free_scan",
         found_count: data.foundCount,
