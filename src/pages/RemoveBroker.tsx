@@ -122,6 +122,14 @@ export default function RemoveBroker() {
         mainEntity: [
           {
             "@type": "Question",
+            name: `How do I delete my information from ${broker.name}?`,
+            acceptedAnswer: {
+              "@type": "Answer",
+              text: `To delete your information from ${broker.name}, open its opt-out page, search for your listing, and submit a removal request. The full step-by-step process is on this page and takes ${broker.opt_out_time_estimate ?? "around 10 minutes"}. Footprint Finder can also do this for you automatically across 45+ brokers.`,
+            },
+          },
+          {
+            "@type": "Question",
             name: `Is it free to remove yourself from ${broker.name}?`,
             acceptedAnswer: {
               "@type": "Answer",
