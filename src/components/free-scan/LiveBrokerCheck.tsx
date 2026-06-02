@@ -34,7 +34,7 @@ const US_STATES = [
   "NC","ND","OH","OK","OR","PA","RI","SC","SD","TN","TX","UT","VT","VA","WA","WV","WI","WY",
 ];
 
-export function LiveBrokerCheck({ email }: LiveBrokerCheckProps) {
+export function LiveBrokerCheck({ email, onResults }: LiveBrokerCheckProps) {
   const { toast } = useToast();
   const [expanded, setExpanded] = useState(false);
   const [fullName, setFullName] = useState("");
