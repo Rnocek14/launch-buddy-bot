@@ -69,32 +69,59 @@ export function ExposureSummary({ email, breachCount, estimate, brokerFindings }
               Exposure detected
             </span>
           </div>
-          <h2 className="text-3xl md:text-4xl font-bold mb-2">We found your exposure</h2>
+          <h2 className="text-3xl md:text-4xl font-bold mb-2">
+            {hasReality ? "We found your information online" : "We found your exposure"}
+          </h2>
           <p className="text-muted-foreground">
             Here's what's exposed for <span className="font-medium text-foreground">{email}</span>
           </p>
         </div>
 
-        {/* The three numbers */}
+        {/* The three numbers — confirmed reality after the broker check, estimates before */}
         <div className="grid sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-border border-b border-border">
-          <StatBlock
-            icon={AlertTriangle}
-            value={breachCount}
-            label="known breaches"
-            sub="from public breach databases"
-          />
-          <StatBlock
-            icon={Database}
-            value={`~${estimate.brokerSites}`}
-            label="likely data broker records"
-            sub="people-search & marketing sites"
-          />
-          <StatBlock
-            icon={Building2}
-            value={`~${estimate.hiddenAccounts}`}
-            label="companies likely holding your info"
-            sub="accounts, signups & senders"
-          />
+          {hasReality ? (
+            <>
+              <StatBlock
+                icon={CheckCircle2}
+                value={brokerFindings!.confirmedCount}
+                label="confirmed listings"
+                sub="people-search sites listing you"
+              />
+              <StatBlock
+                icon={AlertTriangle}
+                value={brokerFindings!.possibleCount}
+                label="possible matches"
+                sub="likely you — needs review"
+              />
+              <StatBlock
+                icon={Database}
+                value={breachCount}
+                label="known breaches"
+                sub="from public breach databases"
+              />
+            </>
+          ) : (
+            <>
+              <StatBlock
+                icon={AlertTriangle}
+                value={breachCount}
+                label="known breaches"
+                sub="from public breach databases"
+              />
+              <StatBlock
+                icon={Database}
+                value={`~${estimate.brokerSites}`}
+                label="likely data broker records"
+                sub="people-search & marketing sites"
+              />
+              <StatBlock
+                icon={Building2}
+                value={`~${estimate.hiddenAccounts}`}
+                label="companies likely holding your info"
+                sub="accounts, signups & senders"
+              />
+            </>
+          )}
         </div>
 
         {/* What this means + what we remove */}
