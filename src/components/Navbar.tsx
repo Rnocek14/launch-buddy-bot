@@ -182,9 +182,10 @@ export const Navbar = () => {
             <ThemeToggle />
             
             {!user && (
-              <Link to="/auth">
-                <Button className="bg-accent hover:bg-accent/90 text-accent-foreground">
-                  Get Started
+              <Link to="/free-scan">
+                <Button className="bg-accent hover:bg-accent/90 text-accent-foreground gap-2">
+                  <ScanSearch className="w-4 h-4" />
+                  Free Scan
                 </Button>
               </Link>
             )}
