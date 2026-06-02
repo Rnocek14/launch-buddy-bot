@@ -234,7 +234,7 @@ export default function RemoveBroker() {
               )}
             </div>
             <h1 className="text-3xl md:text-5xl font-bold mb-4 leading-tight">
-              How to Remove Yourself from {broker.name}
+              How to Delete Your Info from {broker.name}
             </h1>
             <p className="text-lg text-muted-foreground leading-relaxed">
               {broker.name} is a data broker that publishes personal information — name,
