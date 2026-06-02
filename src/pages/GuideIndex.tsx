@@ -4,7 +4,30 @@ import { Footer } from "@/components/Footer";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Clock, BookOpen } from "lucide-react";
-import { GUIDES } from "@/data/guides";
+import { GUIDES, type GuideCategory } from "@/data/guides";
+
+const CATEGORY_ORDER: { key: GuideCategory; label: string; blurb: string }[] = [
+  {
+    key: "Discovery",
+    label: "Start here: who has your information",
+    blurb: "Find out why your details are online and who's holding them.",
+  },
+  {
+    key: "Education",
+    label: "Understand the threat",
+    blurb: "How data brokers, doxxing, spam calls and identity theft actually work.",
+  },
+  {
+    key: "Google Removal",
+    label: "Remove yourself from Google",
+    blurb: "Take your name, address, phone number and images out of search results.",
+  },
+  {
+    key: "Removal",
+    label: "Remove yourself everywhere",
+    blurb: "Full playbooks for getting your data off the internet for good.",
+  },
+];
 import { useSEO } from "@/hooks/useSEO";
 
 export default function GuideIndex() {
