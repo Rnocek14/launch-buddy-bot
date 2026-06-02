@@ -40,6 +40,7 @@ export default function FreeScan() {
   const [isScanning, setIsScanning] = useState(false);
   const [scanPhase, setScanPhase] = useState("");
   const [results, setResults] = useState<ScanResults | null>(null);
+  const [brokerFindings, setBrokerFindings] = useState<{ confirmedCount: number; possibleCount: number } | null>(null);
   const [error, setError] = useState("");
 
   useSEO({
