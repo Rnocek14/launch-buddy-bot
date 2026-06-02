@@ -200,9 +200,18 @@ export default function FreeScan() {
           {/* Results */}
           {results && (
             <div className="space-y-10 animate-fade-in">
-              {/* Layer 1: Real Breaches */}
+              {/* Dominant: the single-decision exposure summary + primary CTA */}
               <section>
-                <h2 className="text-lg font-semibold text-muted-foreground mb-4">Breach History</h2>
+                <ExposureSummary
+                  email={email}
+                  breachCount={results.breachCount}
+                  estimate={estimateIceberg(email, results.breachCount)}
+                />
+              </section>
+
+              {/* Secondary: the detailed breach list for those who want proof */}
+              <section>
+                <h2 className="text-lg font-semibold text-muted-foreground mb-4">Breach detail</h2>
                 <BreachResults
                   breaches={results.breaches}
                   criticalCount={results.criticalCount}
@@ -211,28 +220,14 @@ export default function FreeScan() {
                 />
               </section>
 
-              {/* Layer 2: The Iceberg — personalized hidden-exposure estimate + primary CTA */}
-              <section>
-                <IcebergPanel
-                  email={email}
-                  breachCount={results.breachCount}
-                  estimate={estimateIceberg(email, results.breachCount)}
-                />
-              </section>
-
-              {/* Layer 3: Parent Scan upsell — emotional pivot at peak intent */}
+              {/* Secondary: Parent Scan upsell */}
               {results.breachCount > 0 && (
                 <section>
                   <ParentScanUpsell exposureCount={results.breachCount} />
                 </section>
               )}
 
-              {/* Layer 4: Supporting upgrade card (pricing detail for users who want it) */}
-              <section>
-                <UpgradeCTA hasBreaches={results.breachCount > 0} />
-              </section>
-
-              {/* Footer: methodology — demoted, no longer steals attention */}
+              {/* Footer: methodology — demoted */}
               <section className="pt-4 border-t border-border">
                 <WhatWeChecked
                   breachCount={results.breachCount}
