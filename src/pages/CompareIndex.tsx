@@ -9,6 +9,8 @@ import { useSEO } from "@/hooks/useSEO";
 const COMPETITORS = [
   { slug: "deleteme", name: "DeleteMe", desc: "The original — $129/yr, broker-only" },
   { slug: "incogni", name: "Incogni", desc: "Surfshark-owned — $95/yr, 180+ brokers" },
+  { slug: "onerep", name: "OneRep", desc: "Automated — $100/yr, 200+ brokers" },
+  { slug: "aura", name: "Aura", desc: "Identity bundle — $144/yr, removal add-on" },
   { slug: "optery", name: "Optery", desc: "Tiered pricing $39–$249/yr" },
   { slug: "kanary", name: "Kanary", desc: "Reputation-focused — $179/yr" },
   { slug: "mine", name: "Mine", desc: "Free GDPR requests, no real removal" },
