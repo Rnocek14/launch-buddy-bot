@@ -8,10 +8,18 @@ import { STRIPE_PRICES } from "@/config/pricing";
 import { startCheckout } from "@/lib/checkout";
 import { useToast } from "@/hooks/use-toast";
 
+interface BrokerFindings {
+  confirmedCount: number;
+  possibleCount: number;
+}
+
 interface ExposureSummaryProps {
   email: string;
   breachCount: number;
   estimate: IcebergEstimate;
+  /** Real findings from the live broker check. When present, the summary
+   *  switches from estimates to confirmed reality. */
+  brokerFindings?: BrokerFindings | null;
 }
 
 /**
@@ -19,7 +27,8 @@ interface ExposureSummaryProps {
  * Leads with the exposure count, explains what it means and what we remove,
  * then offers ONE primary action. Everything else on the page is secondary.
  */
-export function ExposureSummary({ email, breachCount, estimate }: ExposureSummaryProps) {
+export function ExposureSummary({ email, breachCount, estimate, brokerFindings }: ExposureSummaryProps) {
+  const hasReality = !!brokerFindings && (brokerFindings.confirmedCount + brokerFindings.possibleCount) > 0;
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
 
