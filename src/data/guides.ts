@@ -829,6 +829,375 @@ export const GUIDES: Guide[] = [
       },
     ],
   },
+
+  // ===================== PRIORITY 2: PERSONAL INFO REMOVAL =====================
+  {
+    slug: "remove-address-from-internet",
+    category: "Removal",
+    title: "How to Remove Your Address From the Internet (Free 2026 Guide)",
+    description:
+      "Your home address is published by data brokers and people-search sites. Here's how to remove your address from the internet for free, step by step — plus a 60-second scan to find every site listing it.",
+    h1: "How to Remove Your Address From the Internet",
+    primaryKeyword: "remove address from internet",
+    readTime: "7 min read",
+    intro:
+      "Your home address is one of the most sensitive things you can have exposed online — it fuels spam mail, stalking and identity theft. Data brokers pull it from public records and publish it for anyone to find. Here's exactly how to remove your address from the internet for free.",
+    sections: [
+      {
+        heading: "1. Find every site publishing your address",
+        body: "You can't remove what you haven't found. Most people are listed on dozens of people-search sites that show their full address next to their name and relatives.",
+        bullets: [
+          "Run a free Footprint Finder scan to map your exposure in about a minute.",
+          "Search your name in quotes plus your city in Google to see which broker pages rank.",
+          "List every site (Whitepages, Spokeo, Radaris, BeenVerified) showing your address.",
+        ],
+      },
+      {
+        heading: "2. Opt out of each data broker",
+        body: "Every people-search site has a removal process, and they're legally required to honor it. You have to do each one individually.",
+        bullets: [
+          "Submit a removal request on each broker's opt-out page.",
+          "Follow our exact per-site steps at /remove-from.",
+          "Keep a checklist — brokers re-list your address every 30–90 days.",
+        ],
+      },
+      {
+        heading: "3. Clear your address from Google",
+        body: "Use Google's 'Results about you' tool to request removal of any page that still displays your home address.",
+      },
+      {
+        heading: "4. Reduce future exposure",
+        body: "Stop your address from getting re-listed by limiting where you share it.",
+        bullets: [
+          "Use a PO box or work address for online forms and deliveries.",
+          "Opt out of marketing and data-sharing wherever offered.",
+          "Re-check quarterly, or let Footprint Finder monitor monthly.",
+        ],
+      },
+    ],
+    faqs: [
+      {
+        question: "Can I remove my home address from the internet for free?",
+        answer:
+          "Yes. Data brokers must remove your address on request at no cost, and Google's 'Results about you' tool is free. The work is doing it across every broker and repeating it quarterly — Footprint Finder automates this.",
+      },
+      {
+        question: "Why does my address keep showing up online?",
+        answer:
+          "Data brokers continuously pull from property records, voter rolls and change-of-address data, so your address reappears 30–90 days after removal unless you keep re-submitting opt-outs.",
+      },
+    ],
+  },
+  {
+    slug: "remove-email-address-from-internet",
+    category: "Removal",
+    title: "How to Remove Your Email Address From the Internet (Free Guide)",
+    description:
+      "Your email is exposed in breaches, broker listings and forgotten accounts. Here's how to remove your email address from the internet and cut down spam — plus a free scan to find where it's exposed.",
+    h1: "How to Remove Your Email Address From the Internet",
+    primaryKeyword: "remove email address from internet",
+    readTime: "6 min read",
+    intro:
+      "Your email address is the key that ties your entire digital footprint together — and it's exposed in data breaches, broker listings and dozens of accounts you've forgotten about. Here's how to find where your email is exposed and clean it up.",
+    sections: [
+      {
+        heading: "1. Find where your email is exposed",
+        body: "Your email is the single best starting point because almost everything is tied to it. Scan it to reveal the full picture.",
+        bullets: [
+          "Run a free Footprint Finder scan to find every account and breach linked to your email.",
+          "Check breach databases to see which leaks include your address.",
+          "Search your email in quotes on Google to find pages that publish it.",
+        ],
+      },
+      {
+        heading: "2. Delete or detach forgotten accounts",
+        body: "Every dormant account stores your email and is a future breach. Close the ones you no longer use.",
+        bullets: [
+          "Delete unused shopping, social and newsletter accounts.",
+          "Use our step-by-step guides at /delete for popular services.",
+        ],
+      },
+      {
+        heading: "3. Remove your email from data brokers",
+        body: "Some people-search sites publish email addresses alongside your name. Opt out of each one that lists yours.",
+        bullets: [
+          "Submit opt-out requests using our /remove-from guides.",
+        ],
+      },
+      {
+        heading: "4. Lock down future exposure",
+        body: "Reduce how often your email leaks going forward.",
+        bullets: [
+          "Use email aliases or a masked address for sign-ups.",
+          "Unsubscribe from lists you don't need.",
+          "Monitor for new breaches automatically with Footprint Finder.",
+        ],
+      },
+    ],
+    faqs: [
+      {
+        question: "How do I stop spam to my email address?",
+        answer:
+          "Most spam comes from your address leaking through breaches, broker listings and resold marketing lists. Closing forgotten accounts, opting out of brokers and using aliases for new sign-ups cuts off the supply.",
+      },
+      {
+        question: "Can I completely remove my email from the internet?",
+        answer:
+          "You can dramatically reduce exposure by deleting old accounts, opting out of brokers and removing public listings, but an email you actively use will always exist somewhere. The goal is minimizing where it's exposed and monitoring for new leaks.",
+      },
+    ],
+  },
+  {
+    slug: "remove-public-records-online",
+    category: "Removal",
+    title: "How to Remove Public Records From the Internet (2026 Guide)",
+    description:
+      "Public records expose your address, phone and relatives through data brokers. Learn how to remove public records online for free, step by step — plus a scan to find where they're published.",
+    h1: "How to Remove Public Records From the Internet",
+    primaryKeyword: "remove public records online",
+    readTime: "7 min read",
+    intro:
+      "Public records — property deeds, voter registrations, court filings — are the raw material data brokers use to build the profiles that expose your address, phone number and relatives online. You usually can't erase the underlying record, but you can remove it from the sites that republish it. Here's how.",
+    sections: [
+      {
+        heading: "Public record vs. broker listing — know the difference",
+        body: "The original public record (held by a county or government office) is rarely removable. What you can remove is the data-broker page that scrapes and republishes that record to the open web — and that's what actually shows up when someone searches you.",
+      },
+      {
+        heading: "1. Find which sites republish your records",
+        body: "Map every people-search site that's built a profile from your public records.",
+        bullets: [
+          "Run a free scan to find broker listings tied to your information.",
+          "Search your name and city in Google to surface the broker pages.",
+        ],
+      },
+      {
+        heading: "2. Opt out of each broker",
+        body: "Submit removal requests to every site republishing your records. They're legally required to comply.",
+        bullets: [
+          "Use our exact per-site instructions at /remove-from.",
+          "Re-check quarterly — brokers re-scrape records and re-list you.",
+        ],
+      },
+      {
+        heading: "3. Request limited suppression at the source",
+        body: "Some jurisdictions let specific groups (judges, law enforcement, abuse survivors) suppress certain public records. Check your county clerk and state programs if you qualify.",
+      },
+    ],
+    faqs: [
+      {
+        question: "Can you remove public records from the internet?",
+        answer:
+          "You generally can't erase the original government record, but you can remove the data-broker pages that republish it — and those are what appear in search results. Opting out of each broker takes your information off the open web.",
+      },
+      {
+        question: "Are public records the reason my info is on people-search sites?",
+        answer:
+          "Yes. People-search sites build their profiles largely from public records like property, voter and court data, then combine it with other sources. Removing the broker listings is the practical way to control your exposure.",
+      },
+    ],
+  },
+
+  // ===================== PRIORITY 3: DIGITAL FOOTPRINT EDUCATION =====================
+  {
+    slug: "what-is-a-digital-footprint",
+    category: "Education",
+    title: "What Is a Digital Footprint? (And How to Shrink Yours)",
+    description:
+      "Your digital footprint is every trace of data you leave online — accounts, breaches, broker listings and search results. Learn what a digital footprint is, why it matters, and how to shrink yours.",
+    h1: "What Is a Digital Footprint?",
+    primaryKeyword: "what is a digital footprint",
+    readTime: "6 min read",
+    intro:
+      "Your digital footprint is the trail of personal data you leave behind every time you sign up for a service, get caught in a breach, or get listed by a data broker. Most people's footprint is far larger than they realize — and shrinking it starts with seeing it.",
+    sections: [
+      {
+        heading: "Active vs. passive digital footprint",
+        body: "Your footprint comes in two forms. Active is what you deliberately share — posts, sign-ups, profiles. Passive is what's collected about you without action — tracking, public records, data sold by brokers. The passive footprint is usually the bigger privacy risk.",
+      },
+      {
+        heading: "What makes up your digital footprint",
+        body: "A typical footprint spans far more than social media.",
+        bullets: [
+          "Accounts tied to your email — dozens of forgotten shopping, app and newsletter sign-ups.",
+          "Data-broker and people-search listings showing your address, phone and relatives.",
+          "Data breaches that leaked your email, passwords and personal details.",
+          "Search results that surface all of the above to anyone who looks.",
+        ],
+      },
+      {
+        heading: "Why your digital footprint matters",
+        body: "A large footprint means more spam, more phishing targets, easier doxxing and a higher risk of identity theft. Reducing it directly lowers your exposure.",
+      },
+      {
+        heading: "How to see and shrink your footprint",
+        body: "You can't shrink what you can't see — start by mapping it.",
+        bullets: [
+          "Run a free Footprint Finder scan to reveal every account, broker listing and breach tied to your email.",
+          "Delete forgotten accounts and opt out of data brokers.",
+          "Remove exposed results from Google, then monitor monthly so it stays small.",
+        ],
+      },
+    ],
+    faqs: [
+      {
+        question: "What is an example of a digital footprint?",
+        answer:
+          "An old account you forgot about, a data-broker page listing your home address, your email appearing in a breach dump, and your name surfacing in Google search results are all parts of your digital footprint.",
+      },
+      {
+        question: "How do I reduce my digital footprint?",
+        answer:
+          "Map it with a scan, delete unused accounts, opt out of data brokers, remove exposed search results, and use aliases for new sign-ups. Ongoing monitoring keeps it from growing back.",
+      },
+    ],
+  },
+
+  // ===================== PRIORITY 4: DISCOVERY INTENT =====================
+  {
+    slug: "who-has-my-email-address",
+    category: "Discovery",
+    title: "Who Has My Email Address? Find Out in 60 Seconds",
+    description:
+      "Find out who has your email address — which accounts, data brokers and breaches it's tied to. Run a free 60-second scan to see everywhere your email is exposed.",
+    h1: "Who Has My Email Address?",
+    primaryKeyword: "who has my email address",
+    readTime: "5 min read",
+    intro:
+      "Your email address is tied to dozens — often hundreds — of accounts, marketing lists and breached databases. Most people have no idea how far it's spread. Here's how to find out exactly who has your email and what to do about it.",
+    sections: [
+      {
+        heading: "Companies and accounts you've signed up for",
+        body: "Every shop, app, newsletter and service you've ever used holds your email. Forgotten accounts are the biggest hidden source of exposure — and each one is a future breach.",
+      },
+      {
+        heading: "Data brokers and marketing lists",
+        body: "Lead-generation and data-broker companies buy and resell contact lists, so your email circulates far beyond the sites you actually used.",
+      },
+      {
+        heading: "Data breaches",
+        body: "If a service you used was breached, your email — and often your password — may be in a breach dump being traded online. Many people are in dozens of breaches without knowing.",
+      },
+      {
+        heading: "How to see who has your email",
+        body: "Scanning your inbox reveals every account, broker listing and breach tied to your address in about a minute.",
+        bullets: [
+          "Run a free Footprint Finder scan with just your email.",
+          "Review the accounts, breaches and brokers that hold it.",
+          "Delete what you don't use and opt out of the rest.",
+        ],
+      },
+    ],
+    faqs: [
+      {
+        question: "How can I find out who has my email address?",
+        answer:
+          "Scan your inbox to reveal every account tied to your email, and check breach databases to see which leaks include it. Footprint Finder does both automatically in about 60 seconds.",
+      },
+      {
+        question: "Is it bad if lots of companies have my email?",
+        answer:
+          "The more places your email exists, the more spam, phishing and breach risk you face. Reducing the number of accounts and lists that hold it directly lowers your exposure.",
+      },
+    ],
+  },
+  {
+    slug: "why-is-my-phone-number-online",
+    category: "Discovery",
+    title: "Why Is My Phone Number Online? (And How to Remove It)",
+    description:
+      "Your phone number is online because data brokers buy it and people-search sites publish it. Here's why your number is public, how they got it, and how to remove it for free.",
+    h1: "Why Is My Phone Number Online?",
+    primaryKeyword: "why is my phone number online",
+    readTime: "5 min read",
+    intro:
+      "If you're getting nonstop spam calls and texts, your phone number is almost certainly published on people-search and data-broker sites. It's not a hack — it's a business. Here's why your number is online and how to take it back.",
+    sections: [
+      {
+        heading: "Why your number ended up online",
+        body: "Your phone number is collected from sources you'd never expect, then aggregated and published.",
+        bullets: [
+          "Online forms, giveaways, loyalty programs and warranties that resell your data.",
+          "Public records and change-of-address data scraped by brokers.",
+          "Data breaches that leaked your contact details to the open market.",
+        ],
+      },
+      {
+        heading: "Who publishes it",
+        body: "People-search sites like Whitepages, Spokeo and BeenVerified display your number next to your name and address, while marketing companies resell it to advertisers and scammers.",
+      },
+      {
+        heading: "How to remove your phone number",
+        body: "You can get it taken down for free, but it has to be done site by site.",
+        bullets: [
+          "Run a free scan to find every site listing your number.",
+          "Opt out of each data broker using our /remove-from guides.",
+          "Use Google's 'Results about you' tool for leftover search results.",
+        ],
+      },
+    ],
+    faqs: [
+      {
+        question: "Why is my phone number showing up when I search my name?",
+        answer:
+          "Data brokers compile your number from forms, public records and breaches, then people-search sites publish it next to your name. Those pages get indexed by Google, so they appear when you search yourself.",
+      },
+      {
+        question: "How do I get my phone number off the internet?",
+        answer:
+          "Opt out of the people-search sites listing it and remove it from Google. Because brokers re-list numbers every few months, re-check quarterly or use monitoring to stay removed.",
+      },
+    ],
+  },
+  {
+    slug: "how-did-whitepages-get-my-information",
+    category: "Discovery",
+    title: "How Did Whitepages Get My Information? (And How to Remove It)",
+    description:
+      "Whitepages got your information from public records, marketing data and other brokers. Learn exactly how Whitepages built your profile and how to remove yourself for free.",
+    h1: "How Did Whitepages Get My Information?",
+    primaryKeyword: "how did whitepages get my information",
+    readTime: "5 min read",
+    intro:
+      "Finding your name, address, phone number and relatives on Whitepages is unsettling — but you never gave them your data directly. Here's exactly where Whitepages gets your information and how to remove your listing for free.",
+    sections: [
+      {
+        heading: "Where Whitepages gets your data",
+        body: "Whitepages doesn't collect data from you — it aggregates it from sources that are technically public or commercially available.",
+        bullets: [
+          "Public records: property deeds, voter rolls, court filings and licenses.",
+          "Marketing and consumer data bought from other brokers and list sellers.",
+          "Phone directory and carrier data tied to your number.",
+          "Other people-search sites it cross-references to fill in the gaps.",
+        ],
+      },
+      {
+        heading: "Why your profile is so detailed",
+        body: "By merging these sources, Whitepages builds a single profile linking your name to your address history, phone numbers, age and relatives — far more than any single record contains.",
+      },
+      {
+        heading: "How to remove yourself from Whitepages",
+        body: "Whitepages offers a free opt-out, and you can remove the rest of your exposure too.",
+        bullets: [
+          "Follow our exact step-by-step Whitepages opt-out guide at /remove-from/whitepages.",
+          "Run a free scan to find the other brokers holding the same data.",
+          "Re-check quarterly — Whitepages can re-list you as records refresh.",
+        ],
+      },
+    ],
+    faqs: [
+      {
+        question: "Is it legal for Whitepages to have my information?",
+        answer:
+          "Yes — most of the source data is public or commercially available, so Whitepages is allowed to compile and publish it. But you have the right to opt out and request removal at no cost.",
+      },
+      {
+        question: "How do I get my information off Whitepages?",
+        answer:
+          "Use the free Whitepages opt-out (we walk through it at /remove-from/whitepages). Because the same data lives on dozens of other brokers, scanning for your full exposure and opting out everywhere is the complete fix.",
+      },
+    ],
+  },
 ];
 
 export const getGuide = (slug: string) =>
@@ -840,6 +1209,49 @@ export const getGuide = (slug: string) =>
  * Only valid guide slugs should appear here.
  */
 export const RELATED_GUIDES: Record<string, string[]> = {
+  // New priority pages
+  "remove-address-from-internet": [
+    "why-is-my-address-online",
+    "remove-public-records-online",
+    "remove-personal-information-from-internet",
+    "how-did-whitepages-get-my-information",
+  ],
+  "remove-email-address-from-internet": [
+    "who-has-my-email-address",
+    "remove-personal-information-from-internet",
+    "what-is-a-digital-footprint",
+    "who-has-my-personal-information",
+  ],
+  "remove-public-records-online": [
+    "remove-address-from-internet",
+    "how-did-whitepages-get-my-information",
+    "what-is-a-data-broker",
+    "remove-personal-information-from-internet",
+  ],
+  "what-is-a-digital-footprint": [
+    "who-has-my-personal-information",
+    "remove-personal-information-from-internet",
+    "what-is-a-data-broker",
+    "who-has-my-email-address",
+  ],
+  "who-has-my-email-address": [
+    "remove-email-address-from-internet",
+    "who-has-my-personal-information",
+    "what-is-a-digital-footprint",
+    "how-many-companies-have-my-information",
+  ],
+  "why-is-my-phone-number-online": [
+    "remove-phone-number-from-internet",
+    "who-has-my-phone-number",
+    "how-to-stop-spam-calls",
+    "how-did-whitepages-get-my-information",
+  ],
+  "how-did-whitepages-get-my-information": [
+    "how-do-data-brokers-get-my-information",
+    "remove-address-from-internet",
+    "remove-public-records-online",
+    "what-is-a-data-broker",
+  ],
   // Discovery
   "why-is-my-address-online": [
     "what-is-a-data-broker",
@@ -947,6 +1359,13 @@ export const RELATED_GUIDES: Record<string, string[]> = {
  * Builds the cluster bridge from guides into bottom-funnel broker pages.
  */
 export const RELATED_BROKERS: Record<string, string[]> = {
+  "remove-address-from-internet": ["whitepages", "spokeo", "radaris"],
+  "remove-email-address-from-internet": ["spokeo", "beenverified", "mylife"],
+  "remove-public-records-online": ["whitepages", "radaris", "beenverified"],
+  "what-is-a-digital-footprint": ["whitepages", "spokeo", "beenverified"],
+  "who-has-my-email-address": ["spokeo", "beenverified", "mylife"],
+  "why-is-my-phone-number-online": ["whitepages", "spokeo", "truthfinder"],
+  "how-did-whitepages-get-my-information": ["whitepages", "spokeo", "radaris"],
   "why-is-my-address-online": ["whitepages", "spokeo", "radaris"],
   "who-has-my-phone-number": ["whitepages", "spokeo", "truthfinder"],
   "how-do-data-brokers-get-my-information": ["spokeo", "beenverified", "intelius"],

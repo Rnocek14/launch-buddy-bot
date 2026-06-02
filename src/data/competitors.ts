@@ -119,6 +119,58 @@ export const COMPETITORS: Record<string, CompetitorData> = {
     bestFor:
       "Kanary is built for reputation cleanup. Footprint Finder is built for digital footprint cleanup — finding and removing the accounts and listings you've forgotten about.",
   },
+  onerep: {
+    slug: "onerep",
+    name: "OneRep",
+    tagline: "Automated data-broker removal across 200+ sites",
+    monthlyPrice: "$14.95/mo",
+    annualPrice: "$99.96/yr",
+    pros: [
+      "Scans and removes from 200+ broker sites",
+      "Automated monthly re-scans",
+      "Clean dashboard with removal progress",
+    ],
+    cons: [
+      "No inbox scan — can't find forgotten accounts",
+      "No data-breach monitoring",
+      "Only covers data brokers, not your wider footprint",
+      "Past ownership controversy raised trust questions",
+    ],
+    whyFf: [
+      "Inbox scan reveals the accounts OneRep can't see",
+      "HaveIBeenPwned breach monitoring + per-scan alerts",
+      "Cheaper at $79/yr with broader coverage",
+      "Bring-your-own-data — we don't resell your info",
+    ],
+    bestFor:
+      "OneRep is solid for hands-off broker removal. Footprint Finder is the better fit if you want your accounts, breaches and broker listings cleaned up in one place.",
+  },
+  aura: {
+    slug: "aura",
+    name: "Aura",
+    tagline: "All-in-one identity theft protection suite",
+    monthlyPrice: "$12/mo (annual)",
+    annualPrice: "$144/yr",
+    pros: [
+      "Bundles identity theft insurance ($1M)",
+      "Includes antivirus, VPN and password manager",
+      "Credit monitoring across all three bureaus",
+    ],
+    cons: [
+      "Data-broker removal is a minor add-on, not the focus",
+      "Expensive vs dedicated removal tools",
+      "No inbox scan to find forgotten accounts",
+      "Lots of features you may never use",
+    ],
+    whyFf: [
+      "Purpose-built for footprint discovery and removal, not a bundle",
+      "Inbox scan finds every account tied to your email",
+      "Far cheaper at $79/yr if removal is your goal",
+      "Focused dashboard — no feature bloat",
+    ],
+    bestFor:
+      "Aura is best if you want an all-in-one identity, credit and security bundle. Footprint Finder is best if your priority is actually finding and removing your exposed data.",
+  },
   mine: {
     slug: "mine",
     name: "Mine",

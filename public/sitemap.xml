@@ -55,6 +55,12 @@
     <priority>0.85</priority>
   </url>
   <url>
+    <loc>https://footprintfinder.co/vs/aura</loc>
+    <lastmod>2026-05-17</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.85</priority>
+  </url>
+  <url>
     <loc>https://footprintfinder.co/vs/kanary</loc>
     <lastmod>2026-05-17</lastmod>
     <changefreq>monthly</changefreq>
@@ -67,6 +73,12 @@
     <priority>0.85</priority>
   </url>
   <url>
+    <loc>https://footprintfinder.co/vs/onerep</loc>
+    <lastmod>2026-05-17</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.85</priority>
+  </url>
+  <url>
     <loc>https://footprintfinder.co/vs/optery</loc>
     <lastmod>2026-05-17</lastmod>
     <changefreq>monthly</changefreq>
@@ -74,6 +86,12 @@
   </url>
   <url>
     <loc>https://footprintfinder.co/enterprise</loc>
+    <lastmod>2026-05-17</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://footprintfinder.co/guides/how-did-whitepages-get-my-information</loc>
     <lastmod>2026-05-17</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
@@ -109,6 +127,18 @@
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>https://footprintfinder.co/guides/remove-address-from-internet</loc>
+    <lastmod>2026-05-17</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://footprintfinder.co/guides/remove-email-address-from-internet</loc>
+    <lastmod>2026-05-17</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://footprintfinder.co/guides/remove-images-from-google</loc>
     <lastmod>2026-05-17</lastmod>
     <changefreq>monthly</changefreq>
@@ -139,6 +169,12 @@
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>https://footprintfinder.co/guides/remove-public-records-online</loc>
+    <lastmod>2026-05-17</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://footprintfinder.co/guides/remove-yourself-from-google</loc>
     <lastmod>2026-05-17</lastmod>
     <changefreq>monthly</changefreq>
@@ -151,7 +187,19 @@
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>https://footprintfinder.co/guides/what-is-a-digital-footprint</loc>
+    <lastmod>2026-05-17</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://footprintfinder.co/guides/what-is-doxxing</loc>
+    <lastmod>2026-05-17</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://footprintfinder.co/guides/who-has-my-email-address</loc>
     <lastmod>2026-05-17</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
@@ -170,6 +218,12 @@
   </url>
   <url>
     <loc>https://footprintfinder.co/guides/why-is-my-address-online</loc>
+    <lastmod>2026-05-17</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://footprintfinder.co/guides/why-is-my-phone-number-online</loc>
     <lastmod>2026-05-17</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
