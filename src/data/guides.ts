@@ -1209,6 +1209,49 @@ export const getGuide = (slug: string) =>
  * Only valid guide slugs should appear here.
  */
 export const RELATED_GUIDES: Record<string, string[]> = {
+  // New priority pages
+  "remove-address-from-internet": [
+    "why-is-my-address-online",
+    "remove-public-records-online",
+    "remove-personal-information-from-internet",
+    "how-did-whitepages-get-my-information",
+  ],
+  "remove-email-address-from-internet": [
+    "who-has-my-email-address",
+    "remove-personal-information-from-internet",
+    "what-is-a-digital-footprint",
+    "who-has-my-personal-information",
+  ],
+  "remove-public-records-online": [
+    "remove-address-from-internet",
+    "how-did-whitepages-get-my-information",
+    "what-is-a-data-broker",
+    "remove-personal-information-from-internet",
+  ],
+  "what-is-a-digital-footprint": [
+    "who-has-my-personal-information",
+    "remove-personal-information-from-internet",
+    "what-is-a-data-broker",
+    "who-has-my-email-address",
+  ],
+  "who-has-my-email-address": [
+    "remove-email-address-from-internet",
+    "who-has-my-personal-information",
+    "what-is-a-digital-footprint",
+    "how-many-companies-have-my-information",
+  ],
+  "why-is-my-phone-number-online": [
+    "remove-phone-number-from-internet",
+    "who-has-my-phone-number",
+    "how-to-stop-spam-calls",
+    "how-did-whitepages-get-my-information",
+  ],
+  "how-did-whitepages-get-my-information": [
+    "how-do-data-brokers-get-my-information",
+    "remove-address-from-internet",
+    "remove-public-records-online",
+    "what-is-a-data-broker",
+  ],
   // Discovery
   "why-is-my-address-online": [
     "what-is-a-data-broker",
@@ -1316,6 +1359,13 @@ export const RELATED_GUIDES: Record<string, string[]> = {
  * Builds the cluster bridge from guides into bottom-funnel broker pages.
  */
 export const RELATED_BROKERS: Record<string, string[]> = {
+  "remove-address-from-internet": ["whitepages", "spokeo", "radaris"],
+  "remove-email-address-from-internet": ["spokeo", "beenverified", "mylife"],
+  "remove-public-records-online": ["whitepages", "radaris", "beenverified"],
+  "what-is-a-digital-footprint": ["whitepages", "spokeo", "beenverified"],
+  "who-has-my-email-address": ["spokeo", "beenverified", "mylife"],
+  "why-is-my-phone-number-online": ["whitepages", "spokeo", "truthfinder"],
+  "how-did-whitepages-get-my-information": ["whitepages", "spokeo", "radaris"],
   "why-is-my-address-online": ["whitepages", "spokeo", "radaris"],
   "who-has-my-phone-number": ["whitepages", "spokeo", "truthfinder"],
   "how-do-data-brokers-get-my-information": ["spokeo", "beenverified", "intelius"],
