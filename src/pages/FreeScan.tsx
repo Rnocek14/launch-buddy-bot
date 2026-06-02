@@ -248,6 +248,7 @@ export default function FreeScan() {
                   variant="ghost"
                   onClick={() => {
                     setResults(null);
+                    setBrokerFindings(null);
                     setEmail("");
                   }}
                 >
