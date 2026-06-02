@@ -13,8 +13,16 @@ export type GuideFAQ = {
   answer: string;
 };
 
+export type GuideCategory =
+  | "Discovery"
+  | "Education"
+  | "Google Removal"
+  | "Removal";
+
 export type Guide = {
   slug: string;
+  /** Funnel stage / topic silo this guide belongs to. */
+  category: GuideCategory;
   /** SEO <title> — lead with the primary keyword. */
   title: string;
   /** Meta description, < 160 chars. */
