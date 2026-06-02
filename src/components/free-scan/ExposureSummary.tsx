@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Shield, ArrowRight, Loader2, AlertTriangle, Database, Building2, Eye } from "lucide-react";
+import { Shield, ArrowRight, Loader2, AlertTriangle, Database, Building2, Eye, CheckCircle2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { IcebergEstimate } from "@/lib/icebergEstimate";
 import { STRIPE_PRICES } from "@/config/pricing";
