@@ -262,9 +262,10 @@ export const Navbar = () => {
                       Sign out
                     </Button>
                   ) : (
-                    <Link to="/auth" onClick={closeMobileMenu}>
-                      <Button className="w-full bg-accent hover:bg-accent/90 text-accent-foreground">
-                        Get Started
+                    <Link to="/free-scan" onClick={closeMobileMenu}>
+                      <Button className="w-full bg-accent hover:bg-accent/90 text-accent-foreground gap-2">
+                        <ScanSearch className="w-4 h-4" />
+                        Free Scan
                       </Button>
                     </Link>
                   )}
