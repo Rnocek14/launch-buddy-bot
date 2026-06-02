@@ -7,7 +7,7 @@ import { ArrowRight, Clock, CheckCircle2, Shield } from "lucide-react";
 import { useSEO } from "@/hooks/useSEO";
 import { trackEvent } from "@/lib/analytics";
 import { SeoEmailCapture } from "@/components/SeoEmailCapture";
-import { getGuide, GUIDES } from "@/data/guides";
+import { getGuide, getRelatedGuides, getRelatedBrokers } from "@/data/guides";
 
 /**
  * Programmatic SEO pillar page: /guides/:slug
