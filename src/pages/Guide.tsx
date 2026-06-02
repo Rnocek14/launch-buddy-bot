@@ -7,7 +7,7 @@ import { ArrowRight, Clock, CheckCircle2, Shield } from "lucide-react";
 import { useSEO } from "@/hooks/useSEO";
 import { trackEvent } from "@/lib/analytics";
 import { SeoEmailCapture } from "@/components/SeoEmailCapture";
-import { getGuide, GUIDES } from "@/data/guides";
+import { getGuide, getRelatedGuides, getRelatedBrokers } from "@/data/guides";
 
 /**
  * Programmatic SEO pillar page: /guides/:slug
@@ -54,6 +54,10 @@ export default function Guide() {
   });
 
   if (!guide) return <Navigate to="/guides" replace />;
+
+  const relatedGuides = getRelatedGuides(guide.slug);
+  const relatedBrokers = getRelatedBrokers(guide.slug);
+
 
   return (
     <div className="min-h-screen bg-background">
@@ -122,11 +126,11 @@ export default function Guide() {
             </div>
           </section>
 
-          {/* Related guides */}
+          {/* Related guides — curated topic cluster */}
           <section className="mb-10">
-            <h2 className="text-xl font-bold mb-4">More privacy guides</h2>
+            <h2 className="text-xl font-bold mb-4">Related guides</h2>
             <div className="grid sm:grid-cols-2 gap-3">
-              {GUIDES.filter((g) => g.slug !== guide.slug).map((g) => (
+              {relatedGuides.map((g) => (
                 <Link key={g.slug} to={`/guides/${g.slug}`} className="group">
                   <Card className="h-full transition-colors group-hover:border-primary/50">
                     <CardContent className="p-4 flex items-center justify-between gap-2">
@@ -138,6 +142,35 @@ export default function Guide() {
               ))}
             </div>
           </section>
+
+          {/* Broker removal cross-links — bridge into bottom-funnel pages */}
+          {relatedBrokers.length > 0 && (
+            <section className="mb-10">
+              <h2 className="text-xl font-bold mb-2">Remove yourself from these sites</h2>
+              <p className="text-sm text-muted-foreground mb-4">
+                Step-by-step opt-out guides for the data brokers most likely to be
+                exposing you.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {relatedBrokers.map((b) => (
+                  <Link
+                    key={b.slug}
+                    to={`/remove-from/${b.slug}`}
+                    className="text-sm font-medium px-3 py-1.5 rounded-full border border-border hover:border-primary/50 hover:text-primary transition-colors"
+                  >
+                    Remove from {b.name}
+                  </Link>
+                ))}
+                <Link
+                  to="/remove-from"
+                  className="text-sm font-medium px-3 py-1.5 rounded-full border border-border hover:border-primary/50 hover:text-primary transition-colors"
+                >
+                  See all brokers →
+                </Link>
+              </div>
+            </section>
+          )}
+
 
           {/* Final CTA */}
           <Card className="border-primary/30 bg-gradient-to-br from-primary/5 via-background to-accent/5">
