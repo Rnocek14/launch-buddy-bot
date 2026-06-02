@@ -59,26 +59,41 @@ export default function GuideIndex() {
             </p>
           </header>
 
-          <div className="grid sm:grid-cols-2 gap-4">
-            {GUIDES.map((g) => (
-              <Link key={g.slug} to={`/guides/${g.slug}`} className="group">
-                <Card className="h-full transition-colors group-hover:border-primary/50">
-                  <CardContent className="p-5">
-                    <div className="flex items-center justify-between mb-2">
-                      <h2 className="font-semibold leading-snug">{g.h1}</h2>
-                      <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors flex-shrink-0 ml-2" />
-                    </div>
-                    <p className="text-sm text-muted-foreground mb-3">
-                      {g.description.slice(0, 120)}…
-                    </p>
-                    <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                      <Clock className="w-3 h-3" /> {g.readTime}
-                    </span>
-                  </CardContent>
-                </Card>
-              </Link>
-            ))}
+          <div className="space-y-12">
+            {CATEGORY_ORDER.map((cat) => {
+              const guides = GUIDES.filter((g) => g.category === cat.key);
+              if (guides.length === 0) return null;
+              return (
+                <section key={cat.key}>
+                  <div className="mb-4">
+                    <h2 className="text-xl md:text-2xl font-bold">{cat.label}</h2>
+                    <p className="text-sm text-muted-foreground">{cat.blurb}</p>
+                  </div>
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    {guides.map((g) => (
+                      <Link key={g.slug} to={`/guides/${g.slug}`} className="group">
+                        <Card className="h-full transition-colors group-hover:border-primary/50">
+                          <CardContent className="p-5">
+                            <div className="flex items-center justify-between mb-2">
+                              <h3 className="font-semibold leading-snug">{g.h1}</h3>
+                              <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors flex-shrink-0 ml-2" />
+                            </div>
+                            <p className="text-sm text-muted-foreground mb-3">
+                              {g.description.slice(0, 120)}…
+                            </p>
+                            <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                              <Clock className="w-3 h-3" /> {g.readTime}
+                            </span>
+                          </CardContent>
+                        </Card>
+                      </Link>
+                    ))}
+                  </div>
+                </section>
+              );
+            })}
           </div>
+
 
           <div className="mt-10 text-center">
             <Link to="/free-scan">
