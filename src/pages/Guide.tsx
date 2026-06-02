@@ -55,6 +55,10 @@ export default function Guide() {
 
   if (!guide) return <Navigate to="/guides" replace />;
 
+  const relatedGuides = getRelatedGuides(guide.slug);
+  const relatedBrokers = getRelatedBrokers(guide.slug);
+
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
