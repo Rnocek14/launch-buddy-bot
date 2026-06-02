@@ -269,17 +269,15 @@ Deno.serve(async (req) => {
       state: parsed.data.state,
     };
 
-    // Run the 6 brokers sequentially with light jitter to stay polite + within budget.
-    const results: BrokerResult[] = [];
-    for (let i = 0; i < FREE_BROKERS.length; i++) {
-      if (i > 0) await new Promise((r) => setTimeout(r, 250));
-      try {
-        results.push(await checkBroker(FREE_BROKERS[i], user, serpApiKey, supabase));
-      } catch (e) {
-        console.error(`[free-broker-check] ${FREE_BROKERS[i].slug} failed:`, e);
-        results.push({ slug: FREE_BROKERS[i].slug, name: FREE_BROKERS[i].name, domain: FREE_BROKERS[i].domain, status: 'unknown', confidence: null, profileUrl: null });
-      }
-    }
+    // Run brokers concurrently — the budget RPC is atomic, so this is safe and fast.
+    const results: BrokerResult[] = await Promise.all(
+      FREE_BROKERS.map((broker) =>
+        checkBroker(broker, user, serpApiKey, supabase).catch((e) => {
+          console.error(`[free-broker-check] ${broker.slug} failed:`, e);
+          return { slug: broker.slug, name: broker.name, domain: broker.domain, status: 'unknown' as StatusV2, confidence: null, profileUrl: null };
+        })
+      )
+    );
 
     const foundCount = results.filter((r) => r.status === 'found').length;
     const possibleCount = results.filter((r) => r.status === 'possible_match').length;
