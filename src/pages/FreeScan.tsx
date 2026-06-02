@@ -208,6 +208,11 @@ export default function FreeScan() {
                 />
               </section>
 
+              {/* Reality step: turn estimates into actual broker listings */}
+              <section>
+                <LiveBrokerCheck email={email} />
+              </section>
+
               {/* Secondary: the detailed breach list for those who want proof */}
               <section>
                 <h2 className="text-lg font-semibold text-muted-foreground mb-4">Breach detail</h2>
