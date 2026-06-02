@@ -90,10 +90,10 @@ export default function RemoveBroker() {
   }, [broker]);
 
   const seoTitle = broker
-    ? `How to Remove Yourself from ${broker.name} (${new Date().getFullYear()} Guide)`
+    ? `How to Delete Your Info from ${broker.name} & Opt Out (${new Date().getFullYear()} Guide)`
     : "Data Broker Removal Guide";
   const seoDescription = broker
-    ? `Step-by-step guide to opt out of ${broker.name}. Takes ${broker.opt_out_time_estimate ?? "a few minutes"}. Or let Footprint Finder do it for you across 45+ brokers.`
+    ? `How to delete your personal information from ${broker.name} and opt out for free. Step-by-step removal guide — takes ${broker.opt_out_time_estimate ?? "a few minutes"}. Or let Footprint Finder remove you from 45+ brokers automatically.`
     : "Remove your personal info from data brokers.";
   const canonical = broker
     ? `https://footprintfinder.co/remove-from/${broker.slug}`
@@ -120,6 +120,14 @@ export default function RemoveBroker() {
         "@context": "https://schema.org",
         "@type": "FAQPage",
         mainEntity: [
+          {
+            "@type": "Question",
+            name: `How do I delete my information from ${broker.name}?`,
+            acceptedAnswer: {
+              "@type": "Answer",
+              text: `To delete your information from ${broker.name}, open its opt-out page, search for your listing, and submit a removal request. The full step-by-step process is on this page and takes ${broker.opt_out_time_estimate ?? "around 10 minutes"}. Footprint Finder can also do this for you automatically across 45+ brokers.`,
+            },
+          },
           {
             "@type": "Question",
             name: `Is it free to remove yourself from ${broker.name}?`,
@@ -226,7 +234,7 @@ export default function RemoveBroker() {
               )}
             </div>
             <h1 className="text-3xl md:text-5xl font-bold mb-4 leading-tight">
-              How to Remove Yourself from {broker.name}
+              How to Delete Your Info from {broker.name}
             </h1>
             <p className="text-lg text-muted-foreground leading-relaxed">
               {broker.name} is a data broker that publishes personal information — name,

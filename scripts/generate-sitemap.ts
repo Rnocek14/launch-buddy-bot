@@ -25,6 +25,7 @@ const routeDefaults: Record<string, Omit<SitemapEntry, "path">> = {
   "/vs": { changefreq: "monthly", priority: "0.85" },
   "/enterprise": { changefreq: "monthly", priority: "0.8" },
   "/blog": { changefreq: "weekly", priority: "0.7" },
+  "/guides": { changefreq: "weekly", priority: "0.85" },
   "/extension": { changefreq: "monthly", priority: "0.7" },
   "/demo": { changefreq: "monthly", priority: "0.6" },
   "/help": { changefreq: "monthly", priority: "0.6" },
@@ -75,6 +76,11 @@ function getStaticRoutesFromApp() {
 function getBlogSlugs() {
   const posts = readFileSync(resolve("src/data/blogPosts.ts"), "utf8");
   return Array.from(posts.matchAll(/slug:\s*"([^"]+)"/g)).map((match) => match[1]);
+}
+
+function getGuideSlugs() {
+  const guides = readFileSync(resolve("src/data/guides.ts"), "utf8");
+  return Array.from(guides.matchAll(/slug:\s*"([^"]+)"/g)).map((match) => match[1]);
 }
 
 async function getBrokerSlugs() {
@@ -163,6 +169,10 @@ async function main() {
 
   for (const slug of getBlogSlugs()) {
     addEntry(entries, { path: `/blog/${slug}`, changefreq: "monthly", priority: "0.75" });
+  }
+
+  for (const slug of getGuideSlugs()) {
+    addEntry(entries, { path: `/guides/${slug}`, changefreq: "monthly", priority: "0.8" });
   }
 
   for (const slug of compareSlugs) {
