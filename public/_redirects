@@ -1,0 +1,5 @@
+# SPA fallback for Netlify and Cloudflare Pages.
+# A real file at the requested path (e.g. the prerendered
+# /guides/foo/index.html) is always served first; this rule only handles
+# routes with no matching static file (auth, dashboard, etc.).
+/*    /index.html   200
