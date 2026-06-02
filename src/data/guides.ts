@@ -833,3 +833,156 @@ export const GUIDES: Guide[] = [
 
 export const getGuide = (slug: string) =>
   GUIDES.find((g) => g.slug === slug);
+
+/**
+ * Curated internal-linking web. Each guide points to the most topically
+ * relevant guides so Google sees a tight topic cluster, not isolated pages.
+ * Only valid guide slugs should appear here.
+ */
+export const RELATED_GUIDES: Record<string, string[]> = {
+  // Discovery
+  "why-is-my-address-online": [
+    "what-is-a-data-broker",
+    "remove-address-from-google",
+    "remove-personal-information-from-internet",
+    "how-do-data-brokers-get-my-information",
+  ],
+  "who-has-my-phone-number": [
+    "remove-phone-number-from-google",
+    "remove-phone-number-from-internet",
+    "how-to-stop-spam-calls",
+    "what-is-a-data-broker",
+  ],
+  "how-do-data-brokers-get-my-information": [
+    "what-is-a-data-broker",
+    "why-is-my-address-online",
+    "remove-personal-information-from-internet",
+    "how-many-companies-have-my-information",
+  ],
+  "how-many-companies-have-my-information": [
+    "who-has-my-personal-information",
+    "what-is-a-data-broker",
+    "how-do-data-brokers-get-my-information",
+    "remove-personal-information-from-internet",
+  ],
+  "who-has-my-personal-information": [
+    "how-many-companies-have-my-information",
+    "what-is-a-data-broker",
+    "remove-personal-information-from-internet",
+    "remove-yourself-from-google",
+  ],
+  // Education
+  "what-is-a-data-broker": [
+    "how-do-data-brokers-get-my-information",
+    "why-is-my-address-online",
+    "remove-personal-information-from-internet",
+    "what-is-doxxing",
+  ],
+  "what-is-doxxing": [
+    "why-is-my-address-online",
+    "remove-address-from-google",
+    "how-to-stop-identity-theft",
+    "what-is-a-data-broker",
+  ],
+  "how-to-stop-spam-calls": [
+    "who-has-my-phone-number",
+    "remove-phone-number-from-google",
+    "remove-phone-number-from-internet",
+    "what-is-a-data-broker",
+  ],
+  "how-to-stop-identity-theft": [
+    "what-is-a-data-broker",
+    "how-many-companies-have-my-information",
+    "remove-personal-information-from-internet",
+    "what-is-doxxing",
+  ],
+  // Google Removal
+  "remove-phone-number-from-google": [
+    "remove-phone-number-from-internet",
+    "who-has-my-phone-number",
+    "how-to-stop-spam-calls",
+    "remove-yourself-from-google",
+  ],
+  "remove-address-from-google": [
+    "why-is-my-address-online",
+    "remove-personal-information-from-internet",
+    "remove-name-from-google",
+    "remove-yourself-from-google",
+  ],
+  "remove-images-from-google": [
+    "remove-name-from-google",
+    "remove-yourself-from-google",
+    "what-is-doxxing",
+    "remove-personal-information-from-internet",
+  ],
+  "remove-name-from-google": [
+    "remove-yourself-from-google",
+    "remove-address-from-google",
+    "remove-images-from-google",
+    "remove-personal-information-from-internet",
+  ],
+  // Original pillars
+  "remove-personal-information-from-internet": [
+    "who-has-my-personal-information",
+    "what-is-a-data-broker",
+    "remove-yourself-from-google",
+    "remove-phone-number-from-internet",
+  ],
+  "remove-phone-number-from-internet": [
+    "remove-phone-number-from-google",
+    "who-has-my-phone-number",
+    "how-to-stop-spam-calls",
+    "remove-personal-information-from-internet",
+  ],
+  "remove-yourself-from-google": [
+    "remove-name-from-google",
+    "remove-address-from-google",
+    "remove-personal-information-from-internet",
+    "who-has-my-personal-information",
+  ],
+};
+
+/**
+ * Curated broker cross-links per guide → /remove-from/:slug pages.
+ * Builds the cluster bridge from guides into bottom-funnel broker pages.
+ */
+export const RELATED_BROKERS: Record<string, string[]> = {
+  "why-is-my-address-online": ["whitepages", "spokeo", "radaris"],
+  "who-has-my-phone-number": ["whitepages", "spokeo", "truthfinder"],
+  "how-do-data-brokers-get-my-information": ["spokeo", "beenverified", "intelius"],
+  "how-many-companies-have-my-information": ["whitepages", "beenverified", "mylife"],
+  "who-has-my-personal-information": ["whitepages", "spokeo", "beenverified"],
+  "what-is-a-data-broker": ["whitepages", "spokeo", "beenverified"],
+  "what-is-doxxing": ["whitepages", "radaris", "peoplefinders"],
+  "how-to-stop-spam-calls": ["whitepages", "spokeo", "truthfinder"],
+  "how-to-stop-identity-theft": ["intelius", "beenverified", "mylife"],
+  "remove-phone-number-from-google": ["whitepages", "spokeo", "truthfinder"],
+  "remove-address-from-google": ["whitepages", "spokeo", "radaris"],
+  "remove-images-from-google": ["mylife", "spokeo", "radaris"],
+  "remove-name-from-google": ["whitepages", "spokeo", "beenverified"],
+  "remove-personal-information-from-internet": ["whitepages", "spokeo", "beenverified"],
+  "remove-phone-number-from-internet": ["whitepages", "spokeo", "truthfinder"],
+  "remove-yourself-from-google": ["whitepages", "spokeo", "radaris"],
+};
+
+const BROKER_LABELS: Record<string, string> = {
+  whitepages: "Whitepages",
+  spokeo: "Spokeo",
+  beenverified: "BeenVerified",
+  radaris: "Radaris",
+  mylife: "MyLife",
+  truthfinder: "TruthFinder",
+  intelius: "Intelius",
+  peoplefinders: "PeopleFinders",
+};
+
+export const getRelatedGuides = (slug: string): Guide[] =>
+  (RELATED_GUIDES[slug] ?? [])
+    .map((s) => getGuide(s))
+    .filter((g): g is Guide => Boolean(g));
+
+export const getRelatedBrokers = (slug: string): { slug: string; name: string }[] =>
+  (RELATED_BROKERS[slug] ?? []).map((s) => ({
+    slug: s,
+    name: BROKER_LABELS[s] ?? s,
+  }));
