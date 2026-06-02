@@ -10,7 +10,7 @@ import { BreachResults } from "@/components/free-scan/BreachResults";
 import { WhatWeChecked } from "@/components/free-scan/WhatWeChecked";
 import { UpgradeCTA } from "@/components/free-scan/UpgradeCTA";
 import { ParentScanUpsell } from "@/components/free-scan/ParentScanUpsell";
-import { IcebergPanel } from "@/components/free-scan/IcebergPanel";
+import { ExposureSummary } from "@/components/free-scan/ExposureSummary";
 import { estimateIceberg } from "@/lib/icebergEstimate";
 import { supabase } from "@/integrations/supabase/client";
 import { trackEvent } from "@/lib/analytics";
