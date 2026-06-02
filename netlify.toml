@@ -1,0 +1,20 @@
+# Netlify deploy config for Footprint Finder.
+#
+# The build runs `vite build` then `scripts/prerender.ts` (postbuild), which
+# writes one static HTML file per public SEO route to dist/<route>/index.html.
+# Netlify serves those automatically at clean URLs (e.g. /guides/foo) and only
+# falls back to the SPA shell for routes that were NOT prerendered (auth,
+# dashboard, etc.).
+
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+# SPA fallback for non-prerendered, client-only routes.
+# IMPORTANT: status 200 WITHOUT a `!` (force) flag means Netlify serves a real
+# file when one exists at the path, and only uses this rule when none matches.
+# So the prerendered /guides/foo/index.html still wins for crawlers.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
