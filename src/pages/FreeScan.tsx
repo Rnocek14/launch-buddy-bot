@@ -8,7 +8,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Mail, AlertTriangle, Lock, Zap, Shield, Search, Eye } from "lucide-react";
 import { BreachResults } from "@/components/free-scan/BreachResults";
 import { WhatWeChecked } from "@/components/free-scan/WhatWeChecked";
-import { UpgradeCTA } from "@/components/free-scan/UpgradeCTA";
 import { ParentScanUpsell } from "@/components/free-scan/ParentScanUpsell";
 import { ExposureSummary } from "@/components/free-scan/ExposureSummary";
 import { estimateIceberg } from "@/lib/icebergEstimate";
