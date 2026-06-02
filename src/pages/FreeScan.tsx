@@ -40,6 +40,7 @@ export default function FreeScan() {
   const [isScanning, setIsScanning] = useState(false);
   const [scanPhase, setScanPhase] = useState("");
   const [results, setResults] = useState<ScanResults | null>(null);
+  const [brokerFindings, setBrokerFindings] = useState<{ confirmedCount: number; possibleCount: number } | null>(null);
   const [error, setError] = useState("");
 
   useSEO({
@@ -206,12 +207,13 @@ export default function FreeScan() {
                   email={email}
                   breachCount={results.breachCount}
                   estimate={estimateIceberg(email, results.breachCount)}
+                  brokerFindings={brokerFindings}
                 />
               </section>
 
               {/* Reality step: turn estimates into actual broker listings */}
               <section>
-                <LiveBrokerCheck email={email} />
+                <LiveBrokerCheck email={email} onResults={setBrokerFindings} />
               </section>
 
               {/* Secondary: the detailed breach list for those who want proof */}
@@ -246,6 +248,7 @@ export default function FreeScan() {
                   variant="ghost"
                   onClick={() => {
                     setResults(null);
+                    setBrokerFindings(null);
                     setEmail("");
                   }}
                 >

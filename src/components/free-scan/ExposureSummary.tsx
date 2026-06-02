@@ -1,17 +1,25 @@
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Shield, ArrowRight, Loader2, AlertTriangle, Database, Building2, Eye } from "lucide-react";
+import { Shield, ArrowRight, Loader2, AlertTriangle, Database, Building2, Eye, CheckCircle2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { IcebergEstimate } from "@/lib/icebergEstimate";
 import { STRIPE_PRICES } from "@/config/pricing";
 import { startCheckout } from "@/lib/checkout";
 import { useToast } from "@/hooks/use-toast";
 
+interface BrokerFindings {
+  confirmedCount: number;
+  possibleCount: number;
+}
+
 interface ExposureSummaryProps {
   email: string;
   breachCount: number;
   estimate: IcebergEstimate;
+  /** Real findings from the live broker check. When present, the summary
+   *  switches from estimates to confirmed reality. */
+  brokerFindings?: BrokerFindings | null;
 }
 
 /**
@@ -19,7 +27,8 @@ interface ExposureSummaryProps {
  * Leads with the exposure count, explains what it means and what we remove,
  * then offers ONE primary action. Everything else on the page is secondary.
  */
-export function ExposureSummary({ email, breachCount, estimate }: ExposureSummaryProps) {
+export function ExposureSummary({ email, breachCount, estimate, brokerFindings }: ExposureSummaryProps) {
+  const hasReality = !!brokerFindings && (brokerFindings.confirmedCount + brokerFindings.possibleCount) > 0;
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
 
@@ -60,32 +69,59 @@ export function ExposureSummary({ email, breachCount, estimate }: ExposureSummar
               Exposure detected
             </span>
           </div>
-          <h2 className="text-3xl md:text-4xl font-bold mb-2">We found your exposure</h2>
+          <h2 className="text-3xl md:text-4xl font-bold mb-2">
+            {hasReality ? "We found your information online" : "We found your exposure"}
+          </h2>
           <p className="text-muted-foreground">
             Here's what's exposed for <span className="font-medium text-foreground">{email}</span>
           </p>
         </div>
 
-        {/* The three numbers */}
+        {/* The three numbers — confirmed reality after the broker check, estimates before */}
         <div className="grid sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-border border-b border-border">
-          <StatBlock
-            icon={AlertTriangle}
-            value={breachCount}
-            label="known breaches"
-            sub="from public breach databases"
-          />
-          <StatBlock
-            icon={Database}
-            value={`~${estimate.brokerSites}`}
-            label="likely data broker records"
-            sub="people-search & marketing sites"
-          />
-          <StatBlock
-            icon={Building2}
-            value={`~${estimate.hiddenAccounts}`}
-            label="companies likely holding your info"
-            sub="accounts, signups & senders"
-          />
+          {hasReality ? (
+            <>
+              <StatBlock
+                icon={CheckCircle2}
+                value={brokerFindings!.confirmedCount}
+                label="confirmed listings"
+                sub="people-search sites listing you"
+              />
+              <StatBlock
+                icon={AlertTriangle}
+                value={brokerFindings!.possibleCount}
+                label="possible matches"
+                sub="likely you — needs review"
+              />
+              <StatBlock
+                icon={Database}
+                value={breachCount}
+                label="known breaches"
+                sub="from public breach databases"
+              />
+            </>
+          ) : (
+            <>
+              <StatBlock
+                icon={AlertTriangle}
+                value={breachCount}
+                label="known breaches"
+                sub="from public breach databases"
+              />
+              <StatBlock
+                icon={Database}
+                value={`~${estimate.brokerSites}`}
+                label="likely data broker records"
+                sub="people-search & marketing sites"
+              />
+              <StatBlock
+                icon={Building2}
+                value={`~${estimate.hiddenAccounts}`}
+                label="companies likely holding your info"
+                sub="accounts, signups & senders"
+              />
+            </>
+          )}
         </div>
 
         {/* What this means + what we remove */}

@@ -24,6 +24,8 @@ interface BrokerResult {
 
 interface LiveBrokerCheckProps {
   email: string;
+  /** Reports confirmed/possible counts up so the top summary can reflect reality. */
+  onResults?: (findings: { confirmedCount: number; possibleCount: number }) => void;
 }
 
 const US_STATES = [
@@ -32,7 +34,7 @@ const US_STATES = [
   "NC","ND","OH","OK","OR","PA","RI","SC","SD","TN","TX","UT","VT","VA","WA","WV","WI","WY",
 ];
 
-export function LiveBrokerCheck({ email }: LiveBrokerCheckProps) {
+export function LiveBrokerCheck({ email, onResults }: LiveBrokerCheckProps) {
   const { toast } = useToast();
   const [expanded, setExpanded] = useState(false);
   const [fullName, setFullName] = useState("");
@@ -64,7 +66,11 @@ export function LiveBrokerCheck({ email }: LiveBrokerCheckProps) {
       if (fnError || !data?.results) {
         throw new Error(fnError?.message || "Check failed");
       }
-      setResults(data.results as BrokerResult[]);
+      const brokerResults = data.results as BrokerResult[];
+      setResults(brokerResults);
+      const confirmedCount = brokerResults.filter((r) => r.status === "found").length;
+      const possibleCount = brokerResults.filter((r) => r.status === "possible_match").length;
+      onResults?.({ confirmedCount, possibleCount });
       trackEvent("broker_check_completed", {
         source: "free_scan",
         found_count: data.foundCount,
