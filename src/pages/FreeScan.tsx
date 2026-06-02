@@ -207,12 +207,13 @@ export default function FreeScan() {
                   email={email}
                   breachCount={results.breachCount}
                   estimate={estimateIceberg(email, results.breachCount)}
+                  brokerFindings={brokerFindings}
                 />
               </section>
 
               {/* Reality step: turn estimates into actual broker listings */}
               <section>
-                <LiveBrokerCheck email={email} />
+                <LiveBrokerCheck email={email} onResults={setBrokerFindings} />
               </section>
 
               {/* Secondary: the detailed breach list for those who want proof */}
