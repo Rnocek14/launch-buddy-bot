@@ -24,6 +24,8 @@ interface BrokerResult {
 
 interface LiveBrokerCheckProps {
   email: string;
+  /** Reports confirmed/possible counts up so the top summary can reflect reality. */
+  onResults?: (findings: { confirmedCount: number; possibleCount: number }) => void;
 }
 
 const US_STATES = [
