@@ -8,8 +8,10 @@
     "dev": "vite",
     "prebuild": "bun scripts/generate-sitemap.ts",
     "build": "vite build",
+    "postbuild": "bun scripts/prerender.ts",
     "prebuild:dev": "bun scripts/generate-sitemap.ts",
     "build:dev": "vite build --mode development",
+    "postbuild:dev": "bun scripts/prerender.ts",
     "lint": "eslint .",
     "preview": "vite preview"
   },
