@@ -14,6 +14,7 @@ export default function PricingPage() {
     <div className="min-h-screen bg-background">
       <Navbar />
       <main className="pt-20">
+        <h1 className="sr-only">Footprint Finder Pricing &amp; Privacy Monitoring Plans</h1>
         <Pricing />
       </main>
       <Footer />
