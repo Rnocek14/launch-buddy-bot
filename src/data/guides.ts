@@ -41,6 +41,7 @@ export type Guide = {
 export const GUIDES: Guide[] = [
   {
     slug: "remove-personal-information-from-internet",
+    category: "Removal",
     title:
       "How to Remove Your Personal Information From the Internet (2026 Guide)",
     description:
@@ -114,6 +115,7 @@ export const GUIDES: Guide[] = [
   },
   {
     slug: "remove-phone-number-from-internet",
+    category: "Removal",
     title: "How to Remove Your Phone Number From the Internet (Free Guide)",
     description:
       "Stop spam calls and protect your privacy. A free step-by-step guide to removing your phone number from data brokers, Google and people-search sites — plus a scan to find where it's listed.",
@@ -168,6 +170,7 @@ export const GUIDES: Guide[] = [
   },
   {
     slug: "remove-yourself-from-google",
+    category: "Google Removal",
     title: "How to Remove Your Personal Information From Google (Free, 2026)",
     description:
       "Remove your personal information from Google search results for free using the 'Results about you' tool — plus how to delete the underlying data-broker listings so it doesn't come back.",
@@ -222,6 +225,7 @@ export const GUIDES: Guide[] = [
   },
   {
     slug: "who-has-my-personal-information",
+    category: "Discovery",
     title: "Who Has My Personal Information? Find Out in 60 Seconds",
     description:
       "Find out who has your personal information — which data brokers, breaches and companies hold your name, address, phone and email. Run a free 60-second scan to see your exposure.",
