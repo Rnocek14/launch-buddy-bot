@@ -195,7 +195,7 @@ export const Navbar = () => {
             <ThemeToggle />
             <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
               <SheetTrigger asChild>
-                <Button variant="ghost" size="icon">
+                <Button variant="ghost" size="icon" aria-label="Open menu">
                   <Menu className="w-5 h-5" />
                 </Button>
               </SheetTrigger>
