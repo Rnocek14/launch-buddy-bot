@@ -10,6 +10,7 @@ import { BreachResults } from "@/components/free-scan/BreachResults";
 import { WhatWeChecked } from "@/components/free-scan/WhatWeChecked";
 import { ParentScanUpsell } from "@/components/free-scan/ParentScanUpsell";
 import { ExposureSummary } from "@/components/free-scan/ExposureSummary";
+import { LiveBrokerCheck } from "@/components/free-scan/LiveBrokerCheck";
 import { estimateIceberg } from "@/lib/icebergEstimate";
 import { supabase } from "@/integrations/supabase/client";
 import { trackEvent } from "@/lib/analytics";
