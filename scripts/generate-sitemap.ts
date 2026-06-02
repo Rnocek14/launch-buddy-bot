@@ -78,6 +78,11 @@ function getBlogSlugs() {
   return Array.from(posts.matchAll(/slug:\s*"([^"]+)"/g)).map((match) => match[1]);
 }
 
+function getGuideSlugs() {
+  const guides = readFileSync(resolve("src/data/guides.ts"), "utf8");
+  return Array.from(guides.matchAll(/slug:\s*"([^"]+)"/g)).map((match) => match[1]);
+}
+
 async function getBrokerSlugs() {
   try {
     const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
