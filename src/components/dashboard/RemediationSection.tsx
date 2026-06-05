@@ -223,7 +223,11 @@ export function RemediationSection({
         attentionCount={attentionCount}
         onCta={scrollToList}
       />
-      <NeedsAttentionList items={items} handlers={handlers} />
+      <NeedsAttentionList
+        items={items}
+        handlers={handlers}
+        extra={<AccountsCard group={accountGroup} handlers={handlers} />}
+      />
     </div>
   );
 }
