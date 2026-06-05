@@ -377,6 +377,12 @@ export interface HeroHeadline {
   cta: string;
   /** Whether there is anything to act on. */
   hasWork: boolean;
+  /** The single recommended next action, phrased as an imperative. */
+  priorityAction: string;
+  /** Why this action matters most right now. */
+  priorityImpact: string;
+  /** Which category the priority action targets (drives the scroll anchor). */
+  priorityKind: RemediationKind | null;
 }
 
 export function deriveHeadline(
@@ -391,6 +397,9 @@ export function deriveHeadline(
       problem: "You're in good shape — nothing needs your attention right now.",
       cta: "Review my footprint",
       hasWork: false,
+      priorityAction: "Nothing needs action right now",
+      priorityImpact: "We'll alert you the moment something new shows up.",
+      priorityKind: null,
     };
   }
 
@@ -404,12 +413,31 @@ export function deriveHeadline(
           : `${n} people-search sites are publishing your personal information.`,
       cta: "Start removing these",
       hasWork: true,
+      priorityAction:
+        n === 1
+          ? "Remove 1 data broker listing"
+          : `Remove ${n} data broker listings`,
+      priorityImpact:
+        "This has the biggest impact on your privacy — broker sites expose your home address and phone number publicly.",
+      priorityKind: "broker",
     };
   }
 
   const breach = active.find((i) => i.kind === "breach");
   if (breach) {
-    return { problem: breach.title + ".", cta: "Secure my accounts", hasWork: true };
+    const total = (breach.payload as BreachSource)?.total ?? 0;
+    return {
+      problem: breach.title + ".",
+      cta: "Secure my accounts",
+      hasWork: true,
+      priorityAction:
+        total > 1
+          ? `Secure ${total} breached accounts`
+          : "Secure your breached account",
+      priorityImpact:
+        "Start here — leaked passwords are the fastest way for someone to take over your accounts.",
+      priorityKind: "breach",
+    };
   }
 
   if (accountReviewCount > 0) {
@@ -421,6 +449,11 @@ export function deriveHeadline(
           : `${n} accounts from your email may need attention.`,
       cta: "Review accounts",
       hasWork: true,
+      priorityAction:
+        n === 1 ? "Review 1 online account" : `Review ${n} online accounts`,
+      priorityImpact:
+        "Clearing out old or unused accounts shrinks your digital footprint.",
+      priorityKind: "account",
     };
   }
 
@@ -428,5 +461,8 @@ export function deriveHeadline(
     problem: `${active.length} possible accounts are worth a quick look.`,
     cta: "Review these",
     hasWork: true,
+    priorityAction: `Review ${active.length} possible accounts`,
+    priorityImpact: "A quick look keeps your footprint clean.",
+    priorityKind: "account",
   };
 }

@@ -8,6 +8,7 @@ import { NeedsAttentionList } from "./NeedsAttentionList";
 import { AccountsCard } from "./AccountsCard";
 import { BrokersCard } from "./BrokersCard";
 import { BreachesCard } from "./BreachesCard";
+import { TodaysPriorityCard } from "./TodaysPriorityCard";
 import type { RemediationHandlers } from "./RemediationItem";
 import { getBrokerResultState } from "@/lib/brokerResultState";
 import {
@@ -211,6 +212,17 @@ export function RemediationSection({
       ?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
+  const startPriority = () => {
+    const anchor = headline.priorityKind
+      ? document.getElementById(`card-${headline.priorityKind}`)
+      : null;
+    (anchor ?? document.getElementById("needs-attention"))?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  };
+
+
   return (
     <div className="space-y-5">
       {riskData && (
@@ -227,6 +239,7 @@ export function RemediationSection({
         attentionCount={attentionCount}
         onCta={scrollToList}
       />
+      <TodaysPriorityCard headline={headline} onStart={startPriority} />
       <NeedsAttentionList hasWork={attentionCount > 0}>
         <BrokersCard items={brokerItems} handlers={handlers} />
         <BreachesCard item={breachItem} breaches={breaches} handlers={handlers} />

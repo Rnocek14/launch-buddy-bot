@@ -37,6 +37,7 @@ export function BrokersCard({ items, handlers }: BrokersCardProps) {
       status={status}
       secondary={secondaryBits.join(" • ") || undefined}
       tone={calm ? "calm" : "alert"}
+      anchorId="card-broker"
     >
       {active.length > 1 && (
         <p className="text-sm text-muted-foreground">
