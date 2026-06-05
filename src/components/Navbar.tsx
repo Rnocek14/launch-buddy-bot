@@ -182,12 +182,20 @@ export const Navbar = () => {
             <ThemeToggle />
             
             {!user && (
-              <Link to="/free-scan">
-                <Button className="bg-accent hover:bg-accent/90 text-accent-foreground gap-2">
-                  <ScanSearch className="w-4 h-4" />
-                  Free Scan
-                </Button>
-              </Link>
+              <>
+                <Link to="/auth">
+                  <Button variant="ghost" className="gap-2">
+                    <User className="w-4 h-4" />
+                    Log in
+                  </Button>
+                </Link>
+                <Link to="/free-scan">
+                  <Button className="bg-accent hover:bg-accent/90 text-accent-foreground gap-2">
+                    <ScanSearch className="w-4 h-4" />
+                    Free Scan
+                  </Button>
+                </Link>
+              </>
             )}
           </div>
 
@@ -262,12 +270,20 @@ export const Navbar = () => {
                       Sign out
                     </Button>
                   ) : (
-                    <Link to="/free-scan" onClick={closeMobileMenu}>
-                      <Button className="w-full bg-accent hover:bg-accent/90 text-accent-foreground gap-2">
-                        <ScanSearch className="w-4 h-4" />
-                        Free Scan
-                      </Button>
-                    </Link>
+                    <>
+                      <Link to="/auth" onClick={closeMobileMenu}>
+                        <Button variant="ghost" className="w-full justify-start gap-2">
+                          <User className="w-4 h-4" />
+                          Log in
+                        </Button>
+                      </Link>
+                      <Link to="/free-scan" onClick={closeMobileMenu}>
+                        <Button className="w-full bg-accent hover:bg-accent/90 text-accent-foreground gap-2">
+                          <ScanSearch className="w-4 h-4" />
+                          Free Scan
+                        </Button>
+                      </Link>
+                    </>
                   )}
                 </div>
               </SheetContent>
