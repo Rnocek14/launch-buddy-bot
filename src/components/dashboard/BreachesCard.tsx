@@ -26,6 +26,7 @@ export function BreachesCard({ item, breaches, handlers }: BreachesCardProps) {
       status={status}
       secondary={secondary}
       tone="alert"
+      anchorId="card-breach"
     >
       <RemediationItemRow item={item} handlers={handlers} />
     </CategorySummaryCard>
