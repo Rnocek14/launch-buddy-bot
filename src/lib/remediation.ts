@@ -394,15 +394,14 @@ export function deriveHeadline(
     return { problem: breach.title + ".", cta: "Secure my accounts", hasWork: true };
   }
 
-  const accounts = active.filter((i) => i.kind === "account");
-  if (accounts.length > 0) {
-    const n = accounts.length;
+  if (accountReviewCount > 0) {
+    const n = accountReviewCount;
     return {
       problem:
         n === 1
-          ? "1 account is worth cleaning up to shrink your footprint."
-          : `${n} accounts are worth cleaning up to shrink your footprint.`,
-      cta: "Start cleaning up",
+          ? "1 account from your email is worth cleaning up."
+          : `${n} accounts from your email are worth cleaning up.`,
+      cta: "Review accounts",
       hasWork: true,
     };
   }
