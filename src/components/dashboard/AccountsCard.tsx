@@ -82,6 +82,21 @@ export function AccountsCard({ group, handlers }: AccountsCardProps) {
       : "No action needed";
   const secondary = `${total} account${total === 1 ? "" : "s"} discovered`;
 
+  // Plain-language top concerns for the calm preview.
+  const topConcerns = needsReview.slice(0, 3).map(({ account }) => ({
+    name: account.name,
+    reason: deriveServiceEvidence({
+      id: account.id,
+      name: account.name,
+      category: account.category,
+      discovered_at: account.discovered_at,
+      privacy_action: account.privacy_action,
+      deletion_requested_at: account.deletion_requested_at,
+      activity_status: account.activity_status,
+      cleanup_priority: account.cleanup_priority,
+    }).reason,
+  }));
+
   return (
     <CategorySummaryCard
       icon={Mail}
@@ -91,6 +106,23 @@ export function AccountsCard({ group, handlers }: AccountsCardProps) {
       tone={calm ? "calm" : "warn"}
       anchorId="card-account"
     >
+      {topConcerns.length > 0 && (
+        <div className="space-y-2">
+          <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+            Top concerns
+          </h4>
+          <ul className="space-y-1.5">
+            {topConcerns.map((c) => (
+              <li key={c.name} className="text-sm text-foreground leading-snug">
+                <span className="font-medium">{c.name}</span>
+                <span className="text-muted-foreground"> — {c.reason}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+
       {reviewCount > 0 && (
         <div className="space-y-3">
           <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
