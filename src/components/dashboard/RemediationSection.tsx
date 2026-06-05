@@ -163,14 +163,26 @@ export function RemediationSection({
           .update({ opted_out_at: new Date().toISOString() } as any)
           .eq("id", broker.id)
           .eq("user_id", session.user.id);
-        setBrokers((prev) =>
-          prev.map((b) =>
+        let remaining = 0;
+        setBrokers((prev) => {
+          const next = prev.map((b) =>
             b.id === broker.id
-              ? { ...b, opted_out_at: new Date().toISOString(), state: "opted_out" }
+              ? { ...b, opted_out_at: new Date().toISOString(), state: "opted_out" as const }
               : b
-          )
-        );
-        toast.success("Marked as removed", { description: broker.broker_name });
+          );
+          remaining = next.filter(
+            (b) => b.state === "found" || b.state === "possible" || b.state === "removal_started"
+          ).length;
+          return next;
+        });
+        // Highest-motivation moment — reinforce momentum, not just confirmation.
+        const progressLine =
+          remaining === 0
+            ? "All data broker listings handled. 🎉"
+            : `${remaining} listing${remaining === 1 ? "" : "s"} remaining`;
+        toast.success(`✓ ${broker.broker_name} removed`, {
+          description: `Privacy Score +3 • ${progressLine}`,
+        });
       } catch {
         load();
       }
