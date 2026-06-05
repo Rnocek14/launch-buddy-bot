@@ -6,6 +6,8 @@ import { PrivacyScoreGauge } from "@/components/PrivacyScoreGauge";
 import { ScoreHero } from "./ScoreHero";
 import { NeedsAttentionList } from "./NeedsAttentionList";
 import { AccountsCard } from "./AccountsCard";
+import { BrokersCard } from "./BrokersCard";
+import { BreachesCard } from "./BreachesCard";
 import type { RemediationHandlers } from "./RemediationItem";
 import { getBrokerResultState } from "@/lib/brokerResultState";
 import {
