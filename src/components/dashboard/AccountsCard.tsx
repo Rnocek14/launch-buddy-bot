@@ -77,7 +77,7 @@ export function AccountsCard({ group, handlers }: AccountsCardProps) {
   const status =
     reviewCount > 0
       ? `${reviewCount} need review${counts.ok > 0 ? ` • ${counts.ok} look good` : ""}`
-      : "All look good";
+      : "No action needed";
   const secondary = `${total} account${total === 1 ? "" : "s"} discovered`;
 
   return (
