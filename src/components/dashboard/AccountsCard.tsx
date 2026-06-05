@@ -87,6 +87,7 @@ export function AccountsCard({ group, handlers }: AccountsCardProps) {
       status={status}
       secondary={secondary}
       tone={calm ? "calm" : "warn"}
+      anchorId="card-account"
     >
       {reviewCount > 0 && (
         <div className="space-y-3">
