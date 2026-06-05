@@ -1278,18 +1278,25 @@ export default function Dashboard() {
           />
         ) : (
           <>
-            {/* Privacy Score Gauge — hero element */}
-            {riskData && (
-              <PrivacyScoreGauge
-                riskScore={riskData.riskScore}
-                riskLevel={riskData.riskLevel}
-                serviceCount={services.length}
-                onShare={() => setShareDialogOpen(true)}
-              />
-            )}
-
-            {/* Privacy Snapshot — operational overview */}
-            <PrivacySnapshot />
+            {/* Score + single biggest problem + unified Needs Attention list */}
+            <RemediationSection
+              accounts={services as any}
+              riskData={riskData}
+              onRequestDeletion={handleRequestDeletion}
+              onFindContact={handleQuickDiscovery}
+              onRequestDoNotSell={handleRequestDoNotSell as any}
+              onDontSell={handleRequestDoNotSell}
+              onKeepAccount={async (a: any) => {
+                if (!userId) return;
+                await supabase
+                  .from("user_services")
+                  .update({ privacy_action: "keep", privacy_action_at: new Date().toISOString() })
+                  .eq("user_id", userId)
+                  .eq("service_id", a.id);
+                fetchServices();
+              }}
+              onShare={() => setShareDialogOpen(true)}
+            />
 
             {/* Scan Progress (only while scanning) — shown right after snapshot */}
             {scanning && scanProgress && (
