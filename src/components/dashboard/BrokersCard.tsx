@@ -20,10 +20,10 @@ export function BrokersCard({ items, handlers }: BrokersCardProps) {
   const calm = active.length === 0;
   const status =
     active.length > 0
-      ? `${active.length} listing${active.length === 1 ? "" : "s"} found`
+      ? `${active.length} listing${active.length === 1 ? "" : "s"} ready for removal`
       : inProgress.length > 0
       ? `${inProgress.length} removal${inProgress.length === 1 ? "" : "s"} in progress`
-      : "No active listings";
+      : "No action needed";
 
   const secondaryBits: string[] = [];
   if (inProgress.length > 0 && active.length > 0)
@@ -38,6 +38,11 @@ export function BrokersCard({ items, handlers }: BrokersCardProps) {
       secondary={secondaryBits.join(" • ") || undefined}
       tone={calm ? "calm" : "alert"}
     >
+      {active.length > 1 && (
+        <p className="text-sm text-muted-foreground">
+          Recommended: remove the highest-risk listings first.
+        </p>
+      )}
       {visible.map((item) => (
         <RemediationItemRow key={item.id} item={item} handlers={handlers} />
       ))}
