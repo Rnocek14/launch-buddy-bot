@@ -8,6 +8,7 @@ import { NeedsAttentionList } from "./NeedsAttentionList";
 import { AccountsCard } from "./AccountsCard";
 import { BrokersCard } from "./BrokersCard";
 import { BreachesCard } from "./BreachesCard";
+import { TodaysPriorityCard } from "./TodaysPriorityCard";
 import type { RemediationHandlers } from "./RemediationItem";
 import { getBrokerResultState } from "@/lib/brokerResultState";
 import {
