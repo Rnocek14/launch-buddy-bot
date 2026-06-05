@@ -187,14 +187,19 @@ export function RemediationSection({
     onDismissMention: () => navigate("/unmatched-domains"),
   };
 
+  // Brokers + breaches surface as individual rows. Accounts are grouped
+  // into a single calm "Accounts found" card so the list never floods.
   const items = buildRemediationItems({
     brokers,
-    accounts,
+    accounts: [],
     breaches,
     mentions: [],
   });
-  const attentionCount = items.filter((i) => i.state === "action_needed").length;
-  const headline = deriveHeadline(items, checkedCount);
+  const accountGroup = classifyAccounts(accounts);
+  const attentionCount =
+    items.filter((i) => i.state === "action_needed").length +
+    accountGroup.needsReview.length;
+  const headline = deriveHeadline(items, checkedCount, accountGroup.needsReview.length);
 
   const scrollToList = () => {
     document
