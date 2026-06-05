@@ -859,6 +859,12 @@
     <priority>0.4</priority>
   </url>
   <url>
+    <loc>https://footprintfinder.co/results/eda54c59c2</loc>
+    <lastmod>2026-06-05</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.4</priority>
+  </url>
+  <url>
     <loc>https://footprintfinder.co/terms</loc>
     <lastmod>2026-05-17</lastmod>
     <changefreq>yearly</changefreq>
