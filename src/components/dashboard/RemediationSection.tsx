@@ -5,10 +5,12 @@ import { toast } from "sonner";
 import { PrivacyScoreGauge } from "@/components/PrivacyScoreGauge";
 import { ScoreHero } from "./ScoreHero";
 import { NeedsAttentionList } from "./NeedsAttentionList";
+import { AccountsCard } from "./AccountsCard";
 import type { RemediationHandlers } from "./RemediationItem";
 import { getBrokerResultState } from "@/lib/brokerResultState";
 import {
   buildRemediationItems,
+  classifyAccounts,
   deriveHeadline,
   type AccountSource,
   type BrokerSource,
