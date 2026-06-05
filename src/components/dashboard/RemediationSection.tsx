@@ -239,7 +239,9 @@ export function RemediationSection({
         attentionCount={attentionCount}
         onCta={scrollToList}
       />
+      <TodaysPriorityCard headline={headline} onStart={startPriority} />
       <NeedsAttentionList hasWork={attentionCount > 0}>
+
         <BrokersCard items={brokerItems} handlers={handlers} />
         <BreachesCard item={breachItem} breaches={breaches} handlers={handlers} />
         <AccountsCard group={accountGroup} handlers={handlers} />
