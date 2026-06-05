@@ -1,13 +1,8 @@
 import { useState } from "react";
-import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
-import { ChevronDown, Mail, ShieldCheck } from "lucide-react";
+import { Mail, ShieldCheck } from "lucide-react";
+import { CategorySummaryCard } from "./CategorySummaryCard";
 import { RemediationItemRow, type RemediationHandlers } from "./RemediationItem";
 import type { AccountGroup, AccountSource } from "@/lib/remediation";
 
@@ -72,7 +67,6 @@ function OtherAccountRow({
 }
 
 export function AccountsCard({ group, handlers }: AccountsCardProps) {
-  const [open, setOpen] = useState(false);
   const { total, needsReview, other, counts, level } = group;
 
   if (total === 0) return null;
@@ -80,83 +74,56 @@ export function AccountsCard({ group, handlers }: AccountsCardProps) {
   const reviewCount = needsReview.length;
   const calm = level === "okay";
 
+  const status =
+    reviewCount > 0
+      ? `${reviewCount} need review${counts.ok > 0 ? ` • ${counts.ok} look good` : ""}`
+      : "All look good";
+  const secondary = `${total} account${total === 1 ? "" : "s"} discovered`;
+
   return (
-    <Card className={calm ? "" : "border-amber-500/30 bg-amber-500/5"}>
-      <Collapsible open={open} onOpenChange={setOpen}>
-        <CollapsibleTrigger asChild>
-          <button className="w-full flex items-start gap-4 p-4 sm:p-5 text-left">
-            <div
-              className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${
-                calm ? "bg-muted" : "bg-amber-500/10"
-              }`}
-            >
-              <Mail
-                className={`w-5 h-5 ${
-                  calm ? "text-muted-foreground" : "text-amber-600 dark:text-amber-400"
-                }`}
+    <CategorySummaryCard
+      icon={Mail}
+      title="Online Accounts"
+      status={status}
+      secondary={secondary}
+      tone={calm ? "calm" : "warn"}
+    >
+      {reviewCount > 0 && (
+        <div className="space-y-3">
+          <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+            Needs review ({reviewCount})
+          </h4>
+          <div className="space-y-3">
+            {needsReview.map(({ item }) => (
+              <RemediationItemRow key={item.id} item={item} handlers={handlers} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {other.length > 0 && (
+        <div className="space-y-2">
+          <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+            Other accounts ({other.length})
+          </h4>
+          <div className="rounded-lg border border-border divide-y divide-border">
+            {other.map((a) => (
+              <OtherAccountRow
+                key={a.id}
+                account={a}
+                onRequestDeletion={handlers.onRequestDeletion}
               />
-            </div>
-            <div className="min-w-0 flex-1">
-              <h3 className="text-base sm:text-lg font-semibold text-foreground">
-                Online Accounts
-              </h3>
-              <p className="text-sm sm:text-base font-medium text-foreground mt-0.5 leading-snug">
-                {reviewCount > 0
-                  ? `${reviewCount} need review${counts.ok > 0 ? ` • ${counts.ok} look good` : ""}`
-                  : "All look good"}
-              </p>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                {total} account{total === 1 ? "" : "s"} discovered
-              </p>
-            </div>
-            <ChevronDown
-              className={`w-5 h-5 text-muted-foreground shrink-0 mt-1 transition-transform ${
-                open ? "rotate-180" : ""
-              }`}
-            />
-          </button>
-        </CollapsibleTrigger>
+            ))}
+          </div>
+        </div>
+      )}
 
-
-        <CollapsibleContent className="px-4 sm:px-5 pb-5 space-y-5">
-          {reviewCount > 0 && (
-            <div className="space-y-3">
-              <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-                Needs review ({reviewCount})
-              </h4>
-              <div className="space-y-3">
-                {needsReview.map(({ item }) => (
-                  <RemediationItemRow key={item.id} item={item} handlers={handlers} />
-                ))}
-              </div>
-            </div>
-          )}
-
-          {other.length > 0 && (
-            <div className="space-y-2">
-              <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-                Other accounts ({other.length})
-              </h4>
-              <div className="rounded-lg border border-border divide-y divide-border">
-                {other.map((a) => (
-                  <OtherAccountRow
-                    key={a.id}
-                    account={a}
-                    onRequestDeletion={handlers.onRequestDeletion}
-                  />
-                ))}
-              </div>
-            </div>
-          )}
-
-          {reviewCount === 0 && other.length === 0 && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
-              <ShieldCheck className="w-4 h-4 text-green-600 dark:text-green-400" />
-              All discovered accounts have been handled.
-            </div>
-          )}
-        </CollapsibleContent>
-      </Collapsible>
-    </Card>
+      {reviewCount === 0 && other.length === 0 && (
+        <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
+          <ShieldCheck className="w-4 h-4 text-green-600 dark:text-green-400" />
+          All discovered accounts have been handled.
+        </div>
+      )}
+    </CategorySummaryCard>
   );
 }
