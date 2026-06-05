@@ -243,6 +243,8 @@ export interface ReviewAccount {
   item: RemediationItem;
 }
 
+export type AccountTier = "high" | "review" | "ok";
+
 export interface AccountGroup {
   /** Every active (not-deleted) account discovered in email. */
   total: number;
@@ -252,8 +254,19 @@ export interface AccountGroup {
   other: AccountSource[];
   /** Accounts already sent for deletion. */
   done: number;
+  /** Count breakdown for the collapsed summary chips. */
+  counts: { high: number; review: number; ok: number };
   /** Overall risk level for the card badge. */
   level: "review" | "okay";
+}
+
+/** High priority = paid subscription or a sensitive (finance/health/gov) account. */
+function accountTier(a: AccountSource): Exclude<AccountTier, "ok"> {
+  const sensitive = ["Finance", "Banking", "Healthcare", "Government"].includes(
+    a.category || ""
+  );
+  if (a.activity_status === "active_paid" || sensitive) return "high";
+  return "review";
 }
 
 /**
@@ -265,6 +278,8 @@ export function classifyAccounts(accounts: AccountSource[]): AccountGroup {
   const needsReview: ReviewAccount[] = [];
   const other: AccountSource[] = [];
   let done = 0;
+  let high = 0;
+  let review = 0;
 
   for (const a of accounts) {
     const item = accountToItem(a);
@@ -274,6 +289,8 @@ export function classifyAccounts(accounts: AccountSource[]): AccountGroup {
     }
     if (item && item.state === "action_needed") {
       needsReview.push({ account: a, item });
+      if (accountTier(a) === "high") high++;
+      else review++;
     } else {
       other.push(a);
     }
@@ -289,6 +306,7 @@ export function classifyAccounts(accounts: AccountSource[]): AccountGroup {
     needsReview,
     other,
     done,
+    counts: { high, review, ok: other.length },
     level: needsReview.length > 0 ? "review" : "okay",
   };
 }
