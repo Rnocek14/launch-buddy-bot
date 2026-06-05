@@ -56,6 +56,7 @@ import { PostCheckoutScanState } from "@/components/PostCheckoutScanState";
 import { PostCheckoutNextSteps } from "@/components/PostCheckoutNextSteps";
 import { PostCheckoutScanProgressStrip } from "@/components/PostCheckoutScanProgressStrip";
 import { LiveFindingsPreview } from "@/components/LiveFindingsPreview";
+import { RemediationSection } from "@/components/dashboard/RemediationSection";
 
 interface Service {
   id: string;
@@ -1284,7 +1285,6 @@ export default function Dashboard() {
               riskData={riskData}
               onRequestDeletion={handleRequestDeletion}
               onFindContact={handleQuickDiscovery}
-              onRequestDoNotSell={handleRequestDoNotSell as any}
               onDontSell={handleRequestDoNotSell}
               onKeepAccount={async (a: any) => {
                 if (!userId) return;
