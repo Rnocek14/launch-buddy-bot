@@ -212,6 +212,17 @@ export function RemediationSection({
       ?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
+  const startPriority = () => {
+    const anchor = headline.priorityKind
+      ? document.getElementById(`card-${headline.priorityKind}`)
+      : null;
+    (anchor ?? document.getElementById("needs-attention"))?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  };
+
+
   return (
     <div className="space-y-5">
       {riskData && (
