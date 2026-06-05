@@ -73,7 +73,7 @@ function OtherAccountRow({
 
 export function AccountsCard({ group, handlers }: AccountsCardProps) {
   const [open, setOpen] = useState(false);
-  const { total, needsReview, other, level } = group;
+  const { total, needsReview, other, counts, level } = group;
 
   if (total === 0) return null;
 
@@ -84,7 +84,7 @@ export function AccountsCard({ group, handlers }: AccountsCardProps) {
     <Card className={calm ? "" : "border-amber-500/30 bg-amber-500/5"}>
       <Collapsible open={open} onOpenChange={setOpen}>
         <CollapsibleTrigger asChild>
-          <button className="w-full flex items-center gap-4 p-4 sm:p-5 text-left">
+          <button className="w-full flex items-start gap-4 p-4 sm:p-5 text-left">
             <div
               className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${
                 calm ? "bg-muted" : "bg-amber-500/10"
@@ -97,32 +97,44 @@ export function AccountsCard({ group, handlers }: AccountsCardProps) {
               />
             </div>
             <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2 flex-wrap">
-                <h3 className="text-base sm:text-lg font-semibold text-foreground">
-                  {total} account{total === 1 ? "" : "s"} found in your email
-                </h3>
-                <span className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-                  <span
-                    className={`w-2 h-2 rounded-full ${
-                      reviewCount > 0 ? "bg-amber-500" : "bg-green-500"
-                    }`}
-                  />
-                  {reviewCount > 0 ? `${reviewCount} need review` : "Look okay"}
-                </span>
-              </div>
+              <h3 className="text-base sm:text-lg font-semibold text-foreground">
+                Accounts &amp; Services
+              </h3>
               <p className="text-sm sm:text-base text-muted-foreground mt-0.5 leading-snug">
-                {reviewCount > 0
-                  ? "Some may store personal data, payments, or be inactive."
-                  : "We didn't spot anything risky — tap to review them anyway."}
+                {total} discovered
+                {reviewCount > 0 ? ` • ${reviewCount} need review` : " • all look okay"}
               </p>
+
+              {/* Visual summary chips — understand the situation without expanding */}
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2.5">
+                {counts.ok > 0 && (
+                  <span className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                    <span className="w-2 h-2 rounded-full bg-green-500" />
+                    {counts.ok} OK
+                  </span>
+                )}
+                {counts.review > 0 && (
+                  <span className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                    <span className="w-2 h-2 rounded-full bg-amber-500" />
+                    {counts.review} review
+                  </span>
+                )}
+                {counts.high > 0 && (
+                  <span className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                    <span className="w-2 h-2 rounded-full bg-destructive" />
+                    {counts.high} high priority
+                  </span>
+                )}
+              </div>
             </div>
             <ChevronDown
-              className={`w-5 h-5 text-muted-foreground shrink-0 transition-transform ${
+              className={`w-5 h-5 text-muted-foreground shrink-0 mt-1 transition-transform ${
                 open ? "rotate-180" : ""
               }`}
             />
           </button>
         </CollapsibleTrigger>
+
 
         <CollapsibleContent className="px-4 sm:px-5 pb-5 space-y-5">
           {reviewCount > 0 && (
