@@ -18,6 +18,7 @@ import Preferences from "./pages/Preferences";
 import UnmatchedDomains from "./pages/UnmatchedDomains";
 import DeletionRequests from "./pages/DeletionRequests";
 import Cleanup from "./pages/Cleanup";
+import WhoHasMyData from "./pages/WhoHasMyData";
 import NotFound from "./pages/NotFound";
 import Settings from "./pages/Settings";
 import Status from "./pages/Status";
@@ -83,6 +84,7 @@ const App = () => (
               <Route path="/unmatched-domains" element={<UnmatchedDomains />} />
               <Route path="/deletion-requests" element={<DeletionRequests />} />
               <Route path="/cleanup" element={<Cleanup />} />
+              <Route path="/who-has-my-data" element={<WhoHasMyData />} />
               <Route path="/alpha" element={<AlphaAccess />} />
               <Route path="/unsubscribe" element={<Unsubscribe />} />
               <Route path="/preferences" element={<Preferences />} />
