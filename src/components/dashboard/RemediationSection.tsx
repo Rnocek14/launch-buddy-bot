@@ -5,10 +5,12 @@ import { toast } from "sonner";
 import { PrivacyScoreGauge } from "@/components/PrivacyScoreGauge";
 import { ScoreHero } from "./ScoreHero";
 import { NeedsAttentionList } from "./NeedsAttentionList";
+import { AccountsCard } from "./AccountsCard";
 import type { RemediationHandlers } from "./RemediationItem";
 import { getBrokerResultState } from "@/lib/brokerResultState";
 import {
   buildRemediationItems,
+  classifyAccounts,
   deriveHeadline,
   type AccountSource,
   type BrokerSource,
@@ -185,14 +187,19 @@ export function RemediationSection({
     onDismissMention: () => navigate("/unmatched-domains"),
   };
 
+  // Brokers + breaches surface as individual rows. Accounts are grouped
+  // into a single calm "Accounts found" card so the list never floods.
   const items = buildRemediationItems({
     brokers,
-    accounts,
+    accounts: [],
     breaches,
     mentions: [],
   });
-  const attentionCount = items.filter((i) => i.state === "action_needed").length;
-  const headline = deriveHeadline(items, checkedCount);
+  const accountGroup = classifyAccounts(accounts);
+  const attentionCount =
+    items.filter((i) => i.state === "action_needed").length +
+    accountGroup.needsReview.length;
+  const headline = deriveHeadline(items, checkedCount, accountGroup.needsReview.length);
 
   const scrollToList = () => {
     document
@@ -216,7 +223,11 @@ export function RemediationSection({
         attentionCount={attentionCount}
         onCta={scrollToList}
       />
-      <NeedsAttentionList items={items} handlers={handlers} />
+      <NeedsAttentionList
+        items={items}
+        handlers={handlers}
+        extra={<AccountsCard group={accountGroup} handlers={handlers} />}
+      />
     </div>
   );
 }

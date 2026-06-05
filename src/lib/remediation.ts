@@ -234,6 +234,65 @@ export function breachToItem(b: BreachSource): RemediationItem | null {
   };
 }
 
+// ---------------------------------------------------------------------------
+// Account grouping — one calm "Accounts found" card instead of N rows
+// ---------------------------------------------------------------------------
+
+export interface ReviewAccount {
+  account: AccountSource;
+  item: RemediationItem;
+}
+
+export interface AccountGroup {
+  /** Every active (not-deleted) account discovered in email. */
+  total: number;
+  /** Risk-ranked accounts that deserve a look. */
+  needsReview: ReviewAccount[];
+  /** The rest — look okay, kept accessible but not noisy. */
+  other: AccountSource[];
+  /** Accounts already sent for deletion. */
+  done: number;
+  /** Overall risk level for the card badge. */
+  level: "review" | "okay";
+}
+
+/**
+ * Splits discovered accounts into a "needs review" set (using the same
+ * risk rules as accountToItem) and an "other" set, so the dashboard can
+ * show a single grouped card rather than flooding the list.
+ */
+export function classifyAccounts(accounts: AccountSource[]): AccountGroup {
+  const needsReview: ReviewAccount[] = [];
+  const other: AccountSource[] = [];
+  let done = 0;
+
+  for (const a of accounts) {
+    const item = accountToItem(a);
+    if (item && item.state === "done") {
+      done++;
+      continue;
+    }
+    if (item && item.state === "action_needed") {
+      needsReview.push({ account: a, item });
+    } else {
+      other.push(a);
+    }
+  }
+
+  needsReview.sort(
+    (x, y) => x.item.rank - y.item.rank || x.account.name.localeCompare(y.account.name)
+  );
+  other.sort((x, y) => x.name.localeCompare(y.name));
+
+  return {
+    total: needsReview.length + other.length,
+    needsReview,
+    other,
+    done,
+    level: needsReview.length > 0 ? "review" : "okay",
+  };
+}
+
 export function mentionToItem(m: MentionSource): RemediationItem | null {
   return {
     id: `mention-${m.domain}`,
@@ -304,11 +363,12 @@ export interface HeroHeadline {
 
 export function deriveHeadline(
   items: RemediationItem[],
-  checkedCount: number
+  checkedCount: number,
+  accountReviewCount = 0
 ): HeroHeadline {
   const active = items.filter((i) => i.state === "action_needed");
 
-  if (active.length === 0) {
+  if (active.length === 0 && accountReviewCount === 0) {
     return {
       problem: "You're in good shape — nothing needs your attention right now.",
       cta: "Review my footprint",
@@ -334,15 +394,14 @@ export function deriveHeadline(
     return { problem: breach.title + ".", cta: "Secure my accounts", hasWork: true };
   }
 
-  const accounts = active.filter((i) => i.kind === "account");
-  if (accounts.length > 0) {
-    const n = accounts.length;
+  if (accountReviewCount > 0) {
+    const n = accountReviewCount;
     return {
       problem:
         n === 1
-          ? "1 account is worth cleaning up to shrink your footprint."
-          : `${n} accounts are worth cleaning up to shrink your footprint.`,
-      cta: "Start cleaning up",
+          ? "1 account from your email is worth cleaning up."
+          : `${n} accounts from your email are worth cleaning up.`,
+      cta: "Review accounts",
       hasWork: true,
     };
   }
