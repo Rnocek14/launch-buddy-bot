@@ -159,6 +159,13 @@ export function AccountsCard({ group, handlers }: AccountsCardProps) {
           All discovered accounts have been handled.
         </div>
       )}
+
+      <Button asChild variant="outline" className="w-full">
+        <Link to="/who-has-my-data">
+          Review all accounts
+          <ArrowRight className="w-4 h-4 ml-2" />
+        </Link>
+      </Button>
     </CategorySummaryCard>
   );
 }
