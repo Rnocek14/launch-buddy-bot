@@ -1,33 +1,21 @@
-import { useState, type ReactNode } from "react";
-import { Button } from "@/components/ui/button";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
-import { CheckCircle, ChevronDown, ShieldCheck } from "lucide-react";
-import { RemediationItemRow, type RemediationHandlers } from "./RemediationItem";
-import { splitItems, type RemediationItem } from "@/lib/remediation";
+import { type ReactNode } from "react";
+import { ShieldCheck } from "lucide-react";
 
 interface NeedsAttentionListProps {
-  items: RemediationItem[];
-  handlers: RemediationHandlers;
-  /** Rendered after the active rows (e.g. the grouped accounts card). */
-  extra?: ReactNode;
+  /** Whether there is anything to act on. Drives the empty state. */
+  hasWork: boolean;
+  /** The unified category summary cards. */
+  children: ReactNode;
 }
 
-export function NeedsAttentionList({ items, handlers, extra }: NeedsAttentionListProps) {
-  const [doneOpen, setDoneOpen] = useState(false);
-  const { active, done } = splitItems(items);
-  const hasContent = active.length > 0 || !!extra;
-
+export function NeedsAttentionList({ hasWork, children }: NeedsAttentionListProps) {
   return (
     <section id="needs-attention" className="space-y-3 scroll-mt-24">
       <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
         Needs your attention
       </h2>
 
-      {!hasContent ? (
+      {!hasWork ? (
         <div className="flex items-center gap-3 p-5 rounded-lg bg-green-500/5 border border-green-500/20">
           <ShieldCheck className="w-6 h-6 text-green-600 dark:text-green-400 shrink-0" />
           <div>
@@ -40,36 +28,7 @@ export function NeedsAttentionList({ items, handlers, extra }: NeedsAttentionLis
           </div>
         </div>
       ) : (
-        <div className="space-y-3">
-          {active.map((item) => (
-            <RemediationItemRow key={item.id} item={item} handlers={handlers} />
-          ))}
-          {extra}
-        </div>
-      )}
-
-      {done.length > 0 && (
-        <Collapsible open={doneOpen} onOpenChange={setDoneOpen}>
-          <CollapsibleTrigger asChild>
-            <Button
-              variant="ghost"
-              className="w-full justify-between text-muted-foreground mt-2"
-            >
-              <span className="flex items-center gap-2">
-                <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400" />
-                Done ({done.length})
-              </span>
-              <ChevronDown
-                className={`w-4 h-4 transition-transform ${doneOpen ? "rotate-180" : ""}`}
-              />
-            </Button>
-          </CollapsibleTrigger>
-          <CollapsibleContent className="space-y-2 pt-2">
-            {done.map((item) => (
-              <RemediationItemRow key={item.id} item={item} handlers={handlers} />
-            ))}
-          </CollapsibleContent>
-        </Collapsible>
+        <div className="space-y-3">{children}</div>
       )}
     </section>
   );
