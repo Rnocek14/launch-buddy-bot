@@ -6,6 +6,8 @@ import { PrivacyScoreGauge } from "@/components/PrivacyScoreGauge";
 import { ScoreHero } from "./ScoreHero";
 import { NeedsAttentionList } from "./NeedsAttentionList";
 import { AccountsCard } from "./AccountsCard";
+import { BrokersCard } from "./BrokersCard";
+import { BreachesCard } from "./BreachesCard";
 import type { RemediationHandlers } from "./RemediationItem";
 import { getBrokerResultState } from "@/lib/brokerResultState";
 import {
@@ -187,14 +189,16 @@ export function RemediationSection({
     onDismissMention: () => navigate("/unmatched-domains"),
   };
 
-  // Brokers + breaches surface as individual rows. Accounts are grouped
-  // into a single calm "Accounts found" card so the list never floods.
+  // Every scan type collapses into one uniform "Category → Status" card so
+  // the Needs Attention stack reads identically top to bottom.
   const items = buildRemediationItems({
     brokers,
     accounts: [],
     breaches,
     mentions: [],
   });
+  const brokerItems = items.filter((i) => i.kind === "broker");
+  const breachItem = items.find((i) => i.kind === "breach") ?? null;
   const accountGroup = classifyAccounts(accounts);
   const attentionCount =
     items.filter((i) => i.state === "action_needed").length +
@@ -223,11 +227,11 @@ export function RemediationSection({
         attentionCount={attentionCount}
         onCta={scrollToList}
       />
-      <NeedsAttentionList
-        items={items}
-        handlers={handlers}
-        extra={<AccountsCard group={accountGroup} handlers={handlers} />}
-      />
+      <NeedsAttentionList hasWork={attentionCount > 0}>
+        <BrokersCard items={brokerItems} handlers={handlers} />
+        <BreachesCard item={breachItem} breaches={breaches} handlers={handlers} />
+        <AccountsCard group={accountGroup} handlers={handlers} />
+      </NeedsAttentionList>
     </div>
   );
 }
