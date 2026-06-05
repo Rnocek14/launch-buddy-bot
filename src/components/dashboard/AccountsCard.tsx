@@ -100,10 +100,15 @@ export function AccountsCard({ group, handlers }: AccountsCardProps) {
               <h3 className="text-base sm:text-lg font-semibold text-foreground">
                 Accounts &amp; Services
               </h3>
-              <p className="text-sm sm:text-base text-muted-foreground mt-0.5 leading-snug">
-                {total} discovered
-                {reviewCount > 0 ? ` • ${reviewCount} need review` : " • all look okay"}
+              <p className="text-sm sm:text-base font-medium text-foreground mt-0.5 leading-snug">
+                {reviewCount > 0
+                  ? `${reviewCount} need review${counts.ok > 0 ? ` • ${counts.ok} look good` : ""}`
+                  : "All look good"}
               </p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {total} account{total === 1 ? "" : "s"} discovered
+              </p>
+
 
               {/* Visual summary chips — understand the situation without expanding */}
               <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2.5">
