@@ -20,6 +20,8 @@ interface CategorySummaryCardProps {
   secondary?: string;
   tone: CardTone;
   defaultOpen?: boolean;
+  /** Optional DOM id so callers can scroll directly to this card. */
+  anchorId?: string;
   children: ReactNode;
 }
 
