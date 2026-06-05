@@ -363,11 +363,12 @@ export interface HeroHeadline {
 
 export function deriveHeadline(
   items: RemediationItem[],
-  checkedCount: number
+  checkedCount: number,
+  accountReviewCount = 0
 ): HeroHeadline {
   const active = items.filter((i) => i.state === "action_needed");
 
-  if (active.length === 0) {
+  if (active.length === 0 && accountReviewCount === 0) {
     return {
       problem: "You're in good shape — nothing needs your attention right now.",
       cta: "Review my footprint",
