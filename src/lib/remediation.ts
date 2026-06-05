@@ -417,8 +417,8 @@ export function deriveHeadline(
     return {
       problem:
         n === 1
-          ? "1 account from your email is worth cleaning up."
-          : `${n} accounts from your email are worth cleaning up.`,
+          ? "1 account from your email may need attention."
+          : `${n} accounts from your email may need attention.`,
       cta: "Review accounts",
       hasWork: true,
     };
