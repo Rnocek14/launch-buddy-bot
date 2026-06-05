@@ -1,10 +1,12 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Mail, ShieldCheck } from "lucide-react";
+import { Mail, ShieldCheck, ArrowRight } from "lucide-react";
 import { CategorySummaryCard } from "./CategorySummaryCard";
 import { RemediationItemRow, type RemediationHandlers } from "./RemediationItem";
 import type { AccountGroup, AccountSource } from "@/lib/remediation";
+import { deriveServiceEvidence } from "@/lib/serviceEvidence";
 
 interface AccountsCardProps {
   group: AccountGroup;
