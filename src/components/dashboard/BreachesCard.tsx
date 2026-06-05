@@ -14,7 +14,7 @@ export function BreachesCard({ item, breaches, handlers }: BreachesCardProps) {
   if (!item || !breaches || breaches.total <= 0) return null;
 
   const n = breaches.total;
-  const status = `${n} account${n === 1 ? "" : "s"} exposed`;
+  const status = `${n} account${n === 1 ? "" : "s"} need${n === 1 ? "s" : ""} securing`;
   const serious = breaches.critical + breaches.high;
   const secondary =
     serious > 0 ? `${serious} high severity` : undefined;
