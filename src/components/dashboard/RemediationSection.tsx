@@ -189,14 +189,16 @@ export function RemediationSection({
     onDismissMention: () => navigate("/unmatched-domains"),
   };
 
-  // Brokers + breaches surface as individual rows. Accounts are grouped
-  // into a single calm "Accounts found" card so the list never floods.
+  // Every scan type collapses into one uniform "Category → Status" card so
+  // the Needs Attention stack reads identically top to bottom.
   const items = buildRemediationItems({
     brokers,
     accounts: [],
     breaches,
     mentions: [],
   });
+  const brokerItems = items.filter((i) => i.kind === "broker");
+  const breachItem = items.find((i) => i.kind === "breach") ?? null;
   const accountGroup = classifyAccounts(accounts);
   const attentionCount =
     items.filter((i) => i.state === "action_needed").length +
