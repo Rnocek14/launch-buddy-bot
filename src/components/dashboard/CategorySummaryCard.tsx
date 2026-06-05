@@ -53,13 +53,15 @@ export function CategorySummaryCard({
   secondary,
   tone,
   defaultOpen = false,
+  anchorId,
   children,
 }: CategorySummaryCardProps) {
   const [open, setOpen] = useState(defaultOpen);
   const t = TONE[tone];
 
   return (
-    <Card className={t.card}>
+    <Card id={anchorId} className={`scroll-mt-24 ${t.card}`}>
+
       <Collapsible open={open} onOpenChange={setOpen}>
         <CollapsibleTrigger asChild>
           <button className="w-full flex items-start gap-4 p-4 sm:p-5 text-left">
