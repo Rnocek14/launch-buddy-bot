@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Collapsible,
@@ -12,11 +12,14 @@ import { splitItems, type RemediationItem } from "@/lib/remediation";
 interface NeedsAttentionListProps {
   items: RemediationItem[];
   handlers: RemediationHandlers;
+  /** Rendered after the active rows (e.g. the grouped accounts card). */
+  extra?: ReactNode;
 }
 
-export function NeedsAttentionList({ items, handlers }: NeedsAttentionListProps) {
+export function NeedsAttentionList({ items, handlers, extra }: NeedsAttentionListProps) {
   const [doneOpen, setDoneOpen] = useState(false);
   const { active, done } = splitItems(items);
+  const hasContent = active.length > 0 || !!extra;
 
   return (
     <section id="needs-attention" className="space-y-3 scroll-mt-24">
