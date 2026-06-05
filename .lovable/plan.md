@@ -1,60 +1,87 @@
-## SEO Domination Plan — Footprint Finder
+# Simplified Dashboard — Full Design
 
-### The honest starting point
-Semrush shows footprintfinder.co currently ranks for **2 keywords**, both on page 6 (positions 55 & 63), with ~0 estimated organic traffic. You're not behind — you've barely started. "Dominating" is realistic here because the queries you named have **low keyword difficulty (0–26/100)** and we already have the page-generation machinery to scale. This is a content-coverage + consistency game, and results land over 2–4 months, not overnight.
+## The decision (confirmed)
+Above the fold: **one score + the single biggest problem + one button.**
+Below: **one ranked "Needs Attention" list** that merges every data type. The product decides priority; the user never has to choose a category first.
 
-### What the search data says (Semrush, US)
-The single biggest untapped opportunity is the **"remove my info from the internet"** cluster — we have almost no content targeting it:
+The critical addition your advisor's version missed: **each row is a different action machine.** A broker is opt-out. Most accounts need an **AI contact search first** before a deletion can be sent. A breach is informational. So the list is one visual pattern with a typed action slot per row.
 
+## Everything the scan produces (nothing dropped)
+| Source | Data | Per-item action lifecycle |
+|---|---|---|
+| Data brokers (`broker_scan_results`) | exposed / possible match; address, phone, relatives | Remove → opens opt-out + marks `removal_started` → Confirm removed (`opted_out`) |
+| Accounts (`user_services`) | activity (active paid/free, dormant, newsletter), cleanup_priority, `contact_status`, `privacy_action` | If `needs_discovery`: **Find removal contact (AI search)** → then Request deletion. Else: Request deletion / Keep / Don't sell |
+| Breaches (snapshot) | total, critical, high | Secure this (guide / change password) — informational |
+| Unmatched domains | possible undiscovered accounts | "Is this yours?" Yes (becomes account) / Dismiss |
+
+## Above the fold — the calm answer
+```text
+┌───────────────────────────────────────────────┐
+│        ◔  742  Good        (compact gauge)     │
+│   We checked 47 places. 12 need your attention.│
+│                                                │
+│   Your biggest risk right now:                 │
+│   12 data-broker sites are publishing your     │
+│   home address and phone number.               │
+│                                                │
+│        [  Start removing these  → ]            │
+└───────────────────────────────────────────────┘
 ```
-how to remove personal information from internet     1,900/mo
-how to remove my personal information from internet   2,900/mo
-how to delete personal information from internet      1,900/mo
-how to remove personal info from google (free)        1,900/mo
-how to hide your phone number / make number private   3,600/mo
-google results about you                              3,600/mo
-how to remove my phone number from the internet         210/mo  (KD 26)
+- Headline sentence is computed from the #1 item in the ranked list, so it always reflects reality (brokers > breaches > risky accounts > dormant > public mentions).
+- The CTA scrolls to / opens the first actionable row. One button only.
+- An accounting line ("We checked 47 places…") so completeness is felt, not hidden.
+
+## Below the fold — the one ranked list
+A single `RemediationItem` component, one row each, ranked by severity:
+1. Broker listings — exposed (highest)
+2. Broker — possible matches
+3. Breach-exposed accounts (critical/high)
+4. Risky / active-paid / old accounts
+5. Dormant & unused accounts
+6. Public mentions / unmatched domains (lowest)
+
+Each row, regardless of type, shows the same anatomy so it reads identically to a 70-year-old:
+```text
+┌──────────────────────────────────────────────┐
+│ [icon] Whitepages                  ● Exposed  │
+│        Showing your address, phone, relatives │
+│        [   Remove my info   →   ]   (1 button)│
+└──────────────────────────────────────────────┘
 ```
+- **One primary button per row**, label changes by type/state:
+  - Broker: "Remove my info" → "Removal requested ✓ · Confirm done"
+  - Account needing contact: "Find removal address" → (after AI search) "Request deletion"
+  - Account ready: "Request deletion"  (Keep / Don't sell tucked behind a small "Other options")
+  - Breach: "How to secure this"
+  - Unmatched: "Yes, this is mine" / "Not me"
+- Type is shown as a plain word + dot color (Exposed / Possible / Breach / Unused), never as a section the user must navigate.
+- Resolved items collapse into a quiet "Done (8)" group at the bottom with a green check, so progress is visible and the active list stays short.
 
-The **"delete from whitepages"** cluster alone is ~1,500/mo across variants (260 + 210 + 170s…), and we already have a `/remove-from/whitepages` page — it's just optimized for "opt out," not the higher-volume "how to delete" phrasing.
+## Progressive disclosure (single page, no navigation)
+Order top-to-bottom: hero → Needs Attention list → Done group → one "More" accordion holding: full account grid (current grid, filters), score history, this-month summary, subscription, referral. Everything stays on one scroll; details expand in place. No tabs, no separate screens.
 
-### Current coverage (what we have)
-- `/remove-from/:slug` — ~45 data-broker pages (DB-driven), targeting "<broker> opt out"
-- `/delete/:slug` — 10 account-deletion guides
-- `/vs/:competitor` — 5 competitor comparisons
-- `/blog` — blog posts
+## Mobile vs desktop
+- **Layout is the same centered single column (`max-w-2xl`) on both** for one mental model. Desktop simply gets more breathing room and can show row metadata inline; mobile wraps it under the title.
+- **Mobile:** full-width rows, min 56px tap targets, one full-width button per row, a sticky bottom bar showing the single next best action ("Remove from Whitepages →") that advances as items are resolved.
+- **Desktop:** the compact gauge + accounting line can sit left with the list right on very wide screens, but default is the same stacked column to avoid divergence.
 
-### The plan — 3 phases
+## Accessibility / age-friendly rules
+- Base body text bumped to `text-base`/`text-lg`; no `text-xs` for anything meaningful.
+- High-contrast tokens (reuse existing 90% neutral palette + `#FF6A00` only for the single primary CTA).
+- Plain language everywhere ("Sites publishing your info", not "broker exposure"). Each row has a one-line "why this matters".
+- One primary action visible at a time; secondary actions are demoted, never competing.
 
-**Phase 1 — Capture the "how to delete X" intent on pages we already have**
-- Update `RemoveBroker.tsx` SEO (title/description/H1 + on-page copy) to target the dominant query phrasing: "How to delete your info from Whitepages (2026 guide)" alongside the existing opt-out language. This recaptures ~1,500/mo for Whitepages and similar for every broker — zero new pages, big ranking lift.
-- Add a FAQ/JSON-LD `FAQPage` block to each broker page answering "How do I delete my information from <broker>?", "Is it free?", "How long does it take?" — wins FAQ rich results and long-tail variants.
+## Technical approach
+- New `src/components/dashboard/NeedsAttentionList.tsx` + `RemediationItem.tsx` (typed union: `broker | account | breach | mention`). Each item carries `severity`, `state`, and a `primaryAction` descriptor so the row renders generically.
+- New `src/lib/remediation.ts`: pure functions to (a) normalize brokers (`brokerResultState`), accounts (`activity_status`/`cleanup_priority`/`contact_status`/`privacy_action`), breaches, and unmatched domains into one `RemediationItem[]`; (b) rank them; (c) derive the hero headline + count from the top item. Reuses existing `get_privacy_snapshot`, `broker_scan_results`, `user_services`, and unmatched-domains queries already in `Dashboard.tsx`/`PrivacySnapshot.tsx` — no backend/schema changes.
+- Reuse existing dialogs/handlers verbatim: `ContactDiscoveryDialog` (AI contact search), `DeletionRequestDialog`, broker `handleRemoveClick` (opt-out + `opt_out_started_at`), `ServiceActionButtons` (Keep/Don't sell) — wired into each row's action slot.
+- New `src/components/dashboard/ScoreHero.tsx` wrapping the existing `PrivacyScoreGauge` in compact mode + computed headline + single CTA.
+- `Dashboard.tsx` is refactored to compose: `<ScoreHero/>`, `<NeedsAttentionList/>`, Done group, and a `<Collapsible>` "More" holding the existing grid/history/etc. The current 1,956-line render is reduced to orchestration; heavy sections move into the accordion unchanged to limit risk.
+- No business-logic changes to scanning, deletion sending, or broker pipeline — purely presentation/composition over existing data + actions.
 
-**Phase 2 — New high-volume hub pages (the cluster we're missing)**
-Build a small set of authoritative guide pages, each with an embedded `SeoEmailCapture` → free scan:
-- `/guides/remove-personal-information-from-internet` — the pillar page (targets the 1,900–2,900/mo cluster), linking out to every broker + delete guide.
-- `/guides/remove-phone-number-from-internet` — phone-number cluster.
-- `/guides/remove-yourself-from-google` — "google results about you" / "remove personal info from google."
-- `/guides/who-has-my-personal-information` — high-intent, funnels straight to the scan.
-Implemented as a data-driven `guides` collection (like `deleteGuides.ts`) so we can keep adding cluster pages cheaply.
-
-**Phase 3 — Widen programmatic broker + delete coverage**
-- Expand the `data_brokers` table coverage (add the remaining major people-search sites — e.g. Radaris, BeenVerified, TruthFinder variants, Spokeo, USPhoneBook) so every "delete from <site>" query has a matching page.
-- Add ~10 more `/delete/:slug` guides for top-searched services.
-- Internal linking: pillar guides ↔ broker pages ↔ delete guides, plus `RelatedBrokers` everywhere, to concentrate authority.
-
-### Sitemap & indexing
-- Regenerate `public/sitemap.xml` via the existing `scripts/generate-sitemap.ts` to include the new `/guides/*` routes and any new broker/delete slugs, and add `routeDefaults` priorities for them.
-- Confirm Google Search Console has the property verified so we can watch these pages get indexed.
-
-### What I'd build first
-Phase 1 + the 4 Phase-2 hub pages in the first pass — that's where the volume and the easy wins are. Phase 3 (broker DB expansion) follows.
-
-### Technical notes
-- New guide pages use `react-helmet`/`useSEO` for per-route title/description/canonical/og + JSON-LD (`Article` + `FAQPage`), mirroring `RemoveBroker.tsx`.
-- Guides stored in `src/data/guides.ts`; routes `/guides` (index) and `/guides/:slug` added in `App.tsx` above the catch-all.
-- Each page embeds `SeoEmailCapture` so SEO traffic converts into free scans.
-- Broker DB additions are SQL migrations (new rows in `data_brokers`), not schema changes.
-
-### Tracking your progress
-For ongoing rank tracking, daily ranking updates, and alerts as these pages climb, Semrush (the SEO data service the platform integrates with) can be connected to wire Position Tracking into an admin view — useful once dozens of these pages are live and you want to watch the cluster move. Optional; not needed to ship the content.
+## Build phases
+1. `remediation.ts` normalizer + ranking + hero-headline derivation (pure, testable).
+2. `RemediationItem` (typed action slot) + `NeedsAttentionList` + Done group.
+3. `ScoreHero` (compact gauge + computed headline + single CTA) and mobile sticky next-action bar.
+4. Refactor `Dashboard.tsx` to the new top-to-bottom composition; move existing sections into the "More" accordion.
+5. Verify both viewports in preview; confirm every action path (broker remove, AI contact search → deletion, keep/don't-sell, breach guide, claim unmatched) still fires.

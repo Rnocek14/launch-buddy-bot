@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Shield, RefreshCw, LogOut, Loader2, ExternalLink, Search, Download, AlertCircle, Sparkles, Mail, Tag, TrendingUp, Trash2, CheckCircle, FileText, DollarSign, Package, Lock, Bell, Settings, HelpCircle, Calendar, Activity, Share2, AlertTriangle } from "lucide-react";
+import { Shield, RefreshCw, LogOut, Loader2, ExternalLink, Search, Download, AlertCircle, Sparkles, Mail, Tag, TrendingUp, Trash2, CheckCircle, FileText, DollarSign, Package, Lock, Bell, Settings, HelpCircle, Calendar, Activity, Share2, AlertTriangle, ChevronDown } from "lucide-react";
 import { RiskScoreCard } from "@/components/RiskScoreCard";
 import { ShareResultDialog } from "@/components/ShareResultDialog";
 import { useToast } from "@/hooks/use-toast";
@@ -56,6 +56,7 @@ import { PostCheckoutScanState } from "@/components/PostCheckoutScanState";
 import { PostCheckoutNextSteps } from "@/components/PostCheckoutNextSteps";
 import { PostCheckoutScanProgressStrip } from "@/components/PostCheckoutScanProgressStrip";
 import { LiveFindingsPreview } from "@/components/LiveFindingsPreview";
+import { RemediationSection } from "@/components/dashboard/RemediationSection";
 
 interface Service {
   id: string;
@@ -1278,18 +1279,24 @@ export default function Dashboard() {
           />
         ) : (
           <>
-            {/* Privacy Score Gauge — hero element */}
-            {riskData && (
-              <PrivacyScoreGauge
-                riskScore={riskData.riskScore}
-                riskLevel={riskData.riskLevel}
-                serviceCount={services.length}
-                onShare={() => setShareDialogOpen(true)}
-              />
-            )}
-
-            {/* Privacy Snapshot — operational overview */}
-            <PrivacySnapshot />
+            {/* Score + single biggest problem + unified Needs Attention list */}
+            <RemediationSection
+              accounts={services as any}
+              riskData={riskData}
+              onRequestDeletion={handleRequestDeletion}
+              onFindContact={handleQuickDiscovery}
+              onDontSell={handleRequestDoNotSell}
+              onKeepAccount={async (a: any) => {
+                if (!userId) return;
+                await supabase
+                  .from("user_services")
+                  .update({ privacy_action: "keep", privacy_action_at: new Date().toISOString() })
+                  .eq("user_id", userId)
+                  .eq("service_id", a.id);
+                fetchServices();
+              }}
+              onShare={() => setShareDialogOpen(true)}
+            />
 
             {/* Scan Progress (only while scanning) — shown right after snapshot */}
             {scanning && scanProgress && (
@@ -1485,8 +1492,13 @@ export default function Dashboard() {
               </details>
             )}
 
-        {/* Services Grid Section */}
-          <div className="space-y-6">
+        {/* Services Grid Section — collapsed under "More" */}
+        <details className="group mt-4">
+          <summary className="cursor-pointer list-none flex items-center justify-between p-4 rounded-lg border border-border bg-card hover:border-primary/40 transition-colors">
+            <span className="text-base font-semibold">All accounts &amp; settings</span>
+            <ChevronDown className="w-5 h-5 text-muted-foreground transition-transform group-open:rotate-180" />
+          </summary>
+          <div className="space-y-6 pt-4">
             {/* View Tabs */}
             <div className="flex items-center gap-2 border-b border-border overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" id="services-grid">
               <Button
@@ -1706,6 +1718,7 @@ export default function Dashboard() {
               </>
             )}
           </div>
+        </details>
 
         {unmatchedDomains.length > 0 && (
           <Card className="mt-8 border-orange-500/20 bg-orange-500/5">
