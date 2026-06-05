@@ -98,7 +98,7 @@ export function AccountsCard({ group, handlers }: AccountsCardProps) {
             </div>
             <div className="min-w-0 flex-1">
               <h3 className="text-base sm:text-lg font-semibold text-foreground">
-                Accounts &amp; Services
+                Online Accounts
               </h3>
               <p className="text-sm sm:text-base font-medium text-foreground mt-0.5 leading-snug">
                 {reviewCount > 0
@@ -108,29 +108,6 @@ export function AccountsCard({ group, handlers }: AccountsCardProps) {
               <p className="text-xs text-muted-foreground mt-0.5">
                 {total} account{total === 1 ? "" : "s"} discovered
               </p>
-
-
-              {/* Visual summary chips — understand the situation without expanding */}
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2.5">
-                {counts.ok > 0 && (
-                  <span className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-                    <span className="w-2 h-2 rounded-full bg-green-500" />
-                    {counts.ok} OK
-                  </span>
-                )}
-                {counts.review > 0 && (
-                  <span className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-                    <span className="w-2 h-2 rounded-full bg-amber-500" />
-                    {counts.review} review
-                  </span>
-                )}
-                {counts.high > 0 && (
-                  <span className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-                    <span className="w-2 h-2 rounded-full bg-destructive" />
-                    {counts.high} high priority
-                  </span>
-                )}
-              </div>
             </div>
             <ChevronDown
               className={`w-5 h-5 text-muted-foreground shrink-0 mt-1 transition-transform ${
