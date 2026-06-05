@@ -27,7 +27,7 @@ export function NeedsAttentionList({ items, handlers, extra }: NeedsAttentionLis
         Needs your attention
       </h2>
 
-      {active.length === 0 ? (
+      {!hasContent ? (
         <div className="flex items-center gap-3 p-5 rounded-lg bg-green-500/5 border border-green-500/20">
           <ShieldCheck className="w-6 h-6 text-green-600 dark:text-green-400 shrink-0" />
           <div>
@@ -44,6 +44,7 @@ export function NeedsAttentionList({ items, handlers, extra }: NeedsAttentionLis
           {active.map((item) => (
             <RemediationItemRow key={item.id} item={item} handlers={handlers} />
           ))}
+          {extra}
         </div>
       )}
 
