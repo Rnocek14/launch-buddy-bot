@@ -101,6 +101,8 @@ export default function RemoveBroker() {
       .filter(Boolean);
   }, [broker]);
 
+  const enrichment = broker ? brokerEnrichment[broker.slug] : undefined;
+
   const seoTitle = broker
     ? `${broker.name} Opt Out: How to Delete & Remove Your Info (${new Date().getFullYear()})`
     : "Data Broker Removal Guide";
