@@ -15,12 +15,24 @@ import {
   Lock,
   Users,
   Zap,
+  Gauge,
+  Database,
+  HelpCircle,
+  Search,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useSEO } from "@/hooks/useSEO";
 import { trackEvent } from "@/lib/analytics";
 import { SeoEmailCapture } from "@/components/SeoEmailCapture";
 import { RelatedBrokers } from "@/components/RelatedBrokers";
+import { brokerEnrichment, type RemovalDifficultyLevel } from "@/data/brokerEnrichment";
+
+const enrichmentDifficultyTone: Record<RemovalDifficultyLevel, string> = {
+  Easy: "bg-accent/15 text-accent border-accent/30",
+  Medium: "bg-primary/10 text-primary border-primary/30",
+  Hard: "bg-destructive/15 text-destructive border-destructive/30",
+  "Very Hard": "bg-destructive/20 text-destructive border-destructive/40",
+};
 
 interface BrokerRecord {
   slug: string;
@@ -88,6 +100,8 @@ export default function RemoveBroker() {
       .map((s) => s.replace(/^\d+\.\s*/, "").trim())
       .filter(Boolean);
   }, [broker]);
+
+  const enrichment = broker ? brokerEnrichment[broker.slug] : undefined;
 
   const seoTitle = broker
     ? `${broker.name} Opt Out: How to Delete & Remove Your Info (${new Date().getFullYear()})`
@@ -160,6 +174,14 @@ export default function RemoveBroker() {
               text: `${broker.name} is one of 100+ data broker sites that publish personal information. Major ones include Spokeo, Whitepages, BeenVerified, Radaris, MyLife, Intelius, and PeopleFinder. Footprint Finder removes you from 45+ brokers automatically and re-checks monthly.`,
             },
           },
+          ...(enrichment?.commonProblems ?? []).map((p) => ({
+            "@type": "Question",
+            name: p.question,
+            acceptedAnswer: {
+              "@type": "Answer",
+              text: p.answer,
+            },
+          })),
         ],
       }
     : undefined;
@@ -315,6 +337,152 @@ export default function RemoveBroker() {
               </a>
             )}
           </section>
+
+          {enrichment && (
+            <>
+              {/* Removal difficulty score */}
+              <section className="mb-10">
+                <h2 className="text-2xl font-bold mb-4">
+                  {broker.name} removal difficulty
+                </h2>
+                <Card>
+                  <CardContent className="p-5 md:p-6 flex items-start gap-4">
+                    <div className="flex-shrink-0 w-11 h-11 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <Gauge className="w-5 h-5 text-primary" />
+                    </div>
+                    <div>
+                      <div className="flex flex-wrap items-center gap-2 mb-1">
+                        <Badge
+                          variant="outline"
+                          className={enrichmentDifficultyTone[enrichment.difficulty]}
+                        >
+                          {enrichment.difficulty}
+                        </Badge>
+                        <span className="text-sm text-muted-foreground">
+                          {enrichment.difficultyNote}
+                        </span>
+                      </div>
+                      <p className="text-sm text-muted-foreground leading-relaxed">
+                        Difficulty reflects the verification steps, account
+                        requirements, and how often {broker.name} re-lists removed
+                        records. Footprint Finder handles every step for you.
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </section>
+
+              {/* Expected removal timeline */}
+              <section className="mb-10">
+                <h2 className="text-2xl font-bold mb-4">
+                  Expected {broker.name} removal timeline
+                </h2>
+                <ol className="space-y-3">
+                  {enrichment.timeline.map((t, i) => (
+                    <li
+                      key={i}
+                      className="flex items-start gap-3 p-4 rounded-lg border bg-card"
+                    >
+                      <div className="flex-shrink-0 w-7 h-7 rounded-full bg-accent/15 text-accent font-bold text-sm flex items-center justify-center">
+                        {i + 1}
+                      </div>
+                      <div>
+                        <p className="font-medium text-sm">{t.label}</p>
+                        <p className="text-sm text-muted-foreground">{t.detail}</p>
+                      </div>
+                    </li>
+                  ))}
+                </ol>
+              </section>
+
+              {/* What data this broker has */}
+              <section className="mb-10">
+                <h2 className="text-2xl font-bold mb-4">
+                  What data {broker.name} typically has on you
+                </h2>
+                <Card>
+                  <CardContent className="p-5 md:p-6">
+                    <div className="flex items-center gap-2 mb-3 text-muted-foreground">
+                      <Database className="w-4 h-4" />
+                      <span className="text-sm">
+                        Information {broker.name} commonly publishes
+                      </span>
+                    </div>
+                    <ul className="grid sm:grid-cols-2 gap-2">
+                      {enrichment.dataHeld.map((d, i) => (
+                        <li key={i} className="flex items-start gap-2 text-sm">
+                          <CheckCircle2 className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
+                          <span>{d}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </CardContent>
+                </Card>
+              </section>
+
+              {/* Common problems */}
+              <section className="mb-10">
+                <h2 className="text-2xl font-bold mb-4">
+                  Common {broker.name} removal problems
+                </h2>
+                <div className="space-y-4">
+                  {enrichment.commonProblems.map((p, i) => (
+                    <Card key={i}>
+                      <CardContent className="p-5">
+                        <h3 className="font-semibold mb-1 flex items-start gap-2">
+                          <HelpCircle className="w-4 h-4 text-primary flex-shrink-0 mt-1" />
+                          {p.question}
+                        </h3>
+                        <p className="text-sm text-muted-foreground leading-relaxed pl-6">
+                          {p.answer}
+                        </p>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </section>
+
+              {/* What to do after removal */}
+              <section className="mb-10">
+                <h2 className="text-2xl font-bold mb-4">
+                  What to do after removing yourself from {broker.name}
+                </h2>
+                <Card className="border-accent/30 bg-accent/5">
+                  <CardContent className="p-5 md:p-6">
+                    <ul className="space-y-3">
+                      <li className="flex items-start gap-2 text-sm">
+                        <Search className="w-4 h-4 text-accent flex-shrink-0 mt-0.5" />
+                        <span>
+                          <strong>Scan for the rest.</strong> {broker.name} is one of
+                          50+ sites that likely list you.{" "}
+                          <Link to="/free-scan" className="text-primary underline underline-offset-2">
+                            Run a free scan
+                          </Link>{" "}
+                          to find every account and broker tied to your email.
+                        </span>
+                      </li>
+                      <li className="flex items-start gap-2 text-sm">
+                        <Clock className="w-4 h-4 text-accent flex-shrink-0 mt-0.5" />
+                        <span>
+                          <strong>Recheck in 30 days.</strong> {broker.name} re-lists
+                          removed records as its sources refresh — confirm your listing
+                          hasn't returned.
+                        </span>
+                      </li>
+                      <li className="flex items-start gap-2 text-sm">
+                        <Shield className="w-4 h-4 text-accent flex-shrink-0 mt-0.5" />
+                        <span>
+                          <strong>Cover related brokers.</strong> Removing yourself from
+                          similar people-search sites below closes the gaps {broker.name}
+                          leaves open.
+                        </span>
+                      </li>
+                    </ul>
+                  </CardContent>
+                </Card>
+              </section>
+            </>
+          )}
 
           {/* Watch-outs */}
           <section className="mb-10">
