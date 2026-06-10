@@ -16,7 +16,32 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { useEffect } from "react";
-import { COMPETITORS } from "@/data/competitors";
+import {
+  COMPETITORS,
+  FOOTPRINT_FINDER_FEATURES,
+  FOOTPRINT_FINDER_BROKER_COVERAGE,
+  type CompetitorFeatures,
+} from "@/data/competitors";
+
+const FEATURE_ROWS: { key: keyof CompetitorFeatures; label: string }[] = [
+  { key: "inboxScan", label: "Inbox scan for forgotten accounts" },
+  { key: "brokerRemoval", label: "Data-broker removal" },
+  { key: "breachMonitoring", label: "Data-breach monitoring" },
+  { key: "gdprCcpaRequests", label: "GDPR / CCPA data requests" },
+  { key: "accountDeletionHelp", label: "Account & subscription deletion help" },
+  { key: "ongoingMonitoring", label: "Ongoing re-scans & alerts" },
+];
+
+// High-intent broker pages to interlink from every comparison page,
+// building the privacy-removal topical cluster.
+const RELATED_BROKERS = [
+  { slug: "truepeoplesearch", name: "TruePeopleSearch" },
+  { slug: "spokeo", name: "Spokeo" },
+  { slug: "radaris", name: "Radaris" },
+  { slug: "mylife", name: "MyLife" },
+  { slug: "whitepages", name: "Whitepages" },
+  { slug: "beenverified", name: "BeenVerified" },
+];
 
 export default function Compare() {
   const { competitor } = useParams<{ competitor: string }>();
