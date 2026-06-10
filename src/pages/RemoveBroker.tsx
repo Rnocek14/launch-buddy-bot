@@ -174,6 +174,14 @@ export default function RemoveBroker() {
               text: `${broker.name} is one of 100+ data broker sites that publish personal information. Major ones include Spokeo, Whitepages, BeenVerified, Radaris, MyLife, Intelius, and PeopleFinder. Footprint Finder removes you from 45+ brokers automatically and re-checks monthly.`,
             },
           },
+          ...(enrichment?.commonProblems ?? []).map((p) => ({
+            "@type": "Question",
+            name: p.question,
+            acceptedAnswer: {
+              "@type": "Answer",
+              text: p.answer,
+            },
+          })),
         ],
       }
     : undefined;
