@@ -218,7 +218,58 @@ export default function Compare() {
             </div>
           </section>
 
-          {/* Why FF wins */}
+          {/* Feature comparison matrix */}
+          <section className="mb-12">
+            <h2 className="text-2xl font-bold mb-2">
+              Feature comparison: Footprint Finder vs {data.name}
+            </h2>
+            <p className="text-sm text-muted-foreground mb-6">
+              Coverage: Footprint Finder removes you from{" "}
+              {FOOTPRINT_FINDER_BROKER_COVERAGE}; {data.name} covers{" "}
+              {data.brokerCoverage}.
+            </p>
+            <div className="overflow-hidden rounded-lg border">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b bg-muted/40">
+                    <th className="text-left font-semibold p-3">Capability</th>
+                    <th className="text-center font-semibold p-3 w-32">
+                      Footprint Finder
+                    </th>
+                    <th className="text-center font-semibold p-3 w-32">
+                      {data.name}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {FEATURE_ROWS.map((row, i) => (
+                    <tr
+                      key={row.key}
+                      className={i % 2 === 1 ? "bg-muted/20" : undefined}
+                    >
+                      <td className="p-3">{row.label}</td>
+                      <td className="p-3 text-center">
+                        {FOOTPRINT_FINDER_FEATURES[row.key] ? (
+                          <CheckCircle2 className="w-4 h-4 text-accent inline" aria-label="Yes" />
+                        ) : (
+                          <XCircle className="w-4 h-4 text-destructive/60 inline" aria-label="No" />
+                        )}
+                      </td>
+                      <td className="p-3 text-center">
+                        {data.features[row.key] ? (
+                          <CheckCircle2 className="w-4 h-4 text-muted-foreground inline" aria-label="Yes" />
+                        ) : (
+                          <XCircle className="w-4 h-4 text-destructive/60 inline" aria-label="No" />
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+
           <section className="mb-12">
             <h2 className="text-2xl font-bold mb-6">
               What Footprint Finder does that {data.name} doesn't
