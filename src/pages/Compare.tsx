@@ -16,7 +16,32 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { useEffect } from "react";
-import { COMPETITORS } from "@/data/competitors";
+import {
+  COMPETITORS,
+  FOOTPRINT_FINDER_FEATURES,
+  FOOTPRINT_FINDER_BROKER_COVERAGE,
+  type CompetitorFeatures,
+} from "@/data/competitors";
+
+const FEATURE_ROWS: { key: keyof CompetitorFeatures; label: string }[] = [
+  { key: "inboxScan", label: "Inbox scan for forgotten accounts" },
+  { key: "brokerRemoval", label: "Data-broker removal" },
+  { key: "breachMonitoring", label: "Data-breach monitoring" },
+  { key: "gdprCcpaRequests", label: "GDPR / CCPA data requests" },
+  { key: "accountDeletionHelp", label: "Account & subscription deletion help" },
+  { key: "ongoingMonitoring", label: "Ongoing re-scans & alerts" },
+];
+
+// High-intent broker pages to interlink from every comparison page,
+// building the privacy-removal topical cluster.
+const RELATED_BROKERS = [
+  { slug: "truepeoplesearch", name: "TruePeopleSearch" },
+  { slug: "spokeo", name: "Spokeo" },
+  { slug: "radaris", name: "Radaris" },
+  { slug: "mylife", name: "MyLife" },
+  { slug: "whitepages", name: "Whitepages" },
+  { slug: "beenverified", name: "BeenVerified" },
+];
 
 export default function Compare() {
   const { competitor } = useParams<{ competitor: string }>();
@@ -193,7 +218,58 @@ export default function Compare() {
             </div>
           </section>
 
-          {/* Why FF wins */}
+          {/* Feature comparison matrix */}
+          <section className="mb-12">
+            <h2 className="text-2xl font-bold mb-2">
+              Feature comparison: Footprint Finder vs {data.name}
+            </h2>
+            <p className="text-sm text-muted-foreground mb-6">
+              Coverage: Footprint Finder removes you from{" "}
+              {FOOTPRINT_FINDER_BROKER_COVERAGE}; {data.name} covers{" "}
+              {data.brokerCoverage}.
+            </p>
+            <div className="overflow-hidden rounded-lg border">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b bg-muted/40">
+                    <th className="text-left font-semibold p-3">Capability</th>
+                    <th className="text-center font-semibold p-3 w-32">
+                      Footprint Finder
+                    </th>
+                    <th className="text-center font-semibold p-3 w-32">
+                      {data.name}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {FEATURE_ROWS.map((row, i) => (
+                    <tr
+                      key={row.key}
+                      className={i % 2 === 1 ? "bg-muted/20" : undefined}
+                    >
+                      <td className="p-3">{row.label}</td>
+                      <td className="p-3 text-center">
+                        {FOOTPRINT_FINDER_FEATURES[row.key] ? (
+                          <CheckCircle2 className="w-4 h-4 text-accent inline" aria-label="Yes" />
+                        ) : (
+                          <XCircle className="w-4 h-4 text-destructive/60 inline" aria-label="No" />
+                        )}
+                      </td>
+                      <td className="p-3 text-center">
+                        {data.features[row.key] ? (
+                          <CheckCircle2 className="w-4 h-4 text-muted-foreground inline" aria-label="Yes" />
+                        ) : (
+                          <XCircle className="w-4 h-4 text-destructive/60 inline" aria-label="No" />
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+
           <section className="mb-12">
             <h2 className="text-2xl font-bold mb-6">
               What Footprint Finder does that {data.name} doesn't
@@ -300,8 +376,34 @@ export default function Compare() {
             </CardContent>
           </Card>
 
-          {/* Other comparisons */}
+          {/* Internal links — broker removal guides (topical cluster) */}
           <section className="mt-12">
+            <h2 className="text-lg font-semibold mb-2">
+              Popular data-broker removal guides
+            </h2>
+            <p className="text-sm text-muted-foreground mb-4">
+              Whichever service you choose, here's how to opt out of the brokers
+              people search for most:
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {RELATED_BROKERS.map((b) => (
+                <Link key={b.slug} to={`/remove-from/${b.slug}`}>
+                  <Button variant="outline" size="sm">
+                    {b.name} opt out
+                  </Button>
+                </Link>
+              ))}
+              <Link to="/remove-from">
+                <Button variant="ghost" size="sm" className="gap-1">
+                  All removal guides
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </Button>
+              </Link>
+            </div>
+          </section>
+
+          {/* Other comparisons */}
+          <section className="mt-10">
             <h2 className="text-lg font-semibold mb-4">
               Compare other privacy tools
             </h2>
@@ -317,6 +419,7 @@ export default function Compare() {
                 ))}
             </div>
           </section>
+
         </div>
       </main>
 

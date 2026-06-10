@@ -63,7 +63,7 @@ const lowPriorityRoutes = new Set([
 ]);
 
 const fallbackBrokerSlugs = ["411", "acxiom", "addresses", "advancedbackgroundchecks", "apollo", "beenverified", "checkpeople", "clustrmaps", "cocofinder", "cyberbackgroundchecks", "epsilon", "familytreenow", "fastpeoplesearch", "idtrue", "infotracer", "instantcheckmate", "intelius", "lead411", "lexisnexis", "mylife", "nuwber", "peekyou", "peoplebyname", "peoplefinders", "peoplelooker", "peoplesearchnow", "persopo", "publicrecords360", "publicrecordsnow", "radaris", "rocketreach", "searchpeoplefree", "smartbackgroundchecks", "spokeo", "thatsthem", "truepeoplesearch", "truthfinder", "usa-people-search", "usphonebook", "voterrecords", "whitepages", "xlek", "yellowpages", "zabasearch", "zoominfo"];
-const compareSlugs = ["deleteme", "incogni", "onerep", "aura", "optery", "kanary", "mine"];
+const compareSlugs = ["deleteme", "incogni", "onerep", "privacybee", "easyoptouts", "aura", "optery", "kanary", "mine"];
 const deleteGuideSlugs = ["facebook", "instagram", "amazon", "linkedin", "spotify", "twitter", "tiktok", "snapchat", "reddit", "pinterest"];
 
 function getStaticRoutesFromApp() {
