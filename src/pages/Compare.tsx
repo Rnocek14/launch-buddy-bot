@@ -376,8 +376,34 @@ export default function Compare() {
             </CardContent>
           </Card>
 
-          {/* Other comparisons */}
+          {/* Internal links — broker removal guides (topical cluster) */}
           <section className="mt-12">
+            <h2 className="text-lg font-semibold mb-2">
+              Popular data-broker removal guides
+            </h2>
+            <p className="text-sm text-muted-foreground mb-4">
+              Whichever service you choose, here's how to opt out of the brokers
+              people search for most:
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {RELATED_BROKERS.map((b) => (
+                <Link key={b.slug} to={`/remove-from/${b.slug}`}>
+                  <Button variant="outline" size="sm">
+                    {b.name} opt out
+                  </Button>
+                </Link>
+              ))}
+              <Link to="/remove-from">
+                <Button variant="ghost" size="sm" className="gap-1">
+                  All removal guides
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </Button>
+              </Link>
+            </div>
+          </section>
+
+          {/* Other comparisons */}
+          <section className="mt-10">
             <h2 className="text-lg font-semibold mb-4">
               Compare other privacy tools
             </h2>
@@ -393,6 +419,7 @@ export default function Compare() {
                 ))}
             </div>
           </section>
+
         </div>
       </main>
 
