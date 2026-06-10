@@ -15,12 +15,24 @@ import {
   Lock,
   Users,
   Zap,
+  Gauge,
+  Database,
+  HelpCircle,
+  Search,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useSEO } from "@/hooks/useSEO";
 import { trackEvent } from "@/lib/analytics";
 import { SeoEmailCapture } from "@/components/SeoEmailCapture";
 import { RelatedBrokers } from "@/components/RelatedBrokers";
+import { brokerEnrichment, type RemovalDifficultyLevel } from "@/data/brokerEnrichment";
+
+const enrichmentDifficultyTone: Record<RemovalDifficultyLevel, string> = {
+  Easy: "bg-accent/15 text-accent border-accent/30",
+  Medium: "bg-primary/10 text-primary border-primary/30",
+  Hard: "bg-destructive/15 text-destructive border-destructive/30",
+  "Very Hard": "bg-destructive/20 text-destructive border-destructive/40",
+};
 
 interface BrokerRecord {
   slug: string;
