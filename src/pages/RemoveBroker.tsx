@@ -90,7 +90,7 @@ export default function RemoveBroker() {
   }, [broker]);
 
   const seoTitle = broker
-    ? `How to Delete Your Info from ${broker.name} & Opt Out (${new Date().getFullYear()} Guide)`
+    ? `${broker.name} Opt Out: How to Delete & Remove Your Info (${new Date().getFullYear()})`
     : "Data Broker Removal Guide";
   const seoDescription = broker
     ? `How to delete your personal information from ${broker.name} and opt out for free. Step-by-step removal guide — takes ${broker.opt_out_time_estimate ?? "a few minutes"}. Or let Footprint Finder remove you from 45+ brokers automatically.`
@@ -234,7 +234,7 @@ export default function RemoveBroker() {
               )}
             </div>
             <h1 className="text-3xl md:text-5xl font-bold mb-4 leading-tight">
-              How to Delete Your Info from {broker.name}
+              {broker.name} Opt Out: How to Delete &amp; Remove Your Info
             </h1>
             <p className="text-lg text-muted-foreground leading-relaxed">
               {broker.name} is a data broker that publishes personal information — name,
