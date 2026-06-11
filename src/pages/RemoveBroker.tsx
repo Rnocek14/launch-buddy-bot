@@ -186,7 +186,37 @@ export default function RemoveBroker() {
       }
     : undefined;
 
-  const jsonLd = [howToJsonLd, faqJsonLd].filter(Boolean) as Record<string, unknown>[];
+  const breadcrumbJsonLd = broker
+    ? {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          {
+            "@type": "ListItem",
+            position: 1,
+            name: "Home",
+            item: "https://footprintfinder.co/",
+          },
+          {
+            "@type": "ListItem",
+            position: 2,
+            name: "Remove From Brokers",
+            item: "https://footprintfinder.co/remove-from",
+          },
+          {
+            "@type": "ListItem",
+            position: 3,
+            name: broker.name,
+            item: `https://footprintfinder.co/remove-from/${broker.slug}`,
+          },
+        ],
+      }
+    : undefined;
+
+  const jsonLd = [howToJsonLd, faqJsonLd, breadcrumbJsonLd].filter(Boolean) as Record<
+    string,
+    unknown
+  >[];
 
   useSEO({
     title: seoTitle,
