@@ -98,7 +98,10 @@ export const DELETE_GUIDES: DeleteGuide[] = [
       { title: "Open Close account", body: "Settings & Privacy → Account preferences → Account management → Close account." },
       { title: "Confirm the reason and password", body: "Pick a reason, enter your password, and submit." },
     ],
-    gotchas: ["Premium subscriptions must be cancelled first or you keep getting billed."],
+    gotchas: [
+      "Premium subscriptions must be cancelled first or you keep getting billed.",
+      "Before closing, turn off data sharing: Settings & Privacy → Data privacy → How LinkedIn uses your data → 'Manage your data and activity' and disable third-party data sharing and advertising data — closing the account alone does not retroactively pull data already shared with partners.",
+    ],
   },
   {
     slug: "spotify",
