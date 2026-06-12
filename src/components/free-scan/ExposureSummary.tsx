@@ -104,9 +104,9 @@ export function ExposureSummary({ email, breachCount, estimate, brokerFindings, 
               />
               <StatBlock
                 icon={Database}
-                value={breachCount}
+                value={breachValue}
                 label="known breaches"
-                sub="from public breach databases"
+                sub={breachSub}
               />
             </>
           ) : (
