@@ -20,6 +20,9 @@ interface ExposureSummaryProps {
   /** Real findings from the live broker check. When present, the summary
    *  switches from estimates to confirmed reality. */
   brokerFindings?: BrokerFindings | null;
+  /** When the breach lookup failed (e.g. HIBP unavailable), we must NOT
+   *  render a confident "0 known breaches" — show an unknown state instead. */
+  breachError?: string | null;
 }
 
 /**
@@ -27,10 +30,16 @@ interface ExposureSummaryProps {
  * Leads with the exposure count, explains what it means and what we remove,
  * then offers ONE primary action. Everything else on the page is secondary.
  */
-export function ExposureSummary({ email, breachCount, estimate, brokerFindings }: ExposureSummaryProps) {
+export function ExposureSummary({ email, breachCount, estimate, brokerFindings, breachError }: ExposureSummaryProps) {
   const hasReality = !!brokerFindings && (brokerFindings.confirmedCount + brokerFindings.possibleCount) > 0;
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+
+  // When the breach lookup failed we don't know the real count — never imply "clean".
+  const breachValue: string | number = breachError ? "—" : breachCount;
+  const breachSub = breachError
+    ? "breach check unavailable — try again shortly"
+    : "from public breach databases";
 
   const handleRemove = async () => {
     setLoading(true);
@@ -95,18 +104,18 @@ export function ExposureSummary({ email, breachCount, estimate, brokerFindings }
               />
               <StatBlock
                 icon={Database}
-                value={breachCount}
+                value={breachValue}
                 label="known breaches"
-                sub="from public breach databases"
+                sub={breachSub}
               />
             </>
           ) : (
             <>
               <StatBlock
                 icon={AlertTriangle}
-                value={breachCount}
+                value={breachValue}
                 label="known breaches"
-                sub="from public breach databases"
+                sub={breachSub}
               />
               <StatBlock
                 icon={Database}

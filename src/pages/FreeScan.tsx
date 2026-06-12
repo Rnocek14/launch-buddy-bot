@@ -210,6 +210,7 @@ export default function FreeScan() {
                   breachCount={results.breachCount}
                   estimate={estimateIceberg(email, results.breachCount)}
                   brokerFindings={brokerFindings}
+                  breachError={results.breachError}
                 />
               </section>
 
