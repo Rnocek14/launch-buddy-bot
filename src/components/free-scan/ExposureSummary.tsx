@@ -20,6 +20,9 @@ interface ExposureSummaryProps {
   /** Real findings from the live broker check. When present, the summary
    *  switches from estimates to confirmed reality. */
   brokerFindings?: BrokerFindings | null;
+  /** When the breach lookup failed (e.g. HIBP unavailable), we must NOT
+   *  render a confident "0 known breaches" — show an unknown state instead. */
+  breachError?: string | null;
 }
 
 /**
