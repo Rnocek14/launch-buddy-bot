@@ -55,6 +55,8 @@ import DeleteServiceIndex from "./pages/DeleteServiceIndex";
 import DeleteService from "./pages/DeleteService";
 import GuideIndex from "./pages/GuideIndex";
 import Guide from "./pages/Guide";
+import Breach from "./pages/Breach";
+import BreachIndex from "./pages/BreachIndex";
 import { captureAffiliateRef } from "./lib/affiliateTracking";
 
 if (typeof window !== "undefined") {
@@ -120,6 +122,8 @@ const App = () => (
               <Route path="/delete/:slug" element={<DeleteService />} />
               <Route path="/guides" element={<GuideIndex />} />
               <Route path="/guides/:slug" element={<Guide />} />
+              <Route path="/breach" element={<BreachIndex />} />
+              <Route path="/breach/:slug" element={<Breach />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
