@@ -98,6 +98,7 @@ export default function FreeScan() {
 
     trackEvent("scan_completed", {
       source: "free_scan",
+      src,
       breach_count: breachData.breachCount,
       critical_count: breachData.criticalCount,
     });
