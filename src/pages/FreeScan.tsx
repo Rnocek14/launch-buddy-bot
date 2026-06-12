@@ -54,7 +54,8 @@ export default function FreeScan() {
   const runScan = useCallback(async (scanEmail: string) => {
     setIsScanning(true);
     setError("");
-    trackEvent("scan_started", { source: "free_scan" });
+    const src = searchParams.get("src") || "direct";
+    trackEvent("scan_started", { source: "free_scan", src });
 
     // Phase 1: Breach check
     setScanPhase("Checking breach databases...");
