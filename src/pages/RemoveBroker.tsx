@@ -284,6 +284,12 @@ export default function RemoveBroker() {
                   ID verification
                 </Badge>
               )}
+              {enrichment?.lastVerified && (
+                <Badge variant="outline" className="gap-1 text-accent border-accent/30 bg-accent/5">
+                  <CheckCircle2 className="w-3 h-3" />
+                  Steps verified {new Date(enrichment.lastVerified).toLocaleDateString("en-US", { month: "long", year: "numeric" })}
+                </Badge>
+              )}
             </div>
             <h1 className="text-3xl md:text-5xl font-bold mb-4 leading-tight">
               {broker.name} Opt Out: How to Delete &amp; Remove Your Info
