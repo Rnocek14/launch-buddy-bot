@@ -32,6 +32,12 @@ export interface BrokerEnrichment {
   dataHeld: string[];
   /** Long-tail "why is this happening" questions users actually search. */
   commonProblems: CommonProblem[];
+  /** How long until the broker typically re-lists removed records, e.g. "3–6 months". */
+  relistWindow?: string;
+  /** Broker-specific gotcha that trips people up or limits free/agent removal. */
+  gotcha?: string;
+  /** ISO date the opt-out steps were last hand-verified (E-E-A-T freshness signal). */
+  lastVerified?: string;
 }
 
 export const brokerEnrichment: Record<string, BrokerEnrichment> = {
