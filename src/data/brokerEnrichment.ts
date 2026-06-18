@@ -113,6 +113,10 @@ export const brokerEnrichment: Record<string, BrokerEnrichment> = {
           "MyLife frequently routes opt-outs through phone verification to slow down removals. Keep a record of your request date and confirmation reference in case you need to escalate.",
       },
     ],
+    relistWindow: "30–90 days",
+    gotcha:
+      "Separates the reputation score from the underlying data record — you often must remove both, and phone verification is used to slow the process down.",
+    lastVerified: "2026-06-18",
   },
 
   smartbackgroundchecks: {
