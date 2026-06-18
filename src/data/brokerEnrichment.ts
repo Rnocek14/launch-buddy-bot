@@ -152,6 +152,10 @@ export const brokerEnrichment: Record<string, BrokerEnrichment> = {
           "Different address and phone combinations generate separate records. Each one must be opted out individually to fully remove your exposure.",
       },
     ],
+    relistWindow: "30–90 days",
+    gotcha:
+      "Shares data with affiliate people-search sites, so removed records often reappear as those shared pools refresh.",
+    lastVerified: "2026-06-18",
   },
 
   idtrue: {
