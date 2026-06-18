@@ -284,6 +284,12 @@ export default function RemoveBroker() {
                   ID verification
                 </Badge>
               )}
+              {enrichment?.lastVerified && (
+                <Badge variant="outline" className="gap-1 text-accent border-accent/30 bg-accent/5">
+                  <CheckCircle2 className="w-3 h-3" />
+                  Steps verified {new Date(enrichment.lastVerified).toLocaleDateString("en-US", { month: "long", year: "numeric" })}
+                </Badge>
+              )}
             </div>
             <h1 className="text-3xl md:text-5xl font-bold mb-4 leading-tight">
               {broker.name} Opt Out: How to Delete &amp; Remove Your Info
@@ -513,6 +519,47 @@ export default function RemoveBroker() {
               </section>
             </>
           )}
+
+          {/* Will it come back? — the maintenance/moat section */}
+          <section className="mb-10">
+            <h2 className="text-2xl font-bold mb-4">
+              Will {broker.name} re-list me? (and what about California's DROP?)
+            </h2>
+            <Card className="border-primary/30 bg-primary/5">
+              <CardContent className="p-5 md:p-6 space-y-4 text-sm leading-relaxed">
+                <p>
+                  <strong>Opting out once is not permanent.</strong> {broker.name} re-acquires
+                  data from public records and other sources, so removed listings typically
+                  reappear within{" "}
+                  <strong>{enrichment?.relistWindow ?? "3–6 months"}</strong>. The real work
+                  isn't the one-time removal — it's re-checking and re-submitting on a schedule,
+                  forever.
+                </p>
+                {enrichment?.gotcha && (
+                  <p className="flex items-start gap-2 text-muted-foreground">
+                    <AlertTriangle className="w-4 h-4 text-accent flex-shrink-0 mt-0.5" />
+                    <span>
+                      <strong className="text-foreground">Watch out:</strong> {enrichment.gotcha}
+                    </span>
+                  </p>
+                )}
+                <p className="text-muted-foreground">
+                  California's free <strong>DROP</strong> platform (live since January 2026) lets
+                  residents send one deletion request to 500+ registered brokers — and manual
+                  opt-outs work well at first. But free, one-time tools delete; they don't{" "}
+                  <em>maintain</em>. Footprint Finder re-scans every 30–90 days, catches re-listings
+                  as they happen, and re-submits — so you never have to think about {broker.name}{" "}
+                  again.
+                </p>
+                <Link to="/free-scan">
+                  <Button className="gap-2 cta-shimmer">
+                    Start my free scan <ArrowRight className="w-4 h-4" />
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
+          </section>
+
 
           {/* Watch-outs */}
           <section className="mb-10">
