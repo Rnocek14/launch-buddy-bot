@@ -74,6 +74,10 @@ export const brokerEnrichment: Record<string, BrokerEnrichment> = {
           "Each unique address or phone number can generate a separate profile. Remove every variation individually — leaving one live means your data is still public.",
       },
     ],
+    relistWindow: "3–6 months",
+    gotcha:
+      "Exposes an unusually broad record including marital, court, and property records, so partial removals leave a lot behind.",
+    lastVerified: "2026-06-18",
   },
 
   mylife: {
