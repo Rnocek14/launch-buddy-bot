@@ -277,42 +277,6 @@
     <priority>0.75</priority>
   </url>
   <url>
-    <loc>https://footprintfinder.co/delete/gmail</loc>
-    <lastmod>2026-06-12</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.75</priority>
-  </url>
-  <url>
-    <loc>https://footprintfinder.co/delete/myfitnesspal</loc>
-    <lastmod>2026-06-12</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.75</priority>
-  </url>
-  <url>
-    <loc>https://footprintfinder.co/delete/shein</loc>
-    <lastmod>2026-06-12</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.75</priority>
-  </url>
-  <url>
-    <loc>https://footprintfinder.co/delete/temu</loc>
-    <lastmod>2026-06-12</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.75</priority>
-  </url>
-  <url>
-    <loc>https://footprintfinder.co/delete/ticketmaster</loc>
-    <lastmod>2026-06-12</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.75</priority>
-  </url>
-  <url>
-    <loc>https://footprintfinder.co/delete/tinder</loc>
-    <lastmod>2026-06-12</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.75</priority>
-  </url>
-  <url>
     <loc>https://footprintfinder.co/delete/facebook</loc>
     <lastmod>2026-05-17</lastmod>
     <changefreq>monthly</changefreq>
@@ -841,22 +805,16 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://footprintfinder.co/delete</loc>
+    <loc>https://footprintfinder.co/breach</loc>
     <lastmod>2026-05-17</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://footprintfinder.co/breach</loc>
-    <lastmod>2026-06-12</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://footprintfinder.co/breach/national-public-data</loc>
-    <lastmod>2026-06-12</lastmod>
+    <loc>https://footprintfinder.co/delete</loc>
+    <lastmod>2026-05-17</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
+    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://footprintfinder.co/demo</loc>
