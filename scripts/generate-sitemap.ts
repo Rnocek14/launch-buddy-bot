@@ -83,6 +83,11 @@ function getGuideSlugs() {
   return Array.from(guides.matchAll(/slug:\s*"([^"]+)"/g)).map((match) => match[1]);
 }
 
+function getBreachSlugs() {
+  const breaches = readFileSync(resolve("src/data/breachEvents.ts"), "utf8");
+  return Array.from(breaches.matchAll(/slug:\s*"([^"]+)"/g)).map((match) => match[1]);
+}
+
 async function getBrokerSlugs() {
   try {
     const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
@@ -173,6 +178,10 @@ async function main() {
 
   for (const slug of getGuideSlugs()) {
     addEntry(entries, { path: `/guides/${slug}`, changefreq: "monthly", priority: "0.8" });
+  }
+
+  for (const slug of getBreachSlugs()) {
+    addEntry(entries, { path: `/breach/${slug}`, changefreq: "weekly", priority: "0.8" });
   }
 
   for (const slug of compareSlugs) {
