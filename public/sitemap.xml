@@ -97,6 +97,12 @@
     <priority>0.85</priority>
   </url>
   <url>
+    <loc>https://footprintfinder.co/breach/national-public-data</loc>
+    <lastmod>2026-05-17</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://footprintfinder.co/enterprise</loc>
     <lastmod>2026-05-17</lastmod>
     <changefreq>monthly</changefreq>
