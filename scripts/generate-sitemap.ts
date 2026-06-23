@@ -180,6 +180,10 @@ async function main() {
     addEntry(entries, { path: `/guides/${slug}`, changefreq: "monthly", priority: "0.8" });
   }
 
+  for (const slug of getBreachSlugs()) {
+    addEntry(entries, { path: `/breach/${slug}`, changefreq: "weekly", priority: "0.8" });
+  }
+
   for (const slug of compareSlugs) {
     addEntry(entries, { path: `/vs/${slug}`, changefreq: "monthly", priority: slug === "deleteme" || slug === "incogni" ? "0.9" : "0.85" });
   }
