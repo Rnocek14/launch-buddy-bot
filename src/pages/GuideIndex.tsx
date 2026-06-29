@@ -32,7 +32,7 @@ import { useSEO } from "@/hooks/useSEO";
 
 export default function GuideIndex() {
   useSEO({
-    title: "Privacy Guides — Remove Your Information From the Internet | Footprint Finder",
+    title: "Privacy & Data Removal Guides | Footprint Finder",
     description:
       "Free, step-by-step guides to removing your personal information from the internet, Google and data brokers. Plus a 60-second scan to find where you're exposed.",
     canonical: "https://footprintfinder.co/guides",
