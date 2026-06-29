@@ -208,7 +208,7 @@ export function FailedDiscoveriesLog() {
                         {failure.service_catalog?.logo_url && (
                           <img
                             src={failure.service_catalog.logo_url}
-                            alt=""
+                            alt={`${failure.service_catalog?.name ?? "Service"} logo`}
                             className="h-6 w-6 rounded object-contain"
                           />
                         )}

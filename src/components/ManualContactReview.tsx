@@ -309,7 +309,7 @@ export function ManualContactReview() {
                           {submission.service_catalog?.logo_url && (
                             <img
                               src={submission.service_catalog.logo_url}
-                              alt=""
+                              alt={`${submission.service_catalog?.name ?? "Service"} logo`}
                               className="h-6 w-6 rounded object-contain"
                             />
                           )}
@@ -374,7 +374,7 @@ export function ManualContactReview() {
                   {selectedSubmission.service_catalog?.logo_url && (
                     <img
                       src={selectedSubmission.service_catalog.logo_url}
-                      alt=""
+                      alt={`${selectedSubmission.service_catalog?.name ?? "Service"} logo`}
                       className="h-8 w-8 rounded object-contain"
                     />
                   )}
