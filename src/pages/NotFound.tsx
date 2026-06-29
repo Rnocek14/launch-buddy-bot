@@ -2,9 +2,16 @@ import { useLocation, Link } from "react-router-dom";
 import { useEffect } from "react";
 import { Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useSEO } from "@/hooks/useSEO";
 
 const NotFound = () => {
   const location = useLocation();
+
+  useSEO({
+    title: "Page Not Found — Footprint Finder",
+    description: "The page you're looking for doesn't exist. Return home to run a free exposure scan or browse our privacy removal guides.",
+    noindex: true,
+  });
 
   useEffect(() => {
     console.error("404 Error: User attempted to access non-existent route:", location.pathname);
