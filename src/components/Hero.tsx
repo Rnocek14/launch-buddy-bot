@@ -88,6 +88,7 @@ export const Hero = () => {
                 <form onSubmit={handleScan} className="flex flex-col sm:flex-row gap-2">
                   <Input
                     type="email"
+                    aria-label="Your email address"
                     placeholder="Enter your email to start scan"
                     value={email}
                     onChange={(e) => { setEmail(e.target.value); setError(""); }}

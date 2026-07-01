@@ -364,7 +364,7 @@ export const ContactVerification = () => {
                       {contact.service_catalog.logo_url && (
                         <img
                           src={contact.service_catalog.logo_url}
-                          alt={contact.service_catalog.name}
+                          alt={`${contact.service_catalog.name} logo`}
                           className="h-6 w-6 rounded"
                         />
                       )}

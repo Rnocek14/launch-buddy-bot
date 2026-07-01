@@ -734,7 +734,7 @@ export default function Admin() {
                         </div>
                         <img 
                           src={service.logo_url}
-                          alt={service.name}
+                          alt={`${service.name} logo`}
                           className="w-10 h-10 rounded object-cover"
                           onError={(e) => {
                             e.currentTarget.src = "/placeholder.svg";
