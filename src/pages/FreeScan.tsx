@@ -165,6 +165,7 @@ export default function FreeScan() {
                   <div className="flex flex-col sm:flex-row gap-3">
                     <Input
                       type="email"
+                      aria-label="Your email address"
                       placeholder="your@email.com"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}

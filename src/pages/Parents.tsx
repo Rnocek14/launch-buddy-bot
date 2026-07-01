@@ -132,6 +132,7 @@ export default function Parents() {
                   <div className="flex flex-col sm:flex-row gap-3">
                     <Input
                       type="email"
+                      aria-label="Parent's email address"
                       placeholder="Mom or Dad's email address"
                       value={parentEmail}
                       onChange={(e) => setParentEmail(e.target.value)}
@@ -385,6 +386,7 @@ export default function Parents() {
               <div className="flex flex-col sm:flex-row gap-3">
                 <Input
                   type="email"
+                  aria-label="Parent's email address"
                   placeholder="Mom or Dad's email address"
                   value={parentEmail}
                   onChange={(e) => setParentEmail(e.target.value)}
