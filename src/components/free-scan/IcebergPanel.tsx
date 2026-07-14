@@ -209,7 +209,7 @@ export function IcebergPanel({ email, breachCount, estimate }: IcebergPanelProps
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-primary">•</span>
-                <span>Inbox scan + 200+ broker sweep starts immediately</span>
+                <span>Inbox scan + 25+ broker sweep starts immediately</span>
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-primary">•</span>
@@ -221,7 +221,7 @@ export function IcebergPanel({ email, breachCount, estimate }: IcebergPanelProps
           {/* Honest Free vs Complete framing — no more "free already shows everything" */}
           <p className="text-[11px] text-center text-muted-foreground pt-2 border-t border-border/50">
             <span className="font-medium">Free:</span> 1 inbox + light scan ·{" "}
-            <span className="font-medium">Complete:</span> deep scan + 200+ data brokers + removals
+            <span className="font-medium">Complete:</span> deep scan + 25+ data brokers + removals
           </p>
         </div>
       </CardContent>

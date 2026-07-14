@@ -8,6 +8,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { trackEvent } from "@/lib/analytics";
 import { CompleteCheckoutButton } from "./CompleteCheckoutButton";
+import { BROKER_COUNT_LABEL } from "@/config/brokers";
 
 type BrokerStatus = "found" | "possible_match" | "not_found" | "unknown";
 
@@ -151,10 +152,10 @@ export function LiveBrokerCheck({ email, onResults }: LiveBrokerCheckProps) {
           <div className="px-6 py-6 bg-gradient-to-b from-primary/5 to-primary/10 border-t border-border space-y-3">
               <p className="text-sm text-muted-foreground">
                 {exposedCount > 0
-                  ? `These are just ${results.length} of 200+ sites. Your full plan scans and removes you from all of them — plus continuous monitoring so you don't reappear.`
+                  ? `These are just ${results.length} of ${BROKER_COUNT_LABEL} sites we remove you from. Your full plan scans and removes you from all of them — plus continuous monitoring so you don't reappear.`
                   : degraded
-                    ? `We couldn't fully check these ${results.length} public sites right now — people-search sites list most US adults, so this isn't an all-clear. Your full plan scans 200+ sites, removes your listings, and monitors so you don't reappear.`
-                    : `Good news — no confirmed listings on these ${results.length} sites today. But new listings appear constantly. Your full plan monitors 200+ sites and removes you automatically the moment you show up.`}
+                    ? `We couldn't fully check these ${results.length} public sites right now — people-search sites list most US adults, so this isn't an all-clear. Your full plan scans ${BROKER_COUNT_LABEL} sites, removes your listings, and monitors so you don't reappear.`
+                    : `Good news — no confirmed listings on these ${results.length} sites today. But new listings appear constantly. Your full plan monitors ${BROKER_COUNT_LABEL} sites and removes you automatically the moment you show up.`}
               </p>
               <CompleteCheckoutButton email={email} source="broker_exposure" />
             </div>

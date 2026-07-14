@@ -243,3 +243,54 @@ describe("tranche2: refund policy reconciled", () => {
     expect(src).toMatch(/30-day money-back guarantee/);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Tranche 3 — reliability + honest broker-count
+// ---------------------------------------------------------------------------
+describe("tranche3: no infinite spinners / hangs", () => {
+  test("FreeScan caps the breach check with a timeout race", () => {
+    const src = readFileSync(SRC("pages/FreeScan.tsx"), "utf8");
+    expect(src).toContain("Promise.race");
+    expect(src).toMatch(/__timeout/);
+  });
+
+  test("free-broker-check aborts a slow SERP fetch", () => {
+    const src = readFileSync(FN("free-broker-check/index.ts"), "utf8");
+    expect(src).toContain("AbortController");
+    expect(src).toMatch(/signal:\s*controller\.signal/);
+  });
+
+  test("PaymentSuccess retries finalize-payment (absorbs the webhook race)", () => {
+    const src = readFileSync(SRC("pages/PaymentSuccess.tsx"), "utf8");
+    // a retry loop around finalize-payment, not a single attempt
+    expect(src).toMatch(/for\s*\(let attempt/);
+    expect(src).toContain("finalize-payment");
+  });
+});
+
+describe("tranche3: honest, consistent broker count", () => {
+  test("brokers.ts exposes a single source-of-truth label grounded in the pattern count", () => {
+    const src = readFileSync(SRC("config/brokers.ts"), "utf8");
+    expect(src).toContain("export const BROKER_COUNT_LABEL");
+    expect(src).toContain("brokerPatterns.length");
+  });
+
+  test("no inflated broker claim survives in the conversion funnel or landing", () => {
+    const files = [
+      "components/Hero.tsx",
+      "components/WhatsExposedSection.tsx",
+      "components/free-scan/LiveBrokerCheck.tsx",
+      "components/free-scan/UpgradeCTA.tsx",
+      "components/free-scan/IcebergPanel.tsx",
+      "pages/Subscribe.tsx",
+      "pages/Index.tsx",
+      "pages/FreeScan.tsx",
+    ];
+    for (const f of files) {
+      const src = readFileSync(SRC(f), "utf8");
+      // our own coverage must not claim 45+/100+/150+/180+/200+ (competitor
+      // comparison pages, which legitimately cite those, are excluded here)
+      expect(src).not.toMatch(/\b(45|100|145|150|180|200)\+\s*(data broker|broker|people-search|sites)/i);
+    }
+  });
+});

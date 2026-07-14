@@ -293,7 +293,7 @@ export default function Subscribe() {
           {isFamily
             ? "One subscription covers up to 5 family members"
             : selectedTier === "complete"
-              ? "Inbox accounts + 200+ data brokers, all in one place"
+              ? "Inbox accounts + 25+ data brokers, all in one place"
               : "Find every hidden account and shut it down"}
         </p>
       </div>

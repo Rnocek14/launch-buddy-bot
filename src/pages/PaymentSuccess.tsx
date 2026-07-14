@@ -49,14 +49,29 @@ export default function PaymentSuccess() {
         if (cancelled) return;
         markDone("payment");
 
-        // Step 2: provision account on the server
-        const { data, error } = await supabase.functions.invoke("finalize-payment", {
-          body: { sessionId },
-        });
-        if (cancelled) return;
+        // Step 2: provision account on the server. The subscription row is written
+        // by the Stripe webhook, which can land a beat after this call — so retry
+        // with backoff instead of stranding a customer who already paid.
+        let data: any = null;
+        let lastErr: string | null = null;
+        for (let attempt = 0; attempt < 4; attempt++) {
+          if (attempt > 0) {
+            await new Promise((r) => setTimeout(r, attempt * 1500)); // 1.5s, 3s, 4.5s
+            if (cancelled) return;
+          }
+          const res = await supabase.functions.invoke("finalize-payment", {
+            body: { sessionId },
+          });
+          if (cancelled) return;
+          if (!res.error && res.data?.ok) {
+            data = res.data;
+            break;
+          }
+          lastErr = res.data?.error || res.error?.message || "Could not finalize sign-in";
+        }
 
-        if (error || !data?.ok) {
-          throw new Error(data?.error || error?.message || "Could not finalize sign-in");
+        if (!data?.ok) {
+          throw new Error(lastErr || "Could not finalize sign-in");
         }
 
         setEmail(data.email || "");

@@ -57,7 +57,7 @@ export function UpgradeCTA({ hasBreaches }: UpgradeCTAProps) {
         <CardContent className="p-8 text-center">
           <h3 className="text-2xl font-bold mb-2">Get the full picture — and clean it up</h3>
           <p className="text-muted-foreground mb-6 max-w-lg mx-auto">
-            We scan 200+ data broker sites, find every account tied to your email, and help you remove your data from each one.
+            We scan 25+ data broker sites, find every account tied to your email, and help you remove your data from each one.
           </p>
 
           {/* Concrete benefits — what you actually get */}
@@ -66,7 +66,7 @@ export function UpgradeCTA({ hasBreaches }: UpgradeCTAProps) {
               <Home className="w-4 h-4 text-destructive flex-shrink-0 mt-0.5" />
               <div>
                 <div className="text-sm font-semibold">Find every broker</div>
-                <div className="text-xs text-muted-foreground">200+ sites publishing your data</div>
+                <div className="text-xs text-muted-foreground">25+ sites publishing your data</div>
               </div>
             </div>
             <div className="flex items-start gap-2 p-3 rounded-lg bg-background/50 border border-border">

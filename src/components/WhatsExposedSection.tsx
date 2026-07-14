@@ -25,7 +25,7 @@ export const WhatsExposedSection = () => {
             Data brokers publish everything about you.
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Anyone with $20 can buy a complete profile of you — including details you never shared online. Here's what 200+ broker sites are likely showing right now:
+            Anyone with $20 can buy a complete profile of you — including details you never shared online. Here's what data broker sites are likely showing right now:
           </p>
         </div>
 

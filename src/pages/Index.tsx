@@ -45,7 +45,7 @@ const Index = () => {
           name: "What is Footprint Finder?",
           acceptedAnswer: {
             "@type": "Answer",
-            text: "Footprint Finder is a digital privacy service that scans your Gmail or Outlook inbox to discover every account tied to your email, checks for data breaches, and removes you from 45+ data broker sites. It runs monthly rescans and alerts you when new exposures appear.",
+            text: "Footprint Finder is a digital privacy service that scans your Gmail or Outlook inbox to discover every account tied to your email, checks for data breaches, and removes you from 25+ data broker sites. It runs monthly rescans and alerts you when new exposures appear.",
           },
         },
         {

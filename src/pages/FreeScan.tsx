@@ -62,11 +62,18 @@ export default function FreeScan() {
     let breachData = { breaches: [] as BreachData[], breachCount: 0, criticalCount: 0, highCount: 0, error: null as string | null };
 
     try {
-      const { data, error: fnError } = await supabase.functions.invoke("free-breach-check", {
-        body: { email: scanEmail },
-      });
+      // Never let a slow/hung HIBP call trap the user on an infinite spinner —
+      // cap the wait and fall through to a rendered result with an error state.
+      const TIMEOUT = { data: null as any, error: { message: "timeout" }, __timeout: true };
+      const { data, error: fnError, __timeout } = (await Promise.race([
+        supabase.functions.invoke("free-breach-check", { body: { email: scanEmail } }),
+        new Promise((resolve) => setTimeout(() => resolve(TIMEOUT), 12000)),
+      ])) as any;
 
-      if (fnError) {
+      if (__timeout) {
+        console.warn("Breach check timed out");
+        breachData.error = "Breach check is taking longer than usual — showing your estimate";
+      } else if (fnError) {
         console.warn("Breach check failed:", fnError);
         breachData.error = "Could not check breaches right now";
       } else if (data?.error) {
