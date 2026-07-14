@@ -179,3 +179,67 @@ describe("bug4: OAuth callback keying", () => {
     expect(src).toMatch(/oauth_states"[\s\S]*?\.delete\(\)[\s\S]*?\.eq\("state",\s*state\)/);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Tranche 2 — front-load the real reveal + honest billing-interval choice
+// ---------------------------------------------------------------------------
+const SRC = (p: string) => join(ROOT, "src", p);
+
+describe("tranche2: broker-removal CTA offers Complete (never Pro)", () => {
+  const cta = () => readFileSync(SRC("components/free-scan/CompleteCheckoutButton.tsx"), "utf8");
+
+  test("uses Complete annual AND monthly as the two options", () => {
+    const src = cta();
+    expect(src).toContain("STRIPE_PRICES.COMPLETE_ANNUAL");
+    expect(src).toContain("STRIPE_PRICES.COMPLETE_MONTHLY");
+  });
+
+  test("never offers Pro on the broker-removal CTA (Pro has brokerScanning: false)", () => {
+    const src = cta();
+    expect(src).not.toContain("PRO_ANNUAL");
+    expect(src).not.toContain("PRO_MONTHLY");
+  });
+
+  test("passes tier: complete to checkout", () => {
+    expect(cta()).toMatch(/tier:\s*"complete"/);
+  });
+
+  test("annual savings vs monthly*12 is ~46%", () => {
+    const annual = 129;
+    const monthly = 19.99;
+    const pct = Math.round((1 - annual / (monthly * 12)) * 100);
+    expect(pct).toBe(46);
+  });
+
+  test("the free-scan CTA hosts no longer hardcode a single COMPLETE_ANNUAL button", () => {
+    for (const f of ["components/free-scan/ExposureSummary.tsx", "components/free-scan/LiveBrokerCheck.tsx"]) {
+      const src = readFileSync(SRC(f), "utf8");
+      expect(src).toContain("CompleteCheckoutButton");
+      // the old single-plan inline checkout is gone from these hosts
+      expect(src).not.toContain("STRIPE_PRICES.COMPLETE_ANNUAL.displayPrice");
+    }
+  });
+});
+
+describe("tranche2: real reveal is front-loaded", () => {
+  test("FreeScan renders LiveBrokerCheck before ExposureSummary", () => {
+    const src = readFileSync(SRC("pages/FreeScan.tsx"), "utf8");
+    expect(src.indexOf("<LiveBrokerCheck")).toBeGreaterThan(-1);
+    expect(src.indexOf("<ExposureSummary")).toBeGreaterThan(-1);
+    expect(src.indexOf("<LiveBrokerCheck")).toBeLessThan(src.indexOf("<ExposureSummary"));
+  });
+
+  test("LiveBrokerCheck shows the form by default (no hidden 'Check My Listings' gate)", () => {
+    const src = readFileSync(SRC("components/free-scan/LiveBrokerCheck.tsx"), "utf8");
+    expect(src).not.toMatch(/useState\(false\)[^\n]*\/\/.*expand/);
+    expect(src).not.toContain("if (!expanded)");
+  });
+});
+
+describe("tranche2: refund policy reconciled", () => {
+  test("Pricing FAQ affirms the 30-day guarantee (no 'no automatic refunds')", () => {
+    const src = readFileSync(SRC("components/Pricing.tsx"), "utf8");
+    expect(src).not.toContain("We don't offer automatic refunds");
+    expect(src).toMatch(/30-day money-back guarantee/);
+  });
+});

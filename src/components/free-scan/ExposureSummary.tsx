@@ -1,12 +1,8 @@
-import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Shield, ArrowRight, Loader2, AlertTriangle, Database, Building2, Eye, CheckCircle2 } from "lucide-react";
+import { Shield, AlertTriangle, Database, Building2, Eye, CheckCircle2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { IcebergEstimate } from "@/lib/icebergEstimate";
-import { STRIPE_PRICES } from "@/config/pricing";
-import { startCheckout } from "@/lib/checkout";
-import { useToast } from "@/hooks/use-toast";
+import { CompleteCheckoutButton } from "./CompleteCheckoutButton";
 
 interface BrokerFindings {
   confirmedCount: number;
@@ -37,40 +33,12 @@ export function ExposureSummary({ email, breachCount, estimate, brokerFindings, 
   // ~estimates reads as manufactured to a skeptical privacy audience.
   const hasBreaches = !breachError && breachCount > 0;
   const hasRealSignal = hasReality || hasBreaches;
-  const { toast } = useToast();
-  const [loading, setLoading] = useState(false);
 
   // When the breach lookup failed we don't know the real count — never imply "clean".
   const breachValue: string | number = breachError ? "—" : breachCount;
   const breachSub = breachError
     ? "breach check unavailable — try again shortly"
     : "from public breach databases";
-
-  const handleRemove = async () => {
-    setLoading(true);
-    const result = await startCheckout({
-      priceId: STRIPE_PRICES.COMPLETE_ANNUAL.id,
-      email,
-      source: "iceberg_panel",
-      tier: "complete",
-    });
-    if (result.status === "error") {
-      toast({
-        title: "Couldn't start checkout",
-        description: result.message,
-        variant: "destructive",
-      });
-      setLoading(false);
-    } else if (result.status === "needs_email") {
-      toast({
-        title: "Email needed",
-        description: "We need your email to start checkout.",
-        variant: "destructive",
-      });
-      setLoading(false);
-    }
-    // "redirecting" -> browser navigates away
-  };
 
   return (
     <Card className="overflow-hidden border-2 border-primary/30 bg-gradient-to-b from-background to-primary/5">
@@ -183,28 +151,7 @@ export function ExposureSummary({ email, breachCount, estimate, brokerFindings, 
 
         {/* The single dominant action */}
         <div className="px-6 pb-8 space-y-3">
-          <Button
-            size="lg"
-            onClick={handleRemove}
-            disabled={loading}
-            className="w-full gap-2 cta-shimmer h-16 text-lg"
-          >
-            {loading ? (
-              <>
-                <Loader2 className="w-5 h-5 animate-spin" />
-                Opening secure checkout…
-              </>
-            ) : (
-              <>
-                <Shield className="w-5 h-5" />
-                Remove My Information — {STRIPE_PRICES.COMPLETE_ANNUAL.displayPrice}
-                <ArrowRight className="w-5 h-5" />
-              </>
-            )}
-          </Button>
-          <p className="text-xs text-center text-muted-foreground">
-            Account auto-created after payment · 30-day refund · cancel anytime
-          </p>
+          <CompleteCheckoutButton email={email} source="iceberg_panel" />
           <div className="flex flex-wrap items-center justify-center gap-3 text-xs text-muted-foreground pt-1">
             <Link to="/auth?intent=signup" className="underline hover:text-foreground">
               Or create a free account first

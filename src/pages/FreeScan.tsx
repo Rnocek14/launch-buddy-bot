@@ -204,7 +204,14 @@ export default function FreeScan() {
           {/* Results */}
           {results && (
             <div className="space-y-10 animate-fade-in">
-              {/* Dominant: the single-decision exposure summary + primary CTA */}
+              {/* Hero: the real, personalized broker reveal — the strongest
+                  conversion moment. Front-loaded above the estimate summary. */}
+              <section>
+                <LiveBrokerCheck email={email} onResults={setBrokerFindings} />
+              </section>
+
+              {/* The single-decision exposure summary + primary CTA. Reflects the
+                  confirmed broker findings above once the check has run. */}
               <section>
                 <ExposureSummary
                   email={email}
@@ -213,11 +220,6 @@ export default function FreeScan() {
                   brokerFindings={brokerFindings}
                   breachError={results.breachError}
                 />
-              </section>
-
-              {/* Reality step: turn estimates into actual broker listings */}
-              <section>
-                <LiveBrokerCheck email={email} onResults={setBrokerFindings} />
               </section>
 
               {/* Secondary: the detailed breach list for those who want proof */}

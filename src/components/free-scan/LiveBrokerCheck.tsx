@@ -3,13 +3,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-  Search, Loader2, CheckCircle2, AlertTriangle, Shield, ArrowRight, Building2,
+  Search, Loader2, CheckCircle2, AlertTriangle, Building2,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { trackEvent } from "@/lib/analytics";
-import { startCheckout } from "@/lib/checkout";
-import { STRIPE_PRICES } from "@/config/pricing";
-import { useToast } from "@/hooks/use-toast";
+import { CompleteCheckoutButton } from "./CompleteCheckoutButton";
 
 type BrokerStatus = "found" | "possible_match" | "not_found" | "unknown";
 
@@ -35,13 +33,12 @@ const US_STATES = [
 ];
 
 export function LiveBrokerCheck({ email, onResults }: LiveBrokerCheckProps) {
-  const { toast } = useToast();
-  const [expanded, setExpanded] = useState(false);
+  // The personalized broker reveal is the strongest conversion moment, so the
+  // form shows by default — no intermediate "Check My Listings" click to bury it.
   const [fullName, setFullName] = useState("");
   const [city, setCity] = useState("");
   const [state, setState] = useState("");
   const [loading, setLoading] = useState(false);
-  const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [results, setResults] = useState<BrokerResult[] | null>(null);
   const [degraded, setDegraded] = useState(false);
   const [error, setError] = useState("");
@@ -84,23 +81,6 @@ export function LiveBrokerCheck({ email, onResults }: LiveBrokerCheckProps) {
       setError("We couldn't complete the check right now. Please try again in a moment.");
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleRemove = async () => {
-    setCheckoutLoading(true);
-    const res = await startCheckout({
-      priceId: STRIPE_PRICES.COMPLETE_ANNUAL.id,
-      email,
-      source: "broker_exposure",
-      tier: "complete",
-    });
-    if (res.status === "error") {
-      toast({ title: "Couldn't start checkout", description: res.message, variant: "destructive" });
-      setCheckoutLoading(false);
-    } else if (res.status === "needs_email") {
-      toast({ title: "Email needed", description: "We need your email to start checkout.", variant: "destructive" });
-      setCheckoutLoading(false);
     }
   };
 
@@ -176,59 +156,20 @@ export function LiveBrokerCheck({ email, onResults }: LiveBrokerCheckProps) {
                     ? `We couldn't fully check these ${results.length} public sites right now — people-search sites list most US adults, so this isn't an all-clear. Your full plan scans 200+ sites, removes your listings, and monitors so you don't reappear.`
                     : `Good news — no confirmed listings on these ${results.length} sites today. But new listings appear constantly. Your full plan monitors 200+ sites and removes you automatically the moment you show up.`}
               </p>
-              <Button
-                size="lg"
-                onClick={handleRemove}
-                disabled={checkoutLoading}
-                className="w-full gap-2 cta-shimmer h-14 text-base"
-              >
-                {checkoutLoading ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    Opening secure checkout…
-                  </>
-                ) : (
-                  <>
-                    <Shield className="w-5 h-5" />
-                    Remove My Information — {STRIPE_PRICES.COMPLETE_ANNUAL.displayPrice}
-                    <ArrowRight className="w-4 h-4" />
-                  </>
-                )}
-              </Button>
-              <p className="text-[11px] text-center text-muted-foreground">
-                Account auto-created after payment · 30-day refund · cancel anytime
-              </p>
+              <CompleteCheckoutButton email={email} source="broker_exposure" />
             </div>
         </CardContent>
       </Card>
     );
   }
 
-  // ---- CTA / form view ----
-  if (!expanded) {
-    return (
-      <Card className="border-2 border-primary/30 bg-gradient-to-b from-background to-primary/5">
-        <CardContent className="p-6 text-center">
-          <Search className="w-8 h-8 text-primary mx-auto mb-3" />
-          <h3 className="text-xl font-bold mb-1">Find exactly which sites list you</h3>
-          <p className="text-sm text-muted-foreground mb-5 max-w-md mx-auto">
-            We'll check the top people-search sites for your real listings. Takes about 10 seconds.
-          </p>
-          <Button size="lg" onClick={() => setExpanded(true)} className="gap-2">
-            <Search className="w-4 h-4" />
-            Check My Listings
-          </Button>
-        </CardContent>
-      </Card>
-    );
-  }
-
+  // ---- Form view (shown by default — the personalized reveal is the hero) ----
   return (
     <Card className="border-2 border-primary/30">
       <CardContent className="p-6">
-        <h3 className="text-xl font-bold mb-1">Check which sites list you</h3>
+        <h3 className="text-xl font-bold mb-1">See exactly which sites list you</h3>
         <p className="text-sm text-muted-foreground mb-5">
-          We only use this to search public people-search sites. We don't store it.
+          Enter your name and we'll check the top people-search sites for your real listings — about 10 seconds. We only use this to search; we don't store it.
         </p>
         <form onSubmit={runCheck} className="space-y-3">
           <Input
