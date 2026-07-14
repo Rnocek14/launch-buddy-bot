@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { CheckCircle2, Loader2, AlertTriangle, Mail, Sparkles, ShieldCheck, Search } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { trackEvent } from "@/lib/analytics";
 import { Button } from "@/components/ui/button";
 
 type Step = {
@@ -33,6 +34,12 @@ export default function PaymentSuccess() {
       setErrorMsg("Missing session reference. Please check your email for confirmation.");
       return;
     }
+
+    // Client-side signal that the buyer reached the post-payment screen. The
+    // authoritative `purchase` event is emitted server-side by stripe-webhook;
+    // this distinct event measures whether users actually land here (surfacing
+    // the post-payment strand) without double-counting paid conversions.
+    trackEvent("payment_success_viewed");
 
     let cancelled = false;
     (async () => {

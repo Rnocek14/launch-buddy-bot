@@ -93,7 +93,7 @@ const pricingFaq = [
   {
     question: "Do you offer refunds?",
     answer:
-      "We don't offer automatic refunds, but if something goes wrong or the product doesn't work as promised, reach out to support and we'll make it right."
+      "Yes — every paid plan comes with a 30-day money-back guarantee. If you're not satisfied within 30 days of your purchase, contact support and we'll issue a full refund. Cancel anytime after that and you'll keep your features through the end of your billing period."
   },
   {
     question: "Is my payment information secure?",

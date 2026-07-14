@@ -7,6 +7,7 @@ import { HowItWorks } from "@/components/HowItWorks";
 import { FeaturesWithTestimonials } from "@/components/FeaturesWithTestimonials";
 import { Pricing } from "@/components/Pricing";
 import { TrustBar } from "@/components/TrustBar";
+import { SecurityCompliance } from "@/components/SecurityCompliance";
 import { FAQ } from "@/components/FAQ";
 import { Footer } from "@/components/Footer";
 import { useSEO } from "@/hooks/useSEO";
@@ -78,6 +79,7 @@ const Index = () => {
       <FeaturesWithTestimonials />
       <Pricing />
       <TrustBar />
+      <SecurityCompliance />
       <FAQ />
       <Footer />
     </div>

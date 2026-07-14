@@ -281,12 +281,25 @@ Deno.serve(async (req) => {
 
     const foundCount = results.filter((r) => r.status === 'found').length;
     const possibleCount = results.filter((r) => r.status === 'possible_match').length;
+    const notFoundCount = results.filter((r) => r.status === 'not_found').length;
+    const unknownCount = results.filter((r) => r.status === 'unknown').length;
+
+    // "Degraded" = we could NOT meaningfully perform the check, so a zero result
+    // must NOT be presented as a reassuring "you're clean". This happens when the
+    // SERP key is unset, or when every broker came back inconclusive (budget
+    // exhausted / SERP failure / no indexed data). Only when at least one broker
+    // was actually searched (found / possible / not_found) is a zero-exposure
+    // result trustworthy.
+    const degraded = !serpApiKey || (foundCount + possibleCount + notFoundCount === 0);
 
     return new Response(JSON.stringify({
       results,
       foundCount,
       possibleCount,
+      notFoundCount,
+      unknownCount,
       checkedCount: results.length,
+      degraded,
     }), {
       status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

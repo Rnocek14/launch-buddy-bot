@@ -43,6 +43,7 @@ export function LiveBrokerCheck({ email, onResults }: LiveBrokerCheckProps) {
   const [loading, setLoading] = useState(false);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [results, setResults] = useState<BrokerResult[] | null>(null);
+  const [degraded, setDegraded] = useState(false);
   const [error, setError] = useState("");
 
   const runCheck = async (e: React.FormEvent) => {
@@ -68,6 +69,7 @@ export function LiveBrokerCheck({ email, onResults }: LiveBrokerCheckProps) {
       }
       const brokerResults = data.results as BrokerResult[];
       setResults(brokerResults);
+      setDegraded(Boolean(data.degraded));
       const confirmedCount = brokerResults.filter((r) => r.status === "found").length;
       const possibleCount = brokerResults.filter((r) => r.status === "possible_match").length;
       onResults?.({ confirmedCount, possibleCount });
@@ -75,6 +77,7 @@ export function LiveBrokerCheck({ email, onResults }: LiveBrokerCheckProps) {
         source: "free_scan",
         found_count: data.foundCount,
         possible_count: data.possibleCount,
+        degraded: Boolean(data.degraded),
       });
     } catch (err: any) {
       console.error("free-broker-check error", err);
@@ -120,13 +123,23 @@ export function LiveBrokerCheck({ email, onResults }: LiveBrokerCheckProps) {
             <h3 className="text-2xl font-bold">
               {exposedCount > 0
                 ? `We found you on ${exposedCount} site${exposedCount === 1 ? "" : "s"}`
-                : "No confirmed listings on the sites we checked"}
+                : degraded
+                  ? "We couldn't finish checking every site"
+                  : "No confirmed listings on the sites we checked"}
             </h3>
-            {exposedCount > 0 && (
+            {exposedCount > 0 ? (
               <p className="text-sm text-muted-foreground mt-1">
                 {found.length > 0 && <span className="text-foreground font-medium">{found.length} confirmed</span>}
                 {found.length > 0 && possible.length > 0 && " · "}
                 {possible.length > 0 && <span>{possible.length} possible match{possible.length === 1 ? "" : "es"}</span>}
+              </p>
+            ) : degraded ? (
+              <p className="text-sm text-muted-foreground mt-1">
+                A few sites were inconclusive just now — that isn't an all-clear. Your estimated exposure still stands.
+              </p>
+            ) : (
+              <p className="text-sm text-muted-foreground mt-1">
+                New listings appear all the time, so this can change week to week.
               </p>
             )}
           </div>
@@ -153,11 +166,15 @@ export function LiveBrokerCheck({ email, onResults }: LiveBrokerCheckProps) {
             ))}
           </div>
 
-          {exposedCount > 0 && (
-            <div className="px-6 py-6 bg-gradient-to-b from-primary/5 to-primary/10 border-t border-border space-y-3">
+          {/* Always show a next step — a service failure or a clean scan must never
+              dead-end the highest-intent user with no way forward. */}
+          <div className="px-6 py-6 bg-gradient-to-b from-primary/5 to-primary/10 border-t border-border space-y-3">
               <p className="text-sm text-muted-foreground">
-                These are just {results.length} of 200+ sites. Your full plan scans and removes you from all of them —
-                plus continuous monitoring so you don't reappear.
+                {exposedCount > 0
+                  ? `These are just ${results.length} of 200+ sites. Your full plan scans and removes you from all of them — plus continuous monitoring so you don't reappear.`
+                  : degraded
+                    ? `We couldn't fully check these ${results.length} public sites right now — people-search sites list most US adults, so this isn't an all-clear. Your full plan scans 200+ sites, removes your listings, and monitors so you don't reappear.`
+                    : `Good news — no confirmed listings on these ${results.length} sites today. But new listings appear constantly. Your full plan monitors 200+ sites and removes you automatically the moment you show up.`}
               </p>
               <Button
                 size="lg"
@@ -182,7 +199,6 @@ export function LiveBrokerCheck({ email, onResults }: LiveBrokerCheckProps) {
                 Account auto-created after payment · 30-day refund · cancel anytime
               </p>
             </div>
-          )}
         </CardContent>
       </Card>
     );

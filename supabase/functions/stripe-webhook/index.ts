@@ -238,22 +238,40 @@ const handler = async (req: Request): Promise<Response> => {
             console.error("Error upserting subscription:", upsertError);
           } else {
             console.log(`Subscription created/updated for user: ${userId} with tier: ${tier}`);
-            
-            // Track successful upgrade
-            console.log('[ANALYTICS]', {
-              event: tier === 'complete' ? 'upgrade_to_complete' : 'upgrade_to_pro',
-              userId,
-              properties: {
-                subscriptionId: subscription.id,
-                customerId: session.customer,
-                priceId: priceId,
-                tier: tier,
-                amount: session.amount_total ? session.amount_total / 100 : 0,
-                currency: session.currency,
-                timestamp: new Date().toISOString(),
+
+            // Record the canonical `purchase` event — the authoritative paid-conversion
+            // signal, fired for BOTH authenticated and guest checkout. Previously this
+            // was only console.logged, so paid conversion was uncomputable. This is the
+            // denominator every funnel experiment measures against.
+            try {
+              const interval = subscription.items.data[0]?.price?.recurring?.interval ?? null;
+              const amount = session.amount_total != null ? session.amount_total / 100 : null;
+              const { error: analyticsError } = await supabase
+                .from("analytics_events")
+                .insert({
+                  user_id: userId,
+                  event: "purchase",
+                  properties: {
+                    tier,
+                    amount,
+                    currency: session.currency,
+                    interval,
+                    priceId,
+                    subscriptionId: subscription.id,
+                    customerId: session.customer,
+                    source:
+                      (session.metadata?.checkout_source as string | undefined) ??
+                      (session.metadata?.source as string | undefined) ??
+                      null,
+                  },
+                });
+              if (analyticsError) {
+                console.error("[ANALYTICS] purchase insert failed:", analyticsError);
               }
-            });
-            
+            } catch (err) {
+              console.error("[ANALYTICS] purchase event error:", err);
+            }
+
             // Send upgrade email
             const { data: profile } = await supabase
               .from("profiles")
