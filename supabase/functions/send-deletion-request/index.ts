@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.79.0";
 import { Resend } from "https://esm.sh/resend@2.0.0";
+import { RESEND_FROM, isResendTestSender, resendSenderDomain } from "../_shared/resend.ts";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
@@ -427,7 +428,7 @@ const handler = async (req: Request): Promise<Response> => {
     if (!emailSent) {
       console.log("Sending via Resend...");
       const emailResponse = await resend.emails.send({
-        from: "Footprint Finder <onboarding@resend.dev>",
+        from: RESEND_FROM,
         to: [recipientEmail],
         cc: [profile.email || user.email!],
         subject,
@@ -457,10 +458,14 @@ const handler = async (req: Request): Promise<Response> => {
 
         // Resend is in testing mode (no verified domain) — surface this clearly
         // so it doesn't masquerade as a generic 500.
-        if (resendMessage.includes("testing emails") || resendMessage.includes("verify a domain")) {
+        if (
+          isResendTestSender() ||
+          resendMessage.includes("testing emails") ||
+          resendMessage.includes("verify a domain")
+        ) {
           return jsonResponse(
             {
-              error: "Email sending is in test mode. A verified sender domain must be configured at resend.com/domains before deletion requests can be sent to third parties.",
+              error: `Email sending is not configured for delivery to third parties. The sender domain "${resendSenderDomain()}" must be verified at resend.com/domains and set via the RESEND_FROM / RESEND_FROM_DOMAIN secret before deletion requests can be sent.`,
               error_code: "RESEND_DOMAIN_NOT_VERIFIED",
               details: resendMessage,
             },

@@ -167,7 +167,7 @@ serve(async (req: Request): Promise<Response> => {
     const { data: existingConnection } = await supabase
       .from("email_connections")
       .select("id")
-      .eq("user_id", state)
+      .eq("user_id", userId)
       .eq("email", profile.email)
       .single();
 
@@ -194,14 +194,14 @@ serve(async (req: Request): Promise<Response> => {
       const { count } = await supabase
         .from("email_connections")
         .select("*", { count: 'exact', head: true })
-        .eq("user_id", state);
+        .eq("user_id", userId);
 
       const isFirstConnection = !count || count === 0;
 
       const { error: insertError } = await supabase
         .from("email_connections")
         .insert({
-          user_id: state,
+          user_id: userId,
           email: profile.email,
           provider: 'gmail',
           access_token: encryptedAccessToken,

@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.79.0";
+import { resendFrom } from "../_shared/resend.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -65,7 +66,7 @@ serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: "Footprint Finder <noreply@footprintfinder.com>",
+        from: resendFrom("noreply"),
         to: [invite.email],
         subject: `You're invited to join ${orgName} on Footprint Finder`,
         html: `

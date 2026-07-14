@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { Resend } from "https://esm.sh/resend@4.0.0";
+import { RESEND_FROM } from "../_shared/resend.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.79.0";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
@@ -82,7 +83,7 @@ const handler = async (req: Request): Promise<Response> => {
     console.log("Sending welcome email to:", email);
 
     const emailResponse = await resend.emails.send({
-      from: "Footprint Finder <onboarding@resend.dev>",
+      from: RESEND_FROM,
       to: [email],
       subject: "You're on the waitlist! 🔒",
       html: `

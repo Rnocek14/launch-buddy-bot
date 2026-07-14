@@ -30,6 +30,17 @@ const PRICE_ID_TO_TIER: Record<string, string> = {
   "price_1TPSsfPqV14jS5m4vegF6HJi": "family",   // Family Annual $179
 };
 
+// Stripe API 2025-08-27.basil moved current_period_start/end onto subscription
+// items. Read from the item first, fall back to the legacy top-level field, and
+// guard against undefined so new Date(undefined * 1000) never throws RangeError.
+const subPeriodISO = (
+  sub: any,
+  field: "current_period_start" | "current_period_end",
+): string | null => {
+  const ts = sub?.items?.data?.[0]?.[field] ?? sub?.[field];
+  return typeof ts === "number" ? new Date(ts * 1000).toISOString() : null;
+};
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -159,7 +170,7 @@ serve(async (req) => {
 
     if (hasActiveSub) {
       const subscription = subscriptions.data[0] as any;
-      subscriptionEnd = new Date(subscription.current_period_end * 1000).toISOString();
+      subscriptionEnd = subPeriodISO(subscription, "current_period_end");
       stripeSubscriptionId = subscription.id;
       
       // Determine tier from price ID
@@ -181,7 +192,7 @@ serve(async (req) => {
           status: 'active',
           stripe_customer_id: customerId,
           stripe_subscription_id: stripeSubscriptionId,
-          current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
+          current_period_start: subPeriodISO(subscription, "current_period_start"),
           current_period_end: subscriptionEnd,
           updated_at: new Date().toISOString()
         })
@@ -204,7 +215,7 @@ serve(async (req) => {
             status: 'active',
             stripe_customer_id: customerId,
             stripe_subscription_id: stripeSubscriptionId,
-            current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
+            current_period_start: subPeriodISO(subscription, "current_period_start"),
             current_period_end: subscriptionEnd,
             manual_override: false // Explicit: new Stripe-synced accounts are not overridden
           });

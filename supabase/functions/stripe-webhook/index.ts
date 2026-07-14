@@ -25,6 +25,17 @@ const PRICE_ID_TO_TIER: Record<string, string> = {
   "price_1TPSsfPqV14jS5m4vegF6HJi": "family",   // Family Annual $179
 };
 
+// Stripe API 2025-08-27.basil moved current_period_start/end onto subscription
+// items. Read from the item first, fall back to the legacy top-level field, and
+// guard against undefined so new Date(undefined * 1000) never throws RangeError.
+const subPeriodISO = (
+  sub: any,
+  field: "current_period_start" | "current_period_end",
+): string | null => {
+  const ts = sub?.items?.data?.[0]?.[field] ?? sub?.[field];
+  return typeof ts === "number" ? new Date(ts * 1000).toISOString() : null;
+};
+
 const handler = async (req: Request): Promise<Response> => {
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
@@ -216,8 +227,8 @@ const handler = async (req: Request): Promise<Response> => {
               stripe_customer_id: session.customer as string,
               stripe_subscription_id: subscription.id,
               status: subscription.status,
-              current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
-              current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+              current_period_start: subPeriodISO(subscription, "current_period_start"),
+              current_period_end: subPeriodISO(subscription, "current_period_end"),
               deletion_count_this_period: 0,
             }, {
               onConflict: "user_id"
@@ -258,7 +269,7 @@ const handler = async (req: Request): Promise<Response> => {
                   body: { 
                     email: profile.email, 
                     tier: tierName,
-                    billingDate: new Date(subscription.current_period_end * 1000).toISOString()
+                    billingDate: subPeriodISO(subscription, "current_period_end")
                   }
                 }
               );
@@ -328,8 +339,8 @@ const handler = async (req: Request): Promise<Response> => {
           .update({
             tier: tier,
             status: subscription.status,
-            current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
-            current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+            current_period_start: subPeriodISO(subscription, "current_period_start"),
+            current_period_end: subPeriodISO(subscription, "current_period_end"),
           })
           .eq("stripe_subscription_id", subscription.id);
 

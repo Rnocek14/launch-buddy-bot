@@ -7,6 +7,31 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Detects the Stripe key mode from its prefix (never logs the key itself).
+function stripeKeyMode(): "live" | "test" | "unknown" {
+  const k = Deno.env.get("STRIPE_SECRET_KEY") ?? "";
+  if (k.startsWith("sk_live_")) return "live";
+  if (k.startsWith("sk_test_")) return "test";
+  return "unknown";
+}
+
+// Turns Stripe "No such price" / resource_missing errors into an actionable message.
+function friendlyStripeError(err: unknown): string {
+  const msg = err instanceof Error ? err.message : String(err);
+  const code = (err as { code?: string } | null)?.code;
+  if (code === "resource_missing" || /no such (price|product|customer)/i.test(msg)) {
+    const mode = stripeKeyMode();
+    if (mode === "test") {
+      return `Checkout failed: Stripe is in TEST mode but the app's price IDs are LIVE. Deploy a live-mode secret key (sk_live_...) and a matching live webhook secret. (Stripe: ${msg})`;
+    }
+    if (mode === "unknown") {
+      return `Checkout failed: STRIPE_SECRET_KEY is missing or malformed. Set a live-mode secret key (sk_live_...) and a matching live webhook secret. (Stripe: ${msg})`;
+    }
+    return `Checkout failed: the configured price was not found in your Stripe LIVE account. Confirm the price IDs in src/config/pricing.ts exist and are active in the live dashboard. (Stripe: ${msg})`;
+  }
+  return msg;
+}
+
 interface CheckoutRequest {
   priceId: string;
   affiliateCode?: string;
@@ -128,7 +153,7 @@ const handler = async (req: Request): Promise<Response> => {
       }
     );
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorMessage = friendlyStripeError(error);
     console.error("Error in create-checkout-session:", errorMessage);
     return new Response(
       JSON.stringify({ error: errorMessage }),
