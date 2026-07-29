@@ -10,7 +10,13 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
+
+# .env is intentionally committed: it holds only publishable VITE_* values,
+# which are bundled into the browser anyway. Server secrets must never go in
+# it — put local overrides in .env.local, which the rule below ignores.
+# `npm run readiness` fails the build if a secret-looking key appears in .env.
 *.local
+.env.*.local
 
 # Editor directories and files
 .vscode/*

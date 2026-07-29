@@ -14,7 +14,8 @@
     "postbuild:dev": "bun scripts/prerender.ts",
     "lint": "eslint .",
     "preview": "vite preview",
-    "seo:audit": "bun scripts/seo-audit.ts"
+    "seo:audit": "bun scripts/seo-audit.ts",
+    "readiness": "bun scripts/readiness.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

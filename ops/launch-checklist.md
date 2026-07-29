@@ -4,7 +4,7 @@
 **Last Updated:** 2025-11-13  
 **Owner:** Engineering / SRE
 
-This checklist ensures Footprint Finder (Deleteist) is production-ready before public launch.
+This checklist ensures Footprint Finder is production-ready before public launch.
 
 ---
 

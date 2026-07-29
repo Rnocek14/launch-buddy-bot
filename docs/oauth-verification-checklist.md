@@ -1,6 +1,6 @@
 # Google + Microsoft OAuth Verification Checklist
 
-Submission path for Deleteist (footprintfinder.co) to clear the "unverified app" warning on Gmail and Outlook consent screens.
+Submission path for Footprint Finder (footprintfinder.co) to clear the "unverified app" warning on Gmail and Outlook consent screens.
 
 **Realistic timeline:** 2–4 weeks (Google), ~1 week (Microsoft). **Cost: $0.**
 
@@ -27,7 +27,7 @@ Verified in code: `supabase/functions/_shared/email-providers/gmail.ts` line 63 
 Cloud Console → APIs & Services → OAuth consent screen:
 
 - [ ] **User type**: External, Production
-- [ ] **App name**: Deleteist
+- [ ] **App name**: Footprint Finder  ← must match the branding on footprintfinder.co, or Google bounces the submission
 - [ ] **User support email**: support@footprintfinder.co (must be deliverable)
 - [ ] **App logo**: upload `src/assets/footprint-finder-icon.png` (120×120 PNG, ≤1MB)
 - [ ] **App domain**: footprintfinder.co (must be verified in Search Console under same Google account)
@@ -50,13 +50,13 @@ Do NOT add `gmail.readonly`, `gmail.send`, `gmail.modify`, or any other Gmail sc
 
 For `gmail.metadata`:
 
-> Deleteist helps users discover, audit, and request deletion of online accounts tied to their email address. We use `gmail.metadata` to read **only message headers** (sender domain, sender display name, subject line, `List-Unsubscribe` header, message date). The Gmail API enforces that this scope **cannot** access message bodies, attachments, or snippets — only headers — which matches our privacy promise to users. Extracted sender domains are stored server-side as a list of services the user has accounts with, which the user can view, manage, and request deletion for from their dashboard. We never send email on the user's behalf, never modify or delete messages, and never share data with third parties. Users can disconnect at any time, which immediately deletes all stored metadata.
+> Footprint Finder helps users discover, audit, and request deletion of online accounts tied to their email address. We use `gmail.metadata` to read **only message headers** (sender domain, sender display name, subject line, `List-Unsubscribe` header, message date). The Gmail API enforces that this scope **cannot** access message bodies, attachments, or snippets — only headers — which matches our privacy promise to users. Extracted sender domains are stored server-side as a list of services the user has accounts with, which the user can view, manage, and request deletion for from their dashboard. We never send email on the user's behalf, never modify or delete messages, and never share data with third parties. Users can disconnect at any time, which immediately deletes all stored metadata.
 
 ### Step 4 — Privacy policy paragraph (required)
 
 Google specifically rejects apps whose privacy policies don't mention "Google user data" by name. Add this to `/privacy`:
 
-> **Google user data.** Deleteist accesses Google user data via the Gmail API using the `gmail.metadata` scope. This scope, enforced by Google, allows us to read only email headers (sender, subject, date, List-Unsubscribe) — never message bodies, attachments, or content snippets. We use this metadata solely to identify services you have accounts with so we can help you manage or delete them. We do not transfer Google user data to third parties except as needed to provide the service, and we never use it for advertising. You can disconnect Google access at any time from Settings, which immediately deletes all stored metadata. Our use of information received from Google APIs adheres to the [Google API Services User Data Policy](https://developers.google.com/terms/api-services-user-data-policy), including the Limited Use requirements.
+> **Google user data.** Footprint Finder accesses Google user data via the Gmail API using the `gmail.metadata` scope. This scope, enforced by Google, allows us to read only email headers (sender, subject, date, List-Unsubscribe) — never message bodies, attachments, or content snippets. We use this metadata solely to identify services you have accounts with so we can help you manage or delete them. We do not transfer Google user data to third parties except as needed to provide the service, and we never use it for advertising. You can disconnect Google access at any time from Settings, which immediately deletes all stored metadata. Our use of information received from Google APIs adheres to the [Google API Services User Data Policy](https://developers.google.com/terms/api-services-user-data-policy), including the Limited Use requirements.
 
 ### Step 5 — Demo video (2–4 min, unlisted YouTube)
 

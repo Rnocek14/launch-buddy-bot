@@ -4,6 +4,14 @@ The code is production-ready (builds, typechecks, tests pass). What remains is
 external configuration that lives in *your* accounts — the app can't run these
 for you. Work top-to-bottom; items are ordered by "what breaks without it."
 
+> **Check the live state before working through this by hand:** `npm run readiness`
+> probes the running system and reports which of the items below are actually
+> configured, rather than reminding you to look. It writes nothing, is safe to
+> run against production repeatedly, and exits non-zero on a revenue-blocking
+> failure so it can gate a deploy. Items it cannot reach are reported as "not
+> checked" rather than failed — run it from a network with access to your
+> Supabase project and the public site.
+
 Secrets are set as **Supabase Edge Function secrets** unless noted:
 `supabase secrets set NAME=value` (or Dashboard → Project → Edge Functions → Secrets).
 **Never commit secret values.** After changing secrets, redeploy the functions.
@@ -58,9 +66,35 @@ fail with `RESEND_DOMAIN_NOT_VERIFIED`.
 - [ ] Google OAuth consent screen: scope is read-only `gmail.metadata` (chosen to
       avoid the CASA restricted-scope assessment). It is still a **sensitive**
       scope — you must submit the app for **OAuth verification** to serve more
-      than 100 users. Budget time for Google's review.
+      than 100 users. See 3a below.
 - [ ] **Verify:** connect a Gmail and an Outlook account end-to-end; confirm a row
       in `email_connections` keyed to the right user.
+
+### 3a. Google OAuth verification — the demo video 🔴
+
+**Full submission steps live in [`docs/oauth-verification-checklist.md`](docs/oauth-verification-checklist.md)** —
+consent screen fields, the verbatim scope justification, the video shot list and
+the Microsoft path. Do not duplicate that checklist here; follow it there.
+
+Two things to know before you record:
+
+- Until verification is approved you are hard-capped at **100 users**, and
+  everyone who connects sees an "unverified app" interstitial — which reads as a
+  security warning on a product whose entire pitch is privacy. This is the
+  biggest ceiling on the core product. Adding up to 100 test users in the Cloud
+  console lets beta users skip the warning in the meantime.
+- The video must show the **OAuth client ID** on screen (leave the address bar
+  readable during the consent redirect) and must show the data actually being
+  used after consent, not just the consent screen. A video that shows the grant
+  but never shows the discovered-accounts list populating is the most common
+  reason for a bounce, and a bounce restarts the 2–4 week clock.
+
+⚠️ **Consent-screen name must match the site.** The checklist currently
+specifies the app name "Deleteist" while the domain, homepage, privacy policy
+and every page of the app say "Footprint Finder". Google checks that consent
+screen branding matches the branding on the verified domain, so a mismatch here
+is an avoidable rejection. Use **Footprint Finder** unless you are actually
+rebranding the site.
 
 ## 4. Scan data providers
 

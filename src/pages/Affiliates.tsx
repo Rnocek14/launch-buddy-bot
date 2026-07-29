@@ -242,7 +242,7 @@ export default function Affiliates() {
         <section className="container mx-auto px-4 py-16 max-w-5xl">
           <div className="grid md:grid-cols-2 gap-8 items-center">
             <div className="space-y-4">
-              <h2 className="text-3xl font-bold">Why Deleteist converts</h2>
+              <h2 className="text-3xl font-bold">Why Footprint Finder converts</h2>
               <ul className="space-y-3">
                 {[
                   "Free scan finds breaches & exposed data instantly — perfect hook",
@@ -427,7 +427,7 @@ export default function Affiliates() {
               },
               {
                 q: "Can I run paid ads?",
-                a: "Yes — except branded keywords (\"Deleteist\", \"Footprint Finder\"). We'll send full guidelines on approval.",
+                a: "Yes — except branded keywords (\"Footprint Finder\", \"footprintfinder.co\"). We'll send full guidelines on approval.",
               },
               {
                 q: "Do you provide creative assets?",

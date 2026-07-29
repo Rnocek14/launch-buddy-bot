@@ -380,7 +380,7 @@ export default function AffiliateDashboard() {
             <h3 className="font-semibold">Quick tips to earn more</h3>
             <ul className="text-sm text-muted-foreground space-y-2 list-disc pl-5">
               <li>
-                Write a comparison post: "Deleteist vs Incogni" — these rank fast on Google.
+                Write a comparison post: "Footprint Finder vs Incogni" — these rank fast on Google.
               </li>
               <li>
                 Answer questions in r/privacy and r/PrivacyGuides (provide value first, link last).

@@ -77,7 +77,7 @@ serve(async (req) => {
       const response = await fetch(hibpUrl, {
         headers: {
           "hibp-api-key": hibpApiKey,
-          "User-Agent": "Deleteist-FreeScan",
+          "User-Agent": "FootprintFinder-FreeScan",
         },
       });
 

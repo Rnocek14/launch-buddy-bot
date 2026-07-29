@@ -1,15 +1,15 @@
-# Deleteist (Footprint Finder)
+# Footprint Finder
 
 **Live site:** [https://footprintfinder.co](https://footprintfinder.co)  
 **Privacy policy:** [https://footprintfinder.co/privacy](https://footprintfinder.co/privacy)
 
 ## What it does
 
-Deleteist helps you find and remove your personal data from online services. Connect your Gmail or Outlook inbox and we scan email headers (sender, subject, date) to discover which companies have your data — no email bodies are ever read or stored. From there you can unsubscribe from marketing emails and send deletion requests in a few clicks.
+Footprint Finder helps you find and remove your personal data from online services. Connect your Gmail or Outlook inbox and we scan email headers (sender, subject, date) to discover which companies have your data — no email bodies are ever read or stored. From there you can unsubscribe from marketing emails and send deletion requests in a few clicks.
 
 ## Why it exists
 
-Most people have hundreds of accounts they forgot about. Deleting them manually means finding contact info, writing emails, and following up. Deleteist automates the discovery and outreach so you can actually finish the job.
+Most people have hundreds of accounts they forgot about. Deleting them manually means finding contact info, writing emails, and following up. Footprint Finder automates the discovery and outreach so you can actually finish the job.
 
 ## Key features
 
