@@ -9,7 +9,7 @@ const proofItems = [
 
 export function SocialProofBar() {
   return (
-    <section className="border-y border-border/50 bg-card/50 backdrop-blur-sm py-4 overflow-hidden">
+    <section className="border-y border-border bg-card py-4 overflow-hidden">
       <div className="flex animate-scroll-left" style={{ width: "max-content" }}>
         {/* Duplicate for seamless loop */}
         {[...proofItems, ...proofItems].map((item, i) => {
@@ -20,7 +20,7 @@ export function SocialProofBar() {
               className="flex items-center gap-2.5 px-8 whitespace-nowrap"
             >
               <Icon className="w-4 h-4 text-accent flex-shrink-0" />
-              <span className="text-sm text-muted-foreground">
+              <span className="text-sm text-foreground">
                 {item.text}
               </span>
               <span className="w-px h-4 bg-border mx-4" />
