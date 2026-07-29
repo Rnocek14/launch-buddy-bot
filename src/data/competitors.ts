@@ -74,6 +74,21 @@ export const FOOTPRINT_FINDER_PRICING = {
 export const COMPETITOR_PRICING_VERIFIED_ON = "2026-06-10";
 
 /**
+ * Year stamped into comparison titles ("... Compared (2026)"). Computed
+ * rather than hardcoded so titles don't silently go stale in January —
+ * a visibly out-of-date year on a comparison page costs clicks.
+ */
+export const CONTENT_YEAR = new Date().getFullYear();
+
+/** Consistent long-form date rendering for "last verified" stamps. */
+export const formatVerifiedDate = (iso: string): string =>
+  new Date(iso).toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+
+/**
  * Rows of the side-by-side capability matrix, in display order.
  * Shared by src/pages/Compare.tsx and scripts/prerender.ts so the HTML a
  * crawler sees on first response matches the hydrated React page exactly.

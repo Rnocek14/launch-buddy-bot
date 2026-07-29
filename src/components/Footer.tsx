@@ -33,8 +33,9 @@ const COLUMNS: { heading: string; links: { to: string; label: string }[] }[] = [
   {
     heading: "Compare & learn",
     links: [
-      { to: "/vs", label: "Compare privacy services" },
-      { to: "/blog", label: "Comparison articles" },
+      { to: "/best-data-removal-services", label: "Best data removal services" },
+      { to: "/vs", label: "All service comparisons" },
+      { to: "/vs/deleteme-vs-incogni", label: "DeleteMe vs Incogni" },
       { to: "/pricing", label: "Pricing" },
       { to: "/enterprise", label: "For businesses" },
       { to: "/help", label: "Help center" },

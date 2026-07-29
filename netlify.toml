@@ -10,6 +10,51 @@
   command = "npm run build"
   publish = "dist"
 
+# Legacy blog comparisons -> the /vs pages they were cannibalising.
+# These MUST come before the SPA fallback: Netlify applies the first matching
+# rule. See public/_redirects for the same rules in file form.
+[[redirects]]
+  from = "/blog/footprint-finder-vs-incogni"
+  to = "/vs/incogni"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/blog/footprint-finder-vs-deleteme"
+  to = "/vs/deleteme"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/blog/footprint-finder-vs-optery"
+  to = "/vs/optery"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/blog/footprint-finder-vs-mine"
+  to = "/vs/mine"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/blog/footprint-finder-vs-aura"
+  to = "/vs/aura"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/blog/*"
+  to = "/vs"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/blog"
+  to = "/vs"
+  status = 301
+  force = true
+
 # SPA fallback for non-prerendered, client-only routes.
 # IMPORTANT: status 200 WITHOUT a `!` (force) flag means Netlify serves a real
 # file when one exists at the path, and only uses this rule when none matches.

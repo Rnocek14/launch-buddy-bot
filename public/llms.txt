@@ -21,12 +21,12 @@ Data-broker removal is a Complete-tier feature. Pro does not include it.
 - [Pricing](/pricing): Full plan comparison.
 - [Parent Scan](/parents): One-time $39 scan for an elderly parent's email (scam-focused).
 - [Enterprise](/enterprise): Shadow IT audits and B2B offering.
-- [Compare](/vs): Footprint Finder vs DeleteMe, Incogni, OneRep, Privacy Bee, EasyOptOuts, Aura, Optery, Kanary, Mine.
+- [Best Data Removal Services](/best-data-removal-services): All 10 services ranked by category, with the honest catch for each — including ours.
+- [Compare](/vs): Alternatives pages for DeleteMe, Incogni, OneRep, Privacy Bee, EasyOptOuts, Aura, Optery, Kanary and Mine, plus head-to-head pages such as /vs/deleteme-vs-incogni.
 - [Data-Broker Removal Guides](/remove-from): Free opt-out instructions for 45+ US brokers.
 - [Privacy Guides](/guides): How-to guides for removing your name, address, phone number, email and images from the internet and from Google.
 - [Account Deletion Guides](/delete): Step-by-step instructions for permanently deleting accounts on Facebook, Instagram, Amazon, LinkedIn, Spotify and more.
 - [Breach Pages](/breach): Plain-English explainers for major data breaches and what to do if you were affected.
-- [Blog](/blog): Long-form privacy tool comparisons.
 - [Browser Extension](/extension): Chrome extension for in-context cleanup.
 - [Help](/help): FAQ explaining server-side metadata scanning.
 - [Demo](/demo): Interactive demo with sample data.

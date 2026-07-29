@@ -1,4 +1,5 @@
 import { useParams, Link, Navigate } from "react-router-dom";
+import { useEffect } from "react";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
@@ -11,11 +12,8 @@ import {
   XCircle,
   ArrowRight,
   Shield,
-  Mail,
-  Search,
-  AlertTriangle,
+  Info,
 } from "lucide-react";
-import { useEffect } from "react";
 import {
   COMPETITORS,
   FEATURE_ROWS,
@@ -24,29 +22,72 @@ import {
   FOOTPRINT_FINDER_BROKER_COVERAGE,
   FOOTPRINT_FINDER_PRICING,
   COMPETITOR_PRICING_VERIFIED_ON,
-  compareFaqs,
+  CONTENT_YEAR,
+  formatVerifiedDate,
 } from "@/data/competitors";
+import {
+  COMPETITOR_ARTICLES,
+  CATEGORY_CONTEXT,
+  RANKING_CRITERIA,
+} from "@/data/competitorArticles";
+import { isHeadToHeadSlug, headToHeadsFor } from "@/data/headToHead";
+import HeadToHead from "./HeadToHead";
+
+const SITE_URL = "https://footprintfinder.co";
 
 export default function Compare() {
   const { competitor } = useParams<{ competitor: string }>();
-  const data = competitor ? COMPETITORS[competitor.toLowerCase()] : undefined;
+  const slug = competitor?.toLowerCase();
+
+  // /vs/:competitor also serves competitor-vs-competitor pages
+  // (e.g. /vs/deleteme-vs-incogni). Dispatch before doing anything else.
+  if (slug && isHeadToHeadSlug(slug)) {
+    return <HeadToHead />;
+  }
+
+  return <AlternativesPage slug={slug} />;
+}
+
+function AlternativesPage({ slug }: { slug?: string }) {
+  const data = slug ? COMPETITORS[slug] : undefined;
+  const article = slug ? COMPETITOR_ARTICLES[slug] : undefined;
+
+  // Every other service, plus Footprint Finder, is an alternative to this one.
+  const alternatives = Object.values(COMPETITORS).filter(
+    (c) => c.slug !== data?.slug,
+  );
+  const optionCount = alternatives.length + 1;
 
   const seoTitle = data
-    ? `Footprint Finder vs ${data.name} — Honest Comparison`
+    ? `${data.name} Alternatives: ${optionCount} Options Compared (${CONTENT_YEAR})`
     : "Compare Privacy Tools — Footprint Finder";
   const seoDescription = data
-    ? `Compare Footprint Finder and ${data.name} side-by-side. Pricing, features, broker coverage, breach monitoring. Which privacy service is right for you?`
+    ? `Looking for a ${data.name} alternative? We compared ${optionCount} data removal services on price, broker coverage and what they can actually see — including where ${data.name} still wins.`
     : "Compare digital privacy tools.";
-  const canonical = data
-    ? `https://footprintfinder.co/vs/${data.slug}`
-    : undefined;
+  const canonical = data ? `${SITE_URL}/vs/${data.slug}` : undefined;
 
-  const faqs = data ? compareFaqs(data) : [];
+  // Article FAQs target People Also Ask; compareFaqs cover our own product.
+  const faqs = article?.faqs ?? [];
+  const relatedPairs = data ? headToHeadsFor(data.slug) : [];
 
-  // FAQPage schema is generated from the same `faqs` array the page renders,
-  // plus a BreadcrumbList matching the visible breadcrumb above the H1.
   const jsonLd = data
     ? [
+        {
+          "@context": "https://schema.org",
+          "@type": "Article",
+          headline: seoTitle,
+          description: seoDescription,
+          image: `${SITE_URL}/og-image.png`,
+          dateModified: COMPETITOR_PRICING_VERIFIED_ON,
+          author: { "@type": "Organization", name: "Footprint Finder", url: SITE_URL },
+          publisher: {
+            "@type": "Organization",
+            name: "Footprint Finder",
+            url: SITE_URL,
+            logo: { "@type": "ImageObject", url: `${SITE_URL}/og-image.png` },
+          },
+          mainEntityOfPage: canonical,
+        },
         {
           "@context": "https://schema.org",
           "@type": "FAQPage",
@@ -60,13 +101,13 @@ export default function Compare() {
           "@context": "https://schema.org",
           "@type": "BreadcrumbList",
           itemListElement: [
-            { "@type": "ListItem", position: 1, name: "Home", item: "https://footprintfinder.co/" },
-            { "@type": "ListItem", position: 2, name: "Compare", item: "https://footprintfinder.co/vs" },
+            { "@type": "ListItem", position: 1, name: "Home", item: `${SITE_URL}/` },
+            { "@type": "ListItem", position: 2, name: "Compare", item: `${SITE_URL}/vs` },
             {
               "@type": "ListItem",
               position: 3,
-              name: `Footprint Finder vs ${data.name}`,
-              item: `https://footprintfinder.co/vs/${data.slug}`,
+              name: `${data.name} alternatives`,
+              item: canonical,
             },
           ],
         },
@@ -86,8 +127,8 @@ export default function Compare() {
     }
   }, [data]);
 
-  if (!competitor || !data) {
-    return <Navigate to="/" replace />;
+  if (!slug || !data || !article) {
+    return <Navigate to="/vs" replace />;
   }
 
   return (
@@ -96,140 +137,134 @@ export default function Compare() {
 
       <main className="pt-24 pb-16 px-4">
         <div className="container max-w-4xl mx-auto">
-          {/* Breadcrumb */}
           <nav className="text-sm text-muted-foreground mb-6" aria-label="Breadcrumb">
             <Link to="/" className="hover:text-foreground">Home</Link>
             <span className="mx-2">/</span>
             <Link to="/vs" className="hover:text-foreground">Compare</Link>
             <span className="mx-2">/</span>
-            <span className="text-foreground">vs {data.name}</span>
+            <span className="text-foreground">{data.name} alternatives</span>
           </nav>
 
-          {/* Header */}
-          <header className="mb-10">
+          <header className="mb-8">
             <Badge variant="outline" className="mb-3">
-              Honest comparison
+              {optionCount} services compared
             </Badge>
             <h1 className="text-3xl md:text-5xl font-bold mb-4 leading-tight">
-              Footprint Finder vs {data.name}
+              {data.name} alternatives: {optionCount} options compared
             </h1>
             <p className="text-lg text-muted-foreground leading-relaxed">
-              {data.tagline}. Here's how it stacks up against Footprint Finder
-              on price, coverage, and features — written by people who use both.
+              {data.tagline}. Here's how it stacks up against every major
+              alternative on price, broker coverage and what each one can
+              actually see — including the cases where {data.name} is still the
+              right buy.
+            </p>
+            <p className="text-xs text-muted-foreground mt-4">
+              Pricing last verified{" "}
+              <time dateTime={COMPETITOR_PRICING_VERIFIED_ON}>
+                {formatVerifiedDate(COMPETITOR_PRICING_VERIFIED_ON)}
+              </time>
+              . Vendors change plans often — check current rates before buying.
             </p>
           </header>
 
-          {/* Quick verdict */}
-          <Card className="mb-10 border-primary/30 bg-primary/5">
-            <CardContent className="p-6">
-              <div className="flex items-start gap-3">
-                <Shield className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-                <div>
-                  <h2 className="font-semibold mb-2">Quick verdict</h2>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
-                    {data.bestFor}
-                  </p>
-                </div>
-              </div>
+          {/* Disclosure. Stated up front, not buried. */}
+          <Card className="mb-10 border-muted-foreground/20 bg-muted/30">
+            <CardContent className="p-4 flex items-start gap-3">
+              <Info className="w-4 h-4 flex-shrink-0 mt-0.5 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">
+                <strong className="text-foreground">Disclosure:</strong>{" "}
+                Footprint Finder is our own product and appears in this
+                comparison. The capability table below is generated from one
+                shared data file, so we're scored on the same criteria as
+                everyone else — and we've been explicit about where {data.name}{" "}
+                and others beat us.
+              </p>
             </CardContent>
           </Card>
 
-          {/* Side-by-side */}
+          {/* Quick answer — the summary a skimmer needs in ten seconds. */}
           <section className="mb-12">
-            <h2 className="text-2xl font-bold mb-6">Side-by-side comparison</h2>
-            <div className="grid md:grid-cols-2 gap-4">
-              {/* Footprint Finder */}
-              <Card className="border-accent/40">
-                <CardContent className="p-6">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Shield className="w-5 h-5 text-accent" />
-                    <h3 className="text-xl font-bold">Footprint Finder</h3>
-                  </div>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Free tier · {FOOTPRINT_FINDER_PRICING.pro} Pro ·{" "}
-                    {FOOTPRINT_FINDER_PRICING.complete} Complete
-                  </p>
-
-                  <ul className="space-y-2 text-sm">
-                    <li className="flex items-start gap-2">
-                      <CheckCircle2 className="w-4 h-4 text-accent flex-shrink-0 mt-0.5" />
-                      <span>Inbox scan finds every account tied to your email</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <CheckCircle2 className="w-4 h-4 text-accent flex-shrink-0 mt-0.5" />
-                      <span>
-                        Removes you from {FOOTPRINT_FINDER_BROKER_COVERAGE} (Complete plan)
-                      </span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <CheckCircle2 className="w-4 h-4 text-accent flex-shrink-0 mt-0.5" />
-                      <span>HaveIBeenPwned breach monitoring + alerts</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <CheckCircle2 className="w-4 h-4 text-accent flex-shrink-0 mt-0.5" />
-                      <span>Monthly rescans — privacy is maintenance, not a fix</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <CheckCircle2 className="w-4 h-4 text-accent flex-shrink-0 mt-0.5" />
-                      <span>Free tier first — see your exposure before you pay</span>
-                    </li>
-                  </ul>
-                </CardContent>
-              </Card>
-
-              {/* Competitor */}
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center gap-2 mb-1">
-                    <h3 className="text-xl font-bold">{data.name}</h3>
-                  </div>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    {data.annualPrice} · {data.monthlyPrice}
-                  </p>
-
-                  <ul className="space-y-2 text-sm">
-                    {data.pros.map((p) => (
-                      <li key={p} className="flex items-start gap-2">
-                        <CheckCircle2 className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-0.5" />
-                        <span>{p}</span>
-                      </li>
-                    ))}
-                    {data.cons.map((c) => (
-                      <li key={c} className="flex items-start gap-2">
-                        <XCircle className="w-4 h-4 text-destructive/70 flex-shrink-0 mt-0.5" />
-                        <span className="text-muted-foreground">{c}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </CardContent>
-              </Card>
+            <h2 className="text-2xl font-bold mb-4">
+              The short answer
+            </h2>
+            <div className="overflow-x-auto rounded-lg border">
+              <table className="w-full text-sm min-w-[560px]">
+                <thead>
+                  <tr className="border-b bg-muted/40">
+                    <th className="text-left font-semibold p-3">Service</th>
+                    <th className="text-left font-semibold p-3">Best for</th>
+                    <th className="text-left font-semibold p-3 w-32">Price</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {alternatives.map((alt, i) => {
+                    const altArticle = COMPETITOR_ARTICLES[alt.slug];
+                    return (
+                      <tr key={alt.slug} className={i % 2 === 1 ? "bg-muted/20" : undefined}>
+                        <td className="p-3 font-medium">
+                          <Link to={`/vs/${alt.slug}`} className="hover:text-primary">
+                            {alt.name}
+                          </Link>
+                        </td>
+                        <td className="p-3 text-muted-foreground">
+                          {altArticle?.bestForShort ?? alt.tagline}
+                        </td>
+                        <td className="p-3 whitespace-nowrap">{alt.annualPrice}</td>
+                      </tr>
+                    );
+                  })}
+                  <tr className="bg-accent/5 border-t-2 border-accent/30">
+                    <td className="p-3 font-medium">Footprint Finder (ours)</td>
+                    <td className="p-3 text-muted-foreground">
+                      Finding forgotten accounts in your inbox
+                    </td>
+                    <td className="p-3 whitespace-nowrap">
+                      {FOOTPRINT_FINDER_PRICING.pro}+
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </section>
 
-          {/* Feature comparison matrix */}
+          <section className="mb-12">
+            <h2 className="text-2xl font-bold mb-4">
+              Why people look for {data.name} alternatives
+            </h2>
+            <ul className="space-y-3">
+              {article.whySeekAlternatives.map((reason) => (
+                <li key={reason} className="flex items-start gap-3">
+                  <XCircle className="w-4 h-4 text-destructive/60 flex-shrink-0 mt-1" />
+                  <span className="text-base leading-relaxed">{reason}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+
+          {/* Unique long-form body. */}
+          {article.sections.map((section) => (
+            <section key={section.heading} className="mb-12">
+              <h2 className="text-2xl font-bold mb-4">{section.heading}</h2>
+              {section.body.map((para, i) => (
+                <p key={i} className="text-base leading-relaxed mb-4 text-foreground/90">
+                  {para}
+                </p>
+              ))}
+            </section>
+          ))}
+
+          {/* Head-to-head: us vs them. */}
           <section className="mb-12">
             <h2 className="text-2xl font-bold mb-2">
-              Feature comparison: Footprint Finder vs {data.name}
+              Footprint Finder vs {data.name}
             </h2>
-            <p className="text-sm text-muted-foreground mb-2">
-              Coverage: Footprint Finder removes you from{" "}
-              {FOOTPRINT_FINDER_BROKER_COVERAGE} on the{" "}
-              {FOOTPRINT_FINDER_PRICING.brokerTier} plan; {data.name} covers{" "}
-              {data.brokerCoverage}.
+            <p className="text-sm text-muted-foreground mb-6">
+              Footprint Finder removes you from {FOOTPRINT_FINDER_BROKER_COVERAGE}{" "}
+              on the {FOOTPRINT_FINDER_PRICING.brokerTier} plan; {data.name}{" "}
+              covers {data.brokerCoverage}.
             </p>
-            <p className="text-xs text-muted-foreground mb-6">
-              {data.name} pricing last verified{" "}
-              <time dateTime={COMPETITOR_PRICING_VERIFIED_ON}>
-                {new Date(COMPETITOR_PRICING_VERIFIED_ON).toLocaleDateString(undefined, {
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric",
-                })}
-              </time>
-              . Vendors change plans often — check {data.name}'s site for current rates.
-            </p>
-            <div className="overflow-hidden rounded-lg border">
-              <table className="w-full text-sm">
+            <div className="overflow-x-auto rounded-lg border mb-6">
+              <table className="w-full text-sm min-w-[480px]">
                 <thead>
                   <tr className="border-b bg-muted/40">
                     <th className="text-left font-semibold p-3">Capability</th>
@@ -243,10 +278,7 @@ export default function Compare() {
                 </thead>
                 <tbody>
                   {FEATURE_ROWS.map((row, i) => (
-                    <tr
-                      key={row.key}
-                      className={i % 2 === 1 ? "bg-muted/20" : undefined}
-                    >
+                    <tr key={row.key} className={i % 2 === 1 ? "bg-muted/20" : undefined}>
                       <td className="p-3">{row.label}</td>
                       <td className="p-3 text-center">
                         {FOOTPRINT_FINDER_FEATURES[row.key] ? (
@@ -264,25 +296,62 @@ export default function Compare() {
                       </td>
                     </tr>
                   ))}
+                  <tr className="border-t">
+                    <td className="p-3 font-medium">Price</td>
+                    <td className="p-3 text-center text-xs">
+                      Free · {FOOTPRINT_FINDER_PRICING.pro} · {FOOTPRINT_FINDER_PRICING.complete}
+                    </td>
+                    <td className="p-3 text-center text-xs">{data.annualPrice}</td>
+                  </tr>
                 </tbody>
               </table>
             </div>
+            <div className="grid sm:grid-cols-2 gap-4">
+              {data.whyFf.map((reason) => (
+                <Card key={reason}>
+                  <CardContent className="p-4">
+                    <p className="text-sm leading-relaxed">{reason}</p>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
           </section>
 
-
+          {/* The alternatives themselves. */}
           <section className="mb-12">
-            <h2 className="text-2xl font-bold mb-6">
-              What Footprint Finder does that {data.name} doesn't
+            <h2 className="text-2xl font-bold mb-2">
+              The best {data.name} alternatives
             </h2>
-            <div className="grid sm:grid-cols-2 gap-4">
-              {data.whyFf.map((reason, i) => {
-                const icons = [Mail, Search, Shield, AlertTriangle];
-                const Icon = icons[i % icons.length];
+            <p className="text-sm text-muted-foreground mb-6">
+              Every other major service in the category, with what each one is
+              genuinely good at.
+            </p>
+            <div className="space-y-4">
+              {alternatives.map((alt) => {
+                const altArticle = COMPETITOR_ARTICLES[alt.slug];
                 return (
-                  <Card key={reason}>
+                  <Card key={alt.slug}>
                     <CardContent className="p-5">
-                      <Icon className="w-5 h-5 text-primary mb-2" />
-                      <p className="text-sm leading-relaxed">{reason}</p>
+                      <div className="flex flex-wrap items-baseline justify-between gap-2 mb-2">
+                        <h3 className="font-semibold text-lg">
+                          <Link to={`/vs/${alt.slug}`} className="hover:text-primary">
+                            {alt.name}
+                          </Link>
+                        </h3>
+                        <span className="text-sm text-muted-foreground">
+                          {alt.annualPrice} · {alt.brokerCoverage}
+                        </span>
+                      </div>
+                      <p className="text-sm leading-relaxed mb-3">
+                        {altArticle?.shortTake ?? alt.tagline}
+                      </p>
+                      <Link
+                        to={`/vs/${alt.slug}`}
+                        className="text-sm text-primary inline-flex items-center hover:underline"
+                      >
+                        {alt.name} vs {data.name} and other alternatives
+                        <ArrowRight className="w-3.5 h-3.5 ml-1" />
+                      </Link>
                     </CardContent>
                   </Card>
                 );
@@ -290,56 +359,84 @@ export default function Compare() {
             </div>
           </section>
 
-          {/* FAQ */}
+          <section className="mb-12">
+            <h2 className="text-2xl font-bold mb-4">{RANKING_CRITERIA.heading}</h2>
+            {RANKING_CRITERIA.body.map((para, i) => (
+              <p key={i} className="text-base leading-relaxed mb-4 text-foreground/90">
+                {para}
+              </p>
+            ))}
+          </section>
+
+          <section className="mb-12">
+            <h2 className="text-2xl font-bold mb-4">{CATEGORY_CONTEXT.heading}</h2>
+            {/* Trimmed on competitor pages; the full version lives on the
+                best-services roundup so the shared block stays a small share
+                of each page's word count. */}
+            {CATEGORY_CONTEXT.body.slice(0, 2).map((para, i) => (
+              <p key={i} className="text-base leading-relaxed mb-4 text-foreground/90">
+                {para}
+              </p>
+            ))}
+            <Link to="/best-data-removal-services" className="text-sm text-primary inline-flex items-center hover:underline">
+              Full breakdown: best data removal services compared
+              <ArrowRight className="w-3.5 h-3.5 ml-1" />
+            </Link>
+          </section>
+
+          <section className="mb-12">
+            <h2 className="text-2xl font-bold mb-4">
+              What to check before you switch from {data.name}
+            </h2>
+            <ul className="space-y-3">
+              {article.switchNotes.map((note) => (
+                <li key={note} className="flex items-start gap-3">
+                  <CheckCircle2 className="w-4 h-4 text-accent flex-shrink-0 mt-1" />
+                  <span className="text-base leading-relaxed">{note}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+
           <section className="mb-12">
             <h2 className="text-2xl font-bold mb-6">
-              Frequently asked: {data.name} vs Footprint Finder
+              {data.name} alternatives: frequently asked questions
             </h2>
             <div className="space-y-4">
               {faqs.map((faq) => (
                 <Card key={faq.question}>
                   <CardContent className="p-5">
                     <h3 className="font-semibold mb-2">{faq.question}</h3>
-                    <p className="text-sm text-muted-foreground">{faq.answer}</p>
+                    <p className="text-sm text-muted-foreground leading-relaxed">
+                      {faq.answer}
+                    </p>
                   </CardContent>
                 </Card>
               ))}
-
-              <Card>
-                <CardContent className="p-5">
-                  <h3 className="font-semibold mb-2">
-                    Can I use both {data.name} and Footprint Finder?
-                  </h3>
-                  <p className="text-sm text-muted-foreground">
-                    You can, but on our Complete plan it's largely redundant —
-                    that tier already handles broker removal alongside inbox
-                    scanning and breach alerts. Pairing {data.name} with our Pro
-                    plan is the one combination that genuinely adds coverage.
-                  </p>
-                </CardContent>
-              </Card>
             </div>
           </section>
 
-          {/* CTA */}
-          <Card className="border-accent/30 bg-gradient-to-br from-accent/5 via-background to-primary/5">
+          <section className="mb-12 rounded-lg bg-muted/30 p-6">
+            <h2 className="text-2xl font-bold mb-3">The verdict</h2>
+            <p className="text-base leading-relaxed">{article.verdict}</p>
+          </section>
+
+          <Card className="border-accent/30 bg-gradient-to-br from-accent/5 via-background to-primary/5 mb-12">
             <CardContent className="p-6 md:p-8 text-center">
               <Shield className="w-10 h-10 text-primary mx-auto mb-3" />
               <h2 className="text-2xl md:text-3xl font-bold mb-3">
-                See your full digital footprint in 60 seconds
+                See your full exposure before you buy anything
               </h2>
               <p className="text-muted-foreground mb-6 max-w-2xl mx-auto">
-                Free scan. No credit card. See exactly what {data.name}{" "}
-                wouldn't show you — every account, every breach, every broker
-                listing tied to your email.
+                Free scan, no credit card. Find the breaches, broker listings
+                and forgotten accounts tied to your email — then decide which
+                service you actually need.
               </p>
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
                 <Link
                   to="/free-scan"
                   onClick={() =>
-                    trackEvent("seo_compare_cta_click", {
-                      competitor: data.slug,
-                    })
+                    trackEvent("seo_compare_cta_click", { competitor: data.slug })
                   }
                 >
                   <Button size="lg" className="gap-2 cta-shimmer">
@@ -349,21 +446,37 @@ export default function Compare() {
                 </Link>
                 <Link to="/remove-from">
                   <Button size="lg" variant="outline">
-                    Browse removal guides
+                    Do it yourself — free guides
                   </Button>
                 </Link>
               </div>
             </CardContent>
           </Card>
 
-          {/* Internal links — broker removal guides (topical cluster) */}
-          <section className="mt-12">
+          {relatedPairs.length > 0 && (
+            <section className="mb-10">
+              <h2 className="text-lg font-semibold mb-4">
+                Head-to-head comparisons involving {data.name}
+              </h2>
+              <div className="flex flex-wrap gap-2">
+                {relatedPairs.map((pair) => (
+                  <Link key={pair.slug} to={`/vs/${pair.slug}`}>
+                    <Button variant="outline" size="sm">
+                      {COMPETITORS[pair.a]?.name} vs {COMPETITORS[pair.b]?.name}
+                    </Button>
+                  </Link>
+                ))}
+              </div>
+            </section>
+          )}
+
+          <section className="mb-10">
             <h2 className="text-lg font-semibold mb-2">
-              Popular data-broker removal guides
+              Free data-broker removal guides
             </h2>
             <p className="text-sm text-muted-foreground mb-4">
-              Whichever service you choose, here's how to opt out of the brokers
-              people search for most:
+              Whichever service you choose — or none — here's how to opt out of
+              the brokers people search for most:
             </p>
             <div className="flex flex-wrap gap-2">
               {RELATED_BROKERS.map((b) => (
@@ -382,24 +495,26 @@ export default function Compare() {
             </div>
           </section>
 
-          {/* Other comparisons */}
-          <section className="mt-10">
+          <section>
             <h2 className="text-lg font-semibold mb-4">
               Compare other privacy tools
             </h2>
             <div className="flex flex-wrap gap-2">
-              {Object.values(COMPETITORS)
-                .filter((c) => c.slug !== data.slug)
-                .map((c) => (
-                  <Link key={c.slug} to={`/vs/${c.slug}`}>
-                    <Button variant="outline" size="sm">
-                      vs {c.name}
-                    </Button>
-                  </Link>
-                ))}
+              {alternatives.map((c) => (
+                <Link key={c.slug} to={`/vs/${c.slug}`}>
+                  <Button variant="outline" size="sm">
+                    {c.name} alternatives
+                  </Button>
+                </Link>
+              ))}
+              <Link to="/best-data-removal-services">
+                <Button variant="ghost" size="sm" className="gap-1">
+                  Best data removal services
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </Button>
+              </Link>
             </div>
           </section>
-
         </div>
       </main>
 

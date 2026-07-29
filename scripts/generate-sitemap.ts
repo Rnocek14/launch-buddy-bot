@@ -38,6 +38,11 @@ function gitLastModified(file: string): string | undefined {
 const SUPABASE_URL = "https://gqxkeezkajkiyjpnjgkx.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdxeGtlZXprYWpraXlqcG5qZ2t4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIzNjM4NDYsImV4cCI6MjA3NzkzOTg0Nn0.64_sr6feszswWrxHBogLYLPZvlnibTY_7ZOFd1l1Vfw";
 
+/** Newest of several optional YYYY-MM-DD dates; undefined if all are. */
+function newest(...dates: (string | undefined)[]): string | undefined {
+  return dates.filter(Boolean).sort().pop();
+}
+
 interface SitemapEntry {
   path: string;
   lastmod?: string;
@@ -53,7 +58,7 @@ const routeDefaults: Record<string, Omit<SitemapEntry, "path">> = {
   "/pricing": { changefreq: "weekly", priority: "0.85" },
   "/vs": { changefreq: "monthly", priority: "0.85" },
   "/enterprise": { changefreq: "monthly", priority: "0.8" },
-  "/blog": { changefreq: "weekly", priority: "0.7" },
+  "/best-data-removal-services": { changefreq: "weekly", priority: "0.9" },
   "/guides": { changefreq: "weekly", priority: "0.85" },
   "/delete": { changefreq: "weekly", priority: "0.8" },
   "/breach": { changefreq: "weekly", priority: "0.8" },
@@ -106,9 +111,11 @@ const excludedRoutes = new Set([
   "/subscribe",
   "/unsubscribe",
   "/affiliates/dashboard",
-  // 3. Redirect-only routes.
+  // 3. Redirect-only routes. A URL that 301s must never be listed as a page
+  //    we want indexed — the sitemap should only ever contain destinations.
   "/exposure-scan",
   "/scan",
+  "/blog",
 ]);
 
 const fallbackBrokerSlugs = ["411", "acxiom", "addresses", "advancedbackgroundchecks", "apollo", "beenverified", "checkpeople", "clustrmaps", "cocofinder", "cyberbackgroundchecks", "epsilon", "familytreenow", "fastpeoplesearch", "idtrue", "infotracer", "instantcheckmate", "intelius", "lead411", "lexisnexis", "mylife", "nuwber", "peekyou", "peoplebyname", "peoplefinders", "peoplelooker", "peoplesearchnow", "persopo", "publicrecords360", "publicrecordsnow", "radaris", "rocketreach", "searchpeoplefree", "smartbackgroundchecks", "spokeo", "thatsthem", "truepeoplesearch", "truthfinder", "usa-people-search", "usphonebook", "voterrecords", "whitepages", "xlek", "yellowpages", "zabasearch", "zoominfo"];
@@ -122,9 +129,12 @@ function getStaticRoutesFromApp() {
     .filter((path) => path !== "*" && !path.includes(":"));
 }
 
-function getBlogSlugs() {
-  const posts = readFileSync(resolve("src/data/blogPosts.ts"), "utf8");
-  return Array.from(posts.matchAll(/slug:\s*"([^"]+)"/g)).map((match) => match[1]);
+/** Canonical "<a>-vs-<b>" slugs from src/data/headToHead.ts. */
+function getHeadToHeadSlugs() {
+  const pairs = readFileSync(resolve("src/data/headToHead.ts"), "utf8");
+  return Array.from(pairs.matchAll(/slug:\s*"([a-z0-9]+-vs-[a-z0-9]+)"/g)).map(
+    (match) => match[1],
+  );
 }
 
 function getGuideSlugs() {
@@ -215,10 +225,16 @@ async function main() {
   // Each cluster's <lastmod> tracks the file that actually produces its
   // content, so a data-only edit correctly re-dates just those URLs.
   const appLastmod = gitLastModified("src/App.tsx") ?? BUILD_DATE;
-  const blogLastmod = gitLastModified("src/data/blogPosts.ts");
   const guidesLastmod = gitLastModified("src/data/guides.ts");
   const breachLastmod = gitLastModified("src/data/breachEvents.ts");
-  const compareLastmod = gitLastModified("src/data/competitors.ts");
+  // Comparison pages are rendered from three files; the newest edit to any of
+  // them is the honest lastmod for the cluster.
+  const compareLastmod = newest(
+    gitLastModified("src/data/competitors.ts"),
+    gitLastModified("src/data/competitorArticles.ts"),
+  );
+  const pairLastmod = newest(compareLastmod, gitLastModified("src/data/headToHead.ts"));
+  const bestServicesLastmod = newest(pairLastmod, gitLastModified("src/data/bestServices.ts"));
   const deleteLastmod = gitLastModified("src/data/deleteGuides.ts");
   // Broker pages are rendered from the Supabase table by scripts/prerender.ts;
   // the page template is what we can date, so use it.
@@ -235,9 +251,9 @@ async function main() {
   // Hub pages list their cluster's items, so they re-date with the cluster
   // data rather than with App.tsx.
   for (const [path, lastmod] of Object.entries({
-    "/blog": blogLastmod,
     "/guides": guidesLastmod,
-    "/vs": compareLastmod,
+    "/vs": pairLastmod,
+    "/best-data-removal-services": bestServicesLastmod,
     "/delete": deleteLastmod,
     "/breach": breachLastmod,
     "/remove-from": brokerLastmod,
@@ -246,8 +262,8 @@ async function main() {
     if (existing && lastmod) entries.set(path, { ...existing, lastmod });
   }
 
-  for (const slug of getBlogSlugs()) {
-    addEntry(entries, { path: `/blog/${slug}`, lastmod: blogLastmod, changefreq: "monthly", priority: "0.75" });
+  for (const slug of getHeadToHeadSlugs()) {
+    addEntry(entries, { path: `/vs/${slug}`, lastmod: pairLastmod, changefreq: "monthly", priority: "0.85" });
   }
 
   for (const slug of getGuideSlugs()) {
