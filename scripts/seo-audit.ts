@@ -32,6 +32,8 @@ const MIN_LINKS = 5;
  */
 const THIN_OK = new Set([
   "/vs",
+  "/remove",
+  "/privacy-rights",
   "/guides",
   "/delete",
   "/breach",

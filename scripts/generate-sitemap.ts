@@ -59,6 +59,8 @@ const routeDefaults: Record<string, Omit<SitemapEntry, "path">> = {
   "/vs": { changefreq: "monthly", priority: "0.85" },
   "/enterprise": { changefreq: "monthly", priority: "0.8" },
   "/best-data-removal-services": { changefreq: "weekly", priority: "0.9" },
+  "/privacy-rights": { changefreq: "weekly", priority: "0.9" },
+  "/remove": { changefreq: "weekly", priority: "0.9" },
   "/guides": { changefreq: "weekly", priority: "0.85" },
   "/delete": { changefreq: "weekly", priority: "0.8" },
   "/breach": { changefreq: "weekly", priority: "0.8" },
@@ -127,6 +129,18 @@ function getStaticRoutesFromApp() {
   return Array.from(app.matchAll(/<Route\s+path="([^"]+)"/g))
     .map((match) => match[1])
     .filter((path) => path !== "*" && !path.includes(":"));
+}
+
+/** State slugs from src/data/states.ts. */
+function getStateSlugs() {
+  const src = readFileSync(resolve("src/data/states.ts"), "utf8");
+  return Array.from(src.matchAll(/slug:\s*"([a-z-]+)",\s*name:/g)).map((m) => m[1]);
+}
+
+/** Personal-data-type slugs from src/data/dataTypes.ts. */
+function getDataTypeSlugs() {
+  const src = readFileSync(resolve("src/data/dataTypes.ts"), "utf8");
+  return Array.from(src.matchAll(/slug:\s*"([a-z-]+)",\s*dataType:/g)).map((m) => m[1]);
 }
 
 /** Canonical "<a>-vs-<b>" slugs from src/data/headToHead.ts. */
@@ -235,6 +249,8 @@ async function main() {
   );
   const pairLastmod = newest(compareLastmod, gitLastModified("src/data/headToHead.ts"));
   const bestServicesLastmod = newest(pairLastmod, gitLastModified("src/data/bestServices.ts"));
+  const statesLastmod = gitLastModified("src/data/states.ts");
+  const dataTypesLastmod = gitLastModified("src/data/dataTypes.ts");
   const deleteLastmod = gitLastModified("src/data/deleteGuides.ts");
   // Broker pages are rendered from the Supabase table by scripts/prerender.ts;
   // the page template is what we can date, so use it.
@@ -254,12 +270,22 @@ async function main() {
     "/guides": guidesLastmod,
     "/vs": pairLastmod,
     "/best-data-removal-services": bestServicesLastmod,
+    "/privacy-rights": statesLastmod,
+    "/remove": dataTypesLastmod,
     "/delete": deleteLastmod,
     "/breach": breachLastmod,
     "/remove-from": brokerLastmod,
   })) {
     const existing = entries.get(path);
     if (existing && lastmod) entries.set(path, { ...existing, lastmod });
+  }
+
+  for (const slug of getStateSlugs()) {
+    addEntry(entries, { path: `/privacy-rights/${slug}`, lastmod: statesLastmod, changefreq: "monthly", priority: "0.8" });
+  }
+
+  for (const slug of getDataTypeSlugs()) {
+    addEntry(entries, { path: `/remove/${slug}`, lastmod: dataTypesLastmod, changefreq: "monthly", priority: "0.85" });
   }
 
   for (const slug of getHeadToHeadSlugs()) {

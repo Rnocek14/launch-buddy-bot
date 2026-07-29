@@ -36,6 +36,8 @@ const scrollToSection = (id: string) => {
 const RESOURCE_LINKS = [
   { to: "/best-data-removal-services", label: "Best data removal services" },
   { to: "/vs", label: "Compare privacy services" },
+  { to: "/privacy-rights", label: "Your privacy rights by state" },
+  { to: "/remove", label: "Remove personal data by type" },
   { to: "/remove-from", label: "Data-broker opt-out guides" },
   { to: "/guides", label: "Privacy removal guides" },
   { to: "/delete", label: "Delete your online accounts" },
