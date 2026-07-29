@@ -31,7 +31,7 @@ export default function CompareIndex() {
   useSEO({
     title: `Data Removal Service Comparisons (${CONTENT_YEAR}) — Footprint Finder`,
     description:
-      "Side-by-side comparisons of DeleteMe, Incogni, OneRep, Optery, Privacy Bee, Kanary, Aura, EasyOptOuts and Mine — pricing, broker coverage and honest alternatives for each.",
+      "Side-by-side comparisons of DeleteMe, Incogni, OneRep, Optery, Privacy Bee, Kanary, Aura and Mine — pricing, coverage and honest alternatives.",
     canonical: `${SITE_URL}/vs`,
     ogType: "website",
     jsonLd: [

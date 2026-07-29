@@ -1,4 +1,4 @@
-import React from "react";
+import React, { lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -7,39 +7,16 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import Index from "./pages/Index";
-import Demo from "./pages/Demo";
-import Auth from "./pages/Auth";
-import Admin from "./pages/Admin";
-import AdminAnalytics from "./pages/AdminAnalytics";
-import Dashboard from "./pages/Dashboard";
-import AlphaAccess from "./pages/AlphaAccess";
-import Unsubscribe from "./pages/Unsubscribe";
-import Preferences from "./pages/Preferences";
-import UnmatchedDomains from "./pages/UnmatchedDomains";
-import DeletionRequests from "./pages/DeletionRequests";
-import Cleanup from "./pages/Cleanup";
 import WhoHasMyData from "./pages/WhoHasMyData";
 import NotFound from "./pages/NotFound";
-import Settings from "./pages/Settings";
-import Status from "./pages/Status";
-import DiscoveryDebug from "./pages/DiscoveryDebug";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfService from "./pages/TermsOfService";
 import Help from "./pages/Help";
-import Subscribe from "./pages/Subscribe";
-import Billing from "./pages/Billing";
-import PublicResult from "./pages/PublicResult";
-import BrokerScan from "./pages/BrokerScan";
 import FreeScan from "./pages/FreeScan";
 import Enterprise from "./pages/Enterprise";
-import Organization from "./pages/Organization";
-import Offboarding from "./pages/Offboarding";
-import Authorize from "./pages/Authorize";
 // ExposureScan deprecated — /exposure-scan now redirects to /dashboard
 import { Navigate } from "react-router-dom";
 import Extension from "./pages/Extension";
-import ResetPassword from "./pages/ResetPassword";
-import EmailSubscriptions from "./pages/EmailSubscriptions";
 import Parents from "./pages/Parents";
 import LegacyBlogRedirect from "./pages/LegacyBlogRedirect";
 import RemoveBroker from "./pages/RemoveBroker";
@@ -48,9 +25,7 @@ import Compare from "./pages/Compare";
 import CompareIndex from "./pages/CompareIndex";
 import BestServices from "./pages/BestServices";
 import Affiliates from "./pages/Affiliates";
-import AffiliateDashboard from "./pages/AffiliateDashboard";
 import PricingPage from "./pages/PricingPage";
-import PaymentSuccess from "./pages/PaymentSuccess";
 import DeleteServiceIndex from "./pages/DeleteServiceIndex";
 import DeleteService from "./pages/DeleteService";
 import GuideIndex from "./pages/GuideIndex";
@@ -63,6 +38,45 @@ if (typeof window !== "undefined") {
   captureAffiliateRef();
 }
 
+/**
+ * Authenticated app surfaces, split out of the main bundle.
+ *
+ * These routes pull in recharts, jspdf, html-to-image and qrcode — none of
+ * which any indexable marketing page needs. Before this split every visitor
+ * landing on a guide or comparison page downloaded the entire dashboard,
+ * which lands directly on Largest Contentful Paint and Interaction to Next
+ * Paint, both Core Web Vitals ranking signals.
+ *
+ * Keep prerendered SEO routes (/, /vs/*, /guides/*, /remove-from/*, ...)
+ * eagerly imported: a Suspense fallback on those would replace prerendered
+ * content with a spinner, which is worse than shipping the code.
+ */
+const Auth = lazy(() => import("./pages/Auth"));
+const Admin = lazy(() => import("./pages/Admin"));
+const AdminAnalytics = lazy(() => import("./pages/AdminAnalytics"));
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const UnmatchedDomains = lazy(() => import("./pages/UnmatchedDomains"));
+const DeletionRequests = lazy(() => import("./pages/DeletionRequests"));
+const Cleanup = lazy(() => import("./pages/Cleanup"));
+const AlphaAccess = lazy(() => import("./pages/AlphaAccess"));
+const Unsubscribe = lazy(() => import("./pages/Unsubscribe"));
+const Preferences = lazy(() => import("./pages/Preferences"));
+const Settings = lazy(() => import("./pages/Settings"));
+const DiscoveryDebug = lazy(() => import("./pages/DiscoveryDebug"));
+const Subscribe = lazy(() => import("./pages/Subscribe"));
+const Billing = lazy(() => import("./pages/Billing"));
+const Authorize = lazy(() => import("./pages/Authorize"));
+const PublicResult = lazy(() => import("./pages/PublicResult"));
+const BrokerScan = lazy(() => import("./pages/BrokerScan"));
+const Organization = lazy(() => import("./pages/Organization"));
+const Offboarding = lazy(() => import("./pages/Offboarding"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+const EmailSubscriptions = lazy(() => import("./pages/EmailSubscriptions"));
+const AffiliateDashboard = lazy(() => import("./pages/AffiliateDashboard"));
+const PaymentSuccess = lazy(() => import("./pages/PaymentSuccess"));
+const Status = lazy(() => import("./pages/Status"));
+const Demo = lazy(() => import("./pages/Demo"));
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -73,6 +87,7 @@ const App = () => (
           <Toaster />
           <Sonner />
           <BrowserRouter>
+            <Suspense fallback={<div className="min-h-screen" aria-busy="true" />}>
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/demo" element={<Demo />} />
@@ -129,6 +144,7 @@ const App = () => (
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
+            </Suspense>
           </BrowserRouter>
         </TooltipProvider>
       </ThemeProvider>

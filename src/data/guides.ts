@@ -43,9 +43,9 @@ export const GUIDES: Guide[] = [
     slug: "remove-personal-information-from-internet",
     category: "Removal",
     title:
-      "How to Remove Your Personal Information From the Internet (2026 Guide)",
+      "How to Remove Your Personal Information From the Internet",
     description:
-      "A free, step-by-step guide to removing your personal information from the internet — data brokers, Google, breaches and old accounts. Plus a 60-second scan to find where you're exposed.",
+      "A free, step-by-step guide to removing your personal information from the internet — data brokers, Google, breaches and old accounts.",
     h1: "How to Remove Your Personal Information From the Internet",
     primaryKeyword: "how to remove personal information from internet",
     readTime: "8 min read",
@@ -118,7 +118,7 @@ export const GUIDES: Guide[] = [
     category: "Removal",
     title: "How to Remove Your Phone Number From the Internet (Free Guide)",
     description:
-      "Stop spam calls and protect your privacy. A free step-by-step guide to removing your phone number from data brokers, Google and people-search sites — plus a scan to find where it's listed.",
+      "Stop spam calls for good. A free step-by-step guide to removing your phone number from data brokers, Google and people-search sites.",
     h1: "How to Remove Your Phone Number From the Internet",
     primaryKeyword: "how to remove my phone number from the internet",
     readTime: "6 min read",
@@ -173,7 +173,7 @@ export const GUIDES: Guide[] = [
     category: "Google Removal",
     title: "How to Remove Your Personal Information From Google (Free, 2026)",
     description:
-      "Remove your personal information from Google search results for free using the 'Results about you' tool — plus how to delete the underlying data-broker listings so it doesn't come back.",
+      "Remove your personal information from Google search results for free — plus how to delete the underlying broker listings so it stays gone.",
     h1: "How to Remove Your Personal Information From Google",
     primaryKeyword: "how to remove personal information from google for free",
     readTime: "6 min read",
@@ -228,7 +228,7 @@ export const GUIDES: Guide[] = [
     category: "Discovery",
     title: "Who Has My Personal Information? Find Out in 60 Seconds",
     description:
-      "Find out who has your personal information — which data brokers, breaches and companies hold your name, address, phone and email. Run a free 60-second scan to see your exposure.",
+      "Find out which data brokers, breaches and companies hold your name, address, phone and email. Run a free 60-second scan to see your exposure.",
     h1: "Who Has My Personal Information?",
     primaryKeyword: "who has my personal information",
     readTime: "5 min read",
@@ -373,7 +373,7 @@ export const GUIDES: Guide[] = [
     category: "Discovery",
     title: "How Do Data Brokers Get My Information? (Explained)",
     description:
-      "Data brokers collect your information from public records, online activity, purchases and other brokers. Here's exactly how they build a profile on you — and how to opt out.",
+      "Data brokers collect from public records, online activity, purchases and each other. Exactly how they build a profile on you — and how to opt out.",
     h1: "How Do Data Brokers Get My Information?",
     primaryKeyword: "how do data brokers get my information",
     readTime: "6 min read",
@@ -419,7 +419,7 @@ export const GUIDES: Guide[] = [
     category: "Discovery",
     title: "How Many Companies Have My Personal Information?",
     description:
-      "The average person's data is held by hundreds of companies — data brokers, apps, retailers and breached databases. Find out how many have yours with a free scan.",
+      "The average person's data sits with hundreds of companies — brokers, apps, retailers and breached databases. Find out how many have yours.",
     h1: "How Many Companies Have My Personal Information?",
     primaryKeyword: "how many companies have my information",
     readTime: "5 min read",
@@ -596,7 +596,7 @@ export const GUIDES: Guide[] = [
     category: "Education",
     title: "How to Stop Identity Theft Before It Happens",
     description:
-      "Identity theft starts with exposed personal data. Learn how to prevent identity theft by removing your information from data brokers and locking down your accounts.",
+      "Identity theft starts with exposed personal data. How to prevent it by removing your info from data brokers and locking down your accounts.",
     h1: "How to Stop Identity Theft",
     primaryKeyword: "how to stop identity theft",
     readTime: "7 min read",
@@ -836,7 +836,7 @@ export const GUIDES: Guide[] = [
     category: "Removal",
     title: "How to Remove Your Address From the Internet (Free 2026 Guide)",
     description:
-      "Your home address is published by data brokers and people-search sites. Here's how to remove your address from the internet for free, step by step — plus a 60-second scan to find every site listing it.",
+      "Data brokers and people-search sites publish your home address. How to remove it from the internet for free, step by step.",
     h1: "How to Remove Your Address From the Internet",
     primaryKeyword: "remove address from internet",
     readTime: "7 min read",
@@ -893,7 +893,7 @@ export const GUIDES: Guide[] = [
     category: "Removal",
     title: "How to Remove Your Email Address From the Internet (Free Guide)",
     description:
-      "Your email is exposed in breaches, broker listings and forgotten accounts. Here's how to remove your email address from the internet and cut down spam — plus a free scan to find where it's exposed.",
+      "Your email is exposed in breaches, broker listings and forgotten accounts. How to remove it from the internet and cut down the spam.",
     h1: "How to Remove Your Email Address From the Internet",
     primaryKeyword: "remove email address from internet",
     readTime: "6 min read",
@@ -952,7 +952,7 @@ export const GUIDES: Guide[] = [
     category: "Removal",
     title: "How to Remove Public Records From the Internet (2026 Guide)",
     description:
-      "Public records expose your address, phone and relatives through data brokers. Learn how to remove public records online for free, step by step — plus a scan to find where they're published.",
+      "Public records expose your address, phone and relatives through data brokers. How to remove public records online for free, step by step.",
     h1: "How to Remove Public Records From the Internet",
     primaryKeyword: "remove public records online",
     readTime: "7 min read",
@@ -1004,7 +1004,7 @@ export const GUIDES: Guide[] = [
     category: "Education",
     title: "What Is a Digital Footprint? (And How to Shrink Yours)",
     description:
-      "Your digital footprint is every trace of data you leave online — accounts, breaches, broker listings and search results. Learn what a digital footprint is, why it matters, and how to shrink yours.",
+      "Your digital footprint is every trace you leave online — accounts, breaches, broker listings, search results. What it is and how to shrink it.",
     h1: "What Is a Digital Footprint?",
     primaryKeyword: "what is a digital footprint",
     readTime: "6 min read",
@@ -1106,7 +1106,7 @@ export const GUIDES: Guide[] = [
     category: "Discovery",
     title: "Why Is My Phone Number Online? (And How to Remove It)",
     description:
-      "Your phone number is online because data brokers buy it and people-search sites publish it. Here's why your number is public, how they got it, and how to remove it for free.",
+      "Data brokers buy your phone number and people-search sites publish it. Why your number is public, how they got it, and how to remove it free.",
     h1: "Why Is My Phone Number Online?",
     primaryKeyword: "why is my phone number online",
     readTime: "5 min read",
@@ -1154,7 +1154,7 @@ export const GUIDES: Guide[] = [
     category: "Discovery",
     title: "How Did Whitepages Get My Information? (And How to Remove It)",
     description:
-      "Whitepages got your information from public records, marketing data and other brokers. Learn exactly how Whitepages built your profile and how to remove yourself for free.",
+      "Whitepages got your data from public records, marketing lists and other brokers. How it built your profile — and how to remove yourself free.",
     h1: "How Did Whitepages Get My Information?",
     primaryKeyword: "how did whitepages get my information",
     readTime: "5 min read",

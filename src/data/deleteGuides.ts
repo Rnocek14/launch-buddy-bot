@@ -348,3 +348,51 @@ export const DELETE_GUIDES: DeleteGuide[] = [
 export function getDeleteGuide(slug: string) {
   return DELETE_GUIDES.find((g) => g.slug === slug.toLowerCase());
 }
+
+/**
+ * FAQs derived from each guide's own data, so they stay correct when the
+ * steps or retention details change and never drift from the visible copy.
+ *
+ * These pages were the thinnest on the site (100–240 words of prerendered
+ * body), which is a weak position for "how to delete <service> account" —
+ * a query where the service's own help page is the incumbent. The answers
+ * below are the ones the official page won't give you: what survives the
+ * deletion, and why deleting doesn't remove you from the data brokers who
+ * already bought the data.
+ */
+export function deleteGuideFaqs(g: DeleteGuide) {
+  return [
+    {
+      question: `How long does it take to delete a ${g.service} account?`,
+      answer: `${g.timeEstimate}. Difficulty: ${g.difficulty.toLowerCase()}. The full step-by-step process is on this page, and the official deletion page is at ${g.officialUrl}.`,
+    },
+    {
+      question: `What data does ${g.service} keep after you delete your account?`,
+      answer: `Deletion is rarely total. ${g.service} retains: ${g.whatTheyKeep.join("; ")}. That is normal across the industry — most retention is for legal, security or fraud-prevention reasons — but it is worth knowing that "delete" does not mean every trace is gone.`,
+    },
+    {
+      question: `Can you recover a deleted ${g.service} account?`,
+      answer: `Assume not. Some services offer a grace period before deletion finalises, and where ${g.service} does, it is noted in the steps above. Once that window closes the account is gone. Download your data before you start — every major service offers an export, and it takes minutes.`,
+    },
+    {
+      question: `Is deleting my ${g.service} account enough to protect my privacy?`,
+      answer: `No, and this is the part most guides skip. Deleting the account stops ${g.service} from collecting more, but it does not claw back what was already shared with advertisers, analytics partners or data brokers. If your name, address and phone are published on people-search sites, that stays true after the account is gone — those listings have to be removed separately, which you can do yourself for free.`,
+    },
+  ];
+}
+
+/**
+ * Shared closing section: the honest limitation of account deletion.
+ * Not boilerplate padding — it is the single most common misconception
+ * about what deleting an account achieves.
+ */
+export function deleteGuideAftermath(g: DeleteGuide) {
+  return {
+    heading: `What deleting your ${g.service} account doesn't fix`,
+    body: [
+      `Closing the account stops the flow of new data. It does not retrieve what has already left. Anything ${g.service} shared with advertising or analytics partners before you deleted stays with those partners, and anything that reached a data broker stays in the broker's database.`,
+      `That is why people who delete a dozen accounts still find their home address on people-search sites afterwards. Those sites did not get your address from ${g.service} — they compiled it from public records, marketing lists and each other. Account deletion and broker removal are separate jobs, and doing one does not do the other.`,
+      `Both are free to do yourself. The opt-out guides on this site cover 45+ brokers step by step, and the deletion steps above cost nothing but time.`,
+    ],
+  };
+}
