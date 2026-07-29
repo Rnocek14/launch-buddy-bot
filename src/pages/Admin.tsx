@@ -193,6 +193,52 @@ export default function Admin() {
     }
   };
 
+  /**
+   * Consented leads from the free scan and breach pages. Separate from the
+   * waitlist: these people ticked an opt-in box on a marketing page, and the
+   * consent columns travel with the address so the export is self-documenting
+   * about what each person actually agreed to.
+   */
+  const exportScanLeads = async () => {
+    const { data, error } = await supabase
+      .from("scan_leads" as any)
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error || !data) {
+      toast({
+        title: "Export failed",
+        description: error?.message ?? "Could not load scan leads",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const rows = data as any[];
+    const esc = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+    const csv = [
+      ["Email", "Source", "Source detail", "Consented at", "Consent copy", "Page"],
+      ...rows.map((r) => [
+        esc(r.email),
+        esc(r.source),
+        esc(r.source_detail),
+        esc(r.consented_at),
+        esc(r.consent_copy),
+        esc(r.source_path),
+      ]),
+    ]
+      .map((row) => row.join(","))
+      .join("\n");
+
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `scan-leads-${new Date().toISOString().split("T")[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const exportWaitlist = () => {
     const csv = [
       ["Email", "Joined Date", "Unsubscribed", "Frequency"],
@@ -1342,10 +1388,16 @@ export default function Admin() {
                 <CardTitle>Waitlist</CardTitle>
                 <CardDescription>{filteredWaitlist.length} entries</CardDescription>
               </div>
-              <Button onClick={exportWaitlist} variant="outline" size="sm">
-                <Download className="w-4 h-4 mr-2" />
-                Export CSV
-              </Button>
+              <div className="flex gap-2">
+                <Button onClick={exportWaitlist} variant="outline" size="sm">
+                  <Download className="w-4 h-4 mr-2" />
+                  Export CSV
+                </Button>
+                <Button onClick={exportScanLeads} variant="outline" size="sm">
+                  <Download className="w-4 h-4 mr-2" />
+                  Export scan leads
+                </Button>
+              </div>
             </div>
           </CardHeader>
           <CardContent className="space-y-4">

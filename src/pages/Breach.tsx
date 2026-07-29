@@ -19,8 +19,11 @@ import {
   BREACHES_BY_DATE,
   UNIVERSAL_BREACH_STEPS,
 } from "@/data/breachEvents";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { trackEvent } from "@/lib/analytics";
 import { useSEO } from "@/hooks/useSEO";
+import { captureLead, LEAD_CONSENT_COPY } from "@/lib/leadCapture";
 
 const SITE_URL = "https://footprintfinder.co";
 
@@ -30,6 +33,7 @@ export default function Breach() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [consent, setConsent] = useState(false);
 
   const canonical = breach ? `${SITE_URL}/breach/${breach.slug}` : `${SITE_URL}/breach`;
 
@@ -98,6 +102,12 @@ export default function Breach() {
     if (!email || !/^\S+@\S+\.\S+$/.test(email)) return;
     setSubmitting(true);
     trackEvent("breach_email_capture", { breach_slug: breach.slug });
+    void captureLead({
+      email,
+      consented: consent,
+      source: "breach",
+      sourceDetail: breach.slug,
+    });
     navigate(`/free-scan?email=${encodeURIComponent(email)}&src=breach_${breach.slug}`);
   };
 
@@ -151,6 +161,25 @@ export default function Breach() {
                   Check my email <ArrowRight className="w-4 h-4" />
                 </Button>
               </form>
+
+              {/* This form hands off to /free-scan, which auto-runs and so
+                  never shows its own consent box. Without this checkbox,
+                  everyone arriving from a breach page would skip the opt-in
+                  entirely. */}
+              <div className="flex items-start gap-2.5 mb-3">
+                <Checkbox
+                  id="breach-consent"
+                  checked={consent}
+                  onCheckedChange={(v) => setConsent(v === true)}
+                  className="mt-0.5"
+                />
+                <Label
+                  htmlFor="breach-consent"
+                  className="text-sm font-normal text-muted-foreground leading-relaxed cursor-pointer text-left"
+                >
+                  {LEAD_CONSENT_COPY}
+                </Label>
+              </div>
               <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
                 <span className="flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5 text-accent" /> No credit card</span>
                 <span className="flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5 text-accent" /> No password</span>

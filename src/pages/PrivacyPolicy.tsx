@@ -47,6 +47,35 @@ const PrivacyPolicy = () => {
                 </ul>
               </div>
               <div>
+                <h3 className="font-semibold mb-2">Free Scan and Breach Pages</h3>
+                <p className="mb-2">
+                  You can run a free exposure scan, and check any breach page,
+                  without an account. The email address you enter is sent to our
+                  breach-checking service to perform the lookup.
+                </p>
+                <ul className="list-disc pl-6 space-y-2">
+                  <li>
+                    <strong>We do not retain that address unless you ask us to.</strong>{" "}
+                    Storing it requires you to tick an opt-in box that is never
+                    pre-ticked. If you do not tick it, the scan runs and the
+                    address is not saved.
+                  </li>
+                  <li>
+                    If you do opt in, we store the address along with when you
+                    consented, the page you consented on, and the exact wording
+                    of the box you ticked — so we have an accurate record of
+                    what you agreed to.
+                  </li>
+                  <li>
+                    We use it only to email you about exposure affecting that
+                    address. Every email includes a one-click unsubscribe link,
+                    and unsubscribing is permanent — a later opt-in tick will
+                    not silently re-subscribe you.
+                  </li>
+                  <li>We do not sell, rent or share these addresses.</li>
+                </ul>
+              </div>
+              <div>
                 <h3 className="font-semibold mb-2">Usage Information</h3>
                 <ul className="list-disc pl-6 space-y-2">
                   <li>Services you've discovered and marked for deletion</li>

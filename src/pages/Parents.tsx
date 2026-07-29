@@ -145,7 +145,7 @@ export default function Parents() {
                   </div>
                   <p className="text-xs text-muted-foreground flex items-center gap-2">
                     <Lock className="w-3 h-3" />
-                    Free check · No signup · We don't store the email
+                    Free check · No signup · We never store or list your parent's address
                   </p>
                 </form>
 

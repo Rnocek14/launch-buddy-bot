@@ -11,10 +11,18 @@ import { WhatWeChecked } from "@/components/free-scan/WhatWeChecked";
 import { ParentScanUpsell } from "@/components/free-scan/ParentScanUpsell";
 import { ExposureSummary } from "@/components/free-scan/ExposureSummary";
 import { LiveBrokerCheck } from "@/components/free-scan/LiveBrokerCheck";
+import { AlertOptIn } from "@/components/free-scan/AlertOptIn";
 import { estimateIceberg } from "@/lib/icebergEstimate";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { trackEvent } from "@/lib/analytics";
 import { useSEO } from "@/hooks/useSEO";
+import {
+  captureLead,
+  LEAD_CONSENT_COPY,
+  LEAD_NO_CAPTURE_COPY,
+} from "@/lib/leadCapture";
 
 interface BreachData {
   name: string;
@@ -37,6 +45,7 @@ interface ScanResults {
 export default function FreeScan() {
   const [searchParams] = useSearchParams();
   const [email, setEmail] = useState("");
+  const [consent, setConsent] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
   const [scanPhase, setScanPhase] = useState("");
   const [results, setResults] = useState<ScanResults | null>(null);
@@ -124,12 +133,29 @@ export default function FreeScan() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  /**
+   * The parent-scan flow sends an adult child here with their parent's email.
+   * Nothing on this page may capture that address — consent has to come from
+   * the person who owns the inbox, not from whoever typed it in.
+   */
+  const isThirdPartyScan =
+    searchParams.get("source") === "parents" ||
+    searchParams.get("src") === "parents";
+
   const handleScan = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !email.includes("@")) {
       setError("Please enter a valid email address");
       return;
     }
+    // Not awaited: a capture failure must never stand between someone and
+    // the results they came for.
+    void captureLead({
+      email,
+      consented: consent,
+      source: "free_scan",
+      sourceDetail: searchParams.get("src"),
+    });
     runScan(email);
   };
 
@@ -183,6 +209,29 @@ export default function FreeScan() {
                       Check Exposure
                     </Button>
                   </div>
+
+                  {/* Unticked by default, and it stays that way. A pre-ticked
+                      box is not consent, and for a company selling privacy it
+                      would be the single most quotable thing on the site.
+                      Suppressed entirely when the address belongs to someone
+                      else — see isThirdPartyScan. */}
+                  {!isThirdPartyScan && (
+                  <div className="flex items-start gap-2.5 pt-1">
+                    <Checkbox
+                      id="scan-consent"
+                      checked={consent}
+                      onCheckedChange={(v) => setConsent(v === true)}
+                      className="mt-0.5"
+                    />
+                    <Label
+                      htmlFor="scan-consent"
+                      className="text-sm font-normal text-muted-foreground leading-relaxed cursor-pointer"
+                    >
+                      {LEAD_CONSENT_COPY}
+                    </Label>
+                  </div>
+                  )}
+
                   {error && (
                     <p className="text-sm text-destructive flex items-center gap-2">
                       <AlertTriangle className="w-4 h-4" />
@@ -191,9 +240,13 @@ export default function FreeScan() {
                   )}
                 </form>
 
-                <div className="mt-6 flex items-center justify-center gap-2 text-xs text-muted-foreground">
-                  <Lock className="w-3 h-3" />
-                  <span>We don't store or share your email address</span>
+                <div className="mt-6 flex items-start justify-center gap-2 text-xs text-muted-foreground text-center">
+                  <Lock className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                  <span>
+                    {isThirdPartyScan
+                      ? "This address belongs to someone else, so we won't store it or add it to any list."
+                      : LEAD_NO_CAPTURE_COPY}
+                  </span>
                 </div>
               </CardContent>
             </Card>
@@ -240,6 +293,22 @@ export default function FreeScan() {
                 />
               </section>
 
+              {/* Second ask, after they have seen the actual numbers. Hidden
+                  if they already ticked the box before scanning, and hidden
+                  entirely on the parent-scan flow: that email belongs to
+                  someone else, and an adult child cannot consent on their
+                  parent's behalf to being added to a mailing list. */}
+              {!consent && !isThirdPartyScan && (
+                <section>
+                  <AlertOptIn
+                    email={email}
+                    breachCount={results.breachCount}
+                    source="free_scan_results"
+                    sourceDetail={searchParams.get("src")}
+                  />
+                </section>
+              )}
+
               {/* Secondary: Parent Scan upsell */}
               {results.breachCount > 0 && (
                 <section>
@@ -279,7 +348,8 @@ export default function FreeScan() {
                   <Lock className="w-8 h-8 text-primary mx-auto mb-4" />
                   <h3 className="font-semibold mb-2">Privacy First</h3>
                   <p className="text-sm text-muted-foreground">
-                    Your email is checked against breach databases but never stored or shared.
+                    Your email is checked against breach databases and never sold or shared. We
+                    only keep it if you tick the opt-in box.
                   </p>
                 </CardContent>
               </Card>
