@@ -37,6 +37,18 @@ import {
 } from "../src/data/competitorArticles";
 import { HEAD_TO_HEADS, headToHeadsFor } from "../src/data/headToHead";
 import {
+  STATES,
+  STATES_WITH_LAWS,
+  STATES_WITHOUT_LAWS,
+  REGISTRY_STATES,
+  stateVerdict,
+  stateSteps,
+  stateFaqs,
+  COMMON_RIGHTS,
+  LAW_DATA_VERIFIED_ON,
+} from "../src/data/states";
+import { DATA_TYPE_GUIDES } from "../src/data/dataTypes";
+import {
   BEST_SERVICES_DESCRIPTION,
   BEST_SERVICES_INTRO,
   BEST_SERVICES_RANKING,
@@ -240,7 +252,7 @@ function brokerRoute(b: BrokerRecord): Route {
   const url = `${BASE_URL}/remove-from/${b.slug}`;
   const time = b.opt_out_time_estimate ?? "a few minutes";
   const title = `How to Delete Your Info from ${b.name} & Opt Out (${YEAR} Guide)`;
-  const description = `How to delete your personal information from ${b.name} and opt out for free. Step-by-step removal guide — takes ${time}. Or let Footprint Finder remove you from 45+ brokers automatically.`;
+  const description = `How to delete your personal information from ${b.name} and opt out for free. Step-by-step removal guide — takes ${time}. Or let Footprint Finder remove you from 25+ brokers automatically.`;
   const steps = (b.instructions ?? "")
     .split(/\\n|\n/)
     .map((s) => s.replace(/^\d+\.\s*/, "").trim())
@@ -253,7 +265,7 @@ function brokerRoute(b: BrokerRecord): Route {
   const faqs = [
     {
       question: `How do I delete my information from ${b.name}?`,
-      answer: `To delete your information from ${b.name}, open its opt-out page, search for your listing, and submit a removal request. The process takes ${time}. Footprint Finder can also do this for you automatically across 45+ brokers.`,
+      answer: `To delete your information from ${b.name}, open its opt-out page, search for your listing, and submit a removal request. The process takes ${time}. Footprint Finder can also do this for you automatically across 25+ brokers.`,
     },
     {
       question: `Is it free to remove yourself from ${b.name}?`,
@@ -310,7 +322,7 @@ function brokerIndexRoute(brokers: BrokerRecord[]): Route {
     path: "/remove-from",
     title: "Remove Yourself from Data Brokers — Free Opt-Out Guides",
     description:
-      "Free, step-by-step opt-out guides for 70+ data brokers and people-search sites. Find out who's exposing your info and remove yourself for free.",
+      "Free, step-by-step opt-out guides for 45+ data brokers and people-search sites. Find out who's exposing your info and remove yourself for free.",
     ogType: "website",
     body: `<main><h1>Remove yourself from data brokers</h1>${p(
       "Free, step-by-step opt-out guides for the data brokers and people-search sites most likely to be exposing your name, address and phone number.",
@@ -718,6 +730,194 @@ function compareIndexRoute(): Route {
   };
 }
 
+function stateRoute(st: (typeof STATES)[number]): Route {
+  const url = `${BASE_URL}/privacy-rights/${st.slug}`;
+  const title = `${st.name} Data Privacy Rights: Delete Your Info (${YEAR})`;
+  const description = `${
+    st.law
+      ? `${st.name}'s ${st.law.abbrev} gives you a right to delete.`
+      : `${st.name} has no comprehensive privacy law.`
+  } What that means in practice, and how to get your data removed.`;
+  const trail = [
+    { name: "Home", path: "/" },
+    { name: "Privacy rights by state", path: "/privacy-rights" },
+    { name: st.name, path: `/privacy-rights/${st.slug}` },
+  ];
+  const faqs = stateFaqs(st);
+  const steps = stateSteps(st);
+  const peers = STATES.filter((o) => o.slug !== st.slug)
+    .filter((o) => (st.law ? Boolean(o.law) : !o.law))
+    .slice(0, 8)
+    .map((o) => ({ href: `/privacy-rights/${o.slug}`, label: `${o.name} privacy rights` }));
+
+  return {
+    path: `/privacy-rights/${st.slug}`,
+    title,
+    description,
+    ogType: "article",
+    jsonLd: [
+      articleSchema(title, description, url, undefined, LAW_DATA_VERIFIED_ON),
+      faqSchema(faqs),
+      breadcrumbSchema(trail),
+    ],
+    body: `<article>${breadcrumbNav(trail)}<h1>How to delete your personal data in ${escHtml(
+      st.name,
+    )}</h1>${p(stateVerdict(st))}${
+      st.law
+        ? `<h2>What the ${escHtml(st.law.abbrev)} gives you</h2>${p(
+            `The ${st.law.name} took effect in ${st.law.effective}.${st.law.note ? " " + st.law.note : ""}`,
+          )}${ul([...COMMON_RIGHTS])}`
+        : ""
+    }<h2>What to do, in order</h2><ol>${steps
+      .map((x) => `<li><strong>${escHtml(x.title)}.</strong> ${escHtml(x.body)}</li>`)
+      .join("")}</ol>${faqBlock(faqs)}${p(
+      `Law names and effective dates last checked ${LAW_DATA_VERIFIED_ON}. General information about consumer privacy rights, not legal advice.`,
+    )}${relatedLinksBlock(
+      st.law ? "Other states with privacy laws" : "Other states without a comprehensive law",
+      peers,
+    )}${comparisonBridgeBlock()}${siteLinksBlock()}</article>`,
+  };
+}
+
+function privacyRightsIndexRoute(): Route {
+  const trail = [
+    { name: "Home", path: "/" },
+    { name: "Privacy rights by state", path: "/privacy-rights" },
+  ];
+  return {
+    path: "/privacy-rights",
+    title: `Data Deletion Rights by State (${YEAR}) — All 50 States`,
+    description:
+      "Which states let you demand deletion of your personal data, which run broker registries, and which have no law at all. All 50 states plus DC.",
+    ogType: "website",
+    jsonLd: [
+      {
+        "@context": "https://schema.org",
+        "@type": "ItemList",
+        name: "US data deletion rights by state",
+        itemListElement: STATES.map((s, i) => ({
+          "@type": "ListItem",
+          position: i + 1,
+          name: `${s.name} data privacy rights`,
+          url: `${BASE_URL}/privacy-rights/${s.slug}`,
+        })),
+      },
+      breadcrumbSchema(trail),
+    ],
+    body: `<main>${breadcrumbNav(trail)}<h1>Your data deletion rights, state by state</h1>${p(
+      `What you can legally demand depends entirely on where you live. One state has a free government tool that binds every registered broker, ${
+        STATES_WITH_LAWS.length - 1
+      } give you a right you exercise company by company, and ${STATES_WITHOUT_LAWS.length} have no comprehensive law at all.`,
+    )}<h2>States with a comprehensive privacy law</h2>${linkList(
+      STATES_WITH_LAWS.map((s) => ({
+        href: `/privacy-rights/${s.slug}`,
+        label: `${s.name} — ${s.law?.abbrev}, in effect ${s.law?.effective}`,
+      })),
+    )}<h2>States with a data broker register</h2>${linkList(
+      REGISTRY_STATES.map((s) => ({
+        href: `/privacy-rights/${s.slug}`,
+        label: `${s.name} data broker register`,
+      })),
+    )}<h2>States without a comprehensive law</h2>${linkList(
+      STATES_WITHOUT_LAWS.map((s) => ({
+        href: `/privacy-rights/${s.slug}`,
+        label: `${s.name} privacy rights`,
+      })),
+    )}${siteLinksBlock()}</main>`,
+  };
+}
+
+function dataTypeRoute(g: (typeof DATA_TYPE_GUIDES)[number]): Route {
+  const url = `${BASE_URL}/remove/${g.slug}`;
+  const trail = [
+    { name: "Home", path: "/" },
+    { name: "Remove your data", path: "/remove" },
+    { name: g.dataType, path: `/remove/${g.slug}` },
+  ];
+  return {
+    path: `/remove/${g.slug}`,
+    title: g.title,
+    description: g.description,
+    ogType: "article",
+    jsonLd: [
+      {
+        "@context": "https://schema.org",
+        "@type": "HowTo",
+        name: g.h1,
+        description: g.intro,
+        step: g.steps.map((s, i) => ({
+          "@type": "HowToStep",
+          position: i + 1,
+          name: s.title,
+          text: s.body,
+        })),
+      },
+      faqSchema(g.faqs),
+      breadcrumbSchema(trail),
+    ],
+    body: `<article>${breadcrumbNav(trail)}<h1>${escHtml(g.h1)}</h1>${p(
+      g.intro,
+    )}<h2>What you need to know first</h2>${p(g.hardTruth)}<h2>Where your ${escHtml(
+      g.dataType,
+    )} comes from</h2>${ul(g.sources)}${p(g.risk)}<h2>How to remove it, step by step</h2><ol>${g.steps
+      .map((s) => `<li><strong>${escHtml(s.title)}.</strong> ${escHtml(s.body)}</li>`)
+      .join("")}</ol>${
+      g.brokers.length
+        ? relatedLinksBlock(
+            "Sites most likely to be publishing it",
+            g.brokers.map((b) => ({ href: `/remove-from/${b}`, label: `Opt out of ${b}` })),
+          )
+        : ""
+    }${faqBlock(g.faqs)}${relatedLinksBlock(
+      "Remove other personal data",
+      DATA_TYPE_GUIDES.filter((o) => o.slug !== g.slug).map((o) => ({
+        href: `/remove/${o.slug}`,
+        label: `Remove your ${o.dataType}`,
+      })),
+    )}${relatedLinksBlock("Related guides", [
+      ...g.relatedGuides.map((s) => ({ href: `/guides/${s}`, label: `Guide: ${s.replace(/-/g, " ")}` })),
+      { href: "/privacy-rights", label: "Your deletion rights by state" },
+    ])}${comparisonBridgeBlock()}${siteLinksBlock()}</article>`,
+  };
+}
+
+function dataTypeIndexRoute(): Route {
+  const trail = [
+    { name: "Home", path: "/" },
+    { name: "Remove your data", path: "/remove" },
+  ];
+  return {
+    path: "/remove",
+    title: `Remove Your Personal Data by Type (${YEAR}) — Free Guides`,
+    description:
+      "Your SSN, address history, date of birth, relatives, mugshot, court and property records — where each is exposed and what can actually be removed.",
+    ogType: "website",
+    jsonLd: [
+      {
+        "@context": "https://schema.org",
+        "@type": "ItemList",
+        name: "Personal data removal guides by type",
+        itemListElement: DATA_TYPE_GUIDES.map((g, i) => ({
+          "@type": "ListItem",
+          position: i + 1,
+          name: g.h1,
+          url: `${BASE_URL}/remove/${g.slug}`,
+        })),
+      },
+      breadcrumbSchema(trail),
+    ],
+    body: `<main>${breadcrumbNav(trail)}<h1>Remove your personal data, by type</h1>${p(
+      "Different kinds of personal data get exposed in different ways and come off — or don't — for different reasons. Each guide covers where that data comes from, how to remove it, and what genuinely cannot be removed.",
+    )}${linkList(
+      DATA_TYPE_GUIDES.map((g) => ({ href: `/remove/${g.slug}`, label: g.h1 })),
+    )}${relatedLinksBlock("Also useful", [
+      { href: "/privacy-rights", label: "Your deletion rights by state" },
+      { href: "/remove-from", label: "Data-broker opt-out guides" },
+      { href: "/delete", label: "Delete your online accounts" },
+    ])}${siteLinksBlock()}</main>`,
+  };
+}
+
 // Authored static marketing pages (body extracted by hand; head accurate).
 function staticRoutes(): Route[] {
   return [
@@ -734,7 +934,7 @@ function staticRoutes(): Route[] {
       )}<h2>What the scan finds</h2>${ul([
         "Forgotten accounts — every service that has emailed you, including ones you signed up for years ago and never closed",
         "Breach exposure — whether your address appears in known data breaches",
-        "Data-broker listings — where your name, address and phone are published across 45+ US people-search sites (Complete plan)",
+        "Data-broker listings — where your name, address and phone are published across 25+ US people-search sites (Complete plan)",
         "Mailing lists you can unsubscribe from in one click",
       ])}<h2>Why removal is ongoing, not a one-off</h2>${p(
         "Data brokers rebuild their databases from public records, marketing data and each other, so a listing you removed reappears within months. Forgotten accounts feed the same loop: one gets breached, your details circulate, and the brokers ingest them again. Monthly rescans and alerts exist because this is maintenance, not a fix.",
@@ -745,6 +945,9 @@ function staticRoutes(): Route[] {
         { href: "/best-data-removal-services", label: `Best data removal services in ${YEAR} — all ${BEST_SERVICES_RANKING.length} compared` },
         { href: "/vs", label: "Compare Footprint Finder against DeleteMe, Incogni and others" },
         { href: "/remove-from", label: "Free data-broker opt-out guides" },
+        { href: "/guides/california-drop-delete-act", label: "California DROP: delete your data from every registered broker, free" },
+        { href: "/privacy-rights", label: "Your data deletion rights, state by state" },
+        { href: "/remove", label: "Remove personal data by type — SSN, address history, mugshots, court records" },
         { href: "/guides", label: "Privacy and data removal guides" },
         { href: "/delete", label: "How to delete your online accounts" },
         { href: "/breach", label: "Recent data breaches and what to do" },
@@ -1004,6 +1207,10 @@ async function main() {
     ...Object.values(COMPETITORS).map(compareRoute),
     ...HEAD_TO_HEADS.map(headToHeadRoute),
     bestServicesRoute(),
+    privacyRightsIndexRoute(),
+    ...STATES.map(stateRoute),
+    dataTypeIndexRoute(),
+    ...DATA_TYPE_GUIDES.map(dataTypeRoute),
   ];
 
   for (const route of routes) writeRoute(template, route);

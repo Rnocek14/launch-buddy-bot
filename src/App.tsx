@@ -24,6 +24,10 @@ import RemoveBrokerIndex from "./pages/RemoveBrokerIndex";
 import Compare from "./pages/Compare";
 import CompareIndex from "./pages/CompareIndex";
 import BestServices from "./pages/BestServices";
+import PrivacyRightsIndex from "./pages/PrivacyRightsIndex";
+import StateRights from "./pages/StateRights";
+import DataTypeIndex from "./pages/DataTypeIndex";
+import DataTypeRemoval from "./pages/DataTypeRemoval";
 import Affiliates from "./pages/Affiliates";
 import PricingPage from "./pages/PricingPage";
 import DeleteServiceIndex from "./pages/DeleteServiceIndex";
@@ -130,6 +134,10 @@ const App = () => (
               <Route path="/remove-from/:slug" element={<RemoveBroker />} />
               <Route path="/vs" element={<CompareIndex />} />
               <Route path="/best-data-removal-services" element={<BestServices />} />
+              <Route path="/privacy-rights" element={<PrivacyRightsIndex />} />
+              <Route path="/privacy-rights/:state" element={<StateRights />} />
+              <Route path="/remove" element={<DataTypeIndex />} />
+              <Route path="/remove/:slug" element={<DataTypeRemoval />} />
               <Route path="/vs/:competitor" element={<Compare />} />
               <Route path="/affiliates" element={<Affiliates />} />
               <Route path="/affiliates/dashboard" element={<AffiliateDashboard />} />

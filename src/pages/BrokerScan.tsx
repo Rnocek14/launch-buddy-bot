@@ -420,7 +420,7 @@ export default function BrokerScan() {
               </div>
               <p className="text-muted-foreground mb-4">
                 Data broker scanning is available on the Complete plan. 
-                Upgrade to find and remove your information from 45+ data broker sites.
+                Upgrade to find and remove your information from 25+ data broker sites.
               </p>
               <div className="space-y-2">
                 <Button 
@@ -476,7 +476,7 @@ export default function BrokerScan() {
                   )}
                 </CardTitle>
                 <CardDescription>
-                  {!scan && "Start a scan to check 45+ data broker sites for your information"}
+                  {!scan && "Start a scan to check 25+ data broker sites for your information"}
                   {scan?.status === 'pending' && "Your scan is queued and will begin shortly"}
                   {scan?.status === 'running' && `Scanning ${scan.scanned_count} of ${scan.total_brokers} brokers...`}
                   {scan?.status === 'completed' && `Scan completed on ${new Date(scan.completed_at!).toLocaleDateString()}`}

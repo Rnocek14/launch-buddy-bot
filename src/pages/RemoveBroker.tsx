@@ -108,7 +108,7 @@ export default function RemoveBroker() {
     ? `${broker.name} Opt Out: How to Delete & Remove Your Info (${new Date().getFullYear()})`
     : "Data Broker Removal Guide";
   const seoDescription = broker
-    ? `How to delete your personal information from ${broker.name} and opt out for free. Step-by-step removal guide — takes ${broker.opt_out_time_estimate ?? "a few minutes"}. Or let Footprint Finder remove you from 45+ brokers automatically.`
+    ? `How to delete your personal information from ${broker.name} and opt out for free. Step-by-step removal guide — takes ${broker.opt_out_time_estimate ?? "a few minutes"}. Or let Footprint Finder remove you from 25+ brokers automatically.`
     : "Remove your personal info from data brokers.";
   const canonical = broker
     ? `https://footprintfinder.co/remove-from/${broker.slug}`
@@ -140,7 +140,7 @@ export default function RemoveBroker() {
             name: `How do I delete my information from ${broker.name}?`,
             acceptedAnswer: {
               "@type": "Answer",
-              text: `To delete your information from ${broker.name}, open its opt-out page, search for your listing, and submit a removal request. The full step-by-step process is on this page and takes ${broker.opt_out_time_estimate ?? "around 10 minutes"}. Footprint Finder can also do this for you automatically across 45+ brokers.`,
+              text: `To delete your information from ${broker.name}, open its opt-out page, search for your listing, and submit a removal request. The full step-by-step process is on this page and takes ${broker.opt_out_time_estimate ?? "around 10 minutes"}. Footprint Finder can also do this for you automatically across 25+ brokers.`,
             },
           },
           {
@@ -172,7 +172,7 @@ export default function RemoveBroker() {
             name: `What other data brokers should I opt out of besides ${broker.name}?`,
             acceptedAnswer: {
               "@type": "Answer",
-              text: `${broker.name} is one of 100+ data broker sites that publish personal information. Major ones include Spokeo, Whitepages, BeenVerified, Radaris, MyLife, Intelius, and PeopleFinder. Footprint Finder removes you from 45+ brokers automatically and re-checks monthly.`,
+              text: `${broker.name} is one of 100+ data broker sites that publish personal information. Major ones include Spokeo, Whitepages, BeenVerified, Radaris, MyLife, Intelius, and PeopleFinder. Footprint Finder removes you from 25+ brokers automatically and re-checks monthly.`,
             },
           },
           ...(enrichment?.commonProblems ?? []).map((p) => ({
@@ -299,7 +299,7 @@ export default function RemoveBroker() {
               {broker.name} is a data broker that publishes personal information — name,
               address, phone number, relatives — gathered from public records and other
               sources. Here's exactly how to opt out, and how Footprint Finder can do it
-              for you across {broker.name} and 45+ other brokers automatically.
+              for you across {broker.name} and 25+ other brokers automatically.
             </p>
           </header>
 

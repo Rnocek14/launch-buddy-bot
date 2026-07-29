@@ -2,13 +2,13 @@
 
 > Footprint Finder scans your inbox to find every account, breach, and data-broker listing tied to your email — then helps you delete or opt out. Free scan, monthly rescans, real-time alerts.
 
-Footprint Finder is a privacy management service for individuals. It uses read-only OAuth metadata (sender, subject, date — never message body) to discover services where your email is registered, classifies them by activity and risk, and provides one-click cleanup actions (delete account, unsubscribe, opt out under CCPA). On the Complete plan, data-broker scans surface where your name, address, and phone are publicly listed across 45+ US people-search sites.
+Footprint Finder is a privacy management service for individuals. It uses read-only OAuth metadata (sender, subject, date — never message body) to discover services where your email is registered, classifies them by activity and risk, and provides one-click cleanup actions (delete account, unsubscribe, opt out under CCPA). On the Complete plan, data-broker scans surface where your name, address, and phone are publicly listed across 25+ US people-search sites.
 
 ## Plans
 
 - Free — 1 email account, 3 deletion requests/month, breach check. No data-broker scanning.
 - Pro — $79/year or $12.99/month. Up to 3 email accounts, unlimited deletion requests, deep inbox scan, monthly rescans. No data-broker scanning.
-- Complete — $129/year or $19.99/month. Everything in Pro, plus data-broker scanning and removal across 45+ sites, and up to 5 email accounts.
+- Complete — $129/year or $19.99/month. Everything in Pro, plus data-broker scanning and removal across 25+ sites, and up to 5 email accounts.
 - Family — $179/year. Everything in Complete, for up to 5 people.
 - Parent Protection Scan — $39 one-time. A single deep scan of a parent's email, scam-focused, no subscription.
 
@@ -24,6 +24,9 @@ Data-broker removal is a Complete-tier feature. Pro does not include it.
 - [Best Data Removal Services](/best-data-removal-services): All 10 services ranked by category, with the honest catch for each — including ours.
 - [Compare](/vs): Alternatives pages for DeleteMe, Incogni, OneRep, Privacy Bee, EasyOptOuts, Aura, Optery, Kanary and Mine, plus head-to-head pages such as /vs/deleteme-vs-incogni.
 - [Data-Broker Removal Guides](/remove-from): Free opt-out instructions for 45+ US brokers.
+- [California DROP Guide](/guides/california-drop-delete-act): How California residents delete their data from every state-registered broker with one free request, what DROP does not cover, and the 1 August 2026 broker compliance deadline.
+- [Privacy Rights by State](/privacy-rights): What deletion rights residents of each of the 50 states plus DC actually have — 20 states with comprehensive laws, 4 with broker registries, 1 (California) with a centralised deletion platform.
+- [Remove Data by Type](/remove): Removal guides for specific categories — Social Security number, date of birth, relatives, mugshots, court records, property records, voter registration, address history — each stating plainly what cannot be removed.
 - [Privacy Guides](/guides): How-to guides for removing your name, address, phone number, email and images from the internet and from Google.
 - [Account Deletion Guides](/delete): Step-by-step instructions for permanently deleting accounts on Facebook, Instagram, Amazon, LinkedIn, Spotify and more.
 - [Breach Pages](/breach): Plain-English explainers for major data breaches and what to do if you were affected.

@@ -40,6 +40,110 @@ export type Guide = {
 
 export const GUIDES: Guide[] = [
   {
+    slug: "california-drop-delete-act",
+    category: "Removal",
+    title: "California DROP: Delete Your Data From 500+ Brokers Free",
+    description: "California's DROP deletes your data from every registered broker with one free request. How it works, what it misses, and who still needs more.",
+    h1: "California DROP: one free request to delete your data from every registered broker",
+    primaryKeyword: "California DROP Delete Act",
+    readTime: "8 min",
+    intro: "California residents can now delete their personal information from every registered data broker in the state with a single free request. The tool is called DROP — the Delete Request and Opt-Out Platform — it is run by the California Privacy Protection Agency, and from 1 August 2026 brokers are legally required to act on the requests sitting in it. If you live in California, this is the most valuable thing you can do for your privacy this year, and it costs nothing.",
+    sections: [
+      {
+        heading: "What DROP is, in plain terms",
+        body: "DROP came out of the Delete Act (SB 362), passed in California in 2023. Before it, deleting yourself from data brokers meant finding each company, locating its opt-out form, and submitting a request one at a time — several hundred times, then again a few months later. DROP replaces that with one verified request that every registered broker is obliged to check and honour. You submit once through the state; the brokers come to you.",
+        bullets: [
+          "Run by the California Privacy Protection Agency, not a private company",
+          "Free — there is no paid tier and no upsell",
+          "Covers every data broker registered with the state, which is several hundred businesses",
+          "Registered brokers must check DROP at least every 45 days and finalise each request within 90 days",
+        ],
+      },
+      {
+        heading: "The dates that matter",
+        body: "DROP opened to consumers on 1 January 2026, but there was a deliberate gap between consumers being able to file and brokers being required to act. That gap closes on 1 August 2026. Requests submitted before then have been queuing; from that date brokers face penalties reported at $200 per request per day for failing to process them. If you filed in January, this is the month it starts to bite. If you have not filed at all, filing now means you are in the queue for the first mandatory processing cycle.",
+        bullets: [
+          "1 January 2026 — DROP opens, consumers can submit requests",
+          "1 August 2026 — registered data brokers must begin processing them",
+          "Every 45 days — how often brokers must check DROP for new requests thereafter",
+          "90 days — the window a broker has to finalise a request once retrieved",
+        ],
+      },
+      {
+        heading: "How to use it",
+        body: "Go to the California Privacy Protection Agency's site at privacy.ca.gov and follow the DROP link. You will need to verify that you are a California resident, which is the step that makes the request legally binding on brokers — an unverified request is just an email. Set aside ten minutes. There is no cost, no account with a private company, and nothing to cancel later.",
+        bullets: [
+          "Start at privacy.ca.gov — the official state site, not a lookalike",
+          "You must be a California resident, and you will be asked to verify it",
+          "The request covers brokers registered with the state; you do not pick them individually",
+          "Keep your confirmation — it is your proof of the filing date if a broker ignores you",
+        ],
+      },
+      {
+        heading: "What DROP does not cover",
+        body: "This is the part most write-ups skip, and it is the part that decides whether you still need to do anything else. DROP is powerful within its boundaries and does nothing outside them. Those boundaries are real, and knowing them is the difference between thinking you are done and actually being done.",
+        bullets: [
+          "Only California residents can use it — there is no equivalent in any other state",
+          "Only brokers registered with California are bound; a business that never registered is not reached by your request",
+          "It does not touch the accounts you have created — the retailer holding your card, the app from an abandoned hobby, the service you signed up for once in 2019",
+          "It does not address data breaches; if your details are already in a leaked dump, deletion from brokers does not retrieve them",
+          "It does not remove search results directly — those usually drop out after the underlying listing goes, which takes weeks",
+          "It is a deletion request, not a permanent block on re-collection; brokers rebuild from public records over time",
+        ],
+      },
+      {
+        heading: "Should you still pay for a removal service?",
+        body: "If you live in California and your only concern is people-search listings, file with DROP first and see what it achieves before you spend anything. It is free, it is binding, and it covers more brokers than most paid plans. Anyone telling you otherwise is selling something — including us, so weigh this accordingly. There are still cases where a paid service earns its keep, and there are cases where it does not.",
+        bullets: [
+          "Paying still makes sense if you are outside California, since no other state offers this",
+          "It makes sense if you need speed — DROP works on 45 and 90 day cycles, which is slow when someone is actively looking for you",
+          "It makes sense if you want the accounts and breaches side handled, which DROP does not touch at all",
+          "It makes less sense if you are a Californian who wants broker listings gone and can wait a cycle or two",
+        ],
+      },
+      {
+        heading: "What to do if you are not in California",
+        body: "California is genuinely alone here. Texas, Oregon and Vermont all require data brokers to register with the state, which gives you a public list of who to contact, but none of them built a centralised deletion tool — you still file with each broker individually. Connecticut, Montana and others give you deletion rights you must exercise one company at a time. So the work is the same as it always was, and the question is only whether you do it yourself or pay someone.",
+        bullets: [
+          "Check whether your state has a broker registry — it tells you who holds your data",
+          "Every broker opt-out is free by law; our guides cover the ones that matter most",
+          "Budget around ten minutes per site, and repeat every few months as listings return",
+          "Watch for your state adopting something DROP-like — California laws in this area tend to get copied",
+        ],
+      },
+    ],
+    faqs: [
+      {
+        question: "Is California DROP free?",
+        answer: "Yes, entirely. DROP is run by the California Privacy Protection Agency, a state body. There is no paid tier, no subscription and no upsell. If you land on a page charging you to submit a DROP request, you are in the wrong place — go to privacy.ca.gov directly.",
+      },
+      {
+        question: "When do data brokers have to honour DROP requests?",
+        answer: "From 1 August 2026. Consumers have been able to file since 1 January 2026, but brokers were not obliged to act until August. After that date they must check DROP at least every 45 days and finalise each request within 90 days of retrieving it, with penalties reported at $200 per request per day for non-compliance.",
+      },
+      {
+        question: "Does DROP delete my online accounts too?",
+        answer: "No. DROP reaches data brokers — companies that compile and sell profiles built from public records and purchased data. It does not touch accounts you created yourself. The shopping site with your card on file, the old fitness app, the streaming trial you forgot: all of those still hold your data after a DROP request completes, and each has to be closed separately.",
+      },
+      {
+        question: "Can I use DROP if I don't live in California?",
+        answer: "No. DROP is limited to California residents and you have to verify residency to file. No other state has built an equivalent — Texas, Oregon and Vermont maintain broker registries but require you to contact each company individually, and other states with deletion rights work the same way.",
+      },
+      {
+        question: "Do I still need a data removal service if I use DROP?",
+        answer: "If you are a Californian who only cares about people-search listings, file with DROP first and judge the results before paying anyone. It is free and binds more brokers than most paid plans. A paid service still adds something if you are outside California, if you need faster cycles than 45 and 90 days, or if you want the accounts and breach side covered — which DROP does not do at all.",
+      },
+      {
+        question: "How many data brokers does DROP cover?",
+        answer: "It covers brokers registered with the California Privacy Protection Agency, which has been reported at roughly 500 to 600 businesses. The registry is public, and the agency publishes the current list along with each broker's contact details for exercising your rights directly.",
+      },
+      {
+        question: "Will my data stay deleted after a DROP request?",
+        answer: "Not permanently. Brokers rebuild their databases from public records, marketing data and each other, so profiles reappear over time. DROP is a deletion obligation, not a standing block on future collection. Treat it as maintenance you repeat rather than a one-time fix — which is true of every removal method, paid or free.",
+      },
+    ],
+  },
+  {
     slug: "remove-personal-information-from-internet",
     category: "Removal",
     title:
@@ -1209,6 +1313,12 @@ export const getGuide = (slug: string) =>
  * Only valid guide slugs should appear here.
  */
 export const RELATED_GUIDES: Record<string, string[]> = {
+  "california-drop-delete-act": [
+    "remove-personal-information-from-internet",
+    "what-is-a-data-broker",
+    "how-do-data-brokers-get-my-information",
+    "remove-address-from-internet",
+  ],
   // New priority pages
   "remove-address-from-internet": [
     "why-is-my-address-online",
@@ -1359,6 +1469,7 @@ export const RELATED_GUIDES: Record<string, string[]> = {
  * Builds the cluster bridge from guides into bottom-funnel broker pages.
  */
 export const RELATED_BROKERS: Record<string, string[]> = {
+  "california-drop-delete-act": ["whitepages", "spokeo", "radaris"],
   "remove-address-from-internet": ["whitepages", "spokeo", "radaris"],
   "remove-email-address-from-internet": ["spokeo", "beenverified", "mylife"],
   "remove-public-records-online": ["whitepages", "radaris", "beenverified"],

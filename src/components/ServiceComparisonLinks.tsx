@@ -50,6 +50,14 @@ export function ServiceComparisonLinks({
             Best data removal services compared
           </Button>
         </Link>
+        {/* Californians can do this for free through the state. Saying so
+            costs us conversions and is the single most useful thing on the
+            page for a third of US visitors. */}
+        <Link to="/guides/california-drop-delete-act">
+          <Button variant="outline" size="sm">
+            In California? Delete from all brokers free
+          </Button>
+        </Link>
         {pairs.map((pair) => (
           <Link key={pair.slug} to={`/vs/${pair.slug}`}>
             <Button variant="outline" size="sm">
