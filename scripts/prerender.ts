@@ -999,6 +999,63 @@ function personaIndexRoute(): Route {
   };
 }
 
+function planRoute(): Route {
+  const trail = [
+    { name: "Home", path: "/" },
+    { name: "Removal plan builder", path: "/plan" },
+  ];
+  const url = `${BASE_URL}/plan`;
+  return {
+    path: "/plan",
+    title: `Free Personalised Data Removal Plan (${YEAR}) — No Email`,
+    description:
+      "Build a free step-by-step plan to remove your personal data, based on your state and situation. No email required, shareable link, printable.",
+    ogType: "website",
+    jsonLd: [
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        name: "Data Removal Plan Builder",
+        url,
+        applicationCategory: "SecurityApplication",
+        operatingSystem: "Web",
+        description:
+          "Free personalised data removal plan based on your state, situation and concerns. No account or email required.",
+        offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+      },
+      breadcrumbSchema(trail),
+    ],
+    // The tool itself is interactive, so the prerendered body carries the
+    // explanation plus links to every input it can produce — which also makes
+    // this a genuine hub page rather than an empty shell for crawlers.
+    body: `<main>${breadcrumbNav(trail)}<h1>Build your data removal plan</h1>${p(
+      "Answer up to three questions and get an ordered checklist for your situation. Everything free comes first, and for some answers the plan never mentions a paid product at all. No account, no email, and the link is shareable if you want to send it to someone.",
+    )}${p(
+      "The plan is assembled from three things: what your state actually lets you demand, whether your situation gives you a stronger route than the general public has, and which specific kinds of personal data are worrying you. Every step says whether it is free.",
+    )}<h2>Pick your state</h2>${linkList(
+      STATES.map((s) => ({
+        href: `/plan?state=${s.slug}`,
+        label: `Removal plan for ${s.name}`,
+      })),
+    )}<h2>Or start from your situation</h2>${linkList(
+      PERSONA_GUIDES.map((g) => ({
+        href: `/plan?for=${g.slug}`,
+        label: `Removal plan for ${g.audience}`,
+      })),
+    )}<h2>Or from what worries you</h2>${linkList(
+      DATA_TYPE_GUIDES.map((g) => ({
+        href: `/plan?worry=${g.slug}`,
+        label: `Removal plan for your ${g.dataType}`,
+      })),
+    )}${relatedLinksBlock("Go deeper", [
+      { href: "/privacy-rights", label: "Your deletion rights by state" },
+      { href: "/for", label: "Removal guidance by situation" },
+      { href: "/remove", label: "Remove personal data by type" },
+      { href: "/remove-from", label: "Free data-broker opt-out guides" },
+    ])}${siteLinksBlock()}</main>`,
+  };
+}
+
 // Authored static marketing pages (body extracted by hand; head accurate).
 function staticRoutes(): Route[] {
   return [
@@ -1023,6 +1080,7 @@ function staticRoutes(): Route[] {
         `Free to scan and see your exposure. Pro is ${FOOTPRINT_FINDER_PRICING.pro} for unlimited deletion requests, deep inbox scanning and monthly rescans. Complete is ${FOOTPRINT_FINDER_PRICING.complete} and adds data-broker removal. Family covers up to five people at ${FOOTPRINT_FINDER_PRICING.family}.`,
       )}<h2>Start here</h2>${linkList([
         { href: "/free-scan", label: "Run your free exposure scan" },
+        { href: "/plan", label: "Build a free personalised removal plan — no email required" },
         { href: "/best-data-removal-services", label: `Best data removal services in ${YEAR} — all ${BEST_SERVICES_RANKING.length} compared` },
         { href: "/vs", label: "Compare Footprint Finder against DeleteMe, Incogni and others" },
         { href: "/remove-from", label: "Free data-broker opt-out guides" },
@@ -1295,6 +1353,7 @@ async function main() {
     ...DATA_TYPE_GUIDES.map(dataTypeRoute),
     personaIndexRoute(),
     ...PERSONA_GUIDES.map(personaRoute),
+    planRoute(),
   ];
 
   for (const route of routes) writeRoute(template, route);

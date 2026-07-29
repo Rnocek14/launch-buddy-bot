@@ -34,6 +34,7 @@ const scrollToSection = (id: string) => {
  * existed they had no inbound internal links outside the footer.
  */
 const RESOURCE_LINKS = [
+  { to: "/plan", label: "Build a free removal plan" },
   { to: "/best-data-removal-services", label: "Best data removal services" },
   { to: "/vs", label: "Compare privacy services" },
   { to: "/privacy-rights", label: "Your privacy rights by state" },

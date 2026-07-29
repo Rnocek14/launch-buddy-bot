@@ -24,6 +24,7 @@ const COLUMNS: { heading: string; links: { to: string; label: string }[] }[] = [
   {
     heading: "Remove your data",
     links: [
+      { to: "/plan", label: "Free removal plan builder" },
       { to: "/remove", label: "Remove data by type" },
       { to: "/privacy-rights", label: "Your rights by state" },
       { to: "/for", label: "Guidance by situation" },

@@ -30,6 +30,7 @@ import DataTypeIndex from "./pages/DataTypeIndex";
 import DataTypeRemoval from "./pages/DataTypeRemoval";
 import PersonaIndex from "./pages/PersonaIndex";
 import PersonaGuidePage from "./pages/PersonaGuidePage";
+import PlanBuilder from "./pages/PlanBuilder";
 import Affiliates from "./pages/Affiliates";
 import PricingPage from "./pages/PricingPage";
 import DeleteServiceIndex from "./pages/DeleteServiceIndex";
@@ -142,6 +143,7 @@ const App = () => (
               <Route path="/remove/:slug" element={<DataTypeRemoval />} />
               <Route path="/for" element={<PersonaIndex />} />
               <Route path="/for/:slug" element={<PersonaGuidePage />} />
+              <Route path="/plan" element={<PlanBuilder />} />
               <Route path="/vs/:competitor" element={<Compare />} />
               <Route path="/affiliates" element={<Affiliates />} />
               <Route path="/affiliates/dashboard" element={<AffiliateDashboard />} />
