@@ -71,7 +71,7 @@ export const BEST_SERVICES_RANKING: RankedService[] = [
     award: "Best for human-filed removals",
     why: "Staff file the requests rather than scripts, which matters more than it sounds: opt-out forms break, add CAPTCHAs and get redesigned, and an automated request that fails often still reports as sent. Fifteen years in the category and the most legible reporting of the manual services.",
     caveat:
-      "The narrowest coverage on this list at a premium price, and no free tier. You're paying for filing quality, not breadth — make sure that's the trade you want.",
+      "Among the narrowest automated coverage here, at the top of the price range, and no free tier. You're paying for filing quality rather than breadth — make sure that's the trade you want.",
   },
   {
     slug: "onerep",

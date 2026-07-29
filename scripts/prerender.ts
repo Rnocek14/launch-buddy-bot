@@ -745,6 +745,7 @@ function staticRoutes(): Route[] {
         { href: "/best-data-removal-services", label: `Best data removal services in ${YEAR} — all ${BEST_SERVICES_RANKING.length} compared` },
         { href: "/vs", label: "Compare Footprint Finder against DeleteMe, Incogni and others" },
         { href: "/remove-from", label: "Free data-broker opt-out guides" },
+        { href: "/guides/california-drop-delete-act", label: "California DROP: delete your data from every registered broker, free" },
         { href: "/guides", label: "Privacy and data removal guides" },
         { href: "/delete", label: "How to delete your online accounts" },
         { href: "/breach", label: "Recent data breaches and what to do" },

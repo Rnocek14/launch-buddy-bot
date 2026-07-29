@@ -60,7 +60,7 @@ export const HEAD_TO_HEADS: HeadToHead[] = [
         body: [
           "This comparison gets framed as a price fight, but the substantive difference is how the removal requests get filed. DeleteMe has staff submitting them. Incogni automates the process end to end.",
           "That matters because opt-out forms are hostile by design. Brokers add CAPTCHAs, require email confirmation loops, redesign pages and bury the form behind three redirects. A script handles the happy path and fails silently when the page changes — and a failed request often still reports as submitted. A person hitting the same wall finds the other route.",
-          "The counter-argument is volume. Incogni's automation covers several times more brokers than DeleteMe reaches, and a request that gets filed imperfectly against 180 sites may leave you less exposed than a request filed perfectly against 30. Neither position is obviously right; it depends on whether the brokers listing you are in DeleteMe's narrower, better-covered set.",
+          "The counter-argument is volume. Incogni's automation covers several times more brokers than DeleteMe reaches, and a request that gets filed imperfectly against 400+ sites may leave you less exposed than a request filed perfectly against 100. Neither position is obviously right; it depends on whether the brokers listing you are in DeleteMe's narrower, better-covered set.",
         ],
       },
       {

@@ -23,7 +23,7 @@ export interface CompetitorData {
   tagline: string;
   monthlyPrice: string;
   annualPrice: string;
-  /** Plain-English broker coverage claim, e.g. "180+ broker sites" */
+  /** Plain-English coverage claim, e.g. "420+ broker sites". Re-verify with COMPETITOR_PRICING_VERIFIED_ON. */
   brokerCoverage: string;
   features: CompetitorFeatures;
   pros: string[];
@@ -76,12 +76,20 @@ export const FOOTPRINT_FINDER_PRICING = {
 } as const;
 
 /**
- * Date the competitor prices below were last checked against vendor sites.
+ * Date the competitor figures below were last checked.
  * Surfaced on-page so readers (and Google) can see how fresh the data is.
- * Re-verify on a schedule — stale competitor pricing is the fastest way to
- * lose trust on a comparison page.
+ *
+ * The 2026-07-29 pass corrected coverage that had drifted a long way: Incogni
+ * was listed at 180+ brokers when published reviews put it at 420+, and Kanary
+ * at ~75 when it is 300+. Understating a competitor, on a page whose only
+ * asset is being believed, is worse than saying nothing at all.
+ *
+ * Sourced from published 2026 reviews and vendor pages, not first-party
+ * testing. Re-verify on a schedule — vendors change tiers often, and
+ * DeleteMe's coverage in particular is claimed very differently by different
+ * sources, which is why it is described rather than given as a bare number.
  */
-export const COMPETITOR_PRICING_VERIFIED_ON = "2026-06-10";
+export const COMPETITOR_PRICING_VERIFIED_ON = "2026-07-29";
 
 /**
  * Year stamped into comparison titles ("... Compared (2026)"). Computed
@@ -154,7 +162,7 @@ export const COMPETITORS: Record<string, CompetitorData> = {
     tagline: "The original people-search removal service",
     monthlyPrice: "$10.75/mo (annual)",
     annualPrice: "$129/yr",
-    brokerCoverage: "~30 broker sites",
+    brokerCoverage: "~100 sites + custom requests",
     features: {
       inboxScan: false,
       brokerRemoval: true,
@@ -166,7 +174,7 @@ export const COMPETITORS: Record<string, CompetitorData> = {
     pros: [
       "Established brand (since 2010)",
       "Manual human reviewers",
-      "Removes from ~30 broker sites",
+      "Covers ~100 sites, plus custom removal requests",
     ],
     cons: [
       "Doesn't scan your inbox for forgotten accounts",
@@ -187,9 +195,9 @@ export const COMPETITORS: Record<string, CompetitorData> = {
     slug: "incogni",
     name: "Incogni",
     tagline: "Surfshark's data-broker removal service",
-    monthlyPrice: "$15.49/mo",
-    annualPrice: "$95.40/yr",
-    brokerCoverage: "180+ broker sites",
+    monthlyPrice: "$15.98/mo",
+    annualPrice: "$95.88/yr Standard · $179.88/yr Unlimited",
+    brokerCoverage: "420+ broker sites",
     features: {
       inboxScan: false,
       brokerRemoval: true,
@@ -200,7 +208,7 @@ export const COMPETITORS: Record<string, CompetitorData> = {
     },
     pros: [
       "Backed by Surfshark (trusted VPN brand)",
-      "Removes from 180+ broker sites",
+      "Removes from 420+ broker sites",
       "Automated, hands-off",
     ],
     cons: [
@@ -224,7 +232,7 @@ export const COMPETITORS: Record<string, CompetitorData> = {
     tagline: "Data-broker removal with a free exposure report",
     monthlyPrice: "$3.99–$24.99/mo",
     annualPrice: "$39–$249/yr",
-    brokerCoverage: "25–320+ brokers (by tier)",
+    brokerCoverage: "90–615 brokers (by tier)",
     features: {
       inboxScan: false,
       brokerRemoval: true,
@@ -239,7 +247,7 @@ export const COMPETITORS: Record<string, CompetitorData> = {
       "Strong broker coverage at higher tiers",
     ],
     cons: [
-      "Cheapest tier only covers ~25 brokers",
+      "Entry tier covers a fraction of what the top tier does",
       "Doesn't scan your inbox",
       "No built-in breach monitoring",
       "Pricing gets expensive fast for full coverage",
@@ -259,7 +267,7 @@ export const COMPETITORS: Record<string, CompetitorData> = {
     tagline: "Reputation-focused removal service",
     monthlyPrice: "$14.99/mo",
     annualPrice: "$179.88/yr",
-    brokerCoverage: "~75 broker sites",
+    brokerCoverage: "300+ broker sites",
     features: {
       inboxScan: false,
       brokerRemoval: true,
@@ -269,7 +277,7 @@ export const COMPETITORS: Record<string, CompetitorData> = {
       ongoingMonitoring: true,
     },
     pros: [
-      "Removes from ~75 broker sites",
+      "Removes from 300+ broker sites",
       "Includes reputation/Google search scanning",
       "Court-record removal at higher tiers",
     ],

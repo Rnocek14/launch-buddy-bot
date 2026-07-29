@@ -24,6 +24,7 @@ Data-broker removal is a Complete-tier feature. Pro does not include it.
 - [Best Data Removal Services](/best-data-removal-services): All 10 services ranked by category, with the honest catch for each — including ours.
 - [Compare](/vs): Alternatives pages for DeleteMe, Incogni, OneRep, Privacy Bee, EasyOptOuts, Aura, Optery, Kanary and Mine, plus head-to-head pages such as /vs/deleteme-vs-incogni.
 - [Data-Broker Removal Guides](/remove-from): Free opt-out instructions for 45+ US brokers.
+- [California DROP Guide](/guides/california-drop-delete-act): How California residents delete their data from every state-registered broker with one free request, what DROP does not cover, and the 1 August 2026 broker compliance deadline.
 - [Privacy Guides](/guides): How-to guides for removing your name, address, phone number, email and images from the internet and from Google.
 - [Account Deletion Guides](/delete): Step-by-step instructions for permanently deleting accounts on Facebook, Instagram, Amazon, LinkedIn, Spotify and more.
 - [Breach Pages](/breach): Plain-English explainers for major data breaches and what to do if you were affected.
