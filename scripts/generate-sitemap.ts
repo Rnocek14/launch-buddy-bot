@@ -145,6 +145,12 @@ function getPersonaSlugs() {
   return Array.from(src.matchAll(/slug:\s*"([a-z-]+)",\s*audience:/g)).map((m) => m[1]);
 }
 
+/** Company slugs from src/data/companyData.ts. */
+function getCompanyDataSlugs() {
+  const src = readFileSync(resolve("src/data/companyData.ts"), "utf8");
+  return Array.from(src.matchAll(/slug:\s*"([a-z0-9-]+)",\s*company:/g)).map((m) => m[1]);
+}
+
 /** Personal-data-type slugs from src/data/dataTypes.ts. */
 function getDataTypeSlugs() {
   const src = readFileSync(resolve("src/data/dataTypes.ts"), "utf8");
@@ -260,6 +266,7 @@ async function main() {
   const statesLastmod = gitLastModified("src/data/states.ts");
   const dataTypesLastmod = gitLastModified("src/data/dataTypes.ts");
   const personasLastmod = gitLastModified("src/data/personas.ts");
+  const companyDataLastmod = gitLastModified("src/data/companyData.ts");
   const deleteLastmod = gitLastModified("src/data/deleteGuides.ts");
   // Broker pages are rendered from the Supabase table by scripts/prerender.ts;
   // the page template is what we can date, so use it.
@@ -282,6 +289,7 @@ async function main() {
     "/privacy-rights": statesLastmod,
     "/remove": dataTypesLastmod,
     "/for": personasLastmod,
+    "/what-they-know": companyDataLastmod,
     "/delete": deleteLastmod,
     "/breach": breachLastmod,
     "/remove-from": brokerLastmod,
@@ -300,6 +308,10 @@ async function main() {
 
   for (const slug of getPersonaSlugs()) {
     addEntry(entries, { path: `/for/${slug}`, lastmod: personasLastmod, changefreq: "monthly", priority: "0.85" });
+  }
+
+  for (const slug of getCompanyDataSlugs()) {
+    addEntry(entries, { path: `/what-they-know/${slug}`, lastmod: companyDataLastmod, changefreq: "monthly", priority: "0.85" });
   }
 
   for (const slug of getHeadToHeadSlugs()) {

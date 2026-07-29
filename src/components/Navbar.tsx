@@ -40,6 +40,7 @@ const RESOURCE_LINKS = [
   { to: "/privacy-rights", label: "Your privacy rights by state" },
   { to: "/remove", label: "Remove personal data by type" },
   { to: "/for", label: "Guidance for your situation" },
+  { to: "/what-they-know", label: "What big tech knows about you" },
   { to: "/remove-from", label: "Data-broker opt-out guides" },
   { to: "/guides", label: "Privacy removal guides" },
   { to: "/delete", label: "Delete your online accounts" },

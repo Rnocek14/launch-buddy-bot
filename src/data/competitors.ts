@@ -1,3 +1,5 @@
+import { BROKER_COUNT_LABEL } from "@/config/brokers";
+
 // Competitor comparison data — powers /vs/:competitor pages.
 // Extracted into its own module so the browserless prerender script
 // (scripts/prerender.ts) can import the same data the page renders.
@@ -43,16 +45,15 @@ export const FOOTPRINT_FINDER_FEATURES: CompetitorFeatures = {
 };
 
 /**
- * What our scanner actually covers — 25 broker patterns in
- * src/config/brokers.ts. NOT the number of opt-out guides we publish, which
- * is larger (45+) and a different claim entirely: guides are instructions you
- * follow yourself, coverage is what we remove you from.
+ * What our scanner actually covers, derived from the single source of truth in
+ * src/config/brokers.ts (BROKER_COUNT_LABEL, grounded in brokerPatterns.length)
+ * so this claim can never drift from what the scanner actually does.
  *
- * PR #1 introduces BROKER_COUNT_LABEL in src/config/brokers.ts, derived from
- * brokerPatterns.length, plus a test barring inflated claims from the funnel.
- * Once that lands, import the constant here instead of restating the number.
+ * NOT the number of opt-out guides we publish, which is larger (45+) and a
+ * different claim entirely: guides are instructions you follow yourself,
+ * coverage is what we remove you from.
  */
-export const FOOTPRINT_FINDER_BROKER_COVERAGE = "25+ broker sites";
+export const FOOTPRINT_FINDER_BROKER_COVERAGE = `${BROKER_COUNT_LABEL} broker sites`;
 
 /**
  * Footprint Finder's own pricing, mirrored from src/config/pricing.ts.

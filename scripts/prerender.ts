@@ -49,6 +49,7 @@ import {
 } from "../src/data/states";
 import { DATA_TYPE_GUIDES } from "../src/data/dataTypes";
 import { PERSONA_GUIDES } from "../src/data/personas";
+import { COMPANY_DATA_GUIDES } from "../src/data/companyData";
 import {
   BEST_SERVICES_DESCRIPTION,
   BEST_SERVICES_INTRO,
@@ -999,6 +1000,123 @@ function personaIndexRoute(): Route {
   };
 }
 
+/**
+ * /what-they-know/:slug
+ *
+ * Deliberately does NOT end on comparisonBridgeBlock(). Every other cluster
+ * bridges into the comparison pages because a removal subscription is a
+ * reasonable next step there. Here it isn't: no broker-removal service reads
+ * your accounts, so pointing a reader at one would be answering a question
+ * they didn't ask. The scan is the honest next step, and siteLinksBlock()
+ * still carries the commercial links for anyone who wants them.
+ */
+function companyDataRoute(g: (typeof COMPANY_DATA_GUIDES)[number]): Route {
+  const trail = [
+    { name: "Home", path: "/" },
+    { name: "What they know", path: "/what-they-know" },
+    { name: g.company, path: `/what-they-know/${g.slug}` },
+  ];
+  return {
+    path: `/what-they-know/${g.slug}`,
+    title: g.title,
+    description: g.description,
+    ogType: "article",
+    jsonLd: [
+      {
+        "@context": "https://schema.org",
+        "@type": "HowTo",
+        name: `How to download your ${g.company} data`,
+        description: g.intro,
+        step: g.downloadSteps.map((s, i) => ({
+          "@type": "HowToStep",
+          position: i + 1,
+          name: s.title,
+          text: s.body,
+        })),
+      },
+      faqSchema(g.faqs),
+      breadcrumbSchema(trail),
+    ],
+    body: `<article>${breadcrumbNav(trail)}<h1>${escHtml(g.h1)}</h1>${p(
+      g.intro,
+    )}<h2>What ${escHtml(g.company)} collects</h2>${ul(
+      g.collects,
+    )}<h2>The part that surprises people</h2>${p(
+      g.surprising,
+    )}<h2>How to download your ${escHtml(g.company)} data</h2><ol>${g.downloadSteps
+      .map((s) => `<li><strong>${escHtml(s.title)}.</strong> ${escHtml(s.body)}</li>`)
+      .join(
+        "",
+      )}</ol><h2>How to collect less of it going forward</h2>${ul(
+      g.limitSteps,
+    )}<h2>What deleting your account actually does</h2>${p(
+      g.deleteNote,
+    )}<h3>What ${escHtml(g.company)} keeps anyway</h3>${ul(g.keepsAnyway)}${faqBlock(
+      g.faqs,
+    )}${relatedLinksBlock(
+      "What other companies know",
+      COMPANY_DATA_GUIDES.filter((o) => o.slug !== g.slug).map((o) => ({
+        href: `/what-they-know/${o.slug}`,
+        label: `What ${o.company} knows about you`,
+      })),
+    )}${relatedLinksBlock("Also worth doing", [
+      ...(g.deleteGuideSlug
+        ? [
+            {
+              href: `/delete/${g.deleteGuideSlug}`,
+              label: `Delete your ${g.company} account`,
+            },
+          ]
+        : []),
+      { href: "/privacy-rights", label: "Your deletion rights by state" },
+      { href: "/remove", label: "Remove personal data by type" },
+      { href: "/plan", label: "Build a free removal plan" },
+    ])}${siteLinksBlock()}</article>`,
+  };
+}
+
+function companyDataIndexRoute(): Route {
+  const trail = [
+    { name: "Home", path: "/" },
+    { name: "What they know", path: "/what-they-know" },
+  ];
+  return {
+    path: "/what-they-know",
+    title: `What Do Big Tech Companies Know About You? (${YEAR})`,
+    description:
+      "Google, Facebook, Amazon, TikTok, Apple and more — what each one holds on you, how to download your copy, and what survives deletion.",
+    ogType: "website",
+    jsonLd: [
+      {
+        "@context": "https://schema.org",
+        "@type": "ItemList",
+        name: "What big tech companies know about you",
+        itemListElement: COMPANY_DATA_GUIDES.map((g, i) => ({
+          "@type": "ListItem",
+          position: i + 1,
+          name: g.h1,
+          url: `${BASE_URL}/what-they-know/${g.slug}`,
+        })),
+      },
+      breadcrumbSchema(trail),
+    ],
+    body: `<main>${breadcrumbNav(trail)}<h1>What do they actually know about you?</h1>${p(
+      "Data-broker removal services work outward from your name into public records. None of them look at the accounts you opened yourself — which is where the detailed material lives. Every company below will hand you a copy of your own file if you ask, and most people have never asked.",
+    )}${linkList(
+      COMPANY_DATA_GUIDES.map((g) => ({ href: `/what-they-know/${g.slug}`, label: g.h1 })),
+    )}<h2>Why your data request is worth the ten minutes</h2>${p(
+      "Under the GDPR in Europe and under state laws in California, Colorado, Connecticut, Texas, Virginia and a growing list of others, these companies are legally obliged to give you a copy of what they hold. Most of them built a self-serve export tool rather than field the requests by hand, which is why the process is usually a few clicks rather than a formal letter.",
+    )}${p(
+      "The archive is worth reading for one specific reason: it shows you the shape of the problem. Nobody guesses correctly how far back the record goes, and seeing it is what turns privacy from an abstract worry into a to-do list.",
+    )}${relatedLinksBlock("Also useful", [
+      { href: "/privacy-rights", label: "Your deletion rights by state" },
+      { href: "/delete", label: "Delete your online accounts" },
+      { href: "/remove", label: "Remove personal data by type" },
+      { href: "/plan", label: "Build a free removal plan" },
+    ])}${siteLinksBlock()}</main>`,
+  };
+}
+
 function planRoute(): Route {
   const trail = [
     { name: "Home", path: "/" },
@@ -1088,6 +1206,7 @@ function staticRoutes(): Route[] {
         { href: "/privacy-rights", label: "Your data deletion rights, state by state" },
         { href: "/remove", label: "Remove personal data by type — SSN, address history, mugshots, court records" },
         { href: "/for", label: "Removal guidance by situation — survivors, officers, nurses, teachers, seniors" },
+        { href: "/what-they-know", label: "What Google, Facebook, Amazon and TikTok know about you — and how to get a copy" },
         { href: "/guides", label: "Privacy and data removal guides" },
         { href: "/delete", label: "How to delete your online accounts" },
         { href: "/breach", label: "Recent data breaches and what to do" },
@@ -1353,6 +1472,8 @@ async function main() {
     ...DATA_TYPE_GUIDES.map(dataTypeRoute),
     personaIndexRoute(),
     ...PERSONA_GUIDES.map(personaRoute),
+    companyDataIndexRoute(),
+    ...COMPANY_DATA_GUIDES.map(companyDataRoute),
     planRoute(),
   ];
 
