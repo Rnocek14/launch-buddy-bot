@@ -1,13 +1,47 @@
 // Runs before Vite dev/build; writes public/sitemap.xml from routes + dynamic SEO data.
 
 import { writeFileSync, readFileSync } from "fs";
+import { execFileSync } from "child_process";
 import { resolve } from "path";
 import { createClient } from "@supabase/supabase-js";
 
 const BASE_URL = "https://footprintfinder.co";
-const LASTMOD = "2026-05-17";
+
+/**
+ * Fallback only. Real <lastmod> values come from git — see gitLastModified().
+ * A sitemap that stamps every URL with the same frozen date teaches Google to
+ * ignore our lastmod entirely, which is worse than omitting it.
+ */
+const BUILD_DATE = new Date().toISOString().slice(0, 10);
+
+/**
+ * Date of the last commit that touched `file`, as YYYY-MM-DD.
+ * Returns undefined on shallow clones or when git is unavailable, in which
+ * case we omit <lastmod> rather than invent one.
+ */
+const gitDateCache = new Map<string, string | undefined>();
+function gitLastModified(file: string): string | undefined {
+  if (gitDateCache.has(file)) return gitDateCache.get(file);
+  let date: string | undefined;
+  try {
+    const out = execFileSync("git", ["log", "-1", "--format=%cs", "--", file], {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    }).trim();
+    date = /^\d{4}-\d{2}-\d{2}$/.test(out) ? out : undefined;
+  } catch {
+    date = undefined;
+  }
+  gitDateCache.set(file, date);
+  return date;
+}
 const SUPABASE_URL = "https://gqxkeezkajkiyjpnjgkx.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdxeGtlZXprYWpraXlqcG5qZ2t4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIzNjM4NDYsImV4cCI6MjA3NzkzOTg0Nn0.64_sr6feszswWrxHBogLYLPZvlnibTY_7ZOFd1l1Vfw";
+
+/** Newest of several optional YYYY-MM-DD dates; undefined if all are. */
+function newest(...dates: (string | undefined)[]): string | undefined {
+  return dates.filter(Boolean).sort().pop();
+}
 
 interface SitemapEntry {
   path: string;
@@ -24,8 +58,12 @@ const routeDefaults: Record<string, Omit<SitemapEntry, "path">> = {
   "/pricing": { changefreq: "weekly", priority: "0.85" },
   "/vs": { changefreq: "monthly", priority: "0.85" },
   "/enterprise": { changefreq: "monthly", priority: "0.8" },
-  "/blog": { changefreq: "weekly", priority: "0.7" },
+  "/best-data-removal-services": { changefreq: "weekly", priority: "0.9" },
   "/guides": { changefreq: "weekly", priority: "0.85" },
+  "/delete": { changefreq: "weekly", priority: "0.8" },
+  "/breach": { changefreq: "weekly", priority: "0.8" },
+  "/who-has-my-data": { changefreq: "monthly", priority: "0.7" },
+  "/affiliates": { changefreq: "monthly", priority: "0.5" },
   "/extension": { changefreq: "monthly", priority: "0.7" },
   "/demo": { changefreq: "monthly", priority: "0.6" },
   "/help": { changefreq: "monthly", priority: "0.6" },
@@ -34,32 +72,50 @@ const routeDefaults: Record<string, Omit<SitemapEntry, "path">> = {
   "/terms": { changefreq: "yearly", priority: "0.4" },
 };
 
-const lowPriorityRoutes = new Set([
+/**
+ * Routes that must NEVER appear in the sitemap.
+ *
+ * A sitemap is a list of pages we want indexed. Listing a URL here that
+ * robots.txt disallows is a direct contradiction — Google Search Console
+ * reports it as an error and it dilutes the crawl signal for the ~150 pages
+ * we actually want ranked.
+ *
+ * Three groups:
+ *  1. Everything Disallow'd in public/robots.txt (keep the two in sync).
+ *  2. Authenticated app surfaces that render nothing useful to a logged-out
+ *     crawler.
+ *  3. Redirect-only routes (<Navigate/>), which have no content of their own.
+ */
+const excludedRoutes = new Set([
+  // 1. Mirrors public/robots.txt Disallow list.
   "/auth",
+  "/dashboard",
   "/admin",
   "/admin/analytics",
-  "/dashboard",
   "/unmatched-domains",
-  "/deletion-requests",
-  "/cleanup",
-  "/alpha",
-  "/unsubscribe",
-  "/preferences",
   "/settings",
-  "/debug/discovery",
-  "/subscribe",
   "/billing",
+  "/preferences",
+  "/cleanup",
+  "/deletion-requests",
+  "/email-subscriptions",
+  "/reset-password",
+  "/payment-success",
+  // 2. Authenticated / internal surfaces.
+  "/alpha",
   "/authorize",
   "/broker-scan",
-  "/organization",
+  "/debug/discovery",
   "/offboarding",
-  "/exposure-scan",
-  "/reset-password",
-  "/email-subscriptions",
-  "/scan",
-  "/affiliates",
+  "/organization",
+  "/subscribe",
+  "/unsubscribe",
   "/affiliates/dashboard",
-  "/payment-success",
+  // 3. Redirect-only routes. A URL that 301s must never be listed as a page
+  //    we want indexed — the sitemap should only ever contain destinations.
+  "/exposure-scan",
+  "/scan",
+  "/blog",
 ]);
 
 const fallbackBrokerSlugs = ["411", "acxiom", "addresses", "advancedbackgroundchecks", "apollo", "beenverified", "checkpeople", "clustrmaps", "cocofinder", "cyberbackgroundchecks", "epsilon", "familytreenow", "fastpeoplesearch", "idtrue", "infotracer", "instantcheckmate", "intelius", "lead411", "lexisnexis", "mylife", "nuwber", "peekyou", "peoplebyname", "peoplefinders", "peoplelooker", "peoplesearchnow", "persopo", "publicrecords360", "publicrecordsnow", "radaris", "rocketreach", "searchpeoplefree", "smartbackgroundchecks", "spokeo", "thatsthem", "truepeoplesearch", "truthfinder", "usa-people-search", "usphonebook", "voterrecords", "whitepages", "xlek", "yellowpages", "zabasearch", "zoominfo"];
@@ -73,9 +129,12 @@ function getStaticRoutesFromApp() {
     .filter((path) => path !== "*" && !path.includes(":"));
 }
 
-function getBlogSlugs() {
-  const posts = readFileSync(resolve("src/data/blogPosts.ts"), "utf8");
-  return Array.from(posts.matchAll(/slug:\s*"([^"]+)"/g)).map((match) => match[1]);
+/** Canonical "<a>-vs-<b>" slugs from src/data/headToHead.ts. */
+function getHeadToHeadSlugs() {
+  const pairs = readFileSync(resolve("src/data/headToHead.ts"), "utf8");
+  return Array.from(pairs.matchAll(/slug:\s*"([a-z0-9]+-vs-[a-z0-9]+)"/g)).map(
+    (match) => match[1],
+  );
 }
 
 function getGuideSlugs() {
@@ -124,8 +183,8 @@ async function getPublicResultEntries() {
 }
 
 function addEntry(entries: Map<string, SitemapEntry>, entry: SitemapEntry) {
+  if (excludedRoutes.has(entry.path)) return;
   entries.set(entry.path, {
-    lastmod: LASTMOD,
     changefreq: "yearly",
     priority: "0.1",
     ...entry,
@@ -163,43 +222,74 @@ function escapeXml(value: string) {
 async function main() {
   const entries = new Map<string, SitemapEntry>();
 
+  // Each cluster's <lastmod> tracks the file that actually produces its
+  // content, so a data-only edit correctly re-dates just those URLs.
+  const appLastmod = gitLastModified("src/App.tsx") ?? BUILD_DATE;
+  const guidesLastmod = gitLastModified("src/data/guides.ts");
+  const breachLastmod = gitLastModified("src/data/breachEvents.ts");
+  // Comparison pages are rendered from three files; the newest edit to any of
+  // them is the honest lastmod for the cluster.
+  const compareLastmod = newest(
+    gitLastModified("src/data/competitors.ts"),
+    gitLastModified("src/data/competitorArticles.ts"),
+  );
+  const pairLastmod = newest(compareLastmod, gitLastModified("src/data/headToHead.ts"));
+  const bestServicesLastmod = newest(pairLastmod, gitLastModified("src/data/bestServices.ts"));
+  const deleteLastmod = gitLastModified("src/data/deleteGuides.ts");
+  // Broker pages are rendered from the Supabase table by scripts/prerender.ts;
+  // the page template is what we can date, so use it.
+  const brokerLastmod = gitLastModified("scripts/prerender.ts");
+
   for (const path of getStaticRoutesFromApp()) {
     addEntry(entries, {
       path,
-      ...(routeDefaults[path] ?? (lowPriorityRoutes.has(path)
-        ? { changefreq: "yearly", priority: "0.1" }
-        : { changefreq: "monthly", priority: "0.6" })),
+      lastmod: appLastmod,
+      ...(routeDefaults[path] ?? { changefreq: "monthly", priority: "0.6" }),
     });
   }
 
-  for (const slug of getBlogSlugs()) {
-    addEntry(entries, { path: `/blog/${slug}`, changefreq: "monthly", priority: "0.75" });
+  // Hub pages list their cluster's items, so they re-date with the cluster
+  // data rather than with App.tsx.
+  for (const [path, lastmod] of Object.entries({
+    "/guides": guidesLastmod,
+    "/vs": pairLastmod,
+    "/best-data-removal-services": bestServicesLastmod,
+    "/delete": deleteLastmod,
+    "/breach": breachLastmod,
+    "/remove-from": brokerLastmod,
+  })) {
+    const existing = entries.get(path);
+    if (existing && lastmod) entries.set(path, { ...existing, lastmod });
+  }
+
+  for (const slug of getHeadToHeadSlugs()) {
+    addEntry(entries, { path: `/vs/${slug}`, lastmod: pairLastmod, changefreq: "monthly", priority: "0.85" });
   }
 
   for (const slug of getGuideSlugs()) {
-    addEntry(entries, { path: `/guides/${slug}`, changefreq: "monthly", priority: "0.8" });
+    addEntry(entries, { path: `/guides/${slug}`, lastmod: guidesLastmod, changefreq: "monthly", priority: "0.8" });
   }
 
   for (const slug of getBreachSlugs()) {
-    addEntry(entries, { path: `/breach/${slug}`, changefreq: "weekly", priority: "0.8" });
+    addEntry(entries, { path: `/breach/${slug}`, lastmod: breachLastmod, changefreq: "weekly", priority: "0.8" });
   }
 
   for (const slug of compareSlugs) {
-    addEntry(entries, { path: `/vs/${slug}`, changefreq: "monthly", priority: slug === "deleteme" || slug === "incogni" ? "0.9" : "0.85" });
+    addEntry(entries, { path: `/vs/${slug}`, lastmod: compareLastmod, changefreq: "monthly", priority: slug === "deleteme" || slug === "incogni" ? "0.9" : "0.85" });
   }
 
   for (const slug of deleteGuideSlugs) {
-    addEntry(entries, { path: `/delete/${slug}`, changefreq: "monthly", priority: "0.75" });
+    addEntry(entries, { path: `/delete/${slug}`, lastmod: deleteLastmod, changefreq: "monthly", priority: "0.75" });
   }
 
   for (const slug of await getBrokerSlugs()) {
-    addEntry(entries, { path: `/remove-from/${slug}`, changefreq: "monthly", priority: "0.75" });
+    addEntry(entries, { path: `/remove-from/${slug}`, lastmod: brokerLastmod, changefreq: "monthly", priority: "0.75" });
   }
 
   for (const result of await getPublicResultEntries()) {
     addEntry(entries, {
       path: `/results/${result.share_id}`,
-      lastmod: result.created_at?.slice(0, 10) ?? LASTMOD,
+      lastmod: result.created_at?.slice(0, 10),
       changefreq: "monthly",
       priority: "0.4",
     });

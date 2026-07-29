@@ -16,9 +16,29 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { dirname, resolve } from "path";
 import { createClient } from "@supabase/supabase-js";
 import { GUIDES, type Guide, type GuideCategory } from "../src/data/guides";
-import { BLOG_POSTS } from "../src/data/blogPosts";
 import { DELETE_GUIDES } from "../src/data/deleteGuides";
-import { COMPETITORS } from "../src/data/competitors";
+import {
+  COMPETITORS,
+  FEATURE_ROWS,
+  RELATED_BROKERS,
+  FOOTPRINT_FINDER_FEATURES,
+  FOOTPRINT_FINDER_BROKER_COVERAGE,
+  FOOTPRINT_FINDER_PRICING,
+  COMPETITOR_PRICING_VERIFIED_ON,
+} from "../src/data/competitors";
+import {
+  COMPETITOR_ARTICLES,
+  CATEGORY_CONTEXT,
+  RANKING_CRITERIA,
+} from "../src/data/competitorArticles";
+import { HEAD_TO_HEADS, headToHeadsFor } from "../src/data/headToHead";
+import {
+  BEST_SERVICES_DESCRIPTION,
+  BEST_SERVICES_INTRO,
+  BEST_SERVICES_RANKING,
+  BEST_SERVICES_HOW_TO_CHOOSE,
+  BEST_SERVICES_FAQS,
+} from "../src/data/bestServices";
 
 const BASE_URL = "https://footprintfinder.co";
 const DIST = resolve("dist");
@@ -57,14 +77,28 @@ const linkList = (links: { href: string; label: string }[]) =>
     .join("")}</ul>`;
 
 // ---------- schema builders ----------
-const articleSchema = (headline: string, description: string, url: string): JsonLd => ({
+const articleSchema = (
+  headline: string,
+  description: string,
+  url: string,
+  datePublished?: string,
+  dateModified?: string,
+): JsonLd => ({
   "@context": "https://schema.org",
   "@type": "Article",
   headline,
   description,
   mainEntityOfPage: url,
-  author: { "@type": "Organization", name: "Footprint Finder" },
-  publisher: { "@type": "Organization", name: "Footprint Finder" },
+  image: `${BASE_URL}/og-image.png`,
+  ...(datePublished ? { datePublished } : {}),
+  ...(dateModified ? { dateModified } : {}),
+  author: { "@type": "Organization", name: "Footprint Finder", url: BASE_URL },
+  publisher: {
+    "@type": "Organization",
+    name: "Footprint Finder",
+    url: BASE_URL,
+    logo: { "@type": "ImageObject", url: `${BASE_URL}/og-image.png` },
+  },
 });
 const faqSchema = (faqs: { question: string; answer: string }[]): JsonLd => ({
   "@context": "https://schema.org",
@@ -75,6 +109,56 @@ const faqSchema = (faqs: { question: string; answer: string }[]): JsonLd => ({
     acceptedAnswer: { "@type": "Answer", text: f.answer },
   })),
 });
+/** BreadcrumbList matching the visible breadcrumb trail on the page. */
+const breadcrumbSchema = (trail: { name: string; path: string }[]): JsonLd => ({
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  itemListElement: trail.map((t, i) => ({
+    "@type": "ListItem",
+    position: i + 1,
+    name: t.name,
+    item: `${BASE_URL}${t.path}`,
+  })),
+});
+
+/** Renders the FAQ block as visible copy, matching the FAQPage schema. */
+const faqBlock = (faqs: { question: string; answer: string }[]) =>
+  `<section><h2>Frequently asked questions</h2>${faqs
+    .map((f) => `<h3>${escHtml(f.question)}</h3>${p(f.answer)}`)
+    .join("")}</section>`;
+
+/** Visible breadcrumb trail; the last item is plain text, not a link. */
+const breadcrumbNav = (trail: { name: string; path: string }[]) =>
+  `<nav aria-label="Breadcrumb">${trail
+    .map((t, i) =>
+      i === trail.length - 1
+        ? `<span>${escHtml(t.name)}</span>`
+        : `<a href="${escAttr(t.path)}">${escHtml(t.name)}</a> / `,
+    )
+    .join("")}</nav>`;
+
+/**
+ * Cross-cluster links appended to every article-type page.
+ *
+ * Without this, a prerendered comparison or blog page is a dead end in the
+ * raw HTML: React adds the nav and footer on hydration, but the first crawl
+ * response has no outbound links at all, so no authority flows through the
+ * page and related URLs are only discoverable via sitemap.xml.
+ */
+const relatedLinksBlock = (
+  heading: string,
+  links: { href: string; label: string }[],
+) => `<section><h2>${escHtml(heading)}</h2>${linkList(links)}</section>`;
+
+const siteLinksBlock = () =>
+  relatedLinksBlock("Explore Footprint Finder", [
+    { href: "/free-scan", label: "Run a free exposure scan" },
+    { href: "/vs", label: "Compare privacy and data-removal services" },
+    { href: "/remove-from", label: "Free data-broker opt-out guides" },
+    { href: "/guides", label: "Privacy and data removal guides" },
+    { href: "/delete", label: "How to delete online accounts" },
+    { href: "/pricing", label: "Pricing" },
+  ]);
 
 // ---------- route builders ----------
 function guideRoute(g: Guide): Route {
@@ -96,7 +180,7 @@ function guideRoute(g: Guide): Route {
     description: g.description,
     ogType: "article",
     jsonLd: [articleSchema(g.h1, g.description, url), faqSchema(g.faqs)],
-    body: `<article><h1>${escHtml(g.h1)}</h1>${p(g.intro)}${sections}${faqHtml}</article>`,
+    body: `<article><h1>${escHtml(g.h1)}</h1>${p(g.intro)}${sections}${faqHtml}${siteLinksBlock()}</article>`,
   };
 }
 
@@ -125,7 +209,7 @@ function guideIndexRoute(): Route {
     ogType: "website",
     body: `<main><h1>Privacy &amp; data removal guides</h1>${p(
       "Free, no-fluff guides to removing your personal information from the internet.",
-    )}${groups}</main>`,
+    )}${groups}${siteLinksBlock()}</main>`,
   };
 }
 
@@ -194,7 +278,7 @@ function brokerRoute(b: BrokerRecord): Route {
             b.name,
           )} opt-out page</a></p>`
         : ""
-    }${stepsHtml}${faqHtml}</article>`,
+    }${stepsHtml}${faqHtml}${siteLinksBlock()}</article>`,
   };
 }
 
@@ -248,7 +332,7 @@ function deleteRoute(g: (typeof DELETE_GUIDES)[number]): Route {
       g.service,
     )} keeps after deletion</h2>${ul(g.whatTheyKeep)}${stepsHtml}<h2>Gotchas to watch for</h2>${ul(
       g.gotchas,
-    )}</article>`,
+    )}${siteLinksBlock()}</article>`,
   };
 }
 
@@ -270,103 +354,333 @@ function deleteIndexRoute(): Route {
   };
 }
 
-function blogRoute(post: (typeof BLOG_POSTS)[number]): Route {
-  const url = `${BASE_URL}/blog/${post.slug}`;
-  const sections = post.sections
+function compareRoute(c: (typeof COMPETITORS)[string]): Route {
+  const article = COMPETITOR_ARTICLES[c.slug];
+  const alternatives = Object.values(COMPETITORS).filter((o) => o.slug !== c.slug);
+  const optionCount = alternatives.length + 1;
+  const url = `${BASE_URL}/vs/${c.slug}`;
+  const title = `${c.name} Alternatives: ${optionCount} Options Compared (${YEAR})`;
+  const description = `Looking for a ${c.name} alternative? We compared ${optionCount} data removal services on price, broker coverage and what they can actually see — including where ${c.name} still wins.`;
+  const trail = [
+    { name: "Home", path: "/" },
+    { name: "Compare", path: "/vs" },
+    { name: `${c.name} alternatives`, path: `/vs/${c.slug}` },
+  ];
+
+  // Summary table — the answer a skimmer needs before scrolling.
+  const summaryTable = `<table><thead><tr><th>Service</th><th>Best for</th><th>Price</th></tr></thead><tbody>${alternatives
+    .map(
+      (alt) =>
+        `<tr><td><a href="/vs/${escAttr(alt.slug)}">${escHtml(alt.name)}</a></td><td>${escHtml(
+          COMPETITOR_ARTICLES[alt.slug]?.bestForShort ?? alt.tagline,
+        )}</td><td>${escHtml(alt.annualPrice)}</td></tr>`,
+    )
+    .join(
+      "",
+    )}<tr><td>Footprint Finder (ours)</td><td>Finding forgotten accounts in your inbox</td><td>${escHtml(
+    FOOTPRINT_FINDER_PRICING.pro,
+  )}+</td></tr></tbody></table>`;
+
+  const matrix = `<table><thead><tr><th>Capability</th><th>Footprint Finder</th><th>${escHtml(
+    c.name,
+  )}</th></tr></thead><tbody>${FEATURE_ROWS.map(
+    (row) =>
+      `<tr><td>${escHtml(row.label)}</td><td>${
+        FOOTPRINT_FINDER_FEATURES[row.key] ? "Yes" : "No"
+      }</td><td>${c.features[row.key] ? "Yes" : "No"}</td></tr>`,
+  ).join("")}</tbody></table>`;
+
+  const articleSections = (article?.sections ?? [])
     .map(
       (s) =>
-        `<section><h2>${escHtml(s.heading)}</h2>${s.body
-          .map((b) => p(b))
-          .join("")}</section>`,
+        `<section><h2>${escHtml(s.heading)}</h2>${s.body.map((b) => p(b)).join("")}</section>`,
     )
     .join("");
-  const table = `<table><thead><tr><th>Feature</th><th>Footprint Finder</th><th>${escHtml(
-    post.competitor,
-  )}</th></tr></thead><tbody>${post.comparisonTable
+
+  const alternativesList = alternatives
     .map(
-      (r) =>
-        `<tr><td>${escHtml(r.feature)}</td><td>${escHtml(r.us)}</td><td>${escHtml(
-          r.them,
-        )}</td></tr>`,
+      (alt) =>
+        `<section><h3><a href="/vs/${escAttr(alt.slug)}">${escHtml(alt.name)}</a></h3>${p(
+          `${alt.annualPrice} · ${alt.brokerCoverage}. ${
+            COMPETITOR_ARTICLES[alt.slug]?.shortTake ?? alt.tagline
+          }`,
+        )}</section>`,
     )
-    .join("")}</tbody></table>`;
-  return {
-    path: `/blog/${post.slug}`,
-    title: post.title,
-    description: post.description,
-    ogType: "article",
-    jsonLd: [articleSchema(post.title, post.description, url)],
-    body: `<article><h1>${escHtml(post.title)}</h1>${p(post.tldr)}${sections}<h2>Feature comparison</h2>${table}<h2>Verdict</h2>${p(
-      post.verdict,
-    )}</article>`,
-  };
-}
+    .join("");
 
-function blogIndexRoute(): Route {
-  return {
-    path: "/blog",
-    title: "Privacy Tool Comparisons & Guides | Footprint Finder Blog",
-    description:
-      "Honest comparisons of Footprint Finder vs Incogni, DeleteMe, Optery and other privacy services — plus guides to cleaning up your digital footprint.",
-    ogType: "website",
-    body: `<main><h1>Footprint Finder blog</h1>${p(
-      "Honest comparisons and guides for cleaning up your digital footprint.",
-    )}${linkList(
-      BLOG_POSTS.map((b) => ({ href: `/blog/${b.slug}`, label: b.title })),
-    )}</main>`,
-  };
-}
+  const pairs = headToHeadsFor(c.slug).map((h) => ({
+    href: `/vs/${h.slug}`,
+    label: `${COMPETITORS[h.a]?.name} vs ${COMPETITORS[h.b]?.name}`,
+  }));
 
-function compareRoute(c: (typeof COMPETITORS)[string]): Route {
-  const faqs = [
-    {
-      question: `Is Footprint Finder cheaper than ${c.name}?`,
-      answer: `Footprint Finder costs $79/year. ${c.name} costs ${c.annualPrice}. Footprint Finder also includes inbox account discovery and breach monitoring, which ${c.name} does not.`,
-    },
-    {
-      question: `What does Footprint Finder do that ${c.name} doesn't?`,
-      answer: `Footprint Finder scans your Gmail or Outlook inbox to discover every account tied to your email — including forgotten subscriptions, old services, and shadow accounts. ${c.name} only removes you from data broker sites and cannot see your inbox-based footprint.`,
-    },
-    {
-      question: `Should I use ${c.name} or Footprint Finder?`,
-      answer: c.bestFor,
-    },
-  ];
   return {
     path: `/vs/${c.slug}`,
-    title: `Footprint Finder vs ${c.name} — Honest Comparison`,
-    description: `Compare Footprint Finder and ${c.name} side-by-side. Pricing, features, broker coverage, breach monitoring. Which privacy service is right for you?`,
+    title,
+    description,
     ogType: "article",
-    jsonLd: [faqSchema(faqs)],
-    body: `<article><h1>Footprint Finder vs ${escHtml(c.name)}</h1>${p(
-      `${c.tagline}. Here's how it stacks up against Footprint Finder on price, coverage, and features.`,
-    )}<h2>Quick verdict</h2>${p(c.bestFor)}<h2>${escHtml(
+    jsonLd: [
+      articleSchema(title, description, url, undefined, COMPETITOR_PRICING_VERIFIED_ON),
+      ...(article ? [faqSchema(article.faqs)] : []),
+      breadcrumbSchema(trail),
+    ],
+    body: `<article>${breadcrumbNav(trail)}<h1>${escHtml(c.name)} alternatives: ${optionCount} options compared</h1>${p(
+      `${c.tagline}. Here's how it stacks up against every major alternative on price, broker coverage and what each one can actually see — including the cases where ${c.name} is still the right buy.`,
+    )}${p(
+      `Disclosure: Footprint Finder is our own product and appears in this comparison. The capability table is generated from one shared data file, so we are scored on the same criteria as everyone else. Pricing last verified ${COMPETITOR_PRICING_VERIFIED_ON}.`,
+    )}<h2>The short answer</h2>${summaryTable}<h2>Why people look for ${escHtml(
       c.name,
-    )} pricing</h2>${p(
-      `${c.monthlyPrice} · ${c.annualPrice}. Footprint Finder is $79/year, all-in-one.`,
-    )}<h2>${escHtml(c.name)} pros</h2>${ul(c.pros)}<h2>${escHtml(
+    )} alternatives</h2>${ul(article?.whySeekAlternatives ?? c.cons)}${articleSections}<h2>Footprint Finder vs ${escHtml(
       c.name,
-    )} cons</h2>${ul(c.cons)}<h2>Why people choose Footprint Finder</h2>${ul(
-      c.whyFf,
-    )}</article>`,
+    )}</h2>${p(
+      `Footprint Finder removes you from ${FOOTPRINT_FINDER_BROKER_COVERAGE} on the ${FOOTPRINT_FINDER_PRICING.brokerTier} plan; ${c.name} covers ${c.brokerCoverage}.`,
+    )}${matrix}${ul(c.whyFf)}<h2>The best ${escHtml(
+      c.name,
+    )} alternatives</h2>${alternativesList}<h2>${escHtml(
+      RANKING_CRITERIA.heading,
+    )}</h2>${RANKING_CRITERIA.body.map((b) => p(b)).join("")}<h2>${escHtml(
+      CATEGORY_CONTEXT.heading,
+    )}</h2>${CATEGORY_CONTEXT.body
+      .slice(0, 2)
+      .map((b) => p(b))
+      .join("")}<h2>What to check before you switch from ${escHtml(
+      c.name,
+    )}</h2>${ul(article?.switchNotes ?? [])}${faqBlock(
+      article?.faqs ?? [],
+    )}<h2>The verdict</h2>${p(article?.verdict ?? c.bestFor)}${
+      pairs.length
+        ? relatedLinksBlock(`Head-to-head comparisons involving ${c.name}`, pairs)
+        : ""
+    }${relatedLinksBlock(
+      "Free data-broker removal guides",
+      RELATED_BROKERS.map((b) => ({
+        href: `/remove-from/${b.slug}`,
+        label: `How to opt out of ${b.name}`,
+      })),
+    )}${relatedLinksBlock("Compare other privacy tools", [
+      ...alternatives.map((o) => ({
+        href: `/vs/${o.slug}`,
+        label: `${o.name} alternatives`,
+      })),
+      { href: "/best-data-removal-services", label: "Best data removal services" },
+    ])}${siteLinksBlock()}</article>`,
+  };
+}
+
+function headToHeadRoute(h: (typeof HEAD_TO_HEADS)[number]): Route {
+  const a = COMPETITORS[h.a];
+  const b = COMPETITORS[h.b];
+  const url = `${BASE_URL}/vs/${h.slug}`;
+  const title = `${a.name} vs ${b.name} (${YEAR}): Which Should You Use?`;
+  const description = `${a.name} vs ${b.name} compared on price, broker coverage, filing method and reporting. ${h.angle}`;
+  const trail = [
+    { name: "Home", path: "/" },
+    { name: "Compare", path: "/vs" },
+    { name: `${a.name} vs ${b.name}`, path: `/vs/${h.slug}` },
+  ];
+
+  const glance = `<table><thead><tr><th></th><th>${escHtml(a.name)}</th><th>${escHtml(
+    b.name,
+  )}</th></tr></thead><tbody><tr><td>Annual price</td><td>${escHtml(
+    a.annualPrice,
+  )}</td><td>${escHtml(b.annualPrice)}</td></tr><tr><td>Monthly price</td><td>${escHtml(
+    a.monthlyPrice,
+  )}</td><td>${escHtml(b.monthlyPrice)}</td></tr><tr><td>Broker coverage</td><td>${escHtml(
+    a.brokerCoverage,
+  )}</td><td>${escHtml(b.brokerCoverage)}</td></tr>${FEATURE_ROWS.map(
+    (row) =>
+      `<tr><td>${escHtml(row.label)}</td><td>${a.features[row.key] ? "Yes" : "No"}</td><td>${
+        b.features[row.key] ? "Yes" : "No"
+      }</td></tr>`,
+  ).join("")}</tbody></table>`;
+
+  const sections = h.sections
+    .map(
+      (s) =>
+        `<section><h2>${escHtml(s.heading)}</h2>${s.body.map((x) => p(x)).join("")}</section>`,
+    )
+    .join("");
+
+  const otherPairs = HEAD_TO_HEADS.filter((o) => o.slug !== h.slug).map((o) => ({
+    href: `/vs/${o.slug}`,
+    label: `${COMPETITORS[o.a]?.name} vs ${COMPETITORS[o.b]?.name}`,
+  }));
+
+  return {
+    path: `/vs/${h.slug}`,
+    title,
+    description,
+    ogType: "article",
+    jsonLd: [
+      articleSchema(title, description, url, undefined, COMPETITOR_PRICING_VERIFIED_ON),
+      faqSchema(h.faqs),
+      breadcrumbSchema(trail),
+    ],
+    body: `<article>${breadcrumbNav(trail)}<h1>${escHtml(a.name)} vs ${escHtml(
+      b.name,
+    )}: which should you use?</h1>${p(h.angle)}<h2>${escHtml(a.name)} vs ${escHtml(
+      b.name,
+    )} at a glance</h2>${p(
+      `Pricing last verified ${COMPETITOR_PRICING_VERIFIED_ON}.`,
+    )}${glance}${sections}<h2>${escHtml(a.name)} pros</h2>${ul(
+      a.pros,
+    )}<h2>${escHtml(a.name)} cons</h2>${ul(a.cons)}<h2>${escHtml(
+      b.name,
+    )} pros</h2>${ul(b.pros)}<h2>${escHtml(b.name)} cons</h2>${ul(
+      b.cons,
+    )}<h2>Which should you pick?</h2>${p(`Pick ${a.name} if: ${h.pickA}`)}${p(
+      `Pick ${b.name} if: ${h.pickB}`,
+    )}<h2>A third option worth knowing about</h2>${p(
+      `Disclosure: Footprint Finder is our product. Both ${a.name} and ${b.name} work outward from your name into public databases; Footprint Finder also reads your inbox metadata to find the accounts you have actually created. ${FOOTPRINT_FINDER_PRICING.pro} for inbox discovery and breach monitoring, ${FOOTPRINT_FINDER_PRICING.complete} adds broker removal across ${FOOTPRINT_FINDER_BROKER_COVERAGE}. Broker coverage is smaller than both services here — if people-search listings are your only concern, one of them covers more sites.`,
+    )}${faqBlock(h.faqs)}${relatedLinksBlock(
+      "Other head-to-head comparisons",
+      otherPairs,
+    )}${relatedLinksBlock("Keep researching", [
+      { href: "/best-data-removal-services", label: "Best data removal services" },
+      { href: `/vs/${a.slug}`, label: `${a.name} alternatives` },
+      { href: `/vs/${b.slug}`, label: `${b.name} alternatives` },
+    ])}${siteLinksBlock()}</article>`,
+  };
+}
+
+function bestServicesRoute(): Route {
+  const url = `${BASE_URL}/best-data-removal-services`;
+  const title = `Best Data Removal Services in ${YEAR}: ${BEST_SERVICES_RANKING.length} Compared & Ranked`;
+  const trail = [
+    { name: "Home", path: "/" },
+    { name: "Compare", path: "/vs" },
+    { name: "Best data removal services", path: "/best-data-removal-services" },
+  ];
+
+  const rows = BEST_SERVICES_RANKING.map((entry) => {
+    const isOurs = entry.slug === "footprintfinder";
+    const c = isOurs ? undefined : COMPETITORS[entry.slug];
+    return {
+      name: isOurs ? "Footprint Finder (ours)" : c!.name,
+      slug: isOurs ? null : c!.slug,
+      price: isOurs
+        ? `${FOOTPRINT_FINDER_PRICING.pro} / ${FOOTPRINT_FINDER_PRICING.complete}`
+        : c!.annualPrice,
+      coverage: isOurs ? FOOTPRINT_FINDER_BROKER_COVERAGE : c!.brokerCoverage,
+      features: isOurs ? FOOTPRINT_FINDER_FEATURES : c!.features,
+      award: entry.award,
+      why: entry.why,
+      caveat: entry.caveat,
+    };
+  });
+
+  const masterTable = `<table><thead><tr><th>Service</th><th>Price</th><th>Brokers</th>${FEATURE_ROWS.map(
+    (r) => `<th>${escHtml(r.label)}</th>`,
+  ).join("")}</tr></thead><tbody>${rows
+    .map(
+      (r) =>
+        `<tr><td>${
+          r.slug ? `<a href="/vs/${escAttr(r.slug)}">${escHtml(r.name)}</a>` : escHtml(r.name)
+        }</td><td>${escHtml(r.price)}</td><td>${escHtml(r.coverage)}</td>${FEATURE_ROWS.map(
+          (f) => `<td>${r.features[f.key] ? "Yes" : "No"}</td>`,
+        ).join("")}</tr>`,
+    )
+    .join("")}</tbody></table>`;
+
+  const entries = rows
+    .map(
+      (r, i) =>
+        `<section><h3>${i + 1}. ${
+          r.slug ? `<a href="/vs/${escAttr(r.slug)}">${escHtml(r.name)}</a>` : escHtml(r.name)
+        } — ${escHtml(r.award)}</h3>${p(`${r.price} · ${r.coverage}`)}${p(r.why)}${p(
+          `The catch: ${r.caveat}`,
+        )}</section>`,
+    )
+    .join("");
+
+  return {
+    path: "/best-data-removal-services",
+    title,
+    description: BEST_SERVICES_DESCRIPTION,
+    ogType: "article",
+    jsonLd: [
+      articleSchema(title, BEST_SERVICES_DESCRIPTION, url, undefined, COMPETITOR_PRICING_VERIFIED_ON),
+      {
+        "@context": "https://schema.org",
+        "@type": "ItemList",
+        name: title,
+        itemListElement: BEST_SERVICES_RANKING.map((entry, i) => ({
+          "@type": "ListItem",
+          position: i + 1,
+          name:
+            entry.slug === "footprintfinder"
+              ? "Footprint Finder"
+              : COMPETITORS[entry.slug]?.name,
+          ...(entry.slug === "footprintfinder"
+            ? {}
+            : { url: `${BASE_URL}/vs/${entry.slug}` }),
+        })),
+      },
+      faqSchema(BEST_SERVICES_FAQS),
+      breadcrumbSchema(trail),
+    ],
+    body: `<article>${breadcrumbNav(trail)}<h1>Best data removal services in ${YEAR}</h1>${BEST_SERVICES_INTRO.map(
+      (b) => p(b),
+    ).join("")}<h2>Every service compared</h2>${masterTable}<h2>The picks, by category</h2>${entries}<h2>${escHtml(
+      BEST_SERVICES_HOW_TO_CHOOSE.heading,
+    )}</h2>${ul(
+      BEST_SERVICES_HOW_TO_CHOOSE.body.map((b) => b.split("**").join("")),
+    )}<h2>${escHtml(CATEGORY_CONTEXT.heading)}</h2>${CATEGORY_CONTEXT.body
+      .map((b) => p(b))
+      .join("")}<h2>${escHtml(RANKING_CRITERIA.heading)}</h2>${RANKING_CRITERIA.body
+      .map((b) => p(b))
+      .join("")}${faqBlock(BEST_SERVICES_FAQS)}${relatedLinksBlock(
+      "Head-to-head comparisons",
+      HEAD_TO_HEADS.map((h) => ({
+        href: `/vs/${h.slug}`,
+        label: `${COMPETITORS[h.a]?.name} vs ${COMPETITORS[h.b]?.name}`,
+      })),
+    )}${siteLinksBlock()}</article>`,
   };
 }
 
 function compareIndexRoute(): Route {
+  const trail = [
+    { name: "Home", path: "/" },
+    { name: "Compare", path: "/vs" },
+  ];
   return {
     path: "/vs",
-    title: "Footprint Finder vs Other Privacy Tools — Comparisons",
+    title: `Data Removal Service Comparisons (${YEAR}) — Footprint Finder`,
     description:
-      "Compare Footprint Finder against DeleteMe, Incogni, Optery, Kanary and Mine on price, data broker coverage, inbox scanning and breach monitoring.",
+      "Side-by-side comparisons of DeleteMe, Incogni, OneRep, Optery, Privacy Bee, Kanary, Aura, EasyOptOuts and Mine — pricing, broker coverage and honest alternatives for each.",
     ogType: "website",
-    body: `<main><h1>Compare Footprint Finder vs other privacy tools</h1>${p(
-      "Honest, side-by-side comparisons against the most popular privacy and data-removal services.",
-    )}${linkList(
+    jsonLd: [
+      {
+        "@context": "https://schema.org",
+        "@type": "ItemList",
+        name: "Data removal service comparisons",
+        itemListElement: Object.values(COMPETITORS).map((c, i) => ({
+          "@type": "ListItem",
+          position: i + 1,
+          name: `${c.name} alternatives`,
+          url: `${BASE_URL}/vs/${c.slug}`,
+        })),
+      },
+      breadcrumbSchema(trail),
+    ],
+    body: `<main>${breadcrumbNav(trail)}<h1>Compare data removal services</h1>${p(
+      "Honest, side-by-side comparisons of the major privacy and data-removal services — what each covers, what it costs, and which alternative fits your situation.",
+    )}${linkList([
+      {
+        href: "/best-data-removal-services",
+        label: `Best data removal services in ${YEAR} — all ${BEST_SERVICES_RANKING.length} ranked`,
+      },
+    ])}<h2>Alternatives by service</h2>${linkList(
       Object.values(COMPETITORS).map((c) => ({
         href: `/vs/${c.slug}`,
-        label: `Footprint Finder vs ${c.name}`,
+        label: `${c.name} alternatives — ${c.annualPrice}, ${c.brokerCoverage}`,
       })),
-    )}</main>`,
+    )}<h2>Head-to-head comparisons</h2>${linkList(
+      HEAD_TO_HEADS.map((h) => ({
+        href: `/vs/${h.slug}`,
+        label: `${COMPETITORS[h.a]?.name} vs ${COMPETITORS[h.b]?.name}`,
+      })),
+    )}${siteLinksBlock()}</main>`,
   };
 }
 
@@ -529,7 +843,8 @@ function buildHtml(template: string, route: Route): string {
     `<meta property="og:url" content="${canonical}" />`,
     `<meta property="og:type" content="${route.ogType ?? "article"}" />`,
     ...(route.jsonLd ?? []).map(
-      (b) => `<script type="application/ld+json">${JSON.stringify(b)}</script>`,
+      (b) =>
+        `<script type="application/ld+json" data-dynamic-seo="1">${JSON.stringify(b)}</script>`,
     ),
   ].join("\n    ");
   html = html.replace("</head>", `    ${headTags}\n  </head>`);
@@ -578,10 +893,10 @@ async function main() {
     ...brokers.map(brokerRoute),
     deleteIndexRoute(),
     ...DELETE_GUIDES.map(deleteRoute),
-    blogIndexRoute(),
-    ...BLOG_POSTS.map(blogRoute),
     compareIndexRoute(),
     ...Object.values(COMPETITORS).map(compareRoute),
+    ...HEAD_TO_HEADS.map(headToHeadRoute),
+    bestServicesRoute(),
   ];
 
   for (const route of routes) writeRoute(template, route);

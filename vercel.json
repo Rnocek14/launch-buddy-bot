@@ -3,6 +3,15 @@
   "outputDirectory": "dist",
   "cleanUrls": true,
   "trailingSlash": false,
+  "redirects": [
+    { "source": "/blog/footprint-finder-vs-incogni", "destination": "/vs/incogni", "permanent": true },
+    { "source": "/blog/footprint-finder-vs-deleteme", "destination": "/vs/deleteme", "permanent": true },
+    { "source": "/blog/footprint-finder-vs-optery", "destination": "/vs/optery", "permanent": true },
+    { "source": "/blog/footprint-finder-vs-mine", "destination": "/vs/mine", "permanent": true },
+    { "source": "/blog/footprint-finder-vs-aura", "destination": "/vs/aura", "permanent": true },
+    { "source": "/blog/:slug*", "destination": "/vs", "permanent": true },
+    { "source": "/blog", "destination": "/vs", "permanent": true }
+  ],
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
   ]
