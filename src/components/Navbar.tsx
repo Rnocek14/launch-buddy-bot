@@ -28,6 +28,20 @@ const scrollToSection = (id: string) => {
   }
 };
 
+/**
+ * Content-cluster entry points surfaced site-wide.
+ * These pages carry the site's organic search traffic; before this menu
+ * existed they had no inbound internal links outside the footer.
+ */
+const RESOURCE_LINKS = [
+  { to: "/best-data-removal-services", label: "Best data removal services" },
+  { to: "/vs", label: "Compare privacy services" },
+  { to: "/remove-from", label: "Data-broker opt-out guides" },
+  { to: "/guides", label: "Privacy removal guides" },
+  { to: "/delete", label: "Delete your online accounts" },
+  { to: "/breach", label: "Recent data breaches" },
+];
+
 export const Navbar = () => {
   const [user, setUser] = useState<any>(null);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -109,12 +123,29 @@ export const Navbar = () => {
                 <Button variant="ghost" onClick={() => scrollToSection("features")}>
                   Features
                 </Button>
-                <Button variant="ghost" onClick={() => scrollToSection("pricing")}>
-                  Pricing
-                </Button>
-                <Button variant="ghost" onClick={() => scrollToSection("faq")}>
-                  FAQ
-                </Button>
+                <Link to="/pricing">
+                  <Button variant="ghost">Pricing</Button>
+                </Link>
+                {/* Site-wide entry point into the SEO content clusters. Without
+                    this, /guides, /vs and /delete are reachable only from the
+                    footer and sitemap. */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className="gap-1">
+                      Resources
+                      <ChevronDown className="w-3 h-3 opacity-50" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="w-64">
+                    {RESOURCE_LINKS.map((link) => (
+                      <DropdownMenuItem key={link.to} asChild>
+                        <Link to={link.to} className="cursor-pointer">
+                          {link.label}
+                        </Link>
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </>
             )}
 
@@ -216,12 +247,26 @@ export const Navbar = () => {
                       <Button variant="ghost" className="justify-start" onClick={() => { scrollToSection("features"); closeMobileMenu(); }}>
                         Features
                       </Button>
-                      <Button variant="ghost" className="justify-start" onClick={() => { scrollToSection("pricing"); closeMobileMenu(); }}>
-                        Pricing
-                      </Button>
+                      <Link to="/pricing" onClick={closeMobileMenu}>
+                        <Button variant="ghost" className="w-full justify-start">
+                          Pricing
+                        </Button>
+                      </Link>
                       <Button variant="ghost" className="justify-start" onClick={() => { scrollToSection("faq"); closeMobileMenu(); }}>
                         FAQ
                       </Button>
+                      <div className="pt-2 mt-1 border-t">
+                        <p className="px-4 pb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                          Resources
+                        </p>
+                        {RESOURCE_LINKS.map((link) => (
+                          <Link key={link.to} to={link.to} onClick={closeMobileMenu}>
+                            <Button variant="ghost" className="w-full justify-start font-normal">
+                              {link.label}
+                            </Button>
+                          </Link>
+                        ))}
+                      </div>
                     </>
                   )}
 

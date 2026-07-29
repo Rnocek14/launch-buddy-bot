@@ -1,3 +1,20 @@
+# Netlify / Cloudflare Pages redirect rules. Order matters — first match wins.
+#
+# 301s: the five /blog/footprint-finder-vs-* articles were consolidated into
+# the /vs/:competitor pages they were cannibalising. Permanent redirects pass
+# the accumulated ranking signals to the surviving URL; anything softer
+# (302, client-side only, canonical-only) leaves them stranded.
+#
+# The `!` forces the rule even though a prerendered file may still exist at
+# the old path in a stale deploy.
+/blog/footprint-finder-vs-incogni    /vs/incogni     301!
+/blog/footprint-finder-vs-deleteme   /vs/deleteme    301!
+/blog/footprint-finder-vs-optery     /vs/optery      301!
+/blog/footprint-finder-vs-mine       /vs/mine        301!
+/blog/footprint-finder-vs-aura       /vs/aura        301!
+/blog/*                              /vs             301!
+/blog                                /vs             301!
+
 # SPA fallback for Netlify and Cloudflare Pages.
 # A real file at the requested path (e.g. the prerendered
 # /guides/foo/index.html) is always served first; this rule only handles

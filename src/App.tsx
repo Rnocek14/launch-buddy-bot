@@ -41,12 +41,12 @@ import Extension from "./pages/Extension";
 import ResetPassword from "./pages/ResetPassword";
 import EmailSubscriptions from "./pages/EmailSubscriptions";
 import Parents from "./pages/Parents";
-import BlogIndex from "./pages/BlogIndex";
-import BlogPost from "./pages/BlogPost";
+import LegacyBlogRedirect from "./pages/LegacyBlogRedirect";
 import RemoveBroker from "./pages/RemoveBroker";
 import RemoveBrokerIndex from "./pages/RemoveBrokerIndex";
 import Compare from "./pages/Compare";
 import CompareIndex from "./pages/CompareIndex";
+import BestServices from "./pages/BestServices";
 import Affiliates from "./pages/Affiliates";
 import AffiliateDashboard from "./pages/AffiliateDashboard";
 import PricingPage from "./pages/PricingPage";
@@ -108,11 +108,13 @@ const App = () => (
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/email-subscriptions" element={<EmailSubscriptions />} />
               <Route path="/scan" element={<Navigate to="/dashboard" replace />} />
-              <Route path="/blog" element={<BlogIndex />} />
-              <Route path="/blog/:slug" element={<BlogPost />} />
+              {/* Consolidated into /vs — see src/pages/LegacyBlogRedirect.tsx */}
+              <Route path="/blog" element={<Navigate to="/vs" replace />} />
+              <Route path="/blog/:slug" element={<LegacyBlogRedirect />} />
               <Route path="/remove-from" element={<RemoveBrokerIndex />} />
               <Route path="/remove-from/:slug" element={<RemoveBroker />} />
               <Route path="/vs" element={<CompareIndex />} />
+              <Route path="/best-data-removal-services" element={<BestServices />} />
               <Route path="/vs/:competitor" element={<Compare />} />
               <Route path="/affiliates" element={<Affiliates />} />
               <Route path="/affiliates/dashboard" element={<AffiliateDashboard />} />

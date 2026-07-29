@@ -2,18 +2,31 @@
 
 > Footprint Finder scans your inbox to find every account, breach, and data-broker listing tied to your email — then helps you delete or opt out. Free scan, monthly rescans, real-time alerts.
 
-Footprint Finder is a privacy management service for individuals. It uses read-only OAuth metadata (sender, subject, date — never message body) to discover services where your email is registered, classifies them by activity and risk, and provides one-click cleanup actions (delete account, unsubscribe, opt out under CCPA). Data-broker scans surface where your name, address, and phone are publicly listed across 45+ US people-search sites.
+Footprint Finder is a privacy management service for individuals. It uses read-only OAuth metadata (sender, subject, date — never message body) to discover services where your email is registered, classifies them by activity and risk, and provides one-click cleanup actions (delete account, unsubscribe, opt out under CCPA). On the Complete plan, data-broker scans surface where your name, address, and phone are publicly listed across 45+ US people-search sites.
+
+## Plans
+
+- Free — 1 email account, 3 deletion requests/month, breach check. No data-broker scanning.
+- Pro — $79/year or $12.99/month. Up to 3 email accounts, unlimited deletion requests, deep inbox scan, monthly rescans. No data-broker scanning.
+- Complete — $129/year or $19.99/month. Everything in Pro, plus data-broker scanning and removal across 45+ sites, and up to 5 email accounts.
+- Family — $179/year. Everything in Complete, for up to 5 people.
+- Parent Protection Scan — $39 one-time. A single deep scan of a parent's email, scam-focused, no subscription.
+
+Data-broker removal is a Complete-tier feature. Pro does not include it.
 
 ## Pages
 
 - [Home](/): Overview, free scan entry point, pricing summary.
 - [Free Scan](/free-scan): Instant breach + exposure check by email (no account required).
-- [Pricing](/pricing): Plans — $15/mo or $79/yr.
+- [Pricing](/pricing): Full plan comparison.
 - [Parent Scan](/parents): One-time $39 scan for an elderly parent's email (scam-focused).
 - [Enterprise](/enterprise): Shadow IT audits and B2B offering.
-- [Compare](/vs): Footprint Finder vs DeleteMe, Incogni, Optery, Kanary, Mine.
+- [Best Data Removal Services](/best-data-removal-services): All 10 services ranked by category, with the honest catch for each — including ours.
+- [Compare](/vs): Alternatives pages for DeleteMe, Incogni, OneRep, Privacy Bee, EasyOptOuts, Aura, Optery, Kanary and Mine, plus head-to-head pages such as /vs/deleteme-vs-incogni.
 - [Data-Broker Removal Guides](/remove-from): Free opt-out instructions for 45+ US brokers.
-- [Blog](/blog): Privacy tool comparisons and guides.
+- [Privacy Guides](/guides): How-to guides for removing your name, address, phone number, email and images from the internet and from Google.
+- [Account Deletion Guides](/delete): Step-by-step instructions for permanently deleting accounts on Facebook, Instagram, Amazon, LinkedIn, Spotify and more.
+- [Breach Pages](/breach): Plain-English explainers for major data breaches and what to do if you were affected.
 - [Browser Extension](/extension): Chrome extension for in-context cleanup.
 - [Help](/help): FAQ explaining server-side metadata scanning.
 - [Demo](/demo): Interactive demo with sample data.

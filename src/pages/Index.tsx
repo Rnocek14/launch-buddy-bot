@@ -11,6 +11,7 @@ import { SecurityCompliance } from "@/components/SecurityCompliance";
 import { FAQ } from "@/components/FAQ";
 import { Footer } from "@/components/Footer";
 import { useSEO } from "@/hooks/useSEO";
+import { BROKER_COUNT_LABEL } from "@/config/brokers";
 import { useEffect } from "react";
 
 const Index = () => {
@@ -45,7 +46,7 @@ const Index = () => {
           name: "What is Footprint Finder?",
           acceptedAnswer: {
             "@type": "Answer",
-            text: "Footprint Finder is a digital privacy service that scans your Gmail or Outlook inbox to discover every account tied to your email, checks for data breaches, and removes you from 25+ data broker sites. It runs monthly rescans and alerts you when new exposures appear.",
+            text: `Footprint Finder is a digital privacy service that scans your Gmail or Outlook inbox to discover every account tied to your email and checks those addresses against known data breaches. On the Complete plan it also finds and removes your listings across ${BROKER_COUNT_LABEL} data broker sites. It runs monthly rescans and alerts you when new exposures appear.`,
           },
         },
         {
@@ -53,7 +54,7 @@ const Index = () => {
           name: "How much does Footprint Finder cost?",
           acceptedAnswer: {
             "@type": "Answer",
-            text: "Footprint Finder offers a free scan with no credit card required. Paid plans start at $79/year for full broker removal, monthly rescans, and breach monitoring.",
+            text: "Footprint Finder offers a free scan with no credit card required. Pro is $79/year and adds unlimited deletion requests, deep inbox scanning and monthly rescans. Complete is $129/year and adds data-broker scanning and removal. A Family plan covering up to 5 people is $179/year.",
           },
         },
         {
