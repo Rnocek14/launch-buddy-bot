@@ -26,6 +26,7 @@ const COLUMNS: { heading: string; links: { to: string; label: string }[] }[] = [
     links: [
       { to: "/remove", label: "Remove data by type" },
       { to: "/privacy-rights", label: "Your rights by state" },
+      { to: "/for", label: "Guidance by situation" },
       { to: "/guides/california-drop-delete-act", label: "California DROP (free)" },
       { to: "/remove-from", label: "Data broker opt-out guides" },
       { to: "/delete", label: "Delete your accounts" },

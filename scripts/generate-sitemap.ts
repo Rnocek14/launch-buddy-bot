@@ -61,6 +61,7 @@ const routeDefaults: Record<string, Omit<SitemapEntry, "path">> = {
   "/best-data-removal-services": { changefreq: "weekly", priority: "0.9" },
   "/privacy-rights": { changefreq: "weekly", priority: "0.9" },
   "/remove": { changefreq: "weekly", priority: "0.9" },
+  "/for": { changefreq: "weekly", priority: "0.9" },
   "/guides": { changefreq: "weekly", priority: "0.85" },
   "/delete": { changefreq: "weekly", priority: "0.8" },
   "/breach": { changefreq: "weekly", priority: "0.8" },
@@ -135,6 +136,12 @@ function getStaticRoutesFromApp() {
 function getStateSlugs() {
   const src = readFileSync(resolve("src/data/states.ts"), "utf8");
   return Array.from(src.matchAll(/slug:\s*"([a-z-]+)",\s*name:/g)).map((m) => m[1]);
+}
+
+/** Situation/persona slugs from src/data/personas.ts. */
+function getPersonaSlugs() {
+  const src = readFileSync(resolve("src/data/personas.ts"), "utf8");
+  return Array.from(src.matchAll(/slug:\s*"([a-z-]+)",\s*audience:/g)).map((m) => m[1]);
 }
 
 /** Personal-data-type slugs from src/data/dataTypes.ts. */
@@ -251,6 +258,7 @@ async function main() {
   const bestServicesLastmod = newest(pairLastmod, gitLastModified("src/data/bestServices.ts"));
   const statesLastmod = gitLastModified("src/data/states.ts");
   const dataTypesLastmod = gitLastModified("src/data/dataTypes.ts");
+  const personasLastmod = gitLastModified("src/data/personas.ts");
   const deleteLastmod = gitLastModified("src/data/deleteGuides.ts");
   // Broker pages are rendered from the Supabase table by scripts/prerender.ts;
   // the page template is what we can date, so use it.
@@ -272,6 +280,7 @@ async function main() {
     "/best-data-removal-services": bestServicesLastmod,
     "/privacy-rights": statesLastmod,
     "/remove": dataTypesLastmod,
+    "/for": personasLastmod,
     "/delete": deleteLastmod,
     "/breach": breachLastmod,
     "/remove-from": brokerLastmod,
@@ -286,6 +295,10 @@ async function main() {
 
   for (const slug of getDataTypeSlugs()) {
     addEntry(entries, { path: `/remove/${slug}`, lastmod: dataTypesLastmod, changefreq: "monthly", priority: "0.85" });
+  }
+
+  for (const slug of getPersonaSlugs()) {
+    addEntry(entries, { path: `/for/${slug}`, lastmod: personasLastmod, changefreq: "monthly", priority: "0.85" });
   }
 
   for (const slug of getHeadToHeadSlugs()) {

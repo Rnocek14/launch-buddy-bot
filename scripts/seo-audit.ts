@@ -34,6 +34,7 @@ const THIN_OK = new Set([
   "/vs",
   "/remove",
   "/privacy-rights",
+  "/for",
   "/guides",
   "/delete",
   "/breach",

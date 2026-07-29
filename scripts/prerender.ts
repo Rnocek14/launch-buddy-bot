@@ -48,6 +48,7 @@ import {
   LAW_DATA_VERIFIED_ON,
 } from "../src/data/states";
 import { DATA_TYPE_GUIDES } from "../src/data/dataTypes";
+import { PERSONA_GUIDES } from "../src/data/personas";
 import {
   BEST_SERVICES_DESCRIPTION,
   BEST_SERVICES_INTRO,
@@ -918,6 +919,86 @@ function dataTypeIndexRoute(): Route {
   };
 }
 
+function personaRoute(g: (typeof PERSONA_GUIDES)[number]): Route {
+  const url = `${BASE_URL}/for/${g.slug}`;
+  const trail = [
+    { name: "Home", path: "/" },
+    { name: "By situation", path: "/for" },
+    { name: g.audience, path: `/for/${g.slug}` },
+  ];
+  return {
+    path: `/for/${g.slug}`,
+    title: g.title,
+    description: g.description,
+    ogType: "article",
+    jsonLd: [
+      articleSchema(g.h1, g.description, url),
+      faqSchema(g.faqs),
+      breadcrumbSchema(trail),
+    ],
+    body: `<article>${breadcrumbNav(trail)}<h1>${escHtml(g.h1)}</h1>${p(g.intro)}${
+      g.leadWith
+        ? `<h2>${escHtml(g.leadWith.heading)}</h2>${p(g.leadWith.body)}`
+        : ""
+    }<h2>Why ${escHtml(g.audience)} are exposed differently</h2>${ul(
+      g.whyExposed,
+    )}<h2>What to do, in order</h2><ol>${g.steps
+      .map((s) => `<li><strong>${escHtml(s.title)}.</strong> ${escHtml(s.body)}</li>`)
+      .join("")}</ol><h2>What not to do</h2>${ul(g.pitfalls)}${faqBlock(
+      g.faqs,
+    )}${relatedLinksBlock(
+      "The data that matters most here",
+      g.relatedDataTypes.map((s) => ({ href: `/remove/${s}`, label: `Remove your ${s.replace(/-/g, " ")}` })),
+    )}${relatedLinksBlock(
+      "Guidance for other situations",
+      PERSONA_GUIDES.filter((o) => o.slug !== g.slug).map((o) => ({
+        href: `/for/${o.slug}`,
+        label: `Data removal for ${o.audience}`,
+      })),
+    )}${relatedLinksBlock("Related guides", [
+      ...g.relatedGuides.map((s) => ({ href: `/guides/${s}`, label: `Guide: ${s.replace(/-/g, " ")}` })),
+      { href: "/privacy-rights", label: "Your deletion rights by state" },
+    ])}${comparisonBridgeBlock()}${siteLinksBlock()}</article>`,
+  };
+}
+
+function personaIndexRoute(): Route {
+  const trail = [
+    { name: "Home", path: "/" },
+    { name: "By situation", path: "/for" },
+  ];
+  return {
+    path: "/for",
+    title: `Data Removal by Situation (${YEAR}) — Free Guides`,
+    description:
+      "Survivors, officers, nurses, teachers, journalists, seniors, job seekers and creators are exposed differently — and need different advice.",
+    ogType: "website",
+    jsonLd: [
+      {
+        "@context": "https://schema.org",
+        "@type": "ItemList",
+        name: "Personal data removal guidance by situation",
+        itemListElement: PERSONA_GUIDES.map((g, i) => ({
+          "@type": "ListItem",
+          position: i + 1,
+          name: g.h1,
+          url: `${BASE_URL}/for/${g.slug}`,
+        })),
+      },
+      breadcrumbSchema(trail),
+    ],
+    body: `<main>${breadcrumbNav(trail)}<h1>Data removal guidance by situation</h1>${p(
+      "Removal services sell one plan to everybody, but the right advice genuinely differs. A survivor needs a state confidentiality programme, not a subscription. A police officer in some states has a takedown right with penalties behind it. Each guide starts with the strongest option actually available to that group — including when that option is free and beats paying us.",
+    )}${linkList(
+      PERSONA_GUIDES.map((g) => ({ href: `/for/${g.slug}`, label: g.h1 })),
+    )}${relatedLinksBlock("Also useful", [
+      { href: "/privacy-rights", label: "Your deletion rights by state" },
+      { href: "/remove", label: "Remove personal data by type" },
+      { href: "/remove-from", label: "Data-broker opt-out guides" },
+    ])}${siteLinksBlock()}</main>`,
+  };
+}
+
 // Authored static marketing pages (body extracted by hand; head accurate).
 function staticRoutes(): Route[] {
   return [
@@ -948,6 +1029,7 @@ function staticRoutes(): Route[] {
         { href: "/guides/california-drop-delete-act", label: "California DROP: delete your data from every registered broker, free" },
         { href: "/privacy-rights", label: "Your data deletion rights, state by state" },
         { href: "/remove", label: "Remove personal data by type — SSN, address history, mugshots, court records" },
+        { href: "/for", label: "Removal guidance by situation — survivors, officers, nurses, teachers, seniors" },
         { href: "/guides", label: "Privacy and data removal guides" },
         { href: "/delete", label: "How to delete your online accounts" },
         { href: "/breach", label: "Recent data breaches and what to do" },
@@ -1211,6 +1293,8 @@ async function main() {
     ...STATES.map(stateRoute),
     dataTypeIndexRoute(),
     ...DATA_TYPE_GUIDES.map(dataTypeRoute),
+    personaIndexRoute(),
+    ...PERSONA_GUIDES.map(personaRoute),
   ];
 
   for (const route of routes) writeRoute(template, route);

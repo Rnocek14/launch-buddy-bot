@@ -38,6 +38,7 @@ const RESOURCE_LINKS = [
   { to: "/vs", label: "Compare privacy services" },
   { to: "/privacy-rights", label: "Your privacy rights by state" },
   { to: "/remove", label: "Remove personal data by type" },
+  { to: "/for", label: "Guidance for your situation" },
   { to: "/remove-from", label: "Data-broker opt-out guides" },
   { to: "/guides", label: "Privacy removal guides" },
   { to: "/delete", label: "Delete your online accounts" },
