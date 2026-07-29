@@ -33,7 +33,7 @@ const HELP_FAQS: { q: string; a: string }[] = [
   { q: "How does Footprint Finder scan my inbox?", a: "We use read-only OAuth to access your Gmail or Outlook and scan only message metadata (sender names and subject lines). We never read message bodies and never store your email content." },
   { q: "Is my email content stored?", a: "No. Footprint Finder reads only metadata server-side, classifies senders into services, and stores only the resulting service list — never message bodies." },
   { q: "How long does a scan take?", a: "Most scans complete in 2–5 minutes depending on inbox size. You'll get an email when results are ready." },
-  { q: "How do data broker removals work?", a: "We send opt-out and CCPA 'Do Not Sell' requests on your behalf via email to 45+ data brokers. You can track responses in your dashboard." },
+  { q: "How do data broker removals work?", a: "We send opt-out and CCPA 'Do Not Sell' requests on your behalf via email to 25+ data brokers. You can track responses in your dashboard." },
   { q: "Can I delete my account and data?", a: "Yes. Visit Settings → Delete Account. We cascade-delete all your data from our database and revoke OAuth tokens immediately." },
   { q: "Do you sell or share my data?", a: "Never. We don't sell, share, or monetize your data. Read our Privacy Policy for details." },
 ];

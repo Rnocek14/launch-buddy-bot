@@ -2,13 +2,13 @@
 
 > Footprint Finder scans your inbox to find every account, breach, and data-broker listing tied to your email — then helps you delete or opt out. Free scan, monthly rescans, real-time alerts.
 
-Footprint Finder is a privacy management service for individuals. It uses read-only OAuth metadata (sender, subject, date — never message body) to discover services where your email is registered, classifies them by activity and risk, and provides one-click cleanup actions (delete account, unsubscribe, opt out under CCPA). On the Complete plan, data-broker scans surface where your name, address, and phone are publicly listed across 45+ US people-search sites.
+Footprint Finder is a privacy management service for individuals. It uses read-only OAuth metadata (sender, subject, date — never message body) to discover services where your email is registered, classifies them by activity and risk, and provides one-click cleanup actions (delete account, unsubscribe, opt out under CCPA). On the Complete plan, data-broker scans surface where your name, address, and phone are publicly listed across 25+ US people-search sites.
 
 ## Plans
 
 - Free — 1 email account, 3 deletion requests/month, breach check. No data-broker scanning.
 - Pro — $79/year or $12.99/month. Up to 3 email accounts, unlimited deletion requests, deep inbox scan, monthly rescans. No data-broker scanning.
-- Complete — $129/year or $19.99/month. Everything in Pro, plus data-broker scanning and removal across 45+ sites, and up to 5 email accounts.
+- Complete — $129/year or $19.99/month. Everything in Pro, plus data-broker scanning and removal across 25+ sites, and up to 5 email accounts.
 - Family — $179/year. Everything in Complete, for up to 5 people.
 - Parent Protection Scan — $39 one-time. A single deep scan of a parent's email, scam-focused, no subscription.
 

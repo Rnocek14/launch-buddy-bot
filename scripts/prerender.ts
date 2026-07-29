@@ -240,7 +240,7 @@ function brokerRoute(b: BrokerRecord): Route {
   const url = `${BASE_URL}/remove-from/${b.slug}`;
   const time = b.opt_out_time_estimate ?? "a few minutes";
   const title = `How to Delete Your Info from ${b.name} & Opt Out (${YEAR} Guide)`;
-  const description = `How to delete your personal information from ${b.name} and opt out for free. Step-by-step removal guide — takes ${time}. Or let Footprint Finder remove you from 45+ brokers automatically.`;
+  const description = `How to delete your personal information from ${b.name} and opt out for free. Step-by-step removal guide — takes ${time}. Or let Footprint Finder remove you from 25+ brokers automatically.`;
   const steps = (b.instructions ?? "")
     .split(/\\n|\n/)
     .map((s) => s.replace(/^\d+\.\s*/, "").trim())
@@ -253,7 +253,7 @@ function brokerRoute(b: BrokerRecord): Route {
   const faqs = [
     {
       question: `How do I delete my information from ${b.name}?`,
-      answer: `To delete your information from ${b.name}, open its opt-out page, search for your listing, and submit a removal request. The process takes ${time}. Footprint Finder can also do this for you automatically across 45+ brokers.`,
+      answer: `To delete your information from ${b.name}, open its opt-out page, search for your listing, and submit a removal request. The process takes ${time}. Footprint Finder can also do this for you automatically across 25+ brokers.`,
     },
     {
       question: `Is it free to remove yourself from ${b.name}?`,
@@ -310,7 +310,7 @@ function brokerIndexRoute(brokers: BrokerRecord[]): Route {
     path: "/remove-from",
     title: "Remove Yourself from Data Brokers — Free Opt-Out Guides",
     description:
-      "Free, step-by-step opt-out guides for 70+ data brokers and people-search sites. Find out who's exposing your info and remove yourself for free.",
+      "Free, step-by-step opt-out guides for 45+ data brokers and people-search sites. Find out who's exposing your info and remove yourself for free.",
     ogType: "website",
     body: `<main><h1>Remove yourself from data brokers</h1>${p(
       "Free, step-by-step opt-out guides for the data brokers and people-search sites most likely to be exposing your name, address and phone number.",
@@ -734,7 +734,7 @@ function staticRoutes(): Route[] {
       )}<h2>What the scan finds</h2>${ul([
         "Forgotten accounts — every service that has emailed you, including ones you signed up for years ago and never closed",
         "Breach exposure — whether your address appears in known data breaches",
-        "Data-broker listings — where your name, address and phone are published across 45+ US people-search sites (Complete plan)",
+        "Data-broker listings — where your name, address and phone are published across 25+ US people-search sites (Complete plan)",
         "Mailing lists you can unsubscribe from in one click",
       ])}<h2>Why removal is ongoing, not a one-off</h2>${p(
         "Data brokers rebuild their databases from public records, marketing data and each other, so a listing you removed reappears within months. Forgotten accounts feed the same loop: one gets breached, your details circulate, and the brokers ingest them again. Monthly rescans and alerts exist because this is maintenance, not a fix.",

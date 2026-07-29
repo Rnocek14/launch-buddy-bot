@@ -42,7 +42,17 @@ export const FOOTPRINT_FINDER_FEATURES: CompetitorFeatures = {
   ongoingMonitoring: true,
 };
 
-export const FOOTPRINT_FINDER_BROKER_COVERAGE = "45+ broker sites";
+/**
+ * What our scanner actually covers — 25 broker patterns in
+ * src/config/brokers.ts. NOT the number of opt-out guides we publish, which
+ * is larger (45+) and a different claim entirely: guides are instructions you
+ * follow yourself, coverage is what we remove you from.
+ *
+ * PR #1 introduces BROKER_COUNT_LABEL in src/config/brokers.ts, derived from
+ * brokerPatterns.length, plus a test barring inflated claims from the funnel.
+ * Once that lands, import the constant here instead of restating the number.
+ */
+export const FOOTPRINT_FINDER_BROKER_COVERAGE = "25+ broker sites";
 
 /**
  * Footprint Finder's own pricing, mirrored from src/config/pricing.ts.
