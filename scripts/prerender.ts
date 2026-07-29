@@ -16,7 +16,11 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { dirname, resolve } from "path";
 import { createClient } from "@supabase/supabase-js";
 import { GUIDES, type Guide, type GuideCategory } from "../src/data/guides";
-import { DELETE_GUIDES } from "../src/data/deleteGuides";
+import {
+  DELETE_GUIDES,
+  deleteGuideFaqs,
+  deleteGuideAftermath,
+} from "../src/data/deleteGuides";
 import {
   COMPETITORS,
   FEATURE_ROWS,
@@ -153,12 +157,32 @@ const relatedLinksBlock = (
 const siteLinksBlock = () =>
   relatedLinksBlock("Explore Footprint Finder", [
     { href: "/free-scan", label: "Run a free exposure scan" },
+    { href: "/best-data-removal-services", label: "Best data removal services compared" },
     { href: "/vs", label: "Compare privacy and data-removal services" },
     { href: "/remove-from", label: "Free data-broker opt-out guides" },
     { href: "/guides", label: "Privacy and data removal guides" },
     { href: "/delete", label: "How to delete online accounts" },
     { href: "/pricing", label: "Pricing" },
   ]);
+
+/**
+ * Bridge from an informational page into the commercial comparison cluster.
+ * Mirrors src/components/ServiceComparisonLinks.tsx so the prerendered HTML
+ * carries the same links a crawler would find after hydration.
+ */
+const comparisonBridgeBlock = (brokerName?: string) =>
+  `<section><h2>Rather not do this manually?</h2>${p(
+    brokerName
+      ? `The ${brokerName} opt-out above is free and takes a few minutes — but you will need to repeat it across dozens of brokers, and again every few months when they re-list you. These services handle the repetition for you:`
+      : "Every opt-out on this site is free to do yourself. The catch is that brokers re-list you within months, so it is a recurring job rather than a one-off. These services handle the repetition for you:",
+  )}${linkList([
+    { href: "/best-data-removal-services", label: "Best data removal services compared" },
+    ...HEAD_TO_HEADS.slice(0, 3).map((h) => ({
+      href: `/vs/${h.slug}`,
+      label: `${COMPETITORS[h.a]?.name} vs ${COMPETITORS[h.b]?.name}`,
+    })),
+    { href: "/vs", label: "All service comparisons" },
+  ])}</section>`;
 
 // ---------- route builders ----------
 function guideRoute(g: Guide): Route {
@@ -180,7 +204,7 @@ function guideRoute(g: Guide): Route {
     description: g.description,
     ogType: "article",
     jsonLd: [articleSchema(g.h1, g.description, url), faqSchema(g.faqs)],
-    body: `<article><h1>${escHtml(g.h1)}</h1>${p(g.intro)}${sections}${faqHtml}${siteLinksBlock()}</article>`,
+    body: `<article><h1>${escHtml(g.h1)}</h1>${p(g.intro)}${sections}${faqHtml}${comparisonBridgeBlock()}${siteLinksBlock()}</article>`,
   };
 }
 
@@ -202,8 +226,7 @@ function guideIndexRoute(): Route {
     .join("");
   return {
     path: "/guides",
-    title:
-      "Privacy Guides — Remove Your Information From the Internet | Footprint Finder",
+    title: "Privacy Guides — Remove Your Info From the Internet",
     description:
       "Free, step-by-step guides to removing your personal information from the internet, Google and data brokers. Plus a 60-second scan to find where you're exposed.",
     ogType: "website",
@@ -278,7 +301,7 @@ function brokerRoute(b: BrokerRecord): Route {
             b.name,
           )} opt-out page</a></p>`
         : ""
-    }${stepsHtml}${faqHtml}${siteLinksBlock()}</article>`,
+    }${stepsHtml}${faqHtml}${comparisonBridgeBlock(b.name)}${siteLinksBlock()}</article>`,
   };
 }
 
@@ -306,10 +329,17 @@ function deleteRoute(g: (typeof DELETE_GUIDES)[number]): Route {
   )} account</h2><ol>${g.steps
     .map((s) => `<li><strong>${escHtml(s.title)}.</strong> ${escHtml(s.body)}</li>`)
     .join("")}</ol></section>`;
+  const faqs = deleteGuideFaqs(g);
+  const aftermath = deleteGuideAftermath(g);
+  const trail = [
+    { name: "Home", path: "/" },
+    { name: "Delete accounts", path: "/delete" },
+    { name: `Delete your ${g.service} account`, path: `/delete/${g.slug}` },
+  ];
   return {
     path: `/delete/${g.slug}`,
-    title: `How to Delete Your ${g.service} Account (${YEAR}) — Step-by-Step`,
-    description: `Permanently delete your ${g.service} account in ${g.timeEstimate}. Step-by-step instructions, what data they keep, and common gotchas.`,
+    title: `How to Delete Your ${g.service} Account (${YEAR})`,
+    description: `Delete your ${g.service} account in ${g.timeEstimate}. Step-by-step instructions, what data ${g.service} keeps, and the gotchas to avoid.`,
     ogType: "article",
     jsonLd: [
       {
@@ -325,21 +355,25 @@ function deleteRoute(g: (typeof DELETE_GUIDES)[number]): Route {
           text: s.body,
         })),
       },
+      faqSchema(faqs),
+      breadcrumbSchema(trail),
     ],
-    body: `<article><h1>How to Delete Your ${escHtml(
+    body: `<article>${breadcrumbNav(trail)}<h1>How to Delete Your ${escHtml(
       g.service,
     )} Account</h1>${p(g.intro)}<h2>What ${escHtml(
       g.service,
     )} keeps after deletion</h2>${ul(g.whatTheyKeep)}${stepsHtml}<h2>Gotchas to watch for</h2>${ul(
       g.gotchas,
-    )}${siteLinksBlock()}</article>`,
+    )}<h2>${escHtml(aftermath.heading)}</h2>${aftermath.body
+      .map((b) => p(b))
+      .join("")}${faqBlock(faqs)}${comparisonBridgeBlock()}${siteLinksBlock()}</article>`,
   };
 }
 
 function deleteIndexRoute(): Route {
   return {
     path: "/delete",
-    title: "How to Delete Online Accounts — Step-by-Step Guides | Footprint Finder",
+    title: "How to Delete Online Accounts — Step-by-Step Guides",
     description:
       "Free, step-by-step guides to permanently delete your accounts on Facebook, Instagram, Amazon, LinkedIn, Spotify and more — including what data they keep.",
     ogType: "website",
@@ -360,7 +394,7 @@ function compareRoute(c: (typeof COMPETITORS)[string]): Route {
   const optionCount = alternatives.length + 1;
   const url = `${BASE_URL}/vs/${c.slug}`;
   const title = `${c.name} Alternatives: ${optionCount} Options Compared (${YEAR})`;
-  const description = `Looking for a ${c.name} alternative? We compared ${optionCount} data removal services on price, broker coverage and what they can actually see — including where ${c.name} still wins.`;
+  const description = `${c.name} alternatives compared: ${optionCount} data removal services on price, broker coverage and what each one can actually see.`;
   const trail = [
     { name: "Home", path: "/" },
     { name: "Compare", path: "/vs" },
@@ -471,7 +505,7 @@ function headToHeadRoute(h: (typeof HEAD_TO_HEADS)[number]): Route {
   const b = COMPETITORS[h.b];
   const url = `${BASE_URL}/vs/${h.slug}`;
   const title = `${a.name} vs ${b.name} (${YEAR}): Which Should You Use?`;
-  const description = `${a.name} vs ${b.name} compared on price, broker coverage, filing method and reporting. ${h.angle}`;
+  const description = h.metaDescription;
   const trail = [
     { name: "Home", path: "/" },
     { name: "Compare", path: "/vs" },
@@ -647,7 +681,7 @@ function compareIndexRoute(): Route {
     path: "/vs",
     title: `Data Removal Service Comparisons (${YEAR}) — Footprint Finder`,
     description:
-      "Side-by-side comparisons of DeleteMe, Incogni, OneRep, Optery, Privacy Bee, Kanary, Aura, EasyOptOuts and Mine — pricing, broker coverage and honest alternatives for each.",
+      "Side-by-side comparisons of DeleteMe, Incogni, OneRep, Optery, Privacy Bee, Kanary, Aura and Mine — pricing, coverage and honest alternatives.",
     ogType: "website",
     jsonLd: [
       {
@@ -694,45 +728,82 @@ function staticRoutes(): Route[] {
         "Monthly scans for new breaches, broker listings, and forgotten accounts tied to your email — alerts you before damage is done.",
       ogType: "website",
       body: `<main><h1>Find out who has your personal information — and remove it</h1>${p(
-        "Footprint Finder scans your inbox to find every account, data-broker listing and breach tied to your email, then helps you remove it. Run a free scan in 60 seconds.",
+        "Footprint Finder scans your inbox to find every account, data-broker listing and breach tied to your email, then helps you remove it. Run a free scan in 60 seconds — no credit card, no password.",
       )}${p(
-        "Continuous monitoring alerts you when new breaches, broker listings or accounts appear, so you can clean them up before they become a problem.",
-      )}${linkList([
+        "The scan reads email metadata only: sender, subject and date. We never read, store or index message bodies. That metadata is enough to reconstruct the list of services holding your data, which is something no public-records search can do.",
+      )}<h2>What the scan finds</h2>${ul([
+        "Forgotten accounts — every service that has emailed you, including ones you signed up for years ago and never closed",
+        "Breach exposure — whether your address appears in known data breaches",
+        "Data-broker listings — where your name, address and phone are published across 45+ US people-search sites (Complete plan)",
+        "Mailing lists you can unsubscribe from in one click",
+      ])}<h2>Why removal is ongoing, not a one-off</h2>${p(
+        "Data brokers rebuild their databases from public records, marketing data and each other, so a listing you removed reappears within months. Forgotten accounts feed the same loop: one gets breached, your details circulate, and the brokers ingest them again. Monthly rescans and alerts exist because this is maintenance, not a fix.",
+      )}<h2>Pricing</h2>${p(
+        `Free to scan and see your exposure. Pro is ${FOOTPRINT_FINDER_PRICING.pro} for unlimited deletion requests, deep inbox scanning and monthly rescans. Complete is ${FOOTPRINT_FINDER_PRICING.complete} and adds data-broker removal. Family covers up to five people at ${FOOTPRINT_FINDER_PRICING.family}.`,
+      )}<h2>Start here</h2>${linkList([
         { href: "/free-scan", label: "Run your free exposure scan" },
-        { href: "/remove-from", label: "Data broker removal guides" },
-        { href: "/guides", label: "Privacy & data removal guides" },
+        { href: "/best-data-removal-services", label: `Best data removal services in ${YEAR} — all ${BEST_SERVICES_RANKING.length} compared` },
+        { href: "/vs", label: "Compare Footprint Finder against DeleteMe, Incogni and others" },
+        { href: "/remove-from", label: "Free data-broker opt-out guides" },
+        { href: "/guides", label: "Privacy and data removal guides" },
+        { href: "/delete", label: "How to delete your online accounts" },
+        { href: "/breach", label: "Recent data breaches and what to do" },
+        { href: "/parents", label: "Protect a parent from scam calls" },
+        { href: "/enterprise", label: "Shadow IT audits for businesses" },
         { href: "/pricing", label: "Pricing" },
       ])}</main>`,
     },
     {
       path: "/free-scan",
-      title: "Free Digital Exposure Scan — Find Where You're Exposed | Footprint Finder",
+      title: "Free Digital Exposure Scan — See Where You're Exposed",
       description:
         "Run a free 60-second scan to find data-broker listings, breaches and forgotten accounts tied to your email. No credit card, no password required.",
       ogType: "website",
       body: `<main><h1>Free digital exposure scan</h1>${p(
-        "Enter your email and we'll show you where your personal information is exposed across data brokers, breaches and forgotten accounts — free, in about 60 seconds.",
-      )}</main>`,
+        "Enter your email and we'll show you where your personal information is exposed — across data brokers, known breaches and the accounts you've forgotten about. It takes about 60 seconds and costs nothing.",
+      )}${p(
+        "There's no credit card and no password involved. Connecting an inbox is optional and uses read-only OAuth for metadata only — sender, subject and date, never message content. You can revoke access from your Google or Microsoft account settings at any time.",
+      )}<h2>What you'll see</h2>${ul([
+        "Which known breaches include your email address",
+        "Which people-search sites publish your name, address and phone",
+        "Which services still hold an account tied to your email",
+        "A risk score, and the specific steps to bring it down",
+      ])}${comparisonBridgeBlock()}${siteLinksBlock()}</main>`,
     },
     {
       path: "/pricing",
       title: "Pricing — Free Scan, Pro & Complete Plans | Footprint Finder",
       description:
-        "Start free. Footprint Finder Pro is $79/year and Complete is $129/year — covering data broker removal, inbox account discovery and breach monitoring.",
+        "Start free. Pro is $79/year, Complete is $129/year with data-broker removal, and Family covers five people at $179/year. No hidden tiers.",
       ogType: "website",
       body: `<main><h1>Simple, transparent pricing</h1>${p(
-        "Try the entire product free before you pay. Pro is $79/year and Complete is $129/year, covering data broker removal, inbox account discovery and breach monitoring.",
-      )}</main>`,
+        "Try the entire product free before you pay anything. The free tier scans one email account and includes three deletion requests a month, so you can see your actual exposure before deciding whether a paid plan is worth it.",
+      )}<h2>Plans</h2>${ul([
+        "Free — one email account, three deletion requests a month, breach check. No data-broker scanning.",
+        `Pro, ${FOOTPRINT_FINDER_PRICING.pro} — up to three email accounts, unlimited deletion requests, deep inbox scan, monthly rescans. No data-broker scanning.`,
+        `Complete, ${FOOTPRINT_FINDER_PRICING.complete} — everything in Pro, plus data-broker scanning and removal across ${FOOTPRINT_FINDER_BROKER_COVERAGE}, and up to five email accounts.`,
+        `Family, ${FOOTPRINT_FINDER_PRICING.family} — everything in Complete, for up to five people.`,
+        "Parent Protection Scan, $39 one-time — a single deep scan of a parent's email, scam-focused, no subscription.",
+      ])}${p(
+        "Data-broker removal is a Complete-tier feature. If broker listings are the only thing you care about, compare Complete against the dedicated removal services rather than our entry plan — and note that every broker opt-out is free to do yourself.",
+      )}${comparisonBridgeBlock()}${siteLinksBlock()}</main>`,
     },
     {
       path: "/parents",
-      title: "Protect Your Parents From Scams & Identity Theft | Footprint Finder",
+      title: "Protect Your Parents From Scams & Identity Theft",
       description:
         "Your parents' phone numbers and addresses are published on data-broker sites, fueling scam calls. Find their exposure and remove it in minutes.",
       ogType: "website",
       body: `<main><h1>Protect your parents from scams and identity theft</h1>${p(
-        "Data brokers publish your parents' home address, phone number and relatives online — exactly what scammers use to target them. Footprint Finder finds those listings and helps you remove them.",
-      )}</main>`,
+        "Data brokers publish your parents' home address, phone number and the names of their relatives online — which is exactly the information a scam caller uses to sound credible. Someone who knows a target's street, their daughter's name and their approximate age is far harder to hang up on.",
+      )}${p(
+        "Footprint Finder finds those listings and walks you through removing them. The Parent Protection Scan is a one-time $39 deep scan of a parent's email with a printable action plan, written to be readable by someone who didn't grow up with this — no subscription required.",
+      )}<h2>What it covers</h2>${ul([
+        "Data-broker listings publishing their address, phone and relatives",
+        "Breach exposure for their email address",
+        "Accounts and subscriptions tied to their inbox",
+        "A printable, plain-English action plan you can work through together",
+      ])}${siteLinksBlock()}</main>`,
     },
     {
       path: "/enterprise",
@@ -741,8 +812,15 @@ function staticRoutes(): Route[] {
         "Discover the forgotten SaaS accounts and exposed employee data across your organization. Footprint Finder runs privacy audits at scale.",
       ogType: "website",
       body: `<main><h1>Enterprise privacy &amp; shadow IT audits</h1>${p(
-        "Footprint Finder helps organizations discover forgotten SaaS accounts and exposed employee data, then drive remediation at scale.",
-      )}</main>`,
+        "Employees sign up for tools faster than IT can track them. By the time someone leaves, their work email is attached to dozens of services nobody inventoried — each holding company data, each an account that outlives the offboarding checklist.",
+      )}${p(
+        "Footprint Finder discovers those accounts by scanning employee inbox metadata with consent, aggregates the findings at the organisation level, and produces an offboarding audit report your IT and HR teams can act on.",
+      )}<h2>What you get</h2>${ul([
+        "Bulk scanning across employee inboxes, with per-employee consent",
+        "Organisation-level view of every SaaS account discovered",
+        "Offboarding audit reports exportable as PDF or CSV",
+        "Risk ranking so remediation starts with the accounts that matter",
+      ])}${siteLinksBlock()}</main>`,
     },
     {
       path: "/help",
@@ -751,8 +829,28 @@ function staticRoutes(): Route[] {
         "Learn how Footprint Finder's server-side email metadata scanning works, what data we read (and never read), and how to remove your information.",
       ogType: "website",
       body: `<main><h1>Help &amp; frequently asked questions</h1>${p(
-        "Footprint Finder uses server-side email metadata extraction to find the services tied to your inbox. We never read or store the body content of your emails.",
-      )}</main>`,
+        "Footprint Finder uses server-side email metadata extraction to find the services tied to your inbox. We read sender, subject and date only. We never read, store or index the body content of your emails, and we never sell your data.",
+      )}${faqBlock([
+        {
+          question: "What does Footprint Finder actually read from my inbox?",
+          answer:
+            "Sender, subject line and date — the message headers. Never the body. That metadata is enough to identify which companies have emailed you, which is what reveals where you hold accounts.",
+        },
+        {
+          question: "Do I have to connect my email?",
+          answer:
+            "No. You can run a free breach and data-broker check with just an email address. Connecting an inbox is what unlocks account discovery, and it uses read-only OAuth you can revoke from your Google or Microsoft account settings at any time.",
+        },
+        {
+          question: "Which plan includes data-broker removal?",
+          answer: `Complete, at ${FOOTPRINT_FINDER_PRICING.complete}. The free and Pro tiers cover inbox account discovery and breach monitoring but do not include broker scanning.`,
+        },
+        {
+          question: "Can I do this myself instead of paying?",
+          answer:
+            "Yes, and we publish the instructions. Every data-broker opt-out is free by law; expect around ten minutes per site and a repeat pass every few months as brokers re-list you. Paying a service buys the repetition, not access.",
+        },
+      ])}${siteLinksBlock()}</main>`,
     },
     {
       path: "/privacy",
@@ -761,8 +859,10 @@ function staticRoutes(): Route[] {
         "How Footprint Finder collects, uses and protects your data. We scan email metadata only — never message body content — and never sell your data.",
       ogType: "website",
       body: `<main><h1>Privacy Policy</h1>${p(
-        "This policy explains how Footprint Finder collects, uses and protects your data. We scan email metadata only — never message body content — and never sell your data.",
-      )}</main>`,
+        "This policy explains how Footprint Finder collects, uses and protects your data. We scan email metadata only — sender, subject and date — never message body content, and we never sell your data.",
+      )}${p(
+        "OAuth tokens are stored server-side and never exposed to the browser. All data is encrypted in transit and at rest, with row-level security on every database table. Our use of Google user data complies with the Google API Services User Data Policy, including the Limited Use requirements.",
+      )}${siteLinksBlock()}</main>`,
     },
     {
       path: "/terms",
@@ -771,8 +871,10 @@ function staticRoutes(): Route[] {
         "The terms and conditions governing your use of Footprint Finder's privacy monitoring and data-removal services.",
       ogType: "website",
       body: `<main><h1>Terms of Service</h1>${p(
-        "These terms govern your use of Footprint Finder's privacy monitoring and data-removal services.",
-      )}</main>`,
+        "These terms govern your use of Footprint Finder's privacy monitoring and data-removal services, including the scope of what we scan, subscription and billing terms, and the limits of what any removal service can guarantee.",
+      )}${p(
+        "In particular: no data-removal service can guarantee removal from every broker. Some ignore requests, some re-list from fresh public records, and some fall outside the reach of the laws a request cites. We describe what we attempt and report what actually happened.",
+      )}${siteLinksBlock()}</main>`,
     },
   ];
 }
@@ -842,6 +944,11 @@ function buildHtml(template: string, route: Route): string {
     `<meta property="og:description" content="${escAttr(route.description)}" />`,
     `<meta property="og:url" content="${canonical}" />`,
     `<meta property="og:type" content="${route.ogType ?? "article"}" />`,
+    `<meta property="og:image" content="${BASE_URL}/og-image.png" />`,
+    `<meta property="og:image:width" content="1200" />`,
+    `<meta property="og:image:height" content="630" />`,
+    `<meta property="og:image:alt" content="${escAttr(route.title)}" />`,
+    `<meta name="twitter:image" content="${BASE_URL}/og-image.png" />`,
     ...(route.jsonLd ?? []).map(
       (b) =>
         `<script type="application/ld+json" data-dynamic-seo="1">${JSON.stringify(b)}</script>`,

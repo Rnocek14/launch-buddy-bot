@@ -34,8 +34,9 @@ export interface RankedService {
 export const BEST_SERVICES_TITLE =
   "Best Data Removal Services in 2026: 10 Compared & Ranked";
 
+/** SERP snippet — kept under 160 characters so Google doesn't truncate it. */
 export const BEST_SERVICES_DESCRIPTION =
-  "We compared 10 data removal services on coverage, price, transparency and what they can actually see. Category-by-category picks, honest caveats, and where each one falls short.";
+  "We compared 10 data removal services on coverage, price and transparency. Category-by-category picks, with the honest catch for every one.";
 
 export const BEST_SERVICES_INTRO = [
   "Every service on this list does the same core job: it finds the people-search sites publishing your name, address, phone number and relatives, then submits removal requests on your behalf. The differences are in how many sites they cover, whether people or scripts file the requests, how often they re-check, and what they charge for the tier that actually includes what you want.",

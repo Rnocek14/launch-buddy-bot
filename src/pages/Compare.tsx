@@ -61,8 +61,10 @@ function AlternativesPage({ slug }: { slug?: string }) {
   const seoTitle = data
     ? `${data.name} Alternatives: ${optionCount} Options Compared (${CONTENT_YEAR})`
     : "Compare Privacy Tools — Footprint Finder";
+  // Kept under 160 characters: Google truncates past roughly that, and a
+  // snippet cut mid-clause costs clicks.
   const seoDescription = data
-    ? `Looking for a ${data.name} alternative? We compared ${optionCount} data removal services on price, broker coverage and what they can actually see — including where ${data.name} still wins.`
+    ? `${data.name} alternatives compared: ${optionCount} data removal services on price, broker coverage and what each one can actually see.`
     : "Compare digital privacy tools.";
   const canonical = data ? `${SITE_URL}/vs/${data.slug}` : undefined;
 

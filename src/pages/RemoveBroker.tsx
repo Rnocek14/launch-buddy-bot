@@ -25,6 +25,7 @@ import { useSEO } from "@/hooks/useSEO";
 import { trackEvent } from "@/lib/analytics";
 import { SeoEmailCapture } from "@/components/SeoEmailCapture";
 import { RelatedBrokers } from "@/components/RelatedBrokers";
+import { ServiceComparisonLinks } from "@/components/ServiceComparisonLinks";
 import { brokerEnrichment, type RemovalDifficultyLevel } from "@/data/brokerEnrichment";
 
 const enrichmentDifficultyTone: Record<RemovalDifficultyLevel, string> = {
@@ -609,6 +610,8 @@ export default function RemoveBroker() {
           </section>
 
           {/* Internal linking — boost SEO + dwell time */}
+          <ServiceComparisonLinks brokerName={broker.name} className="mb-10" />
+
           <RelatedBrokers currentSlug={broker.slug} />
 
           {/* Final CTA — sharpened: "this is one site, you're on 50+" */}

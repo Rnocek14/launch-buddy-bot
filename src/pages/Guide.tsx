@@ -8,6 +8,7 @@ import { useSEO } from "@/hooks/useSEO";
 import { trackEvent } from "@/lib/analytics";
 import { SeoEmailCapture } from "@/components/SeoEmailCapture";
 import { getGuide, getRelatedGuides, getRelatedBrokers } from "@/data/guides";
+import { ServiceComparisonLinks } from "@/components/ServiceComparisonLinks";
 
 /**
  * Programmatic SEO pillar page: /guides/:slug
@@ -171,6 +172,8 @@ export default function Guide() {
             </section>
           )}
 
+          {/* Bridge into the comparison cluster — see the component docstring. */}
+          <ServiceComparisonLinks className="mb-10" />
 
           {/* Final CTA */}
           <Card className="border-primary/30 bg-gradient-to-br from-primary/5 via-background to-accent/5">

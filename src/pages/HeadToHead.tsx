@@ -38,7 +38,7 @@ export default function HeadToHead() {
     ? `${resolved.a.name} vs ${resolved.b.name} (${CONTENT_YEAR}): Which Should You Use?`
     : "Compare privacy services";
   const description = resolved
-    ? `${resolved.a.name} vs ${resolved.b.name} compared on price, broker coverage, filing method and reporting. ${resolved.data.angle}`
+    ? resolved.data.metaDescription
     : "Compare data removal services side by side.";
   const canonical = resolved ? `${SITE_URL}/vs/${resolved.data.slug}` : undefined;
 

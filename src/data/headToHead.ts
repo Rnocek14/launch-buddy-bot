@@ -28,8 +28,14 @@ export interface HeadToHead {
   slug: string;
   a: string;
   b: string;
-  /** One line naming the real trade-off. Used in the TL;DR and meta description. */
+  /** One line naming the real trade-off. Rendered as the page's standfirst. */
   angle: string;
+  /**
+   * SERP snippet. Kept separate from `angle` and under 160 characters —
+   * Google truncates past roughly that, and a description cut mid-clause
+   * costs clicks.
+   */
+  metaDescription: string;
   /** Unique prose. 2–3 sections. */
   sections: Array<{ heading: string; body: string[] }>;
   /** Who should pick A. */
@@ -42,6 +48,8 @@ export interface HeadToHead {
 export const HEAD_TO_HEADS: HeadToHead[] = [
   {
     slug: "deleteme-vs-incogni",
+    metaDescription:
+      "DeleteMe files removals by hand across a smaller broker list; Incogni automates a much larger one for less. Here's which one to pick.",
     a: "deleteme",
     b: "incogni",
     angle:
@@ -98,6 +106,8 @@ export const HEAD_TO_HEADS: HeadToHead[] = [
   },
   {
     slug: "deleteme-vs-optery",
+    metaDescription:
+      "DeleteMe's flat price and human filing vs Optery's free exposure report and tiered coverage. Which one actually fits your situation.",
     a: "deleteme",
     b: "optery",
     angle:
@@ -141,6 +151,8 @@ export const HEAD_TO_HEADS: HeadToHead[] = [
   },
   {
     slug: "incogni-vs-optery",
+    metaDescription:
+      "Incogni's single automated plan vs Optery's free report and tiered coverage. Less thinking or more proof — which matters more to you?",
     a: "incogni",
     b: "optery",
     angle:
@@ -184,6 +196,8 @@ export const HEAD_TO_HEADS: HeadToHead[] = [
   },
   {
     slug: "incogni-vs-onerep",
+    metaDescription:
+      "Incogni and OneRep are close on coverage and price. The dashboard, the corporate backing and one trust question decide it.",
     a: "incogni",
     b: "onerep",
     angle:
@@ -227,6 +241,8 @@ export const HEAD_TO_HEADS: HeadToHead[] = [
   },
   {
     slug: "deleteme-vs-onerep",
+    metaDescription:
+      "DeleteMe's manual filing and long track record vs OneRep's wider automated coverage and clearer dashboard. How to choose between them.",
     a: "deleteme",
     b: "onerep",
     angle:
@@ -264,6 +280,8 @@ export const HEAD_TO_HEADS: HeadToHead[] = [
   },
   {
     slug: "incogni-vs-aura",
+    metaDescription:
+      "Incogni removes you from data brokers; Aura bundles thinner removal with identity insurance and credit monitoring. Which one to buy.",
     a: "incogni",
     b: "aura",
     angle:
@@ -308,6 +326,8 @@ export const HEAD_TO_HEADS: HeadToHead[] = [
   },
   {
     slug: "incogni-vs-easyoptouts",
+    metaDescription:
+      "EasyOptOuts costs a fraction of Incogni for similar coverage. What the price difference actually buys, and when it's worth paying.",
     a: "incogni",
     b: "easyoptouts",
     angle:
@@ -352,6 +372,8 @@ export const HEAD_TO_HEADS: HeadToHead[] = [
   },
   {
     slug: "deleteme-vs-privacybee",
+    metaDescription:
+      "DeleteMe focuses on people-search removal; Privacy Bee contacts ordinary companies too, at the highest price here. Which to pick.",
     a: "deleteme",
     b: "privacybee",
     angle:
@@ -389,6 +411,8 @@ export const HEAD_TO_HEADS: HeadToHead[] = [
   },
   {
     slug: "optery-vs-onerep",
+    metaDescription:
+      "Optery's free report and documented removals vs OneRep's flat pricing and broad automation, plus the trust question to read up on.",
     a: "optery",
     b: "onerep",
     angle:
@@ -426,6 +450,8 @@ export const HEAD_TO_HEADS: HeadToHead[] = [
   },
   {
     slug: "deleteme-vs-aura",
+    metaDescription:
+      "DeleteMe removes your data; Aura insures you after something goes wrong. Prevention vs recovery, and which one you need first.",
     a: "deleteme",
     b: "aura",
     angle:
