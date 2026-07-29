@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { Resend } from "https://esm.sh/resend@4.0.0";
+import { RESEND_FROM } from "../_shared/resend.ts";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
@@ -19,7 +20,7 @@ const handler = async (req: Request): Promise<Response> => {
     console.log("Sending subscription cancelled email to:", email);
 
     const emailResponse = await resend.emails.send({
-      from: "Footprint Finder <onboarding@resend.dev>",
+      from: RESEND_FROM,
       to: [email],
       subject: "Your Pro subscription has been cancelled",
       html: `

@@ -7,9 +7,11 @@ import { HowItWorks } from "@/components/HowItWorks";
 import { FeaturesWithTestimonials } from "@/components/FeaturesWithTestimonials";
 import { Pricing } from "@/components/Pricing";
 import { TrustBar } from "@/components/TrustBar";
+import { SecurityCompliance } from "@/components/SecurityCompliance";
 import { FAQ } from "@/components/FAQ";
 import { Footer } from "@/components/Footer";
 import { useSEO } from "@/hooks/useSEO";
+import { BROKER_COUNT_LABEL } from "@/config/brokers";
 import { useEffect } from "react";
 
 const Index = () => {
@@ -44,7 +46,7 @@ const Index = () => {
           name: "What is Footprint Finder?",
           acceptedAnswer: {
             "@type": "Answer",
-            text: "Footprint Finder is a digital privacy service that scans your Gmail or Outlook inbox to discover every account tied to your email and checks those addresses against known data breaches. On the Complete plan it also finds and removes your listings across 45+ data broker sites. It runs monthly rescans and alerts you when new exposures appear.",
+            text: `Footprint Finder is a digital privacy service that scans your Gmail or Outlook inbox to discover every account tied to your email and checks those addresses against known data breaches. On the Complete plan it also finds and removes your listings across ${BROKER_COUNT_LABEL} data broker sites. It runs monthly rescans and alerts you when new exposures appear.`,
           },
         },
         {
@@ -78,6 +80,7 @@ const Index = () => {
       <FeaturesWithTestimonials />
       <Pricing />
       <TrustBar />
+      <SecurityCompliance />
       <FAQ />
       <Footer />
     </div>

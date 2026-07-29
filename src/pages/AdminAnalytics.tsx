@@ -182,7 +182,10 @@ export default function AdminAnalytics() {
         const emailConnectUsers = new Set(events.filter(e => e.event === "email_connected").map(e => e.user_id));
         const scanCompleteUsers = new Set(events.filter(e => e.event === "scan_completed").map(e => e.user_id));
         const checkoutUsers = new Set(events.filter(e => e.event === "checkout_initiated").map(e => e.user_id));
-        const upgradeUsers = new Set(events.filter(e => e.event === "upgrade_to_pro").map(e => e.user_id));
+        // `purchase` is the canonical paid-conversion event emitted by stripe-webhook
+        // (authoritative for both authed and guest checkout). The legacy `upgrade_to_pro`
+        // was never persisted, so this filter used to be structurally zero.
+        const upgradeUsers = new Set(events.filter(e => e.event === "purchase").map(e => e.user_id));
 
         const signupCount = signupUsers.size;
         const emailConnectCount = emailConnectUsers.size;

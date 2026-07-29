@@ -1,12 +1,8 @@
-import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Shield, ArrowRight, Loader2, AlertTriangle, Database, Building2, Eye, CheckCircle2 } from "lucide-react";
+import { Shield, AlertTriangle, Database, Building2, Eye, CheckCircle2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { IcebergEstimate } from "@/lib/icebergEstimate";
-import { STRIPE_PRICES } from "@/config/pricing";
-import { startCheckout } from "@/lib/checkout";
-import { useToast } from "@/hooks/use-toast";
+import { CompleteCheckoutButton } from "./CompleteCheckoutButton";
 
 interface BrokerFindings {
   confirmedCount: number;
@@ -32,8 +28,11 @@ interface ExposureSummaryProps {
  */
 export function ExposureSummary({ email, breachCount, estimate, brokerFindings, breachError }: ExposureSummaryProps) {
   const hasReality = !!brokerFindings && (brokerFindings.confirmedCount + brokerFindings.possibleCount) > 0;
-  const { toast } = useToast();
-  const [loading, setLoading] = useState(false);
+  // Confirmed breaches are real signal too. Only assert "Exposure detected" when
+  // we actually found something — otherwise the red alarm over a screen of
+  // ~estimates reads as manufactured to a skeptical privacy audience.
+  const hasBreaches = !breachError && breachCount > 0;
+  const hasRealSignal = hasReality || hasBreaches;
 
   // When the breach lookup failed we don't know the real count — never imply "clean".
   const breachValue: string | number = breachError ? "—" : breachCount;
@@ -41,48 +40,39 @@ export function ExposureSummary({ email, breachCount, estimate, brokerFindings, 
     ? "breach check unavailable — try again shortly"
     : "from public breach databases";
 
-  const handleRemove = async () => {
-    setLoading(true);
-    const result = await startCheckout({
-      priceId: STRIPE_PRICES.COMPLETE_ANNUAL.id,
-      email,
-      source: "iceberg_panel",
-      tier: "complete",
-    });
-    if (result.status === "error") {
-      toast({
-        title: "Couldn't start checkout",
-        description: result.message,
-        variant: "destructive",
-      });
-      setLoading(false);
-    } else if (result.status === "needs_email") {
-      toast({
-        title: "Email needed",
-        description: "We need your email to start checkout.",
-        variant: "destructive",
-      });
-      setLoading(false);
-    }
-    // "redirecting" -> browser navigates away
-  };
-
   return (
     <Card className="overflow-hidden border-2 border-primary/30 bg-gradient-to-b from-background to-primary/5">
       <CardContent className="p-0">
         {/* Headline */}
         <div className="px-6 pt-8 pb-6 text-center border-b border-border">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-destructive/10 border border-destructive/20 mb-4">
-            <AlertTriangle className="w-3.5 h-3.5 text-destructive" />
-            <span className="text-xs font-semibold uppercase tracking-wide text-destructive">
-              Exposure detected
-            </span>
-          </div>
+          {hasRealSignal ? (
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-destructive/10 border border-destructive/20 mb-4">
+              <AlertTriangle className="w-3.5 h-3.5 text-destructive" />
+              <span className="text-xs font-semibold uppercase tracking-wide text-destructive">
+                Exposure detected
+              </span>
+            </div>
+          ) : (
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 mb-4">
+              <AlertTriangle className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+              <span className="text-xs font-semibold uppercase tracking-wide text-amber-600 dark:text-amber-400">
+                Estimated exposure
+              </span>
+            </div>
+          )}
           <h2 className="text-3xl md:text-4xl font-bold mb-2">
-            {hasReality ? "We found your information online" : "We found your exposure"}
+            {hasReality
+              ? "We found your information online"
+              : hasBreaches
+                ? "We found your exposure"
+                : "Here's your estimated exposure"}
           </h2>
           <p className="text-muted-foreground">
-            Here's what's exposed for <span className="font-medium text-foreground">{email}</span>
+            {hasRealSignal ? (
+              <>Here's what's exposed for <span className="font-medium text-foreground">{email}</span></>
+            ) : (
+              <>Based on <span className="font-medium text-foreground">{email}</span> — run the free listings check below to confirm what's real</>
+            )}
           </p>
         </div>
 
@@ -161,28 +151,7 @@ export function ExposureSummary({ email, breachCount, estimate, brokerFindings, 
 
         {/* The single dominant action */}
         <div className="px-6 pb-8 space-y-3">
-          <Button
-            size="lg"
-            onClick={handleRemove}
-            disabled={loading}
-            className="w-full gap-2 cta-shimmer h-16 text-lg"
-          >
-            {loading ? (
-              <>
-                <Loader2 className="w-5 h-5 animate-spin" />
-                Opening secure checkout…
-              </>
-            ) : (
-              <>
-                <Shield className="w-5 h-5" />
-                Remove My Information — {STRIPE_PRICES.COMPLETE_ANNUAL.displayPrice}
-                <ArrowRight className="w-5 h-5" />
-              </>
-            )}
-          </Button>
-          <p className="text-xs text-center text-muted-foreground">
-            Account auto-created after payment · 30-day refund · cancel anytime
-          </p>
+          <CompleteCheckoutButton email={email} source="iceberg_panel" />
           <div className="flex flex-wrap items-center justify-center gap-3 text-xs text-muted-foreground pt-1">
             <Link to="/auth?intent=signup" className="underline hover:text-foreground">
               Or create a free account first

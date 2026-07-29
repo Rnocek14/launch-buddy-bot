@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.79.0";
 import { Resend } from "https://esm.sh/resend@3.0.0";
+import { resendFrom } from "../_shared/resend.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -184,7 +185,7 @@ serve(async (req) => {
 
       try {
         await resend.emails.send({
-          from: "Footprint Finder <reports@footprintfinder.com>",
+          from: resendFrom("reports"),
           to: [profile.email],
           subject: `Your Monthly Privacy Report: ${newCount} New Services Found`,
           html: emailHtml,

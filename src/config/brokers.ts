@@ -299,6 +299,14 @@ export const statusColors: Record<string, { bg: string; text: string; border: st
   opted_out: { bg: 'bg-blue-500/10', text: 'text-blue-600', border: 'border-blue-500/30' },
 };
 
+// Single source of truth for the broker-coverage claim shown across the site.
+// Grounded in the actual number of brokers we scan/remove from (brokerPatterns
+// here = 25; the scan-brokers engine covers ~28). Do NOT inflate this — an
+// unsubstantiated "200+" is false advertising, especially for a privacy brand.
+// If real coverage grows, bump this one constant.
+export const BROKER_COUNT = brokerPatterns.length;
+export const BROKER_COUNT_LABEL = "25+";
+
 // Difficulty badge colors
 export const difficultyColors: Record<string, { bg: string; text: string }> = {
   easy: { bg: 'bg-green-500/10', text: 'text-green-600' },

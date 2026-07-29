@@ -156,19 +156,25 @@ function buildQueries(user: UserProfile, domain: string): string[] {
 }
 
 async function serpSearch(query: string, apiKey: string) {
+  // Bound each SERP call so one slow provider response can't hang the whole
+  // broker check (which the client renders as a spinner).
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 6000);
   try {
     const url = new URL('https://serpapi.com/search.json');
     url.searchParams.set('engine', 'google');
     url.searchParams.set('q', query);
     url.searchParams.set('api_key', apiKey);
     url.searchParams.set('num', '5');
-    const res = await fetch(url.toString(), { method: 'GET' });
+    const res = await fetch(url.toString(), { method: 'GET', signal: controller.signal });
     if (!res.ok) return [];
     const json = await res.json();
     const organic = Array.isArray(json?.organic_results) ? json.organic_results : [];
     return organic.slice(0, 3).map((r: any) => ({ title: r.title ?? '', snippet: r.snippet ?? '', link: r.link ?? '' }));
   } catch {
     return [];
+  } finally {
+    clearTimeout(timeout);
   }
 }
 
@@ -281,12 +287,25 @@ Deno.serve(async (req) => {
 
     const foundCount = results.filter((r) => r.status === 'found').length;
     const possibleCount = results.filter((r) => r.status === 'possible_match').length;
+    const notFoundCount = results.filter((r) => r.status === 'not_found').length;
+    const unknownCount = results.filter((r) => r.status === 'unknown').length;
+
+    // "Degraded" = we could NOT meaningfully perform the check, so a zero result
+    // must NOT be presented as a reassuring "you're clean". This happens when the
+    // SERP key is unset, or when every broker came back inconclusive (budget
+    // exhausted / SERP failure / no indexed data). Only when at least one broker
+    // was actually searched (found / possible / not_found) is a zero-exposure
+    // result trustworthy.
+    const degraded = !serpApiKey || (foundCount + possibleCount + notFoundCount === 0);
 
     return new Response(JSON.stringify({
       results,
       foundCount,
       possibleCount,
+      notFoundCount,
+      unknownCount,
       checkedCount: results.length,
+      degraded,
     }), {
       status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

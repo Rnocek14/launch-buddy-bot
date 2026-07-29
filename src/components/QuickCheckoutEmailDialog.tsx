@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, Shield, Lock } from "lucide-react";
+import { Loader2, Shield, Lock, CheckCircle2 } from "lucide-react";
 import {
   getPersistedGuestEmail,
   persistGuestEmail,
@@ -117,10 +117,20 @@ export function QuickCheckoutEmailDialog({
             )}
           </Button>
 
-          <p className="text-[11px] text-center text-muted-foreground flex items-center justify-center gap-1.5">
-            <Lock className="w-3 h-3" />
-            Pay first · account auto-created · 30-day refund · cancel anytime
-          </p>
+          <div className="rounded-lg border border-border/60 bg-muted/30 px-4 py-3 space-y-2">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Lock className="w-3.5 h-3.5 text-primary shrink-0" />
+              <span>Secure checkout powered by <span className="font-medium text-foreground">Stripe</span> — we never see your card details.</span>
+            </div>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Shield className="w-3.5 h-3.5 text-primary shrink-0" />
+              <span>We never sell or share your personal data.</span>
+            </div>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <CheckCircle2 className="w-3.5 h-3.5 text-primary shrink-0" />
+              <span>30-day money-back guarantee · account auto-created · cancel anytime.</span>
+            </div>
+          </div>
         </form>
       </DialogContent>
     </Dialog>

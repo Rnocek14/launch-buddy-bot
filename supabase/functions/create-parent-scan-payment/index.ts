@@ -11,6 +11,31 @@ const corsHeaders = {
 // Hard-coded one-time Parent Protection Scan price.
 const PARENT_SCAN_PRICE_ID = "price_1TPSshPqV14jS5m4e5KpiA6o";
 
+// Detects the Stripe key mode from its prefix (never logs the key itself).
+function stripeKeyMode(): "live" | "test" | "unknown" {
+  const k = Deno.env.get("STRIPE_SECRET_KEY") ?? "";
+  if (k.startsWith("sk_live_")) return "live";
+  if (k.startsWith("sk_test_")) return "test";
+  return "unknown";
+}
+
+// Turns Stripe "No such price" / resource_missing errors into an actionable message.
+function friendlyStripeError(err: unknown): string {
+  const msg = err instanceof Error ? err.message : String(err);
+  const code = (err as { code?: string } | null)?.code;
+  if (code === "resource_missing" || /no such (price|product|customer)/i.test(msg)) {
+    const mode = stripeKeyMode();
+    if (mode === "test") {
+      return `Payment failed: Stripe is in TEST mode but the parent-scan price ID is LIVE. Deploy a live-mode secret key (sk_live_...) and a matching live webhook secret. (Stripe: ${msg})`;
+    }
+    if (mode === "unknown") {
+      return `Payment failed: STRIPE_SECRET_KEY is missing or malformed. Set a live-mode secret key (sk_live_...) and a matching live webhook secret. (Stripe: ${msg})`;
+    }
+    return `Payment failed: the configured price was not found in your Stripe LIVE account. Confirm PARENT_SCAN_PRICE_ID exists and is active in the live dashboard. (Stripe: ${msg})`;
+  }
+  return msg;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -96,7 +121,7 @@ serve(async (req) => {
       status: 200,
     });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
+    const msg = friendlyStripeError(err);
     console.error("[create-parent-scan-payment]", msg);
     return new Response(JSON.stringify({ error: msg }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

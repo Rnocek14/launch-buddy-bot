@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { Resend } from "https://esm.sh/resend@2.0.0";
+import { resendFrom } from "../_shared/resend.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.79.0";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
@@ -65,7 +66,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Send notification email to sales team
     const emailResponse = await resend.emails.send({
-      from: "Footprint Finder <notifications@footprintfinder.com>",
+      from: resendFrom("notifications"),
       to: ["enterprise@footprintfinder.com"],
       subject: `🏢 New Enterprise Lead: ${leadData.company}`,
       html: `
