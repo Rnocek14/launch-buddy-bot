@@ -62,6 +62,13 @@ export function useSEO({
     if (canonical) {
       setMeta('link[rel="canonical"]', "rel", "canonical", canonical);
       setMeta('meta[property="og:url"]', "property", "og:url", canonical);
+    } else {
+      // A page with no canonical of its own must not inherit the previous
+      // route's. Prerendered HTML always ships a correct canonical, but during
+      // client-side navigation a stale tag would otherwise persist and point
+      // Google at the wrong URL.
+      document.head.querySelector('link[rel="canonical"]')?.remove();
+      document.head.querySelector('meta[property="og:url"]')?.remove();
     }
     if (ogImage) {
       setMeta('meta[property="og:image"]', "property", "og:image", ogImage);

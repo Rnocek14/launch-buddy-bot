@@ -9,7 +9,15 @@ export interface BlogPost {
   title: string;
   description: string;
   competitor: string;
+  /**
+   * Key into COMPETITORS (src/data/competitors.ts). The /vs/:slug page and
+   * this article describe the same product, so they must never quote
+   * different prices — this link is what makes that checkable.
+   */
+  competitorSlug: string;
   publishedAt: string; // ISO date
+  /** Last substantive revision. Drives the visible "Updated" label + schema. */
+  updatedAt: string; // ISO date
   readMinutes: number;
   tldr: string;
   sections: Array<{ heading: string; body: string[] }>;
@@ -20,14 +28,16 @@ export interface BlogPost {
 export const BLOG_POSTS: BlogPost[] = [
   {
     slug: "footprint-finder-vs-incogni",
+    competitorSlug: "incogni",
     competitor: "Incogni",
     title: "Footprint Finder vs Incogni: Which Removes More?",
     description:
       "Honest comparison of Footprint Finder and Incogni in 2026. Pricing, data broker coverage, account discovery, and which one fits your situation best.",
     publishedAt: "2026-04-22",
+    updatedAt: "2026-07-29",
     readMinutes: 7,
     tldr:
-      "Incogni is excellent if you only care about data brokers. Footprint Finder covers data brokers PLUS the 100+ shopping, streaming, and service accounts buried in your inbox — for a similar price.",
+      "Incogni is excellent if you only care about data brokers. Footprint Finder covers data brokers PLUS the 100+ shopping, streaming, and service accounts buried in your inbox — for about $34 more a year on our Complete plan.",
     sections: [
       {
         heading: "What each service actually does",
@@ -40,9 +50,9 @@ export const BLOG_POSTS: BlogPost[] = [
       {
         heading: "Pricing breakdown",
         body: [
-          "Incogni: $77/year individual, $134/year family (4 members). They renew annually and don't offer a free tier.",
+          "Incogni: $95.40/year individual ($15.49/month), $134/year family (4 members). They renew annually and don't offer a free tier.",
           "Footprint Finder: Free tier (1 email, 3 deletions/month), Pro at $79/year, Complete at $129/year (includes data broker scanning + 5 emails). You can try the entire product for free before paying anything.",
-          "On a per-feature basis, Footprint Finder Complete at $129 gives you everything Incogni does PLUS inbox scanning. That's roughly the same price for ~3x the coverage.",
+          "On a per-feature basis, Footprint Finder Complete at $129 gives you everything Incogni does PLUS inbox scanning, for about $34 more per year. Incogni is the cheaper option if brokers are all you want.",
         ],
       },
       {
@@ -73,8 +83,8 @@ export const BLOG_POSTS: BlogPost[] = [
       { feature: "Free tier", us: "Yes — 1 email, 3 deletions/mo", them: "No" },
       { feature: "Inbox scanning", us: "Deep AI scan, all senders", them: "Not offered" },
       { feature: "Data brokers", us: "45+ priority brokers", them: "~180 brokers" },
-      { feature: "Annual price (individual)", us: "$79 Pro / $129 Complete", them: "$77/year" },
-      { feature: "Family plan", us: "Coming soon", them: "$134/yr (4 members)" },
+      { feature: "Annual price (individual)", us: "$79 Pro / $129 Complete", them: "$95.40/year" },
+      { feature: "Family plan", us: "$179/yr (5 members)", them: "$134/yr (4 members)" },
       { feature: "One-click deletion templates", us: "Yes", them: "Brokers only" },
       { feature: "Try before you buy", us: "Full free tier", them: "No" },
     ],
@@ -83,11 +93,13 @@ export const BLOG_POSTS: BlogPost[] = [
   },
   {
     slug: "footprint-finder-vs-deleteme",
+    competitorSlug: "deleteme",
     competitor: "DeleteMe",
     title: "Footprint Finder vs DeleteMe: Honest 2026 Comparison",
     description:
       "Comparing DeleteMe and Footprint Finder on price, coverage, and what you actually get. Includes when DeleteMe is worth $129/year and when it isn't.",
     publishedAt: "2026-04-21",
+    updatedAt: "2026-07-29",
     readMinutes: 6,
     tldr:
       "DeleteMe pioneered the data broker removal category and does it well. But at $129/year for brokers only, you're paying premium for one feature. Footprint Finder Complete is the same price and adds inbox scanning.",
@@ -97,7 +109,7 @@ export const BLOG_POSTS: BlogPost[] = [
         body: [
           "DeleteMe Individual: $129/year (or $10.75/month equivalent). Family plan: $229/year (2 people).",
           "Footprint Finder Complete: $129/year. Same price. But Complete includes data broker scanning AND deep inbox AI scanning across 5 email accounts.",
-          "If you're going to spend $129 on privacy, you might as well get coverage for the 200 service accounts you've forgotten about — not just the 20 data brokers.",
+          "If you're going to spend $129 on privacy, you might as well get coverage for the 200 service accounts you've forgotten about — not just the ~30 data brokers.",
         ],
       },
       {
@@ -119,8 +131,8 @@ export const BLOG_POSTS: BlogPost[] = [
       {
         heading: "The math",
         body: [
-          "DeleteMe at $129/yr = ~20 data brokers covered manually. Roughly $6.45 per broker.",
-          "Footprint Finder Complete at $129/yr = 20 data brokers + unlimited service account discovery + deletion templates + 5 email accounts. Often 100+ services discovered per user.",
+          "DeleteMe at $129/yr = ~30 data brokers covered manually. Roughly $4.30 per broker.",
+          "Footprint Finder Complete at $129/yr = 45+ data brokers + unlimited service account discovery + deletion templates + 5 email accounts. Often 100+ services discovered per user.",
           "If your goal is dollars-per-account-protected, we're an order of magnitude cheaper.",
         ],
       },
@@ -135,7 +147,7 @@ export const BLOG_POSTS: BlogPost[] = [
     comparisonTable: [
       { feature: "Annual price", us: "$129 Complete", them: "$129" },
       { feature: "Free trial / tier", us: "Yes", them: "No" },
-      { feature: "Data broker removal", us: "20+ priority brokers", them: "~30 brokers, manual" },
+      { feature: "Data broker removal", us: "45+ priority brokers (Complete)", them: "~30 brokers, manual" },
       { feature: "Inbox scanning", us: "Yes — deep AI scan", them: "No" },
       { feature: "Email accounts", us: "Up to 5", them: "N/A" },
       { feature: "Service deletion templates", us: "Yes", them: "No" },
@@ -146,11 +158,13 @@ export const BLOG_POSTS: BlogPost[] = [
   },
   {
     slug: "footprint-finder-vs-optery",
+    competitorSlug: "optery",
     competitor: "Optery",
     title: "Footprint Finder vs Optery: Which Is Right for You?",
     description:
       "Optery offers a free people-search opt-out service. Here's how it compares to Footprint Finder's broader privacy platform in 2026.",
     publishedAt: "2026-04-20",
+    updatedAt: "2026-07-29",
     readMinutes: 6,
     tldr:
       "Optery's free tier is genuinely useful — they show you where you appear on people-search sites. But once you want actual removal automation, you're at $99-$249/year. Footprint Finder Pro at $79 covers more ground for less.",
@@ -158,7 +172,7 @@ export const BLOG_POSTS: BlogPost[] = [
       {
         heading: "Optery's free tier is excellent (with a catch)",
         body: [
-          "Optery's free tier shows you exposure across ~70 people-search sites. You see your name, address, phone — the whole profile. It's eye-opening.",
+          "Optery's free tier shows you your exposure across a wide slice of people-search sites. You see your name, address, phone — the whole profile. It's eye-opening.",
           "The catch: free tier requires you to do all the removals yourself. They give you links and you click through dozens of opt-out forms manually.",
           "Footprint Finder's free tier focuses on inbox-discovered accounts (also genuinely useful) and lets you send 3 deletion requests per month with one-click templates.",
         ],
@@ -166,9 +180,9 @@ export const BLOG_POSTS: BlogPost[] = [
       {
         heading: "Paid tier comparison",
         body: [
-          "Optery Core: $99/year — automates removals across ~110 brokers. Optery Extended: $159/year — adds more brokers. Optery Ultimate: $249/year — adds custom removal requests.",
+          "Optery runs from $39/year at the entry tier up to $249/year at the top, with broker coverage scaling from about 25 sites to 320+ depending on the plan you pick.",
           "Footprint Finder Pro: $79/year — unlimited service account deletions + deep AI inbox scan. Complete: $129/year — adds data broker scanning.",
-          "Per dollar, Footprint Finder Complete ($129) competes directly with Optery Core ($99). Optery has more brokers; we have inbox scanning they don't.",
+          "Per dollar, Footprint Finder Complete ($129) lands in the middle of Optery's range. Optery's upper tiers cover more brokers; we have inbox scanning they don't offer at any tier.",
         ],
       },
       {
@@ -188,8 +202,8 @@ export const BLOG_POSTS: BlogPost[] = [
     ],
     comparisonTable: [
       { feature: "Free tier", us: "1 email scan + 3 deletions/mo", them: "Profile visibility only" },
-      { feature: "Entry paid price", us: "$79/yr Pro", them: "$99/yr Core" },
-      { feature: "Broker coverage", us: "20+ priority", them: "~110 brokers" },
+      { feature: "Entry paid price", us: "$79/yr Pro", them: "$39/yr entry tier" },
+      { feature: "Broker coverage", us: "45+ priority (Complete)", them: "25–320+ by tier" },
       { feature: "Inbox scanning", us: "Yes", them: "No" },
       { feature: "Custom removals", us: "Service deletion templates", them: "Ultimate plan only" },
       { feature: "Pricing tiers", us: "3 (clear)", them: "3 (overlapping)" },
@@ -199,14 +213,16 @@ export const BLOG_POSTS: BlogPost[] = [
   },
   {
     slug: "footprint-finder-vs-mine",
+    competitorSlug: "mine",
     competitor: "Mine (SayMine)",
     title: "Footprint Finder vs Mine: Which Inbox Scanner Wins?",
     description:
       "Mine and Footprint Finder both scan your inbox for accounts. Here's the honest difference in coverage, deletion success rate, and pricing in 2026.",
     publishedAt: "2026-04-19",
+    updatedAt: "2026-07-29",
     readMinutes: 6,
     tldr:
-      "Mine pioneered the inbox-scanning approach. Footprint Finder takes the same idea and adds aggressive contact discovery, broker scanning, and a stronger deletion engine — at a competitive price.",
+      "Mine pioneered the inbox-scanning approach and is the cheaper of the two. Footprint Finder takes the same idea and adds aggressive contact discovery, broker scanning, and a stronger deletion engine — you pay more for the extra coverage.",
     sections: [
       {
         heading: "We're the most direct comparison",
@@ -227,37 +243,39 @@ export const BLOG_POSTS: BlogPost[] = [
         heading: "Beyond inbox scanning",
         body: [
           "Mine focuses almost entirely on inbox-discovered accounts. Their broker coverage is minimal.",
-          "Footprint Finder Complete adds 20+ data broker scans on top of inbox scanning. Same product, two coverage layers.",
+          "Footprint Finder Complete adds 45+ data broker scans on top of inbox scanning. Same product, two coverage layers.",
           "We also do breach checking via HaveIBeenPwned integration on the free tier — Mine charges for similar visibility.",
         ],
       },
       {
         heading: "Pricing",
         body: [
-          "Mine: Free tier (limited), then Mine Premium at $99/year. They've changed pricing multiple times — verify current rates.",
+          "Mine: Free tier (limited), then Mine Pro at $4.99/month — $59.88/year. They've changed pricing multiple times, so verify current rates before you buy.",
           "Footprint Finder: Free (genuinely useful), Pro $79/year, Complete $129/year. Three clear tiers.",
-          "Pro at $79 directly competes with Mine Premium at $99 and includes deeper discovery.",
+          "Our Pro at $79/year is priced above Mine Pro at $59.88, and the gap buys deeper contact discovery and breach monitoring. Complete at $129 adds broker removal, which Mine doesn't do at all.",
         ],
       },
     ],
     comparisonTable: [
       { feature: "Free tier", us: "1 email, 3 deletions/mo", them: "Limited free tier" },
-      { feature: "Pro/Premium price", us: "$79/yr", them: "$99/yr" },
+      { feature: "Pro/Premium price", us: "$79/yr", them: "$59.88/yr" },
       { feature: "Inbox scanning", us: "Deep multi-layer", them: "Standard sender classification" },
       { feature: "Privacy contact discovery", us: "Aggressive multi-probe", them: "Basic" },
       { feature: "Data broker scanning", us: "Complete tier", them: "Limited" },
       { feature: "Breach monitoring", us: "Free tier includes it", them: "Premium feature" },
     ],
     verdict:
-      "If you've used Mine and like the idea but want better deletion success and broader coverage, Footprint Finder is the natural upgrade. Same approach, more depth, lower entry price.",
+      "If you've used Mine and like the idea but want better deletion success and broader coverage, Footprint Finder is the natural upgrade. Same approach, more depth — at a higher price. If budget is the deciding factor, Mine is the cheaper pick.",
   },
   {
     slug: "footprint-finder-vs-aura",
+    competitorSlug: "aura",
     competitor: "Aura",
     title: "Footprint Finder vs Aura: Specialist vs All-in-One",
     description:
       "Aura bundles privacy with identity theft, antivirus, and VPN. Footprint Finder focuses purely on digital footprint cleanup. Which is right for you?",
     publishedAt: "2026-04-18",
+    updatedAt: "2026-07-29",
     readMinutes: 7,
     tldr:
       "Aura is a privacy + identity theft + cybersecurity bundle starting at $144/year. Footprint Finder does one thing — find and clean up your digital footprint — for $79-$129/year. If you only need privacy, we're cheaper and more focused.",
@@ -290,7 +308,7 @@ export const BLOG_POSTS: BlogPost[] = [
         heading: "Cost comparison",
         body: [
           "Aura Individual: $144/year intro, renews higher. Aura Couple: $216/year. Aura Family (5 adults): $300/year.",
-          "Footprint Finder Pro: $79/year. Complete: $129/year. Family plan in development.",
+          "Footprint Finder Pro: $79/year. Complete: $129/year. Family (up to 5 people): $179/year.",
           "If you only need privacy: we're 45-65% cheaper than Aura. If you need identity theft insurance + antivirus + VPN bundled, Aura's price starts to make sense.",
         ],
       },
@@ -304,7 +322,7 @@ export const BLOG_POSTS: BlogPost[] = [
     ],
     comparisonTable: [
       { feature: "Annual price (individual)", us: "$79-$129", them: "$144 intro" },
-      { feature: "Family plan", us: "Coming soon", them: "$300 (5 adults)" },
+      { feature: "Family plan", us: "$179/yr (5 members)", them: "$300 (5 adults)" },
       { feature: "Inbox scanning", us: "Yes", them: "No" },
       { feature: "Data broker removal", us: "Yes (Complete)", them: "Yes" },
       { feature: "VPN included", us: "No", them: "Yes" },

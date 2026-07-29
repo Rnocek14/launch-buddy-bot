@@ -5,26 +5,37 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Shield } from "lucide-react";
 import { useSEO } from "@/hooks/useSEO";
+import {
+  COMPETITORS,
+  COMPETITOR_PRICING_VERIFIED_ON,
+} from "@/data/competitors";
 
-const COMPETITORS = [
-  { slug: "deleteme", name: "DeleteMe", desc: "The original — $129/yr, broker-only" },
-  { slug: "incogni", name: "Incogni", desc: "Surfshark-owned — $95/yr, 180+ brokers" },
-  { slug: "onerep", name: "OneRep", desc: "Automated — $100/yr, 200+ brokers" },
-  { slug: "privacybee", name: "Privacy Bee", desc: "Proactive opt-outs — $197/yr, 150+ brokers" },
-  { slug: "easyoptouts", name: "EasyOptOuts", desc: "Budget pick — $20/yr, 145+ brokers" },
-  { slug: "aura", name: "Aura", desc: "Identity bundle — $144/yr, removal add-on" },
-  { slug: "optery", name: "Optery", desc: "Tiered pricing $39–$249/yr" },
-  { slug: "kanary", name: "Kanary", desc: "Reputation-focused — $179/yr" },
-  { slug: "mine", name: "Mine", desc: "Free GDPR requests, no real removal" },
-];
+// Derived from the single COMPETITORS source rather than a parallel list, so
+// this hub can never quote a price the /vs/:slug page contradicts.
+const CARDS = Object.values(COMPETITORS).map((c) => ({
+  slug: c.slug,
+  name: c.name,
+  desc: `${c.tagline} — ${c.annualPrice}, ${c.brokerCoverage}`,
+}));
 
 export default function CompareIndex() {
   useSEO({
     title: "Footprint Finder vs DeleteMe, Incogni, Optery — Honest Comparisons",
     description:
-      "Compare Footprint Finder against DeleteMe, Incogni, Optery, Kanary, and Mine. Side-by-side pricing, features, and coverage. Find the best privacy tool for you.",
+      "Compare Footprint Finder against DeleteMe, Incogni, OneRep, Optery, Privacy Bee, Kanary, Aura, EasyOptOuts and Mine. Side-by-side pricing, features, and coverage.",
     canonical: "https://footprintfinder.co/vs",
     ogType: "website",
+    jsonLd: {
+      "@context": "https://schema.org",
+      "@type": "ItemList",
+      name: "Footprint Finder privacy service comparisons",
+      itemListElement: CARDS.map((c, i) => ({
+        "@type": "ListItem",
+        position: i + 1,
+        name: `Footprint Finder vs ${c.name}`,
+        url: `https://footprintfinder.co/vs/${c.slug}`,
+      })),
+    },
   });
 
   return (
@@ -41,10 +52,21 @@ export default function CompareIndex() {
               Honest, head-to-head comparisons of Footprint Finder vs the major
               data-removal services. Pricing, features, coverage — no fluff.
             </p>
+            <p className="text-xs text-muted-foreground mt-3">
+              Competitor pricing last verified{" "}
+              <time dateTime={COMPETITOR_PRICING_VERIFIED_ON}>
+                {new Date(COMPETITOR_PRICING_VERIFIED_ON).toLocaleDateString(undefined, {
+                  year: "numeric",
+                  month: "long",
+                  day: "numeric",
+                })}
+              </time>
+              .
+            </p>
           </header>
 
           <div className="grid sm:grid-cols-2 gap-4">
-            {COMPETITORS.map((c) => (
+            {CARDS.map((c) => (
               <Link key={c.slug} to={`/vs/${c.slug}`} className="group">
                 <Card className="h-full transition-colors group-hover:border-primary/50">
                   <CardContent className="p-5">
@@ -67,6 +89,35 @@ export default function CompareIndex() {
               </Button>
             </Link>
           </div>
+
+          <section className="mt-12">
+            <h2 className="text-lg font-semibold mb-4">
+              Prefer to do it yourself?
+            </h2>
+            <div className="flex flex-wrap gap-2">
+              <Link to="/remove-from">
+                <Button variant="outline" size="sm">
+                  Free data-broker opt-out guides
+                </Button>
+              </Link>
+              <Link to="/guides">
+                <Button variant="outline" size="sm">
+                  Privacy removal guides
+                </Button>
+              </Link>
+              <Link to="/delete">
+                <Button variant="outline" size="sm">
+                  Delete your online accounts
+                </Button>
+              </Link>
+              <Link to="/blog">
+                <Button variant="ghost" size="sm" className="gap-1">
+                  Long-form comparisons
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </Button>
+              </Link>
+            </div>
+          </section>
         </div>
       </main>
       <Footer />

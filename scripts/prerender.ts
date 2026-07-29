@@ -18,7 +18,16 @@ import { createClient } from "@supabase/supabase-js";
 import { GUIDES, type Guide, type GuideCategory } from "../src/data/guides";
 import { BLOG_POSTS } from "../src/data/blogPosts";
 import { DELETE_GUIDES } from "../src/data/deleteGuides";
-import { COMPETITORS } from "../src/data/competitors";
+import {
+  COMPETITORS,
+  FEATURE_ROWS,
+  RELATED_BROKERS,
+  FOOTPRINT_FINDER_FEATURES,
+  FOOTPRINT_FINDER_BROKER_COVERAGE,
+  FOOTPRINT_FINDER_PRICING,
+  COMPETITOR_PRICING_VERIFIED_ON,
+  compareFaqs,
+} from "../src/data/competitors";
 
 const BASE_URL = "https://footprintfinder.co";
 const DIST = resolve("dist");
@@ -57,14 +66,28 @@ const linkList = (links: { href: string; label: string }[]) =>
     .join("")}</ul>`;
 
 // ---------- schema builders ----------
-const articleSchema = (headline: string, description: string, url: string): JsonLd => ({
+const articleSchema = (
+  headline: string,
+  description: string,
+  url: string,
+  datePublished?: string,
+  dateModified?: string,
+): JsonLd => ({
   "@context": "https://schema.org",
   "@type": "Article",
   headline,
   description,
   mainEntityOfPage: url,
-  author: { "@type": "Organization", name: "Footprint Finder" },
-  publisher: { "@type": "Organization", name: "Footprint Finder" },
+  image: `${BASE_URL}/og-image.png`,
+  ...(datePublished ? { datePublished } : {}),
+  ...(dateModified ? { dateModified } : {}),
+  author: { "@type": "Organization", name: "Footprint Finder", url: BASE_URL },
+  publisher: {
+    "@type": "Organization",
+    name: "Footprint Finder",
+    url: BASE_URL,
+    logo: { "@type": "ImageObject", url: `${BASE_URL}/og-image.png` },
+  },
 });
 const faqSchema = (faqs: { question: string; answer: string }[]): JsonLd => ({
   "@context": "https://schema.org",
@@ -75,6 +98,56 @@ const faqSchema = (faqs: { question: string; answer: string }[]): JsonLd => ({
     acceptedAnswer: { "@type": "Answer", text: f.answer },
   })),
 });
+/** BreadcrumbList matching the visible breadcrumb trail on the page. */
+const breadcrumbSchema = (trail: { name: string; path: string }[]): JsonLd => ({
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  itemListElement: trail.map((t, i) => ({
+    "@type": "ListItem",
+    position: i + 1,
+    name: t.name,
+    item: `${BASE_URL}${t.path}`,
+  })),
+});
+
+/** Renders the FAQ block as visible copy, matching the FAQPage schema. */
+const faqBlock = (faqs: { question: string; answer: string }[]) =>
+  `<section><h2>Frequently asked questions</h2>${faqs
+    .map((f) => `<h3>${escHtml(f.question)}</h3>${p(f.answer)}`)
+    .join("")}</section>`;
+
+/** Visible breadcrumb trail; the last item is plain text, not a link. */
+const breadcrumbNav = (trail: { name: string; path: string }[]) =>
+  `<nav aria-label="Breadcrumb">${trail
+    .map((t, i) =>
+      i === trail.length - 1
+        ? `<span>${escHtml(t.name)}</span>`
+        : `<a href="${escAttr(t.path)}">${escHtml(t.name)}</a> / `,
+    )
+    .join("")}</nav>`;
+
+/**
+ * Cross-cluster links appended to every article-type page.
+ *
+ * Without this, a prerendered comparison or blog page is a dead end in the
+ * raw HTML: React adds the nav and footer on hydration, but the first crawl
+ * response has no outbound links at all, so no authority flows through the
+ * page and related URLs are only discoverable via sitemap.xml.
+ */
+const relatedLinksBlock = (
+  heading: string,
+  links: { href: string; label: string }[],
+) => `<section><h2>${escHtml(heading)}</h2>${linkList(links)}</section>`;
+
+const siteLinksBlock = () =>
+  relatedLinksBlock("Explore Footprint Finder", [
+    { href: "/free-scan", label: "Run a free exposure scan" },
+    { href: "/vs", label: "Compare privacy and data-removal services" },
+    { href: "/remove-from", label: "Free data-broker opt-out guides" },
+    { href: "/guides", label: "Privacy and data removal guides" },
+    { href: "/delete", label: "How to delete online accounts" },
+    { href: "/pricing", label: "Pricing" },
+  ]);
 
 // ---------- route builders ----------
 function guideRoute(g: Guide): Route {
@@ -96,7 +169,7 @@ function guideRoute(g: Guide): Route {
     description: g.description,
     ogType: "article",
     jsonLd: [articleSchema(g.h1, g.description, url), faqSchema(g.faqs)],
-    body: `<article><h1>${escHtml(g.h1)}</h1>${p(g.intro)}${sections}${faqHtml}</article>`,
+    body: `<article><h1>${escHtml(g.h1)}</h1>${p(g.intro)}${sections}${faqHtml}${siteLinksBlock()}</article>`,
   };
 }
 
@@ -125,7 +198,7 @@ function guideIndexRoute(): Route {
     ogType: "website",
     body: `<main><h1>Privacy &amp; data removal guides</h1>${p(
       "Free, no-fluff guides to removing your personal information from the internet.",
-    )}${groups}</main>`,
+    )}${groups}${siteLinksBlock()}</main>`,
   };
 }
 
@@ -194,7 +267,7 @@ function brokerRoute(b: BrokerRecord): Route {
             b.name,
           )} opt-out page</a></p>`
         : ""
-    }${stepsHtml}${faqHtml}</article>`,
+    }${stepsHtml}${faqHtml}${siteLinksBlock()}</article>`,
   };
 }
 
@@ -248,7 +321,7 @@ function deleteRoute(g: (typeof DELETE_GUIDES)[number]): Route {
       g.service,
     )} keeps after deletion</h2>${ul(g.whatTheyKeep)}${stepsHtml}<h2>Gotchas to watch for</h2>${ul(
       g.gotchas,
-    )}</article>`,
+    )}${siteLinksBlock()}</article>`,
   };
 }
 
@@ -290,15 +363,41 @@ function blogRoute(post: (typeof BLOG_POSTS)[number]): Route {
         )}</td></tr>`,
     )
     .join("")}</tbody></table>`;
+  const trail = [
+    { name: "Home", path: "/" },
+    { name: "Blog", path: "/blog" },
+    { name: post.title, path: `/blog/${post.slug}` },
+  ];
+  const competitorPage = COMPETITORS[post.competitorSlug];
+  const otherPosts = BLOG_POSTS.filter((o) => o.slug !== post.slug).map((o) => ({
+    href: `/blog/${o.slug}`,
+    label: o.title,
+  }));
+
   return {
     path: `/blog/${post.slug}`,
     title: post.title,
     description: post.description,
     ogType: "article",
-    jsonLd: [articleSchema(post.title, post.description, url)],
-    body: `<article><h1>${escHtml(post.title)}</h1>${p(post.tldr)}${sections}<h2>Feature comparison</h2>${table}<h2>Verdict</h2>${p(
-      post.verdict,
-    )}</article>`,
+    jsonLd: [
+      articleSchema(post.title, post.description, url, post.publishedAt, post.updatedAt),
+      breadcrumbSchema(trail),
+    ],
+    body: `<article>${breadcrumbNav(trail)}<h1>${escHtml(post.title)}</h1>${p(
+      post.tldr,
+    )}${sections}<h2>Feature comparison</h2>${table}${p(
+      `${post.competitor} pricing last verified ${COMPETITOR_PRICING_VERIFIED_ON}. Vendors change plans often — check ${post.competitor}'s own site for current rates.`,
+    )}<h2>Verdict</h2>${p(post.verdict)}${
+      competitorPage
+        ? relatedLinksBlock("Keep comparing", [
+            {
+              href: `/vs/${competitorPage.slug}`,
+              label: `Footprint Finder vs ${competitorPage.name} — feature matrix`,
+            },
+            ...otherPosts,
+          ])
+        : relatedLinksBlock("More comparisons", otherPosts)
+    }${siteLinksBlock()}</article>`,
   };
 }
 
@@ -313,42 +412,66 @@ function blogIndexRoute(): Route {
       "Honest comparisons and guides for cleaning up your digital footprint.",
     )}${linkList(
       BLOG_POSTS.map((b) => ({ href: `/blog/${b.slug}`, label: b.title })),
-    )}</main>`,
+    )}${siteLinksBlock()}</main>`,
   };
 }
 
 function compareRoute(c: (typeof COMPETITORS)[string]): Route {
-  const faqs = [
-    {
-      question: `Is Footprint Finder cheaper than ${c.name}?`,
-      answer: `Footprint Finder costs $79/year. ${c.name} costs ${c.annualPrice}. Footprint Finder also includes inbox account discovery and breach monitoring, which ${c.name} does not.`,
-    },
-    {
-      question: `What does Footprint Finder do that ${c.name} doesn't?`,
-      answer: `Footprint Finder scans your Gmail or Outlook inbox to discover every account tied to your email — including forgotten subscriptions, old services, and shadow accounts. ${c.name} only removes you from data broker sites and cannot see your inbox-based footprint.`,
-    },
-    {
-      question: `Should I use ${c.name} or Footprint Finder?`,
-      answer: c.bestFor,
-    },
+  const faqs = compareFaqs(c);
+  const trail = [
+    { name: "Home", path: "/" },
+    { name: "Compare", path: "/vs" },
+    { name: `Footprint Finder vs ${c.name}`, path: `/vs/${c.slug}` },
   ];
+
+  // The capability matrix is the substance of this page — it has to be in the
+  // prerendered HTML, not only in the hydrated React tree.
+  const matrix = `<table><thead><tr><th>Capability</th><th>Footprint Finder</th><th>${escHtml(
+    c.name,
+  )}</th></tr></thead><tbody>${FEATURE_ROWS.map(
+    (row) =>
+      `<tr><td>${escHtml(row.label)}</td><td>${
+        FOOTPRINT_FINDER_FEATURES[row.key] ? "Yes" : "No"
+      }</td><td>${c.features[row.key] ? "Yes" : "No"}</td></tr>`,
+  ).join("")}</tbody></table>`;
+
+  const otherComparisons = Object.values(COMPETITORS)
+    .filter((o) => o.slug !== c.slug)
+    .map((o) => ({
+      href: `/vs/${o.slug}`,
+      label: `Footprint Finder vs ${o.name}`,
+    }));
+
   return {
     path: `/vs/${c.slug}`,
     title: `Footprint Finder vs ${c.name} — Honest Comparison`,
     description: `Compare Footprint Finder and ${c.name} side-by-side. Pricing, features, broker coverage, breach monitoring. Which privacy service is right for you?`,
     ogType: "article",
-    jsonLd: [faqSchema(faqs)],
-    body: `<article><h1>Footprint Finder vs ${escHtml(c.name)}</h1>${p(
-      `${c.tagline}. Here's how it stacks up against Footprint Finder on price, coverage, and features.`,
-    )}<h2>Quick verdict</h2>${p(c.bestFor)}<h2>${escHtml(
+    jsonLd: [faqSchema(faqs), breadcrumbSchema(trail)],
+    body: `<article>${breadcrumbNav(trail)}<h1>Footprint Finder vs ${escHtml(
       c.name,
-    )} pricing</h2>${p(
-      `${c.monthlyPrice} · ${c.annualPrice}. Footprint Finder is $79/year, all-in-one.`,
+    )}</h1>${p(
+      `${c.tagline}. Here's how it stacks up against Footprint Finder on price, coverage, and features.`,
+    )}<h2>Quick verdict</h2>${p(c.bestFor)}<h2>Feature comparison: Footprint Finder vs ${escHtml(
+      c.name,
+    )}</h2>${p(
+      `Footprint Finder removes you from ${FOOTPRINT_FINDER_BROKER_COVERAGE} on the ${FOOTPRINT_FINDER_PRICING.brokerTier} plan; ${c.name} covers ${c.brokerCoverage}.`,
+    )}${matrix}<h2>${escHtml(c.name)} pricing</h2>${p(
+      `${c.monthlyPrice} · ${c.annualPrice}. Footprint Finder is ${FOOTPRINT_FINDER_PRICING.pro} for Pro (inbox discovery and breach monitoring) and ${FOOTPRINT_FINDER_PRICING.complete} for Complete, which adds data-broker removal. ${c.name} pricing last verified ${COMPETITOR_PRICING_VERIFIED_ON}.`,
     )}<h2>${escHtml(c.name)} pros</h2>${ul(c.pros)}<h2>${escHtml(
       c.name,
-    )} cons</h2>${ul(c.cons)}<h2>Why people choose Footprint Finder</h2>${ul(
-      c.whyFf,
-    )}</article>`,
+    )} cons</h2>${ul(c.cons)}<h2>What Footprint Finder does that ${escHtml(
+      c.name,
+    )} doesn't</h2>${ul(c.whyFf)}${faqBlock(faqs)}${relatedLinksBlock(
+      "Popular data-broker removal guides",
+      RELATED_BROKERS.map((b) => ({
+        href: `/remove-from/${b.slug}`,
+        label: `How to opt out of ${b.name}`,
+      })),
+    )}${relatedLinksBlock(
+      "Compare other privacy tools",
+      otherComparisons,
+    )}${siteLinksBlock()}</article>`,
   };
 }
 
@@ -366,7 +489,7 @@ function compareIndexRoute(): Route {
         href: `/vs/${c.slug}`,
         label: `Footprint Finder vs ${c.name}`,
       })),
-    )}</main>`,
+    )}${siteLinksBlock()}</main>`,
   };
 }
 
@@ -529,7 +652,8 @@ function buildHtml(template: string, route: Route): string {
     `<meta property="og:url" content="${canonical}" />`,
     `<meta property="og:type" content="${route.ogType ?? "article"}" />`,
     ...(route.jsonLd ?? []).map(
-      (b) => `<script type="application/ld+json">${JSON.stringify(b)}</script>`,
+      (b) =>
+        `<script type="application/ld+json" data-dynamic-seo="1">${JSON.stringify(b)}</script>`,
     ),
   ].join("\n    ");
   html = html.replace("</head>", `    ${headTags}\n  </head>`);

@@ -1,5 +1,6 @@
 import { Link, useParams, Navigate } from "react-router-dom";
 import { getPostBySlug, BLOG_POSTS } from "@/data/blogPosts";
+import { COMPETITORS, COMPETITOR_PRICING_VERIFIED_ON } from "@/data/competitors";
 import { useSEO } from "@/hooks/useSEO";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
@@ -18,26 +19,55 @@ export default function BlogPost() {
     description: post?.description ?? "Privacy tool comparison.",
     canonical: post ? `${SITE_URL}/blog/${post.slug}` : `${SITE_URL}/blog`,
     jsonLd: post
-      ? {
-          "@context": "https://schema.org",
-          "@type": "Article",
-          headline: post.title,
-          description: post.description,
-          datePublished: post.publishedAt,
-          author: { "@type": "Organization", name: "Footprint Finder" },
-          publisher: {
-            "@type": "Organization",
-            name: "Footprint Finder",
-            url: SITE_URL,
+      ? [
+          {
+            "@context": "https://schema.org",
+            "@type": "Article",
+            headline: post.title,
+            description: post.description,
+            datePublished: post.publishedAt,
+            dateModified: post.updatedAt,
+            image: `${SITE_URL}/og-image.png`,
+            author: { "@type": "Organization", name: "Footprint Finder", url: SITE_URL },
+            publisher: {
+              "@type": "Organization",
+              name: "Footprint Finder",
+              url: SITE_URL,
+              logo: {
+                "@type": "ImageObject",
+                url: `${SITE_URL}/og-image.png`,
+              },
+            },
+            mainEntityOfPage: `${SITE_URL}/blog/${post.slug}`,
           },
-          mainEntityOfPage: `${SITE_URL}/blog/${post.slug}`,
-        }
+          {
+            "@context": "https://schema.org",
+            "@type": "BreadcrumbList",
+            itemListElement: [
+              { "@type": "ListItem", position: 1, name: "Home", item: `${SITE_URL}/` },
+              { "@type": "ListItem", position: 2, name: "Blog", item: `${SITE_URL}/blog` },
+              {
+                "@type": "ListItem",
+                position: 3,
+                name: post.title,
+                item: `${SITE_URL}/blog/${post.slug}`,
+              },
+            ],
+          },
+        ]
       : undefined,
   });
 
   if (!post) return <Navigate to="/blog" replace />;
 
   const otherPosts = BLOG_POSTS.filter((p) => p.slug !== post.slug).slice(0, 3);
+  const competitorPage = COMPETITORS[post.competitorSlug];
+  const fmtDate = (iso: string) =>
+    new Date(iso).toLocaleDateString(undefined, {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -56,7 +86,15 @@ export default function BlogPost() {
             <div className="flex items-center gap-3 mb-4">
               <Badge variant="secondary">vs {post.competitor}</Badge>
               <span className="text-sm text-muted-foreground">
-                {post.readMinutes} min read · Updated {new Date(post.publishedAt).toLocaleDateString()}
+                {post.readMinutes} min read · Published{" "}
+                <time dateTime={post.publishedAt}>{fmtDate(post.publishedAt)}</time>
+                {post.updatedAt !== post.publishedAt && (
+                  <>
+                    {" "}
+                    · Updated{" "}
+                    <time dateTime={post.updatedAt}>{fmtDate(post.updatedAt)}</time>
+                  </>
+                )}
               </span>
             </div>
             <h1 className="text-3xl md:text-4xl font-bold mb-4 leading-tight">{post.title}</h1>
@@ -123,10 +161,52 @@ export default function BlogPost() {
             </div>
           </section>
 
+          <p className="text-xs text-muted-foreground -mt-6 mb-10">
+            {post.competitor} pricing last verified{" "}
+            <time dateTime={COMPETITOR_PRICING_VERIFIED_ON}>
+              {fmtDate(COMPETITOR_PRICING_VERIFIED_ON)}
+            </time>
+            . Vendors change plans often — check {post.competitor}'s own site for
+            current rates before you buy.
+          </p>
+
           <section className="mb-10 rounded-lg bg-muted/30 p-6">
             <h2 className="text-2xl font-bold mb-3">Our verdict</h2>
             <p className="text-base leading-relaxed">{post.verdict}</p>
           </section>
+
+          {competitorPage && (
+            <section className="mb-10">
+              <h2 className="text-2xl font-bold mb-3">Keep comparing</h2>
+              <p className="text-muted-foreground mb-4">
+                Want the quick side-by-side instead of the full write-up? The
+                comparison hub has the feature matrix for {post.competitor} and
+                every other major removal service.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <Link to={`/vs/${competitorPage.slug}`}>
+                  <Button variant="outline" size="sm">
+                    Footprint Finder vs {competitorPage.name} — feature matrix
+                  </Button>
+                </Link>
+                <Link to="/vs">
+                  <Button variant="outline" size="sm">
+                    All privacy tool comparisons
+                  </Button>
+                </Link>
+                <Link to="/remove-from">
+                  <Button variant="outline" size="sm">
+                    Free data-broker opt-out guides
+                  </Button>
+                </Link>
+                <Link to="/guides">
+                  <Button variant="ghost" size="sm">
+                    Privacy removal guides
+                  </Button>
+                </Link>
+              </div>
+            </section>
+          )}
 
           <section className="rounded-2xl bg-gradient-to-br from-primary/5 to-accent/5 border p-8 text-center">
             <h2 className="text-2xl font-bold mb-3">Try Footprint Finder free</h2>

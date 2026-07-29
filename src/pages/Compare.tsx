@@ -18,30 +18,14 @@ import {
 import { useEffect } from "react";
 import {
   COMPETITORS,
+  FEATURE_ROWS,
+  RELATED_BROKERS,
   FOOTPRINT_FINDER_FEATURES,
   FOOTPRINT_FINDER_BROKER_COVERAGE,
-  type CompetitorFeatures,
+  FOOTPRINT_FINDER_PRICING,
+  COMPETITOR_PRICING_VERIFIED_ON,
+  compareFaqs,
 } from "@/data/competitors";
-
-const FEATURE_ROWS: { key: keyof CompetitorFeatures; label: string }[] = [
-  { key: "inboxScan", label: "Inbox scan for forgotten accounts" },
-  { key: "brokerRemoval", label: "Data-broker removal" },
-  { key: "breachMonitoring", label: "Data-breach monitoring" },
-  { key: "gdprCcpaRequests", label: "GDPR / CCPA data requests" },
-  { key: "accountDeletionHelp", label: "Account & subscription deletion help" },
-  { key: "ongoingMonitoring", label: "Ongoing re-scans & alerts" },
-];
-
-// High-intent broker pages to interlink from every comparison page,
-// building the privacy-removal topical cluster.
-const RELATED_BROKERS = [
-  { slug: "truepeoplesearch", name: "TruePeopleSearch" },
-  { slug: "spokeo", name: "Spokeo" },
-  { slug: "radaris", name: "Radaris" },
-  { slug: "mylife", name: "MyLife" },
-  { slug: "whitepages", name: "Whitepages" },
-  { slug: "beenverified", name: "BeenVerified" },
-];
 
 export default function Compare() {
   const { competitor } = useParams<{ competitor: string }>();
@@ -57,37 +41,36 @@ export default function Compare() {
     ? `https://footprintfinder.co/vs/${data.slug}`
     : undefined;
 
+  const faqs = data ? compareFaqs(data) : [];
+
+  // FAQPage schema is generated from the same `faqs` array the page renders,
+  // plus a BreadcrumbList matching the visible breadcrumb above the H1.
   const jsonLd = data
-    ? {
-        "@context": "https://schema.org",
-        "@type": "FAQPage",
-        mainEntity: [
-          {
+    ? [
+        {
+          "@context": "https://schema.org",
+          "@type": "FAQPage",
+          mainEntity: faqs.map((f) => ({
             "@type": "Question",
-            name: `Is Footprint Finder cheaper than ${data.name}?`,
-            acceptedAnswer: {
-              "@type": "Answer",
-              text: `Footprint Finder costs $79/year. ${data.name} costs ${data.annualPrice}. Footprint Finder also includes inbox account discovery and breach monitoring, which ${data.name} does not.`,
+            name: f.question,
+            acceptedAnswer: { "@type": "Answer", text: f.answer },
+          })),
+        },
+        {
+          "@context": "https://schema.org",
+          "@type": "BreadcrumbList",
+          itemListElement: [
+            { "@type": "ListItem", position: 1, name: "Home", item: "https://footprintfinder.co/" },
+            { "@type": "ListItem", position: 2, name: "Compare", item: "https://footprintfinder.co/vs" },
+            {
+              "@type": "ListItem",
+              position: 3,
+              name: `Footprint Finder vs ${data.name}`,
+              item: `https://footprintfinder.co/vs/${data.slug}`,
             },
-          },
-          {
-            "@type": "Question",
-            name: `What does Footprint Finder do that ${data.name} doesn't?`,
-            acceptedAnswer: {
-              "@type": "Answer",
-              text: `Footprint Finder scans your Gmail or Outlook inbox to discover every account tied to your email — including forgotten subscriptions, old services, and shadow accounts. ${data.name} only removes you from data broker sites and cannot see your inbox-based footprint.`,
-            },
-          },
-          {
-            "@type": "Question",
-            name: `Should I use ${data.name} or Footprint Finder?`,
-            acceptedAnswer: {
-              "@type": "Answer",
-              text: data.bestFor,
-            },
-          },
-        ],
-      }
+          ],
+        },
+      ]
     : undefined;
 
   useSEO({
@@ -114,8 +97,10 @@ export default function Compare() {
       <main className="pt-24 pb-16 px-4">
         <div className="container max-w-4xl mx-auto">
           {/* Breadcrumb */}
-          <nav className="text-sm text-muted-foreground mb-6">
+          <nav className="text-sm text-muted-foreground mb-6" aria-label="Breadcrumb">
             <Link to="/" className="hover:text-foreground">Home</Link>
+            <span className="mx-2">/</span>
+            <Link to="/vs" className="hover:text-foreground">Compare</Link>
             <span className="mx-2">/</span>
             <span className="text-foreground">vs {data.name}</span>
           </nav>
@@ -161,7 +146,8 @@ export default function Compare() {
                     <h3 className="text-xl font-bold">Footprint Finder</h3>
                   </div>
                   <p className="text-sm text-muted-foreground mb-4">
-                    $79/year · all-in-one
+                    Free tier · {FOOTPRINT_FINDER_PRICING.pro} Pro ·{" "}
+                    {FOOTPRINT_FINDER_PRICING.complete} Complete
                   </p>
 
                   <ul className="space-y-2 text-sm">
@@ -171,7 +157,9 @@ export default function Compare() {
                     </li>
                     <li className="flex items-start gap-2">
                       <CheckCircle2 className="w-4 h-4 text-accent flex-shrink-0 mt-0.5" />
-                      <span>Removes you from 45+ data brokers</span>
+                      <span>
+                        Removes you from {FOOTPRINT_FINDER_BROKER_COVERAGE} (Complete plan)
+                      </span>
                     </li>
                     <li className="flex items-start gap-2">
                       <CheckCircle2 className="w-4 h-4 text-accent flex-shrink-0 mt-0.5" />
@@ -183,7 +171,7 @@ export default function Compare() {
                     </li>
                     <li className="flex items-start gap-2">
                       <CheckCircle2 className="w-4 h-4 text-accent flex-shrink-0 mt-0.5" />
-                      <span>One price, no upsells</span>
+                      <span>Free tier first — see your exposure before you pay</span>
                     </li>
                   </ul>
                 </CardContent>
@@ -223,10 +211,22 @@ export default function Compare() {
             <h2 className="text-2xl font-bold mb-2">
               Feature comparison: Footprint Finder vs {data.name}
             </h2>
-            <p className="text-sm text-muted-foreground mb-6">
+            <p className="text-sm text-muted-foreground mb-2">
               Coverage: Footprint Finder removes you from{" "}
-              {FOOTPRINT_FINDER_BROKER_COVERAGE}; {data.name} covers{" "}
+              {FOOTPRINT_FINDER_BROKER_COVERAGE} on the{" "}
+              {FOOTPRINT_FINDER_PRICING.brokerTier} plan; {data.name} covers{" "}
               {data.brokerCoverage}.
+            </p>
+            <p className="text-xs text-muted-foreground mb-6">
+              {data.name} pricing last verified{" "}
+              <time dateTime={COMPETITOR_PRICING_VERIFIED_ON}>
+                {new Date(COMPETITOR_PRICING_VERIFIED_ON).toLocaleDateString(undefined, {
+                  year: "numeric",
+                  month: "long",
+                  day: "numeric",
+                })}
+              </time>
+              . Vendors change plans often — check {data.name}'s site for current rates.
             </p>
             <div className="overflow-hidden rounded-lg border">
               <table className="w-full text-sm">
@@ -296,34 +296,14 @@ export default function Compare() {
               Frequently asked: {data.name} vs Footprint Finder
             </h2>
             <div className="space-y-4">
-              <Card>
-                <CardContent className="p-5">
-                  <h3 className="font-semibold mb-2">
-                    Is Footprint Finder cheaper than {data.name}?
-                  </h3>
-                  <p className="text-sm text-muted-foreground">
-                    Yes. Footprint Finder is $79/year. {data.name} is{" "}
-                    {data.annualPrice}. And Footprint Finder includes inbox
-                    discovery and breach monitoring — features {data.name}{" "}
-                    doesn't offer at any price.
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-5">
-                  <h3 className="font-semibold mb-2">
-                    What does Footprint Finder do that {data.name} doesn't?
-                  </h3>
-                  <p className="text-sm text-muted-foreground">
-                    Footprint Finder scans your Gmail or Outlook inbox to find
-                    every account, subscription, and service tied to your email
-                    — including ones you've forgotten about. {data.name} only
-                    removes you from data brokers and can't see your inbox-based
-                    footprint.
-                  </p>
-                </CardContent>
-              </Card>
+              {faqs.map((faq) => (
+                <Card key={faq.question}>
+                  <CardContent className="p-5">
+                    <h3 className="font-semibold mb-2">{faq.question}</h3>
+                    <p className="text-sm text-muted-foreground">{faq.answer}</p>
+                  </CardContent>
+                </Card>
+              ))}
 
               <Card>
                 <CardContent className="p-5">
@@ -331,10 +311,10 @@ export default function Compare() {
                     Can I use both {data.name} and Footprint Finder?
                   </h3>
                   <p className="text-sm text-muted-foreground">
-                    You can, but it's redundant. Footprint Finder already
-                    handles broker removal, plus inbox scanning and breach
-                    alerts. Most customers switch to Footprint Finder to
-                    consolidate and save money.
+                    You can, but on our Complete plan it's largely redundant —
+                    that tier already handles broker removal alongside inbox
+                    scanning and breach alerts. Pairing {data.name} with our Pro
+                    plan is the one combination that genuinely adds coverage.
                   </p>
                 </CardContent>
               </Card>

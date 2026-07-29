@@ -44,6 +44,84 @@ export const FOOTPRINT_FINDER_FEATURES: CompetitorFeatures = {
 
 export const FOOTPRINT_FINDER_BROKER_COVERAGE = "45+ broker sites";
 
+/**
+ * Footprint Finder's own pricing, mirrored from src/config/pricing.ts.
+ * Keep these in sync with STRIPE_PRICES / TIER_LIMITS — every comparison
+ * page, FAQ answer and JSON-LD block reads from here so the site can never
+ * quote a price or a tier boundary that contradicts what we actually charge.
+ *
+ * IMPORTANT: broker removal is a COMPLETE-tier feature
+ * (TIER_LIMITS.pro.brokerScanning === false). Never imply that the $79 Pro
+ * plan includes data-broker removal.
+ */
+export const FOOTPRINT_FINDER_PRICING = {
+  /** Entry paid tier — inbox scan, breach monitoring, rescans. No brokers. */
+  pro: "$79/yr",
+  /** Tier that actually includes data-broker removal. */
+  complete: "$129/yr",
+  /** Multi-person plan — live, not "coming soon". */
+  family: "$179/yr",
+  /** Human-readable label for the tier a broker comparison should quote. */
+  brokerTier: "Complete ($129/yr)",
+} as const;
+
+/**
+ * Date the competitor prices below were last checked against vendor sites.
+ * Surfaced on-page so readers (and Google) can see how fresh the data is.
+ * Re-verify on a schedule — stale competitor pricing is the fastest way to
+ * lose trust on a comparison page.
+ */
+export const COMPETITOR_PRICING_VERIFIED_ON = "2026-06-10";
+
+/**
+ * Rows of the side-by-side capability matrix, in display order.
+ * Shared by src/pages/Compare.tsx and scripts/prerender.ts so the HTML a
+ * crawler sees on first response matches the hydrated React page exactly.
+ */
+export const FEATURE_ROWS: { key: keyof CompetitorFeatures; label: string }[] = [
+  { key: "inboxScan", label: "Inbox scan for forgotten accounts" },
+  { key: "brokerRemoval", label: "Data-broker removal" },
+  { key: "breachMonitoring", label: "Data-breach monitoring" },
+  { key: "gdprCcpaRequests", label: "GDPR / CCPA data requests" },
+  { key: "accountDeletionHelp", label: "Account & subscription deletion help" },
+  { key: "ongoingMonitoring", label: "Ongoing re-scans & alerts" },
+];
+
+/**
+ * High-intent broker pages linked from every comparison page, so the
+ * comparison cluster feeds the bottom-funnel removal cluster.
+ */
+export const RELATED_BROKERS = [
+  { slug: "truepeoplesearch", name: "TruePeopleSearch" },
+  { slug: "spokeo", name: "Spokeo" },
+  { slug: "radaris", name: "Radaris" },
+  { slug: "mylife", name: "MyLife" },
+  { slug: "whitepages", name: "Whitepages" },
+  { slug: "beenverified", name: "BeenVerified" },
+];
+
+/**
+ * The three FAQs rendered on every /vs/:competitor page. Shared so the
+ * visible copy, the FAQPage JSON-LD and the prerendered HTML always agree —
+ * mismatched schema and body text is a structured-data violation.
+ */
+export function compareFaqs(c: CompetitorData) {
+  return [
+    {
+      question: `Is Footprint Finder cheaper than ${c.name}?`,
+      answer: `Footprint Finder starts at ${FOOTPRINT_FINDER_PRICING.pro} for inbox account discovery and breach monitoring. Data-broker removal is on the ${FOOTPRINT_FINDER_PRICING.brokerTier} plan, which is the tier to compare against ${c.name} at ${c.annualPrice}. There is also a free tier, so you can see your exposure before paying anything.`,
+    },
+    {
+      question: `What does Footprint Finder do that ${c.name} doesn't?`,
+      answer: `Footprint Finder scans your Gmail or Outlook inbox to discover every account tied to your email — including forgotten subscriptions, old services, and shadow accounts. ${c.name} only removes you from data broker sites and cannot see your inbox-based footprint.`,
+    },
+    {
+      question: `Should I use ${c.name} or Footprint Finder?`,
+      answer: c.bestFor,
+    },
+  ];
+}
+
 export const COMPETITORS: Record<string, CompetitorData> = {
   deleteme: {
     slug: "deleteme",
@@ -75,7 +153,7 @@ export const COMPETITORS: Record<string, CompetitorData> = {
       "Scans your Gmail/Outlook inbox to find every account tied to your email",
       "Includes HaveIBeenPwned breach check + monthly rescans",
       "Covers data brokers AND mailing lists AND old accounts",
-      "$79/yr vs DeleteMe's $129 — and broader coverage",
+      "Same $129/yr as DeleteMe on our Complete plan — with inbox discovery on top",
     ],
     bestFor:
       "DeleteMe is best if you only care about US people-search sites. Footprint Finder is best if you want to clean up your entire digital footprint — accounts, breaches, and brokers.",
@@ -109,7 +187,7 @@ export const COMPETITORS: Record<string, CompetitorData> = {
     whyFf: [
       "Inbox scan reveals where you actually have accounts (Incogni can't see this)",
       "Breach monitoring + per-scan alerts when new exposures appear",
-      "Cheaper at $79/yr with broader coverage (brokers + accounts + breaches)",
+      "Broader coverage on Complete ($129/yr): brokers + accounts + breaches in one place",
       "Bring-your-own-data — we don't share your info with third parties",
     ],
     bestFor:
@@ -142,7 +220,7 @@ export const COMPETITORS: Record<string, CompetitorData> = {
       "Pricing gets expensive fast for full coverage",
     ],
     whyFf: [
-      "Single $79/yr plan = full coverage, no upsells",
+      "Two clear tiers instead of overlapping plans: $79/yr Pro, $129/yr Complete",
       "Inbox-driven discovery finds what Optery can't see",
       "Unified view of accounts + brokers + breaches in one dashboard",
       "Per-scan email alerts the moment something new shows up",
@@ -177,7 +255,7 @@ export const COMPETITORS: Record<string, CompetitorData> = {
       "Reputation features overlap with what's free in Google",
     ],
     whyFf: [
-      "Less than half the price ($79 vs $179)",
+      "Broker removal costs $129/yr on Complete vs Kanary's $179",
       "Inbox scan finds the accounts Kanary doesn't know exist",
       "Breach monitoring through HaveIBeenPwned partnership",
       "Real-time alerts when new exposures appear",
@@ -214,7 +292,7 @@ export const COMPETITORS: Record<string, CompetitorData> = {
     whyFf: [
       "Inbox scan reveals the accounts OneRep can't see",
       "HaveIBeenPwned breach monitoring + per-scan alerts",
-      "Cheaper at $79/yr with broader coverage",
+      "Inbox + breach monitoring from $79/yr; brokers included on Complete at $129/yr",
       "Bring-your-own-data — we don't resell your info",
     ],
     bestFor:
@@ -249,7 +327,7 @@ export const COMPETITORS: Record<string, CompetitorData> = {
     whyFf: [
       "Inbox scan finds every account tied to your email — Privacy Bee can't see this",
       "HaveIBeenPwned breach monitoring + per-scan alerts included",
-      "Less than half the price at $79/yr",
+      "Broker removal at $129/yr on Complete vs Privacy Bee's $197",
       "Accounts, brokers and breaches unified in one dashboard",
     ],
     bestFor:
@@ -319,7 +397,7 @@ export const COMPETITORS: Record<string, CompetitorData> = {
     whyFf: [
       "Purpose-built for footprint discovery and removal, not a bundle",
       "Inbox scan finds every account tied to your email",
-      "Far cheaper at $79/yr if removal is your goal",
+      "Cheaper if removal is your goal: $129/yr Complete vs Aura's $144 intro price",
       "Focused dashboard — no feature bloat",
     ],
     bestFor:
@@ -355,7 +433,7 @@ export const COMPETITORS: Record<string, CompetitorData> = {
       "Real broker removal (not just emails to companies)",
       "HaveIBeenPwned-powered breach checks",
       "Higher response rates with US/EU-specific templates",
-      "Single price, no upsells — $79/yr covers everything",
+      "Clear tiers, no drip upsells — $79/yr Pro, or $129/yr Complete with broker removal",
     ],
     bestFor:
       "Mine is fine for a one-time GDPR cleanup. Footprint Finder gives you broker removal + breach alerts + monthly rescans — a complete privacy ops layer rather than a one-shot tool.",
