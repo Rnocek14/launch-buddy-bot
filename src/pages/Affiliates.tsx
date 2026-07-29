@@ -36,6 +36,18 @@ export default function Affiliates() {
       "Promote Footprint Finder privacy protection and earn 40% recurring commission on every subscription. Join the affiliate program.",
     canonical: "https://footprintfinder.co/affiliates",
     ogType: "website",
+    // Mirrors the prerendered copy — without this, hydration strips the
+    // breadcrumb schema the prerenderer wrote and replaces it with nothing.
+    jsonLd: [
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          { "@type": "ListItem", position: 1, name: "Home", item: "https://footprintfinder.co/" },
+          { "@type": "ListItem", position: 2, name: "Affiliate programme", item: "https://footprintfinder.co/affiliates" },
+        ],
+      },
+    ],
   });
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -128,7 +140,7 @@ export default function Affiliates() {
               <span className="text-primary">promoting online privacy</span>
             </h1>
             <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto">
-              Privacy is a $4B market growing 20% per year. Join the Deleteist affiliate program and earn 40% recurring on every subscription you refer — for as long as they stay.
+              Join the Footprint Finder affiliate program and earn 40% recurring on every subscription you refer — for as long as they stay.
             </p>
             <div className="flex flex-wrap justify-center gap-3 pt-2">
               <Badge variant="outline" className="px-3 py-1">

@@ -120,6 +120,15 @@ const excludedRoutes = new Set([
   "/exposure-scan",
   "/scan",
   "/blog",
+  // 4. Routes that render nothing meaningful without a signed-in session or
+  //    live data, so they cannot be prerendered and have nothing to index.
+  //    Listing them was submitting empty shells to search engines; the
+  //    sitemap-coverage check in scripts/seo-audit.ts now catches this class
+  //    of mistake, and these are the legitimate answers to it.
+  "/who-has-my-data",
+  "/demo",
+  "/status",
+  "/extension",
 ]);
 
 const fallbackBrokerSlugs = ["411", "acxiom", "addresses", "advancedbackgroundchecks", "apollo", "beenverified", "checkpeople", "clustrmaps", "cocofinder", "cyberbackgroundchecks", "epsilon", "familytreenow", "fastpeoplesearch", "idtrue", "infotracer", "instantcheckmate", "intelius", "lead411", "lexisnexis", "mylife", "nuwber", "peekyou", "peoplebyname", "peoplefinders", "peoplelooker", "peoplesearchnow", "persopo", "publicrecords360", "publicrecordsnow", "radaris", "rocketreach", "searchpeoplefree", "smartbackgroundchecks", "spokeo", "thatsthem", "truepeoplesearch", "truthfinder", "usa-people-search", "usphonebook", "voterrecords", "whitepages", "xlek", "yellowpages", "zabasearch", "zoominfo"];

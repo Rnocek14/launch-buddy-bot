@@ -14,9 +14,15 @@ import {
   Mail,
   ExternalLink,
 } from "lucide-react";
-import { getBreachEvent } from "@/data/breachEvents";
+import {
+  getBreachEvent,
+  BREACHES_BY_DATE,
+  UNIVERSAL_BREACH_STEPS,
+} from "@/data/breachEvents";
 import { trackEvent } from "@/lib/analytics";
 import { useSEO } from "@/hooks/useSEO";
+
+const SITE_URL = "https://footprintfinder.co";
 
 export default function Breach() {
   const { slug = "" } = useParams();
@@ -25,6 +31,11 @@ export default function Breach() {
   const [email, setEmail] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
+  const canonical = breach ? `${SITE_URL}/breach/${breach.slug}` : `${SITE_URL}/breach`;
+
+  // Schema goes through useSEO rather than inline <script> tags so the
+  // prerendered copy in <head> is replaced on hydration instead of being
+  // duplicated by a second copy rendered into the body.
   useSEO({
     title: breach
       ? `Was your email in the ${breach.company} breach? Check free`
@@ -32,13 +43,55 @@ export default function Breach() {
     description: breach
       ? `The ${breach.company} breach (${breach.date}) exposed ${breach.affected}. Check in 60 seconds whether your email is affected — free, no signup.`
       : "Check instantly if your email was exposed in a known data breach.",
-    canonical: breach
-      ? `https://footprintfinder.co/breach/${breach.slug}`
-      : "https://footprintfinder.co/breach",
+    canonical,
     ogType: "article",
+    jsonLd: breach
+      ? [
+          {
+            "@context": "https://schema.org",
+            "@type": "NewsArticle",
+            headline: `Was your email in the ${breach.company} breach?`,
+            datePublished: breach.isoDate,
+            description: breach.summary,
+            mainEntityOfPage: canonical,
+            author: { "@type": "Organization", name: "Footprint Finder" },
+            publisher: { "@type": "Organization", name: "Footprint Finder" },
+          },
+          {
+            "@context": "https://schema.org",
+            "@type": "FAQPage",
+            mainEntity: [
+              ...(breach.faqs ?? []).map((f) => ({
+                "@type": "Question",
+                name: f.question,
+                acceptedAnswer: { "@type": "Answer", text: f.answer },
+              })),
+              {
+                "@type": "Question",
+                name: `What was exposed in the ${breach.company} breach?`,
+                acceptedAnswer: {
+                  "@type": "Answer",
+                  text: `${breach.summary} Confirmed data classes include: ${breach.whatLeaked.join(", ")}.`,
+                },
+              },
+            ],
+          },
+          {
+            "@context": "https://schema.org",
+            "@type": "BreadcrumbList",
+            itemListElement: [
+              { "@type": "ListItem", position: 1, name: "Home", item: `${SITE_URL}/` },
+              { "@type": "ListItem", position: 2, name: "Data breaches", item: `${SITE_URL}/breach` },
+              { "@type": "ListItem", position: 3, name: breach.company, item: canonical },
+            ],
+          },
+        ]
+      : undefined,
   });
 
   if (!breach) return <Navigate to="/breach" replace />;
+
+  const others = BREACHES_BY_DATE.filter((b) => b.slug !== breach.slug).slice(0, 6);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,44 +101,9 @@ export default function Breach() {
     navigate(`/free-scan?email=${encodeURIComponent(email)}&src=breach_${breach.slug}`);
   };
 
-  const newsSchema = {
-    "@context": "https://schema.org",
-    "@type": "NewsArticle",
-    headline: `Was your email in the ${breach.company} breach?`,
-    datePublished: breach.isoDate,
-    description: breach.summary,
-    author: { "@type": "Organization", name: "Footprint Finder" },
-    publisher: { "@type": "Organization", name: "Footprint Finder" },
-  };
-
-  const faqSchema = {
-    "@context": "https://schema.org",
-    "@type": "FAQPage",
-    mainEntity: [
-      {
-        "@type": "Question",
-        name: `What was exposed in the ${breach.company} breach?`,
-        acceptedAnswer: {
-          "@type": "Answer",
-          text: `${breach.summary} Confirmed data classes include: ${breach.whatLeaked.join(", ")}.`,
-        },
-      },
-      {
-        "@type": "Question",
-        name: `How do I know if I was affected by the ${breach.company} breach?`,
-        acceptedAnswer: {
-          "@type": "Answer",
-          text: "Enter your email on this page to run a free 60-second scan against known breach databases. No signup or password required.",
-        },
-      },
-    ],
-  };
-
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(newsSchema) }} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
       <main className="pt-24 pb-16 px-4">
         <article className="container max-w-3xl mx-auto">
           <Link to="/breach" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-6">
@@ -141,6 +159,17 @@ export default function Breach() {
             </CardContent>
           </Card>
 
+          {breach.whatHappened && (
+            <section className="mb-10">
+              <h2 className="text-2xl font-semibold mb-4">What happened</h2>
+              <div className="space-y-4">
+                {breach.whatHappened.map((para, i) => (
+                  <p key={i} className="text-muted-foreground leading-relaxed">{para}</p>
+                ))}
+              </div>
+            </section>
+          )}
+
           <section className="mb-10">
             <h2 className="text-2xl font-semibold mb-4">What was exposed</h2>
             <ul className="space-y-2 text-muted-foreground">
@@ -149,6 +178,20 @@ export default function Breach() {
               ))}
             </ul>
           </section>
+
+          {/* The reason these pages beat a news article: a news story is
+              written for readers who did not yet know it happened, and most
+              people arrive here years later. */}
+          {breach.stillMatters && (
+            <Card className="mb-10 border-accent/40 bg-accent/5">
+              <CardContent className="p-6">
+                <h2 className="text-xl font-bold mb-3">
+                  Why this still matters {breach.settlement ? "today" : "now"}
+                </h2>
+                <p className="leading-relaxed">{breach.stillMatters}</p>
+              </CardContent>
+            </Card>
+          )}
 
           <section className="mb-10">
             <h2 className="text-2xl font-semibold mb-4">What to do now</h2>
@@ -172,6 +215,95 @@ export default function Breach() {
                 {breach.source.label} <ExternalLink className="w-4 h-4" />
               </a>
             )}
+          </section>
+
+          {breach.settlement && (
+            <section className="mb-10">
+              <h2 className="text-2xl font-semibold mb-3">Settlement history</h2>
+              <p className="text-muted-foreground leading-relaxed">{breach.settlement}</p>
+              <p className="text-sm text-muted-foreground mt-3 italic">
+                Claim windows for past settlements have closed. Anyone
+                contacting you offering to file a claim on a breach this old is
+                running a scam — that pitch is itself a common fraud.
+              </p>
+            </section>
+          )}
+
+          {breach.faqs && breach.faqs.length > 0 && (
+            <section className="mb-10">
+              <h2 className="text-2xl font-semibold mb-4">
+                Frequently asked questions
+              </h2>
+              <div className="space-y-4">
+                {breach.faqs.map((f) => (
+                  <Card key={f.question}>
+                    <CardContent className="p-5">
+                      <h3 className="font-semibold mb-2">{f.question}</h3>
+                      <p className="text-sm text-muted-foreground leading-relaxed">{f.answer}</p>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </section>
+          )}
+
+          <section className="mb-10">
+            <h2 className="text-2xl font-semibold mb-2">
+              What to do after any breach
+            </h2>
+            <p className="text-sm text-muted-foreground mb-5">
+              These apply regardless of which breach brought you here, and the
+              first one is free and permanent.
+            </p>
+            <ol className="space-y-5">
+              {UNIVERSAL_BREACH_STEPS.map((s, i) => (
+                <li key={s.title} className="flex gap-4">
+                  <span className="flex-shrink-0 w-7 h-7 rounded-full bg-primary/10 text-primary font-semibold text-sm flex items-center justify-center">
+                    {i + 1}
+                  </span>
+                  <div>
+                    <h3 className="font-semibold mb-1">{s.title}</h3>
+                    <p className="text-sm text-muted-foreground leading-relaxed">{s.body}</p>
+                  </div>
+                </li>
+              ))}
+            </ol>
+          </section>
+
+          {others.length > 0 && (
+            <section className="mb-10">
+              <h2 className="text-lg font-semibold mb-4">Other major breaches</h2>
+              <div className="flex flex-wrap gap-2">
+                {others.map((b) => (
+                  <Link key={b.slug} to={`/breach/${b.slug}`}>
+                    <Button variant="outline" size="sm">
+                      {b.company} ({b.date})
+                    </Button>
+                  </Link>
+                ))}
+              </div>
+            </section>
+          )}
+
+          <section className="mb-10">
+            <h2 className="text-lg font-semibold mb-4">Reduce your exposure</h2>
+            <div className="flex flex-wrap gap-2">
+              <Link to="/plan">
+                <Button variant="outline" size="sm">Build a free removal plan</Button>
+              </Link>
+              <Link to="/what-they-know">
+                <Button variant="outline" size="sm">What big tech knows about you</Button>
+              </Link>
+              <Link to="/remove-from">
+                <Button variant="outline" size="sm">Data-broker opt-out guides</Button>
+              </Link>
+              <Link to="/privacy-rights">
+                <Button variant="outline" size="sm">Your rights by state</Button>
+              </Link>
+              <Link to="/delete">
+                <Button variant="outline" size="sm">Delete unused accounts</Button>
+              </Link>
+            </div>
           </section>
 
           <Card className="border-primary/30 bg-gradient-to-r from-primary/5 to-accent/5">

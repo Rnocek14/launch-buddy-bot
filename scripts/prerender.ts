@@ -51,6 +51,11 @@ import { DATA_TYPE_GUIDES } from "../src/data/dataTypes";
 import { PERSONA_GUIDES } from "../src/data/personas";
 import { COMPANY_DATA_GUIDES } from "../src/data/companyData";
 import {
+  BREACHES_BY_DATE,
+  UNIVERSAL_BREACH_STEPS,
+  SEVERITY_LABEL,
+} from "../src/data/breachEvents";
+import {
   BEST_SERVICES_DESCRIPTION,
   BEST_SERVICES_INTRO,
   BEST_SERVICES_RANKING,
@@ -1117,6 +1122,170 @@ function companyDataIndexRoute(): Route {
   };
 }
 
+/**
+ * /breach/:slug
+ *
+ * These pages were in the sitemap but were never prerendered, so every URL we
+ * submitted served an empty <div id="root"> to a crawler. Breach queries are
+ * some of the highest-volume in this category and they were being thrown away.
+ */
+function breachRoute(b: (typeof BREACHES_BY_DATE)[number]): Route {
+  const url = `${BASE_URL}/breach/${b.slug}`;
+  const trail = [
+    { name: "Home", path: "/" },
+    { name: "Data breaches", path: "/breach" },
+    { name: b.company, path: `/breach/${b.slug}` },
+  ];
+  const others = BREACHES_BY_DATE.filter((o) => o.slug !== b.slug).slice(0, 6);
+  return {
+    path: `/breach/${b.slug}`,
+    title: `Was your email in the ${b.company} breach? Check free`,
+    description: `The ${b.company} breach (${b.date}) exposed ${b.affected}. Check in 60 seconds whether your email is affected — free, no signup.`,
+    ogType: "article",
+    jsonLd: [
+      {
+        "@context": "https://schema.org",
+        "@type": "NewsArticle",
+        headline: `Was your email in the ${b.company} breach?`,
+        datePublished: b.isoDate,
+        description: b.summary,
+        mainEntityOfPage: url,
+        author: { "@type": "Organization", name: "Footprint Finder" },
+        publisher: { "@type": "Organization", name: "Footprint Finder" },
+      },
+      faqSchema([
+        ...(b.faqs ?? []),
+        {
+          question: `What was exposed in the ${b.company} breach?`,
+          answer: `${b.summary} Confirmed data classes include: ${b.whatLeaked.join(", ")}.`,
+        },
+      ]),
+      breadcrumbSchema(trail),
+    ],
+    body: `<article>${breadcrumbNav(trail)}<h1>Was your email in the ${escHtml(
+      b.company,
+    )} breach?</h1>${p(`${b.date} · ${b.affected}`)}${p(b.summary)}${
+      b.whatHappened ? `<h2>What happened</h2>${b.whatHappened.map(p).join("")}` : ""
+    }<h2>What was exposed</h2>${ul(b.whatLeaked)}${
+      b.stillMatters ? `<h2>Why this still matters</h2>${p(b.stillMatters)}` : ""
+    }<h2>What to do now</h2>${ul(b.whatToDo)}${
+      b.settlement
+        ? `<h2>Settlement history</h2>${p(b.settlement)}${p(
+            "Claim windows for past settlements have closed. Anyone contacting you offering to file a claim on a breach this old is running a scam — that pitch is itself a common fraud.",
+          )}`
+        : ""
+    }${b.faqs ? faqBlock(b.faqs) : ""}<h2>What to do after any breach</h2><ol>${UNIVERSAL_BREACH_STEPS.map(
+      (s) => `<li><strong>${escHtml(s.title)}.</strong> ${escHtml(s.body)}</li>`,
+    ).join("")}</ol>${relatedLinksBlock(
+      "Other major breaches",
+      others.map((o) => ({
+        href: `/breach/${o.slug}`,
+        label: `${o.company} breach (${o.date})`,
+      })),
+    )}${relatedLinksBlock("Reduce your exposure", [
+      { href: "/plan", label: "Build a free removal plan" },
+      { href: "/what-they-know", label: "What big tech knows about you" },
+      { href: "/remove-from", label: "Data-broker opt-out guides" },
+      { href: "/privacy-rights", label: "Your deletion rights by state" },
+      { href: "/delete", label: "Delete unused accounts" },
+    ])}${siteLinksBlock()}</article>`,
+  };
+}
+
+function breachIndexRoute(): Route {
+  const trail = [
+    { name: "Home", path: "/" },
+    { name: "Data breaches", path: "/breach" },
+  ];
+  return {
+    path: "/breach",
+    title: "Major Data Breaches — Check If Your Email Was Exposed",
+    description:
+      "Equifax, Yahoo, Marriott, T-Mobile, 23andMe, Change Healthcare and more — what each breach exposed, why it still matters, and what to do about it now.",
+    ogType: "website",
+    jsonLd: [
+      {
+        "@context": "https://schema.org",
+        "@type": "ItemList",
+        name: "Major data breaches and what to do about them",
+        itemListElement: BREACHES_BY_DATE.map((b, i) => ({
+          "@type": "ListItem",
+          position: i + 1,
+          name: `${b.company} breach (${b.date})`,
+          url: `${BASE_URL}/breach/${b.slug}`,
+        })),
+      },
+      breadcrumbSchema(trail),
+    ],
+    body: `<main>${breadcrumbNav(trail)}<h1>Major data breaches</h1>${p(
+      "News coverage of a breach lasts about four days. The exposure lasts indefinitely — a Social Security number leaked in 2015 is still valid today. Each page below covers what was actually exposed, what it means for you now rather than on the day it broke, and the specific step that matches that kind of data.",
+    )}${linkList(
+      BREACHES_BY_DATE.map((b) => ({
+        href: `/breach/${b.slug}`,
+        label: `${b.company} breach (${b.date}) — ${b.affected}${
+          b.severity ? `, ${SEVERITY_LABEL[b.severity].toLowerCase()}` : ""
+        }`,
+      })),
+    )}<h2>What to do after any breach</h2>${p(
+      "Ordered deliberately. The free, permanent control comes first; the thing we sell comes last.",
+    )}<ol>${UNIVERSAL_BREACH_STEPS.map(
+      (s) => `<li><strong>${escHtml(s.title)}.</strong> ${escHtml(s.body)}</li>`,
+    ).join("")}</ol>${relatedLinksBlock("Also useful", [
+      { href: "/plan", label: "Build a free removal plan" },
+      { href: "/what-they-know", label: "What big tech knows about you" },
+      { href: "/remove-from", label: "Data-broker opt-out guides" },
+      { href: "/privacy-rights", label: "Your deletion rights by state" },
+      { href: "/delete", label: "Delete unused accounts" },
+    ])}${siteLinksBlock()}</main>`,
+  };
+}
+
+/**
+ * /affiliates — prerendered because affiliate recruitment is itself a search
+ * channel ("data removal affiliate program" is low-competition and the people
+ * searching it own audiences we cannot reach directly). The page's own form
+ * still requires JavaScript; this is the crawlable version of the offer.
+ */
+function affiliatesRoute(): Route {
+  const trail = [
+    { name: "Home", path: "/" },
+    { name: "Affiliate programme", path: "/affiliates" },
+  ];
+  return {
+    path: "/affiliates",
+    title: "Affiliate Program — Earn 40% Recurring | Footprint Finder",
+    description:
+      "Promote Footprint Finder privacy protection and earn 40% recurring commission on every subscription. 90-day cookie, monthly payouts.",
+    ogType: "website",
+    jsonLd: [breadcrumbSchema(trail)],
+    body: `<main>${breadcrumbNav(trail)}<h1>Earn recurring revenue promoting online privacy</h1>${p(
+      "Join the Footprint Finder affiliate program and earn 40% recurring commission on every subscription you refer — for as long as they stay subscribed, not just on the first payment.",
+    )}<h2>Programme terms</h2>${ul([
+      "40% recurring commission on every subscription, for the life of the subscription",
+      "90-day cookie window",
+      "Monthly payouts",
+      "Free tools to promote: a free exposure scan, free data-broker opt-out guides and a free removal plan builder, all of which convert without a paywall in the way",
+    ])}<h2>What you would be promoting</h2>${p(
+      `Footprint Finder scans an inbox to find the accounts, breaches and data-broker listings tied to an email address, then helps remove them. Pro is ${FOOTPRINT_FINDER_PRICING.pro}, Complete is ${FOOTPRINT_FINDER_PRICING.complete} and adds data-broker removal across ${FOOTPRINT_FINDER_BROKER_COVERAGE}, and Family covers up to five people at ${FOOTPRINT_FINDER_PRICING.family}.`,
+    )}${p(
+      "The unusual part of the pitch is the free layer. Most of this site is genuinely free and stays free — opt-out guides for every major broker, state-by-state rights, a plan builder that needs no email address. That gives you something to link to that is useful on its own, which converts better than sending people straight at a pricing page.",
+    )}<h2>Who this works for</h2>${ul([
+      "Personal finance and security newsletters",
+      "Privacy, OSINT and infosec audiences",
+      "Creators covering identity theft, scams and elder fraud",
+      "Comparison and review sites in the data-removal category",
+    ])}${p(
+      "We publish honest comparisons against DeleteMe, Incogni, Optery and the rest, including the categories where they beat us. If you write reviews, you can link to those rather than writing the caveats yourself.",
+    )}${relatedLinksBlock("Look at what you would be linking to", [
+      { href: "/free-scan", label: "The free exposure scan" },
+      { href: "/best-data-removal-services", label: "Our comparison of every major service, including where we lose" },
+      { href: "/plan", label: "The free removal plan builder" },
+      { href: "/remove-from", label: "Free data-broker opt-out guides" },
+      { href: "/pricing", label: "Pricing" },
+    ])}${siteLinksBlock()}</main>`,
+  };
+}
+
 function planRoute(): Route {
   const trail = [
     { name: "Home", path: "/" },
@@ -1209,7 +1378,7 @@ function staticRoutes(): Route[] {
         { href: "/what-they-know", label: "What Google, Facebook, Amazon and TikTok know about you — and how to get a copy" },
         { href: "/guides", label: "Privacy and data removal guides" },
         { href: "/delete", label: "How to delete your online accounts" },
-        { href: "/breach", label: "Recent data breaches and what to do" },
+        { href: "/breach", label: "Major data breaches — Equifax, Yahoo, T-Mobile, 23andMe, Change Healthcare and what to do now" },
         { href: "/parents", label: "Protect a parent from scam calls" },
         { href: "/enterprise", label: "Shadow IT audits for businesses" },
         { href: "/pricing", label: "Pricing" },
@@ -1474,6 +1643,9 @@ async function main() {
     ...PERSONA_GUIDES.map(personaRoute),
     companyDataIndexRoute(),
     ...COMPANY_DATA_GUIDES.map(companyDataRoute),
+    breachIndexRoute(),
+    ...BREACHES_BY_DATE.map(breachRoute),
+    affiliatesRoute(),
     planRoute(),
   ];
 

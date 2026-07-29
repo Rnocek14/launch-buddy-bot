@@ -32,7 +32,7 @@ Data-broker removal is a Complete-tier feature. Pro does not include it.
 - [What Big Tech Knows About You](/what-they-know): What Google, Facebook, Amazon, TikTok, Apple, LinkedIn, Instagram, Microsoft, Uber and Spotify each hold on you, how to download your own copy from each company's official export tool, how to limit future collection, and what each one retains after account deletion. Distinct from broker removal: this covers accounts the user opened themselves, which no data-broker removal service examines.
 - [Privacy Guides](/guides): How-to guides for removing your name, address, phone number, email and images from the internet and from Google.
 - [Account Deletion Guides](/delete): Step-by-step instructions for permanently deleting accounts on Facebook, Instagram, Amazon, LinkedIn, Spotify and more.
-- [Breach Pages](/breach): Plain-English explainers for major data breaches and what to do if you were affected.
+- [Breach Pages](/breach): Plain-English explainers for 16 major data breaches — Equifax, Yahoo, Marriott/Starwood, T-Mobile, Capital One, Facebook, LinkedIn, 23andMe, MOVEit, Change Healthcare, AT&T, Ticketmaster, Anthem, Adobe, Uber, MyFitnessPal, National Public Data. Each covers what happened, the confirmed data classes exposed, why it still matters years later rather than only on the day it broke, settlement history where applicable, and the response that matches that specific kind of data. Settlement claim windows are described in the past tense because they have closed.
 - [Browser Extension](/extension): Chrome extension for in-context cleanup.
 - [Help](/help): FAQ explaining server-side metadata scanning.
 - [Demo](/demo): Interactive demo with sample data.

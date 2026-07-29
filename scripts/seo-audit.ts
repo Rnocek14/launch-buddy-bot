@@ -88,6 +88,9 @@ const dynamicRoutes = routePatterns
   .map((r) => new RegExp("^" + r.replace(/:[^/]+/g, "[^/]+") + "$"));
 
 const pages = collectPages(DIST);
+/** dist/foo/index.html -> "/foo"; dist/index.html -> "/" */
+const routeOf = (file: string) =>
+  "/" + relative(DIST, file).replace(/index\.html$/, "").replace(/\/$/, "");
 const titles = new Map<string, string[]>();
 const descs = new Map<string, string[]>();
 const brokenLinks = new Map<string, Set<string>>();
@@ -95,8 +98,7 @@ const wordCounts: number[] = [];
 
 for (const file of pages) {
   const html = readFileSync(file, "utf8");
-  const route =
-    "/" + relative(DIST, file).replace(/index\.html$/, "").replace(/\/$/, "");
+  const route = routeOf(file);
   const start = html.indexOf('<div id="root">');
   const end = html.indexOf("</body>");
   const body = start >= 0 && end > start ? html.slice(start, end) : "";
@@ -176,6 +178,38 @@ for (const [desc, routes] of descs)
     add("error", routes.join(", "), `duplicate description: "${desc.slice(0, 60)}"`);
 for (const [href, from] of brokenLinks)
   add("error", [...from][0], `link to non-existent route ${href}`);
+
+/**
+ * Every URL we submit in the sitemap must have prerendered HTML behind it.
+ *
+ * This check exists because /breach and /breach/:slug sat in the sitemap for
+ * months with no prerender route: the URLs were submitted to search engines
+ * and served an empty <div id="root"> to anything that did not run JavaScript.
+ * Nothing else in the pipeline noticed, because each half was individually
+ * correct — the sitemap listed real routes, and the prerenderer rendered
+ * everything it was asked to. Only the join between them was wrong.
+ *
+ * Two exemptions, both legitimate:
+ *   - /remove-from/* comes from Supabase, which is unreachable from sandboxes
+ *     and CI. Those pages exist in a production build.
+ *   - /results/* are user-generated share links, deliberately dynamic.
+ */
+const SITEMAP_PRERENDER_EXEMPT = [/^\/remove-from\//, /^\/results\//];
+
+const sitemapPath = join(ROOT, "public/sitemap.xml");
+if (existsSync(sitemapPath)) {
+  const sitemap = readFileSync(sitemapPath, "utf8");
+  const locs = Array.from(
+    sitemap.matchAll(/<loc>https:\/\/footprintfinder\.co(\/[^<]*)<\/loc>/g),
+  ).map((m) => m[1].replace(/\/$/, "") || "/");
+  const rendered = new Set(pages.map(routeOf));
+  const missing = locs.filter(
+    (loc) =>
+      !rendered.has(loc) && !SITEMAP_PRERENDER_EXEMPT.some((re) => re.test(loc)),
+  );
+  for (const loc of missing)
+    add("error", loc, "in sitemap.xml but has no prerendered HTML");
+}
 
 wordCounts.sort((a, b) => a - b);
 const median = wordCounts[Math.floor(wordCounts.length / 2)];
