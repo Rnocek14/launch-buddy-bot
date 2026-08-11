@@ -4,20 +4,38 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { ArrowRight, Mail, CheckCircle2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { trackEvent } from "@/lib/analytics";
+import { captureLead, LEAD_CONSENT_COPY } from "@/lib/leadCapture";
 
 interface SeoEmailCaptureProps {
   brokerSlug: string;
-  brokerName: string;
+  /** Named broker, when this sits on a /remove-from/:slug page. */
+  brokerName?: string;
+  /** Event name, so guide pages are distinguishable from broker pages. */
+  event?: string;
+  /** Lead-capture source label stored with a consenting address. */
+  source?: string;
 }
 
 /**
  * Inline email capture for SEO landing pages.
  * Sends user straight into the free scan with their email pre-filled.
- * No password, no friction — just exposure report → conversion.
+ *
+ * `brokerName` is optional because this is used on two different page types.
+ * Guide pages previously passed the literal string "the internet" to fill it,
+ * which rendered as "the internet is just one of 50+ sites that publish your
+ * info" — so the copy is now chosen by whether a broker was actually named.
  */
-export function SeoEmailCapture({ brokerSlug, brokerName }: SeoEmailCaptureProps) {
+export function SeoEmailCapture({
+  brokerSlug,
+  brokerName,
+  event = "seo_broker_email_capture",
+  source = "seo_broker",
+}: SeoEmailCaptureProps) {
   const [email, setEmail] = useState("");
+  const [consent, setConsent] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const navigate = useNavigate();
 
@@ -25,8 +43,15 @@ export function SeoEmailCapture({ brokerSlug, brokerName }: SeoEmailCaptureProps
     e.preventDefault();
     if (!email || !/^\S+@\S+\.\S+$/.test(email)) return;
     setSubmitting(true);
-    trackEvent("seo_broker_email_capture", {
-      broker_slug: brokerSlug,
+    trackEvent(event, { broker_slug: brokerSlug });
+    // This form hands off to /free-scan, which auto-runs and so never shows
+    // its own consent box. Without the checkbox below, every lead arriving
+    // through an SEO page would bypass the opt-in entirely.
+    void captureLead({
+      email,
+      consented: consent,
+      source,
+      sourceDetail: brokerSlug,
     });
     navigate(`/free-scan?email=${encodeURIComponent(email)}&src=seo_${brokerSlug}`);
   };
@@ -43,8 +68,18 @@ export function SeoEmailCapture({ brokerSlug, brokerName }: SeoEmailCaptureProps
               See where else you're exposed — in 60 seconds
             </h3>
             <p className="text-sm text-muted-foreground">
-              {brokerName} is just <strong>one of 50+ sites</strong> that publish your info.
-              Enter your email and we'll show you the rest — free.
+              {brokerName ? (
+                <>
+                  {brokerName} is just <strong>one of 50+ sites</strong> that publish
+                  your info. Enter your email and we'll show you the rest — free.
+                </>
+              ) : (
+                <>
+                  Your details are published across <strong>50+ data-broker sites</strong>,
+                  and most people can only name one or two. Enter your email and we'll
+                  show you which ones — free.
+                </>
+              )}
             </p>
           </div>
         </div>
@@ -70,6 +105,21 @@ export function SeoEmailCapture({ brokerSlug, brokerName }: SeoEmailCaptureProps
             <ArrowRight className="w-4 h-4" />
           </Button>
         </form>
+
+        <div className="flex items-start gap-2.5 mb-3">
+          <Checkbox
+            id={`seo-consent-${brokerSlug}`}
+            checked={consent}
+            onCheckedChange={(v) => setConsent(v === true)}
+            className="mt-0.5"
+          />
+          <Label
+            htmlFor={`seo-consent-${brokerSlug}`}
+            className="text-xs font-normal text-muted-foreground leading-relaxed cursor-pointer"
+          >
+            {LEAD_CONSENT_COPY}
+          </Label>
+        </div>
 
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
           <span className="flex items-center gap-1">

@@ -88,7 +88,11 @@ export default function Guide() {
           </header>
 
           <div className="mb-10">
-            <SeoEmailCapture brokerSlug={guide.slug} brokerName="the internet" />
+            <SeoEmailCapture
+              brokerSlug={guide.slug}
+              event="seo_guide_email_capture"
+              source="seo_guide"
+            />
           </div>
 
           {guide.sections.map((section, i) => (
