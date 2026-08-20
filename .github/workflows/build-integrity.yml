@@ -1,0 +1,88 @@
+name: Build Integrity
+
+# Catches the failure mode that silently breaks every deploy host:
+# Lovable's pipeline writes bun.lock and never touches package-lock.json, so the
+# npm lockfile drifts out of sync with package.json. Netlify, Vercel and the
+# golden10 workflow all install with `npm ci`, which fails hard on drift
+# ("npm error Missing: <pkg> from lock file") — but nothing catches it until a
+# deploy dies at the install step.
+#
+# This job fails fast on the PR instead.
+
+on:
+  pull_request:
+    paths:
+      - 'package.json'
+      - 'package-lock.json'
+      - 'src/**'
+      - 'tsconfig*.json'
+      - 'vite.config.ts'
+      - '.github/workflows/build-integrity.yml'
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # prebuild/postbuild shell out to `bun` (scripts/generate-sitemap.ts,
+      # scripts/prerender.ts), so a faithful `npm run build` needs it on PATH.
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install (npm ci — fails on lockfile drift)
+        run: npm ci
+
+      # Belt and braces: npm ci already rejects a lockfile that cannot satisfy
+      # package.json, but this names the problem explicitly when it happens.
+      - name: Assert lockfile is in sync with package.json
+        run: |
+          if ! npm ls --package-lock-only --all >/dev/null 2>&1; then
+            echo "::error::package-lock.json is out of sync with package.json."
+            echo "Regenerate it and commit the result:"
+            echo "    rm package-lock.json && npm install"
+            npm ls --package-lock-only --all 2>&1 | head -30
+            exit 1
+          fi
+          echo "package-lock.json resolves cleanly."
+
+      # `tsc -b`, not `tsc --noEmit`: the root tsconfig.json is "files": [] plus
+      # project references, so --noEmit exits 0 without checking anything.
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build (full prebuild -> vite -> postbuild, as the hosts run it)
+        run: npm run build
+
+      - name: Assert build output exists
+        run: |
+          test -f dist/index.html || { echo "::error::dist/index.html missing"; exit 1; }
+          echo "dist/ built: $(find dist -type f | wc -l) files, $(find dist -name '*.html' | wc -l) HTML pages"
+
+      # scripts/prerender.ts catches a failed broker fetch, logs a warning and
+      # still exits 0 — so a Supabase blip at build time silently ships a build
+      # with the whole /remove-broker/* programmatic-SEO surface missing.
+      # CI has no Supabase secrets, so 0 brokers is expected here and must not
+      # fail the job; on a real deploy host it is a red flag worth seeing.
+      - name: Warn if broker pages were skipped
+        if: always()
+        run: |
+          BROKERS=$(find dist -path '*remove-broker*' -name '*.html' 2>/dev/null | wc -l)
+          echo "broker pages prerendered: $BROKERS"
+          if [ "$BROKERS" -eq 0 ]; then
+            echo "::warning::No broker pages were prerendered. Expected in CI (no Supabase \
+          credentials). If you see this on a production deploy, the build silently dropped the \
+          programmatic-SEO pages — check the [prerender] log line for a broker fetch error."
+          fi
