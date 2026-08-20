@@ -174,10 +174,12 @@ async function getBrokerSlugs() {
 
     if (error) throw error;
     const slugs = (data ?? []).map((row) => row.slug).filter(Boolean);
-    return slugs.length ? slugs : fallbackBrokerSlugs;
+    if (slugs.length) return { slugs, degraded: false };
+    console.warn("data_brokers returned no rows; using fallback broker slugs for sitemap.");
+    return { slugs: fallbackBrokerSlugs, degraded: true };
   } catch (error) {
     console.warn("Using fallback broker slugs for sitemap:", error instanceof Error ? error.message : error);
-    return fallbackBrokerSlugs;
+    return { slugs: fallbackBrokerSlugs, degraded: true };
   }
 }
 
@@ -189,10 +191,25 @@ async function getPublicResultEntries() {
     const { data, error } = await supabase.rpc("get_public_result_sitemap_entries");
 
     if (error) throw error;
-    return (data ?? []) as Array<{ share_id: string; created_at: string | null }>;
+    return {
+      entries: (data ?? []) as Array<{ share_id: string; created_at: string | null }>,
+      degraded: false,
+    };
   } catch (error) {
     console.warn("Skipping public result sitemap entries:", error instanceof Error ? error.message : error);
-    return [];
+    return { entries: [] as Array<{ share_id: string; created_at: string | null }>, degraded: true };
+  }
+}
+
+/**
+ * How many <url> entries the sitemap currently on disk contains.
+ * Returns 0 when there is no readable sitemap yet (first build).
+ */
+function existingEntryCount() {
+  try {
+    return (readFileSync(resolve("public/sitemap.xml"), "utf8").match(/<loc>/g) ?? []).length;
+  } catch {
+    return 0;
   }
 }
 
@@ -308,11 +325,15 @@ async function main() {
     addEntry(entries, { path: `/delete/${slug}`, lastmod: deleteLastmod, changefreq: "monthly", priority: "0.75" });
   }
 
-  for (const slug of await getBrokerSlugs()) {
+  const brokers = await getBrokerSlugs();
+  const publicResults = await getPublicResultEntries();
+  const degraded = brokers.degraded || publicResults.degraded;
+
+  for (const slug of brokers.slugs) {
     addEntry(entries, { path: `/remove-from/${slug}`, lastmod: brokerLastmod, changefreq: "monthly", priority: "0.75" });
   }
 
-  for (const result of await getPublicResultEntries()) {
+  for (const result of publicResults.entries) {
     addEntry(entries, {
       path: `/results/${result.share_id}`,
       lastmod: result.created_at?.slice(0, 10),
@@ -326,8 +347,26 @@ async function main() {
     return priorityDiff || a.path.localeCompare(b.path);
   });
 
+  // Fail closed on data loss. public/sitemap.xml is a TRACKED file, so a build
+  // that runs while Supabase is unreachable would otherwise overwrite it from
+  // the hardcoded fallback list — which is smaller than the live table (45 vs
+  // 77 brokers at time of writing) — and `git add -A` would quietly commit a
+  // sitemap missing dozens of indexed pages. Never shrink the sitemap on the
+  // strength of degraded data: keep what is on disk and say so loudly.
+  const existing = existingEntryCount();
+  if (degraded && existing > ordered.length) {
+    console.warn(
+      `[sitemap] REFUSING TO OVERWRITE: a data source was unavailable, and the ` +
+        `regenerated sitemap has ${ordered.length} entries vs ${existing} already on disk. ` +
+        `Keeping the existing public/sitemap.xml. Re-run with Supabase reachable to refresh it.`,
+    );
+    return;
+  }
+
   writeFileSync(resolve("public/sitemap.xml"), generateSitemap(ordered));
-  console.log(`sitemap.xml written (${ordered.length} entries)`);
+  console.log(
+    `sitemap.xml written (${ordered.length} entries)${degraded ? " — WARNING: generated from degraded/fallback data" : ""}`,
+  );
 }
 
 void main();

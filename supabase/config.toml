@@ -111,6 +111,14 @@ verify_jwt = true
 [functions.free-breach-check]
 verify_jwt = false
 
+# Public entry point of the free scan, same as free-breach-check above. Both are
+# invoked from the anonymous FreeScan flow (src/pages/FreeScan.tsx and
+# src/components/free-scan/LiveBrokerCheck.tsx), which has no auth gate, so this
+# must not require a JWT — otherwise logged-out visitors get a 401 at the top of
+# the paid funnel, indistinguishable from a missing SERP_API_KEY.
+[functions.free-broker-check]
+verify_jwt = false
+
 [functions.send-exposure-alert]
 verify_jwt = false
 
