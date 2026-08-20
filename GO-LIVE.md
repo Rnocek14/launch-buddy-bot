@@ -154,3 +154,38 @@ Also note `prebuild`/`postbuild` shell out to `bun` (`scripts/generate-sitemap.t
 `scripts/prerender.ts`). Netlify and Vercel images don't ship `bun` by default —
 install it in the build command, or those steps silently skip and you lose the
 prerendered SEO pages that `postbuild` generates.
+
+### The prerender fails open — watch for it 🟠
+
+`scripts/prerender.ts` fetches the broker list from Supabase to generate the
+`/remove-broker/*` pages. If that fetch fails it logs
+
+```
+[prerender] Could not fetch brokers, skipping broker pages: …
+[prerender] wrote 133 static HTML pages (0 brokers).
+```
+
+…and **exits 0**. The deploy goes green while shipping a build with your entire
+programmatic-SEO surface missing — the pages that bring in organic traffic. A
+transient Supabase blip during a build is enough to cause it, and nothing alerts
+you.
+
+After any production deploy, confirm the broker count in the build log is
+non-zero, or spot-check that a `/remove-broker/<slug>` URL returns prerendered
+HTML rather than the SPA shell. The `Build Integrity` workflow surfaces the same
+count on every PR (as a warning — CI legitimately has no Supabase credentials).
+
+**The same failure hits a tracked file.** `prebuild` runs
+`scripts/generate-sitemap.ts`, which rewrites `public/sitemap.xml` — and that
+file *is* committed to the repo. Run `npm run build` anywhere the broker fetch
+fails and the sitemap is silently rewritten without its ~77 `/remove-from/*`
+URLs. `git add -A` after a local build will then commit the gutted sitemap.
+
+Before committing after a build, always check:
+
+```bash
+git diff --stat public/sitemap.xml     # expect: no change
+grep -c 'remove-from/' public/sitemap.xml   # expect: ~77, never 0
+```
+
+If it shrank, `git checkout main -- public/sitemap.xml` before you commit.
