@@ -6,6 +6,14 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { TIER_LIMITS, type SubscriptionTier } from "@/config/pricing";
+
+// Single source of truth for "does this tier include broker scanning".
+// Hardcoding 'complete' here hid the feature from paying Family subscribers even
+// after scan-brokers started accepting them. TIER_LIMITS is the same table the
+// edge function's gate mirrors, so reading it keeps UI and backend in step.
+const tierHasBrokerScanning = (tier?: string | null): boolean =>
+  Boolean(tier && TIER_LIMITS[tier as SubscriptionTier]?.brokerScanning);
 
 interface BrokerScan {
   id: string;
@@ -41,10 +49,10 @@ export function BrokerScanCard() {
       .eq('user_id', session.user.id)
       .maybeSingle();
 
-    setIsComplete(subscription?.tier === 'complete');
+    setIsComplete(tierHasBrokerScanning(subscription?.tier));
 
     // Get latest scan (only for Complete users)
-    if (subscription?.tier === 'complete') {
+    if (tierHasBrokerScanning(subscription?.tier)) {
       const { data: scanData } = await supabase
         .from('broker_scans')
         .select('*')
