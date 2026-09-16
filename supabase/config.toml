@@ -87,6 +87,11 @@ verify_jwt = true
 [functions.fix-token-encryption-states]
 verify_jwt = true
 
+# Invoked only by the 'monthly-pro-rescan' pg_cron job, which posts an anon-key
+# bearer and has no user JWT to present, so this cannot be flipped to true. The
+# caller check is the x-email-secret header (same EMAIL_SECRET as
+# send-welcome-email) enforced inside the function; the cron job supplies it as of
+# 20260916130100_secure_internal_cron_endpoints.sql.
 [functions.scheduled-rescan]
 verify_jwt = false
 
@@ -119,6 +124,11 @@ verify_jwt = false
 [functions.free-broker-check]
 verify_jwt = false
 
+# Invoked function-to-function only (scan-brokers, scheduled-rescan), never from the
+# browser, so there is no user JWT to verify. It takes the target userId from the
+# request body, so the function itself requires an internal credential: either
+# x-email-secret or an Authorization bearer holding the service role key, which is
+# what supabase.functions.invoke() sends between edge functions.
 [functions.send-exposure-alert]
 verify_jwt = false
 
