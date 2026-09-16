@@ -531,7 +531,7 @@ export const BulkDiscoveryTool = () => {
               <CardTitle>Deep Scan is a Pro Feature</CardTitle>
             </div>
             <CardDescription>
-              Deep scanning finds 2-3× more accounts by analyzing your complete inbox history and using advanced AI parsing.
+              Deep scanning reads your complete inbox history rather than only recent mail, so it surfaces older and long-dormant accounts.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -542,7 +542,7 @@ export const BulkDiscoveryTool = () => {
                 <li>• Advanced AI pattern recognition</li>
                 <li>• Hidden and dormant account detection</li>
                 <li>• Receipt and confirmation email parsing</li>
-                <li>• 2-3× more accounts discovered</li>
+                <li>• Reaches older and long-dormant accounts</li>
               </ul>
             </div>
             <div className="p-4 bg-primary/5 border border-primary/20 rounded-lg">

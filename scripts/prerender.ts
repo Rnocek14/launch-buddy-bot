@@ -36,6 +36,7 @@ import {
   RANKING_CRITERIA,
 } from "../src/data/competitorArticles";
 import { HEAD_TO_HEADS, headToHeadsFor } from "../src/data/headToHead";
+import { AUTO_SCAN_BROKER_COUNT } from "../src/config/brokers";
 import {
   STATES,
   STATES_WITH_LAWS,
@@ -252,7 +253,7 @@ function brokerRoute(b: BrokerRecord): Route {
   const url = `${BASE_URL}/remove-from/${b.slug}`;
   const time = b.opt_out_time_estimate ?? "a few minutes";
   const title = `How to Delete Your Info from ${b.name} & Opt Out (${YEAR} Guide)`;
-  const description = `How to delete your personal information from ${b.name} and opt out for free. Step-by-step removal guide — takes ${time}. Or let Footprint Finder remove you from 25+ brokers automatically.`;
+  const description = `How to delete your personal information from ${b.name} and opt out for free. Step-by-step removal guide — takes ${time}. Or let Footprint Finder find your listings across ${AUTO_SCAN_BROKER_COUNT} people-search sites and hand you a one-click opt-out for each.`;
   const steps = (b.instructions ?? "")
     .split(/\\n|\n/)
     .map((s) => s.replace(/^\d+\.\s*/, "").trim())
@@ -478,7 +479,7 @@ function compareRoute(c: (typeof COMPETITORS)[string]): Route {
     )} alternatives</h2>${ul(article?.whySeekAlternatives ?? c.cons)}${articleSections}<h2>Footprint Finder vs ${escHtml(
       c.name,
     )}</h2>${p(
-      `Footprint Finder removes you from ${FOOTPRINT_FINDER_BROKER_COVERAGE} on the ${FOOTPRINT_FINDER_PRICING.brokerTier} plan; ${c.name} covers ${c.brokerCoverage}.`,
+      `Footprint Finder scans ${FOOTPRINT_FINDER_BROKER_COVERAGE} for your listings on the ${FOOTPRINT_FINDER_PRICING.brokerTier} plan and gives you a one-click opt-out for each one; ${c.name} covers ${c.brokerCoverage}.`,
     )}${matrix}${ul(c.whyFf)}<h2>The best ${escHtml(
       c.name,
     )} alternatives</h2>${alternativesList}<h2>${escHtml(

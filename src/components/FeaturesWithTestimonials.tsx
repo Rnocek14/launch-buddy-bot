@@ -31,12 +31,12 @@ const benefits = [
   {
     icon: Zap,
     title: "Save Hours of Work",
-    description: "Manual privacy cleanup takes 40+ hours. Our automation does it in minutes.",
+    description: "Finding every company that holds your data by hand means checking them one at a time. We do the finding, so you only do the deciding.",
   },
   {
     icon: Shield,
     title: "Reduce Data Exposure",
-    description: "The average person has 100+ forgotten accounts. Cleaning them up means fewer places your data can be misused.",
+    description: "Most people have accounts they no longer remember making. Every one you close is one fewer place your data can leak from.",
   },
   {
     icon: CheckCircle2,

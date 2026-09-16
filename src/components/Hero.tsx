@@ -114,29 +114,34 @@ export const Hero = () => {
               Free scan in 30 seconds. No signup required. Email-only — no inbox access.
             </p>
 
-            {/* Calm typographic stat strip (non-alarmist) */}
+            {/* Capability facts, not research findings. This strip previously read
+                "Average exposure 47 broker sites / 8 breaches found / 120+ data points"
+                — presented as averages for a typical person, with no source behind any
+                of the three. Every figure here is checkable against the code: the two
+                counts come from config/brokers.ts, and the free check genuinely needs
+                no account (LiveBrokerCheck collects name + city + state only). */}
             <div className="mb-8 pt-6 border-t border-border flex flex-wrap gap-x-8 gap-y-4 justify-center lg:justify-start">
               <div className="space-y-1 text-left">
-                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Average exposure</p>
+                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Sites we check</p>
                 <div className="flex items-baseline gap-2">
-                  <span className="text-2xl font-semibold text-foreground">47</span>
-                  <span className="text-sm text-muted-foreground">broker sites</span>
+                  <span className="text-2xl font-semibold text-foreground">{AUTO_SCAN_BROKER_COUNT}</span>
+                  <span className="text-sm text-muted-foreground">people-search sites</span>
                 </div>
               </div>
               <div className="w-px h-10 bg-border hidden sm:block self-center" aria-hidden />
               <div className="space-y-1 text-left">
-                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Data leaks</p>
+                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Opt-out links</p>
                 <div className="flex items-baseline gap-2">
-                  <span className="text-2xl font-semibold text-foreground">8</span>
-                  <span className="text-sm text-muted-foreground">breaches found</span>
+                  <span className="text-2xl font-semibold text-foreground">{GUIDED_OPTOUT_BROKER_COUNT}</span>
+                  <span className="text-sm text-muted-foreground">brokers covered</span>
                 </div>
               </div>
               <div className="w-px h-10 bg-border hidden sm:block self-center" aria-hidden />
               <div className="space-y-1 text-left">
-                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Public records</p>
+                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">To see your results</p>
                 <div className="flex items-baseline gap-2">
-                  <span className="text-2xl font-semibold text-foreground">120+</span>
-                  <span className="text-sm text-muted-foreground">data points</span>
+                  <span className="text-2xl font-semibold text-foreground">No</span>
+                  <span className="text-sm text-muted-foreground">signup or card</span>
                 </div>
               </div>
             </div>

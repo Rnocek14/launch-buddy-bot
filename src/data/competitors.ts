@@ -1,3 +1,5 @@
+import { AUTO_SCAN_BROKER_COUNT } from "@/config/brokers";
+
 // Competitor comparison data — powers /vs/:competitor pages.
 // Extracted into its own module so the browserless prerender script
 // (scripts/prerender.ts) can import the same data the page renders.
@@ -43,16 +45,15 @@ export const FOOTPRINT_FINDER_FEATURES: CompetitorFeatures = {
 };
 
 /**
- * What our scanner actually covers — 25 broker patterns in
- * src/config/brokers.ts. NOT the number of opt-out guides we publish, which
- * is larger (45+) and a different claim entirely: guides are instructions you
- * follow yourself, coverage is what we remove you from.
+ * How many people-search sites the scanner actually checks. Derived from
+ * AUTO_SCAN_BROKER_COUNT so it can never drift from the engine again — this
+ * previously hardcoded "25+ broker sites" while the engine had 20 patterns.
  *
- * PR #1 introduces BROKER_COUNT_LABEL in src/config/brokers.ts, derived from
- * brokerPatterns.length, plus a test barring inflated claims from the funnel.
- * Once that lands, import the constant here instead of restating the number.
+ * Phrased as sites we CHECK, not sites we "remove you from": nothing is
+ * submitted on the user's behalf. The opt-out is one click, and the user makes
+ * it. See config/brokers.ts for the count that covers opt-out links.
  */
-export const FOOTPRINT_FINDER_BROKER_COVERAGE = "25+ broker sites";
+export const FOOTPRINT_FINDER_BROKER_COVERAGE = `${AUTO_SCAN_BROKER_COUNT} people-search sites`;
 
 /**
  * Footprint Finder's own pricing, mirrored from src/config/pricing.ts.

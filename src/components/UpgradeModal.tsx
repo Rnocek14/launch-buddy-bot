@@ -65,7 +65,7 @@ export function UpgradeModal({
 
   const proFeatures = [
     "Unlimited deletion requests",
-    "Deep AI Scan (finds 2-3× more accounts)",
+    "Deep AI Scan (reads your full inbox history, not just recent mail)",
     "Connect and scan up to 3 email addresses",
     "Complete inbox history analysis",
     "Monthly automatic rescans",

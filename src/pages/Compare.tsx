@@ -261,8 +261,9 @@ function AlternativesPage({ slug }: { slug?: string }) {
               Footprint Finder vs {data.name}
             </h2>
             <p className="text-sm text-muted-foreground mb-6">
-              Footprint Finder removes you from {FOOTPRINT_FINDER_BROKER_COVERAGE}{" "}
-              on the {FOOTPRINT_FINDER_PRICING.brokerTier} plan; {data.name}{" "}
+              Footprint Finder scans {FOOTPRINT_FINDER_BROKER_COVERAGE} for your
+              listings on the {FOOTPRINT_FINDER_PRICING.brokerTier} plan and gives you a
+              one-click opt-out for each one it finds; {data.name}{" "}
               covers {data.brokerCoverage}.
             </p>
             <div className="overflow-x-auto rounded-lg border mb-6">
