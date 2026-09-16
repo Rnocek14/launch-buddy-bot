@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { getPersistedScanIdentity } from "@/lib/checkout";
 import { User } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -90,23 +91,47 @@ export function BrokerScanProfileForm({ onProfileReady, disabled }: BrokerScanPr
       .eq('id', session.user.id)
       .single();
 
-    if (profile) {
-      const names = (profile.full_name || '').trim().split(/\s+/);
-      if (names.length >= 1) setFirstName(names[0]);
-      if (names.length >= 2) setLastName(names.slice(1).join(' '));
-      if (profile.city) setCity(profile.city);
-      if (profile.state) setState(profile.state);
+    // Prefer the saved profile. Fall back to whatever the visitor typed into the
+    // free broker check before paying — otherwise a customer who just watched us
+    // find them on four sites is asked to retype the identical three fields, and
+    // scan-brokers runs against their email local-part if they skip it.
+    const carried = getPersistedScanIdentity();
+    const carriedNames = (carried?.fullName ?? '').trim().split(/\s+/).filter(Boolean);
 
-      // Check if profile is complete enough for scanning
-      if (names.length >= 2 && profile.city && profile.state) {
-        setProfileComplete(true);
-        onProfileReady({
-          firstName: names[0],
-          lastName: names.slice(1).join(' '),
-          city: profile.city,
-          state: profile.state,
-        });
+    const names = (profile?.full_name || '').trim().split(/\s+/).filter(Boolean);
+    const resolvedNames = names.length >= 2 ? names : carriedNames;
+    const resolvedCity = profile?.city || carried?.city || '';
+    const resolvedState = profile?.state || carried?.state || '';
+
+    if (resolvedNames.length >= 1) setFirstName(resolvedNames[0]);
+    if (resolvedNames.length >= 2) setLastName(resolvedNames.slice(1).join(' '));
+    if (resolvedCity) setCity(resolvedCity);
+    if (resolvedState) setState(resolvedState);
+
+    if (resolvedNames.length >= 2 && resolvedCity && resolvedState) {
+      const resolved = {
+        firstName: resolvedNames[0],
+        lastName: resolvedNames.slice(1).join(' '),
+        city: resolvedCity,
+        state: resolvedState,
+      };
+
+      // Persist the carried values so the next scan, and the server-side identity
+      // scan-brokers reads, no longer depend on this browser's localStorage.
+      const profileIncomplete = names.length < 2 || !profile?.city || !profile?.state;
+      if (profileIncomplete) {
+        await supabase
+          .from('profiles')
+          .update({
+            full_name: `${resolved.firstName} ${resolved.lastName}`.trim(),
+            city: resolved.city,
+            state: resolved.state,
+          })
+          .eq('id', session.user.id);
       }
+
+      setProfileComplete(true);
+      onProfileReady(resolved);
     }
 
     setLoading(false);

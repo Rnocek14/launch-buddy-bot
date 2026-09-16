@@ -59,6 +59,51 @@ export function persistGuestEmail(email: string) {
   }
 }
 
+/**
+ * The free broker check collects exactly the three fields the paid scan needs
+ * (LiveBrokerCheck), and until now all three were dropped at the checkout
+ * boundary: startCheckout forwards only priceId/email/source/affiliateCode, and
+ * scan-brokers then reads profiles.full_name/city/state, finds them empty, and
+ * falls back to the email local-part as a first name with a blank surname. A
+ * customer who saw "we found you on 4 sites" and paid ninety seconds later got a
+ * 20-site scan run for a person named after their email prefix.
+ *
+ * Stored in the same place and the same way as the guest email, so it survives
+ * the Stripe redirect round-trip (same browser, same origin).
+ */
+export interface ScanIdentity {
+  fullName: string;
+  city: string;
+  state: string;
+}
+
+const PERSISTED_IDENTITY_KEY = "ff_scan_identity";
+
+export function getPersistedScanIdentity(): ScanIdentity | null {
+  try {
+    const raw = localStorage.getItem(PERSISTED_IDENTITY_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<ScanIdentity>;
+    if (!parsed?.fullName?.trim()) return null;
+    return {
+      fullName: parsed.fullName.trim(),
+      city: (parsed.city ?? "").trim(),
+      state: (parsed.state ?? "").trim(),
+    };
+  } catch {
+    return null;
+  }
+}
+
+export function persistScanIdentity(identity: ScanIdentity) {
+  try {
+    if (!identity.fullName?.trim()) return;
+    localStorage.setItem(PERSISTED_IDENTITY_KEY, JSON.stringify(identity));
+  } catch {
+    // ignore quota / privacy mode
+  }
+}
+
 export async function startCheckout(
   opts: StartCheckoutOptions
 ): Promise<StartCheckoutResult> {

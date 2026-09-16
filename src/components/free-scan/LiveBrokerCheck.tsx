@@ -8,6 +8,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { trackEvent } from "@/lib/analytics";
 import { CompleteCheckoutButton } from "./CompleteCheckoutButton";
+import { persistScanIdentity } from "@/lib/checkout";
 import { AUTO_SCAN_BROKER_COUNT } from "@/config/brokers";
 
 type BrokerStatus = "found" | "possible_match" | "not_found" | "unknown";
@@ -68,6 +69,9 @@ export function LiveBrokerCheck({ email, onResults }: LiveBrokerCheckProps) {
         throw new Error(fnError?.message || "Check failed");
       }
       const brokerResults = data.results as BrokerResult[];
+      // Carry the identity across checkout. Without this the paid scan re-asks for
+      // the same three fields, or runs against the buyer's email local-part.
+      persistScanIdentity({ fullName: fullName.trim(), city: city.trim(), state });
       setResults(brokerResults);
       setDegraded(Boolean(data.degraded));
       const confirmedCount = brokerResults.filter((r) => r.status === "found").length;
