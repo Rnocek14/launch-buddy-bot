@@ -285,6 +285,21 @@ const brokerPatterns: Record<string, {
   },
 };
 
+// data_brokers holds far more rows than we have detection patterns for. Only the
+// slugs above can be checked with a real network request; every other listed broker
+// is manual-opt-out-only. Scanning must never touch them, because a broker we never
+// requested cannot honestly be reported to a paying customer as "clean".
+const SCANNABLE_BROKER_SLUGS = new Set(Object.keys(brokerPatterns));
+
+function hasDetectionPattern(slug: string): boolean {
+  return SCANNABLE_BROKER_SLUGS.has(slug);
+}
+
+// Tiers that include data broker scanning.
+// Mirrors TIER_LIMITS in src/config/pricing.ts: complete and family have
+// brokerScanning: true, free and pro do not.
+const BROKER_SCAN_TIERS = new Set(['complete', 'family']);
+
 interface UserProfile {
   firstName: string;
   lastName: string;
@@ -908,14 +923,19 @@ async function scanBrokerV2(
   const pattern = brokerPatterns[slug];
   
   if (!pattern) {
-    console.log(`No pattern for broker: ${slug}`);
+    // Defence in depth: the scan loop already filters these out. If one still reaches
+    // here we must NOT say 'not_found' — the caller maps that to status 'clean', which
+    // would claim the broker was checked when no request was ever made. 'unknown' maps
+    // to 'error' instead, which the status CHECK constraint allows.
+    // No ErrorCode member describes "we never attempted this", so error_code stays null.
+    console.log(`No pattern for broker: ${slug} — skipping, not reporting clean`);
     return {
       brokerId: null,
       slug,
-      status_v2: 'not_found',
+      status_v2: 'unknown',
       error_code: null,
       http_status: null,
-      error_detail: 'No pattern configured',
+      error_detail: 'No detection pattern configured — broker not auto-checked',
       detection_method: 'direct',
       confidence: null,
       confidence_breakdown: null,
@@ -1206,7 +1226,7 @@ Deno.serve(async (req) => {
 
     const userId = user.id;
 
-    // Check if user has Complete subscription
+    // Check if user has a subscription that includes broker scanning (Complete or Family)
     const { data: subscription } = await supabase
       .from('subscriptions')
       .select('tier, status')
@@ -1214,9 +1234,9 @@ Deno.serve(async (req) => {
       .eq('status', 'active')
       .single();
 
-    if (!subscription || subscription.tier !== 'complete') {
+    if (!subscription || !BROKER_SCAN_TIERS.has(subscription.tier)) {
       return new Response(
-        JSON.stringify({ error: 'Complete subscription required for broker scanning' }),
+        JSON.stringify({ error: 'Complete or Family subscription required for broker scanning' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -1302,6 +1322,17 @@ Deno.serve(async (req) => {
       // Determine which brokers to scan
       let brokers: { id: string; slug: string }[] | null = null;
       let brokerCount = 0;
+      let skippedBrokers: { id: string; slug: string }[] = [];
+      let listedCount = 0;
+
+      // Split candidates into brokers we can actually check and brokers we merely list.
+      // Only the first group is ever scanned or counted; the second is reported back so
+      // the UI can say "N more sites we list but don't auto-check yet" instead of
+      // silently folding them into the clean total.
+      const partitionByPatternSupport = (candidates: { id: string; slug: string }[]) => ({
+        scannable: candidates.filter((b) => hasDetectionPattern(b.slug)),
+        skipped: candidates.filter((b) => !hasDetectionPattern(b.slug)),
+      });
 
       if (retryFailedOnly) {
         // Only re-scan brokers whose last result for this user is in an error state
@@ -1328,18 +1359,41 @@ Deno.serve(async (req) => {
           .eq('is_searchable', true)
           .in('id', failedIds);
 
-        brokers = filtered || [];
+        const retryCandidates = filtered || [];
+        const retrySplit = partitionByPatternSupport(retryCandidates);
+        brokers = retrySplit.scannable;
+        skippedBrokers = retrySplit.skipped;
+        listedCount = retryCandidates.length;
         brokerCount = brokers.length;
-        console.log(`[RETRY] Re-scanning ${brokerCount} previously-failed brokers for user ${userId}`);
+
+        // Pattern-less brokers can be sitting in an error state from an older build.
+        // Retrying them would achieve nothing, so if that is all there is, say so.
+        if (brokerCount === 0) {
+          return new Response(
+            JSON.stringify({
+              error: 'No failed brokers to retry',
+              skipped_brokers: skippedBrokers.length,
+            }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        console.log(`[RETRY] Re-scanning ${brokerCount} previously-failed brokers for user ${userId} (${skippedBrokers.length} skipped: no detection pattern)`);
       } else {
         // Get all active + searchable brokers (skip enterprise aggregators with no public people-search)
-        const { data: all, count } = await supabase
+        const { data: all } = await supabase
           .from('data_brokers')
-          .select('id, slug', { count: 'exact' })
+          .select('id, slug')
           .eq('is_active', true)
           .eq('is_searchable', true);
-        brokers = all || [];
-        brokerCount = count || 0;
+        const candidates = all || [];
+        const split = partitionByPatternSupport(candidates);
+        brokers = split.scannable;
+        skippedBrokers = split.skipped;
+        listedCount = candidates.length;
+        // total_brokers must reflect real coverage, not the size of the broker directory
+        brokerCount = brokers.length;
+        console.log(`Broker coverage: ${brokerCount} auto-checkable of ${listedCount} listed (${skippedBrokers.length} manual opt-out only)`);
       }
 
       // Create scan record
@@ -1493,6 +1547,12 @@ Deno.serve(async (req) => {
         JSON.stringify({
           message: 'Scan started',
           scan: newScan,
+          // Honest coverage numbers: total_brokers is what we will actually request,
+          // skipped_brokers is what we list but cannot auto-check yet.
+          total_brokers: brokerCount,
+          listed_brokers: listedCount,
+          skipped_brokers: skippedBrokers.length,
+          skipped_broker_slugs: skippedBrokers.map((b) => b.slug),
         }),
         { status: 202, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -1568,11 +1628,21 @@ Deno.serve(async (req) => {
         .eq('is_active', true)
         .order('priority');
 
+      // Same coverage figures the POST returns, recomputed from the broker list we
+      // already fetched (no extra round-trip on each poll) so the UI still has them
+      // after a reload, when only this endpoint is called.
+      const activeBrokers = brokers || [];
+      const skippedBrokerSlugs = activeBrokers
+        .filter((b: any) => !hasDetectionPattern(b.slug))
+        .map((b: any) => b.slug);
+
       return new Response(
-        JSON.stringify({ 
+        JSON.stringify({
           scan,
           results: results || [],
-          brokers: brokers || [],
+          brokers: activeBrokers,
+          skipped_brokers: skippedBrokerSlugs.length,
+          skipped_broker_slugs: skippedBrokerSlugs,
         }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
