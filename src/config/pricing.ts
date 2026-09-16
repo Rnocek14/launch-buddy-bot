@@ -8,6 +8,8 @@
  * - Complete: 5 emails, unlimited deletions, broker scanning
  */
 
+import { AUTO_SCAN_BROKER_COUNT, GUIDED_OPTOUT_BROKER_COUNT } from "@/config/brokers";
+
 export const STRIPE_PRICES = {
   // Legacy prices (for grandfathered users)
   LEGACY_PRO_ANNUAL: {
@@ -179,13 +181,18 @@ export const PRO_FEATURES = [
   "Monthly automatic rescans",
 ] as const;
 
+// Every line here has to be literally true of the shipped product. We scan the
+// brokers the engine has detection patterns for, then hand the user a one-click
+// guided opt-out — we do not submit removals on their behalf, and there is no
+// scheduled broker rescan job yet, so neither is advertised.
 export const COMPLETE_FEATURES = [
   "Everything in Pro, plus:",
-  "Data Broker Scanning (20+ sites)",
-  "Guided opt-out instructions",
+  `Data broker scan across ${AUTO_SCAN_BROKER_COUNT} people-search sites`,
+  "One-click guided opt-out for every listing we find",
+  `Step-by-step removal guides for ${GUIDED_OPTOUT_BROKER_COUNT} brokers`,
+  "Re-run your broker scan any time",
   "Connect up to 5 email addresses",
   "Priority email support",
-  "Monthly broker rescans",
 ] as const;
 
 export const FAMILY_FEATURES = [
@@ -200,7 +207,7 @@ export const FAMILY_FEATURES = [
 
 export const PARENT_SCAN_FEATURES = [
   "One-time deep scan of their email",
-  "Full data broker check (20+ sites)",
+  `Data broker check across ${AUTO_SCAN_BROKER_COUNT} sites`,
   "Breach exposure report",
   "Printable PDF action plan",
   "Senior-friendly explanations",

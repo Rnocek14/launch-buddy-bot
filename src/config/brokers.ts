@@ -299,13 +299,29 @@ export const statusColors: Record<string, { bg: string; text: string; border: st
   opted_out: { bg: 'bg-blue-500/10', text: 'text-blue-600', border: 'border-blue-500/30' },
 };
 
-// Single source of truth for the broker-coverage claim shown across the site.
-// Grounded in the actual number of brokers we scan/remove from (brokerPatterns
-// here = 25; the scan-brokers engine covers ~28). Do NOT inflate this — an
+// ---------------------------------------------------------------------------
+// Broker-coverage claims. These are two different numbers describing two
+// different promises — keep them apart in copy. Collapsing them into a single
+// "N brokers" claim overstates what the product actually does.
+// ---------------------------------------------------------------------------
+
+// Sites the scanner can auto-check with a live request. The authoritative list
+// is SCANNABLE_BROKER_SLUGS in supabase/functions/scan-brokers/index.ts; a
+// broker without a detection pattern is never queried, so it can never be
+// counted here. Deliberately NOT derived from brokerPatterns.length above —
+// that client-side list has drifted from the engine and carries slugs the
+// scanner has no pattern for, so it over-counts. Do NOT inflate this; an
 // unsubstantiated "200+" is false advertising, especially for a privacy brand.
-// If real coverage grows, bump this one constant.
-export const BROKER_COUNT = brokerPatterns.length;
-export const BROKER_COUNT_LABEL = "25+";
+// Bump it only when the engine actually gains patterns.
+export const AUTO_SCAN_BROKER_COUNT = 20;
+
+// Sites we ship a step-by-step opt-out guide for (the data_brokers seed rows).
+// These are guides the user follows — not scans, and not automated submissions.
+export const GUIDED_OPTOUT_BROKER_COUNT = 77;
+
+// Site-wide label for the scan claim; everything in the funnel reads this.
+export const BROKER_COUNT = AUTO_SCAN_BROKER_COUNT;
+export const BROKER_COUNT_LABEL = String(AUTO_SCAN_BROKER_COUNT);
 
 // Difficulty badge colors
 export const difficultyColors: Record<string, { bg: string; text: string }> = {

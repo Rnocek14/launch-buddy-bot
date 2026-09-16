@@ -7,6 +7,7 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { HeroScanAnimation } from "./HeroScanAnimation";
+import { AUTO_SCAN_BROKER_COUNT, GUIDED_OPTOUT_BROKER_COUNT } from "@/config/brokers";
 
 export const Hero = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -78,7 +79,7 @@ export const Hero = () => {
             </h1>
 
             <p className="text-lg sm:text-xl text-muted-foreground mb-6 leading-relaxed">
-              Data brokers publish your home address, phone number, age, and relatives' names — and sell them to anyone with $20. We find every site exposing you, and monitor as new ones appear.
+              Data brokers publish your home address, phone number, age, and relatives' names — and sell them to anyone with $20. We search {AUTO_SCAN_BROKER_COUNT} people-search sites for your listing and hand you a one-click opt-out for every one we find.
             </p>
 
             {/* Elevated scan form — primary focal action */}
@@ -164,7 +165,7 @@ export const Hero = () => {
               </div>
               <div className="flex items-center gap-2">
                 <Zap className="w-4 h-4 text-primary" />
-                <span className="text-muted-foreground">25+ Data Brokers</span>
+                <span className="text-muted-foreground">{AUTO_SCAN_BROKER_COUNT} Brokers Scanned</span>
               </div>
               <div className="flex items-center gap-2">
                 <Target className="w-4 h-4 text-primary" />
@@ -210,7 +211,7 @@ export const Hero = () => {
                 How is this different from data broker removal?
               </AccordionTrigger>
               <AccordionContent className="text-sm text-muted-foreground">
-                Data broker removal focuses on people-search/data broker sites. We focus on <strong>account discovery</strong> first — finding services tied to your email — and then guiding cleanup.
+                Data broker removal focuses on people-search/data broker sites. We focus on <strong>account discovery</strong> first — finding services tied to your email — then scan <strong>{AUTO_SCAN_BROKER_COUNT} people-search sites</strong> and walk you through each opt-out, with step-by-step guides for <strong>{GUIDED_OPTOUT_BROKER_COUNT} brokers</strong>. You stay in the loop on every request — no script quietly reporting a removal that never happened.
               </AccordionContent>
             </AccordionItem>
           </Accordion>
