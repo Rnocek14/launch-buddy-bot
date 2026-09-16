@@ -26,18 +26,26 @@
 -- That makes the cap a one-line change, with no function edit and no redeploy:
 --
 --   -- every future day:
---   ALTER TABLE public.serp_free_usage_daily ALTER COLUMN searches_limit SET DEFAULT 400;
+--   ALTER TABLE public.serp_free_usage_daily ALTER COLUMN searches_limit SET DEFAULT 800;
 --   -- and today too, since today's row already exists carrying the old limit:
---   UPDATE public.serp_free_usage_daily SET searches_limit = 400 WHERE day = current_date;
+--   UPDATE public.serp_free_usage_daily SET searches_limit = 800 WHERE day = current_date;
 --
 -- Read it back with:  SELECT * FROM public.get_free_serp_budget_status();
 --
--- Sizing the default: one free check is 6 brokers x at most 2 queries = at most 12 SERP
--- calls, and far fewer once serp_cache is warm, because free-broker-check consults the
--- cache BEFORE it consumes any budget. 200 is therefore ~16 completely cold checks a day
--- and many times that warm, while capping the free path's worst case at a fifth of the
--- paid budget's spend. Raise it if the free funnel is legitimately hitting the ceiling --
--- the point of this migration is that hitting it can no longer hurt a paying customer.
+-- Note: re-running this migration will NOT undo those ALTERs, because the CREATE TABLE
+-- below is IF NOT EXISTS. That is deliberate -- the operator's tuning outlives a replay.
+--
+-- Sizing the default. Do NOT size this on the assumption that serp_cache absorbs most of
+-- the load: the cache key hashes the query, and every query embeds the visitor's own
+-- name (`"Jane Smith" site:whitepages.com`). A brand-new visitor is therefore a cache MISS
+-- on essentially every broker, so budget the near-worst case, not the warm case. Cache
+-- hits here are the repeat-visitor and free-then-paid cases, not the steady state.
+-- One free check = 6 brokers x up to 2 queries, minus an early exit on a strong match:
+-- call it ~8-12 SERP calls. So 400/day is roughly 35-50 free checks a day, at 40% of the
+-- paid bucket's 1000. That is a real ceiling and the free funnel can outgrow it -- watch
+-- get_free_serp_budget_status() and raise it with the ALTER above. What this migration
+-- buys is that reaching the ceiling now degrades the free check honestly instead of
+-- taking a paying customer's scan offline.
 -- ============================================================================
 
 CREATE TABLE IF NOT EXISTS public.serp_free_usage_daily (
@@ -47,7 +55,7 @@ CREATE TABLE IF NOT EXISTS public.serp_free_usage_daily (
   searches_used INT NOT NULL DEFAULT 0,
   -- Per-day copy of the cap, so changing the default only affects days not yet started
   -- and an operator can also grant a one-off bump for today alone.
-  searches_limit INT NOT NULL DEFAULT 200,
+  searches_limit INT NOT NULL DEFAULT 400,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 

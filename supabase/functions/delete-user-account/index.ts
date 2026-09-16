@@ -59,9 +59,11 @@ serve(async (req) => {
     // public table carrying a user-owned uuid column.
     const deletions: { table: string; column: string; value: string }[] = [
       // Email subscription tree: audit rows reference email_subscriptions.
+      // email_connections is NOT here — user_services.discovered_from_connection_id
+      // points at it with no ON DELETE action, so it has to wait until
+      // user_services is gone. See the note further down.
       { table: "unsubscribe_audit_log", column: "user_id", value: userId },
       { table: "email_subscriptions", column: "user_id", value: userId },
-      { table: "email_connections", column: "user_id", value: userId },
 
       // Broker scans: results reference scans.
       { table: "broker_scan_results", column: "user_id", value: userId },
@@ -80,6 +82,17 @@ serve(async (req) => {
       { table: "unmatched_domains", column: "user_id", value: userId },
       { table: "user_services", column: "user_id", value: userId },
       { table: "user_identifiers", column: "user_id", value: userId },
+
+      // Mailbox OAuth tokens. This MUST come after user_services:
+      // user_services.discovered_from_connection_id references
+      // email_connections(id) with no ON DELETE clause (NO ACTION), and
+      // scan-email / scan-all-emails / scheduled-rescan populate it on every
+      // service they discover. Deleting connections first therefore raised
+      // 23503 for every user who has ever connected a mailbox — the most
+      // common account there is. The accompanying migration also relaxes that
+      // FK to SET NULL, but the order is what makes this sweep correct even
+      // against a database where the migration has not run yet.
+      { table: "email_connections", column: "user_id", value: userId },
 
       { table: "challenge_participants", column: "user_id", value: userId },
       { table: "contact_discovery_failures", column: "user_id", value: userId },
@@ -119,9 +132,20 @@ serve(async (req) => {
       const { error } = await adminClient.from(table).delete().eq(column, value);
       if (error) {
         const msg = error.message || "";
+        // A table this build knows about but the target database does not is a
+        // warning, not a failed erasure. PostgREST 12 reports that as PGRST205
+        // ("Could not find the table 'public.x' in the schema cache") and never
+        // as Postgres' 42P01, so matching only 42P01/"relation does not exist"
+        // would classify an absent table as an error — and now that `status`
+        // is derived from `errors`, that would tell every user their data
+        // survived when there was no table to hold it. 42P01 is kept for
+        // older PostgREST and for errors raised inside a function.
         const isMissingTable =
           error.code === "42P01" ||
-          (msg.includes("relation") && msg.includes("does not exist"));
+          error.code === "PGRST205" ||
+          error.code === "PGRST106" ||
+          (msg.includes("relation") && msg.includes("does not exist")) ||
+          (msg.includes("Could not find the table") && msg.includes("schema cache"));
 
         if (isMissingTable) {
           console.log(`[delete-user-account] Skipped missing table ${table}`);

@@ -1271,16 +1271,29 @@ Deno.serve(async (req) => {
       // finalize-payment creates a moment later would never see that entitlement. Adopt it
       // here by matching the verified email on the JWT against the purchaser email Stripe
       // gave us. The claim is one-way: the row gets a user_id, nothing else changes.
-      if (!parentScanOrder && user.email) {
-        const { data: orphaned } = await supabase
+      //
+      // It also runs when the user already has an order but it is spent: a customer buying
+      // a second scan (for the other parent) as a guest leaves a fresh 'paid' row
+      // unattached, and stopping at their own 'consumed' row would tell someone who has
+      // just paid again that their scan "has already been used" — the same take-the-money
+      // failure, one purchase later.
+      if ((!parentScanOrder || parentScanOrder.status !== 'paid') && user.email) {
+        const { data: orphanRows } = await supabase
           .from('parent_scan_orders')
           .select('id, status, consumed_at')
           .is('user_id', null)
           .eq('purchaser_email', user.email.toLowerCase())
           .in('status', ['paid', 'consumed'])
           .order('created_at', { ascending: true })
-          .limit(1)
-          .maybeSingle();
+          .limit(10);
+
+        const orphans = (orphanRows || []) as { id: string; status: string; consumed_at: string | null }[];
+        // Prefer an unspent orphan. Once the user already holds a consumed order there is
+        // nothing to gain from adopting another consumed one, so only 'paid' is claimed.
+        let orphaned = orphans.find((o) => o.status === 'paid') ?? null;
+        if (!orphaned && !parentScanOrder) {
+          orphaned = [...orphans].reverse().find((o) => o.status === 'consumed') ?? null;
+        }
 
         if (orphaned) {
           const { data: adopted } = await supabase
@@ -1458,6 +1471,24 @@ Deno.serve(async (req) => {
         // total_brokers must reflect real coverage, not the size of the broker directory
         brokerCount = brokers.length;
         console.log(`Broker coverage: ${brokerCount} auto-checkable of ${listedCount} listed (${skippedBrokers.length} manual opt-out only)`);
+      }
+
+      // Refuse to start a sweep with nothing in it. The data_brokers read above swallows
+      // its error into an empty list, so a transient DB failure would otherwise create a
+      // 0-broker scan that completes immediately with found_count 0 — which every surface
+      // renders as "all clean" — while spending the one-time Parent Scan entitlement and
+      // starting a 5-minute cooldown. Charging $39 for a scan that checked nothing, and
+      // calling the result clean, are the two worst outcomes this function has.
+      // (The retry path returns its own 'No failed brokers to retry' above, so this only
+      // ever fires on a full sweep.)
+      if (!brokers || brokerCount === 0) {
+        console.error('[SCAN-BROKERS] refusing to start: no scannable brokers returned');
+        return new Response(
+          JSON.stringify({
+            error: 'No data brokers are available to scan right now. Nothing was charged or used — please try again in a few minutes.',
+          }),
+          { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
       }
 
       // Spend the one-time entitlement, if that is how this user got through the gate.

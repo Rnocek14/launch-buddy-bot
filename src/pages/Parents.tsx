@@ -183,7 +183,7 @@ export default function Parents() {
                       <div className="space-y-3">
                         <div>
                           <p className="font-semibold">
-                            Payment confirmed — your Parent Protection Scan is on your account
+                            Payment confirmed — your Parent Protection Scan is recorded on your account
                           </p>
                           <p className="text-sm text-muted-foreground">
                             {purchaseEmail
@@ -200,14 +200,20 @@ export default function Parents() {
                             </a>
                           </Button>
                         )}
+                        {/* Deliberately blunt. The one-time purchase is recorded and the
+                            scan back end honours it, but the dashboard still only offers a
+                            start-scan button to Complete/Family subscribers, so for now the
+                            reliable route really is support. Say that here rather than let
+                            the buyer discover it on a page that offers them an upgrade. */}
                         <p className="text-xs text-muted-foreground">
-                          We don't send a separate confirmation email — sign in from this page.
-                          If your scan isn't available once you're signed in, email{" "}
+                          We don't send a confirmation email, so keep this reference
+                          {purchaseRef ? `: ${purchaseRef}` : " from your Stripe receipt"}. Starting
+                          the scan isn't self-serve for one-time purchases yet — if you don't see
+                          it after signing in, email{" "}
                           <a className="underline" href="mailto:support@footprintfinder.co">
                             support@footprintfinder.co
-                          </a>
-                          {purchaseRef ? ` with reference ${purchaseRef}` : ""} and we'll run it
-                          for you.
+                          </a>{" "}
+                          with that reference and we'll run it and send you the results.
                         </p>
                       </div>
                     </div>

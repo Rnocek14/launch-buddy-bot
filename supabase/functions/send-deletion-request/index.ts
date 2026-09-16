@@ -240,6 +240,8 @@ const handler = async (req: Request): Promise<Response> => {
             error_code: "IDENTIFIER_NOT_VERIFIED",
             requiresVerifiedIdentifier: true,
             identifierId: identifierData.id,
+            // Same field name as the free-text branch, so the dialog only has to learn one.
+            suggestedIdentifier: authEmail,
           },
           403,
         );
@@ -292,13 +294,21 @@ const handler = async (req: Request): Promise<Response> => {
 
         if (!match) {
           console.warn(`Refusing unconfirmed account_identifier for user ${user.id}`);
+          // Do NOT tell them to clear the box. This branch is only reachable from the
+          // free-text field, which DeletionRequestDialog renders only when the user has no
+          // saved identifiers -- and that dialog disables "Review & Send" while both the
+          // box and the dropdown are empty. "Leave it empty and we'll use your account
+          // email" is true of this function but impossible in the UI, so it would strand
+          // the user on the one screen where this refusal actually fires. Name the value
+          // that does work and hand it back in a field the dialog can prefill from.
           return jsonResponse(
             {
               error:
                 `We only send requests that name an identifier we can confirm belongs to you, because the request goes to another company under your name. ` +
-                `We can't confirm "${candidate}". Use your account email (${authEmail}), or leave the field empty and we'll use it for you.`,
+                `We can't confirm "${candidate}", so we can't put it in the letter. Type your account email (${authEmail}) in that box instead — it's the only identifier we can confirm today.`,
               error_code: "IDENTIFIER_NOT_VERIFIED",
               requiresVerifiedIdentifier: true,
+              suggestedIdentifier: authEmail,
             },
             403,
           );

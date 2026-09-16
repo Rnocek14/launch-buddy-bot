@@ -146,10 +146,68 @@ BEGIN
   END LOOP;
 END $$;
 
+-- The other FK that blocks account deletion does not point at auth.users at all.
+--
+-- user_services.discovered_from_connection_id references email_connections(id)
+-- (added as gmail_connections in 20251116063602) with no ON DELETE clause, so it
+-- is NO ACTION. email_connections.user_id IS ON DELETE CASCADE, which means the
+-- final auth.users delete tries to remove the connection rows and trips this
+-- constraint from the surviving user_services rows. The block is therefore
+-- transitive but just as fatal, and it hits every user who has ever connected a
+-- mailbox, because scan-email, scan-all-emails and scheduled-rescan stamp this
+-- column on every service they discover.
+--
+-- SET NULL, not CASCADE. The column records only WHICH mailbox found a service;
+-- the service entry itself is the user's own curated list, with its own
+-- privacy_action state. Cascading would silently wipe that whole list the moment
+-- a user disconnected one of several mailboxes.
+DO $$
+DECLARE
+  v_conname TEXT;
+  v_confdeltype "char";
+BEGIN
+  SELECT con.conname, con.confdeltype
+  INTO v_conname, v_confdeltype
+  FROM pg_constraint con
+  JOIN pg_class c ON c.oid = con.conrelid
+  JOIN pg_namespace n ON n.oid = c.relnamespace
+  JOIN pg_class rc ON rc.oid = con.confrelid
+  JOIN pg_namespace rn ON rn.oid = rc.relnamespace
+  WHERE con.contype = 'f'
+    AND n.nspname = 'public'
+    AND c.relname = 'user_services'
+    AND rn.nspname = 'public'
+    AND rc.relname = 'email_connections'
+    AND con.conkey = ARRAY[(
+      SELECT a.attnum FROM pg_attribute a
+      WHERE a.attrelid = c.oid
+        AND a.attname = 'discovered_from_connection_id'
+        AND NOT a.attisdropped
+    )]::smallint[];
+
+  IF NOT FOUND THEN
+    RAISE NOTICE 'skip user_services.discovered_from_connection_id (no FK to email_connections)';
+  ELSIF v_confdeltype::text = 'n' THEN
+    RAISE NOTICE 'skip % (already ON DELETE SET NULL)', v_conname;
+  ELSE
+    EXECUTE format('ALTER TABLE public.user_services DROP CONSTRAINT %I', v_conname);
+    EXECUTE format(
+      'ALTER TABLE public.user_services ADD CONSTRAINT %I FOREIGN KEY (discovered_from_connection_id) REFERENCES public.email_connections(id) ON DELETE SET NULL',
+      v_conname
+    );
+    RAISE NOTICE 'rebuilt % as ON DELETE SET NULL', v_conname;
+  END IF;
+END $$;
+
 -- Document the non-obvious choices on the columns themselves, guarded the same
 -- way as the block above so a missing table cannot abort the migration.
 DO $$
 BEGIN
+  IF to_regclass('public.user_services') IS NOT NULL THEN
+    COMMENT ON COLUMN public.user_services.discovered_from_connection_id IS
+      'Provenance only: which mailbox connection surfaced this service. ON DELETE SET NULL — disconnecting a mailbox (or deleting the account) must not take the user''s curated service list with it.';
+  END IF;
+
   IF to_regclass('public.serp_requests_log') IS NOT NULL THEN
     COMMENT ON COLUMN public.serp_requests_log.user_id IS
       'Cascades on account deletion. The row''s `query` column contains the user''s own name/location, so the row cannot be anonymised by nulling this column; per-day spend is tracked separately in serp_usage_daily.';

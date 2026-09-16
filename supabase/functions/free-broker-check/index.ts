@@ -199,7 +199,18 @@ function buildQueries(user: UserProfile, domain: string): string[] {
   return queries;
 }
 
-async function serpSearch(query: string, apiKey: string) {
+interface SerpOutcome {
+  /**
+   * False when the call never produced an answer: non-2xx from SerpApi, a network error,
+   * or the 6s abort below. This MUST stay distinct from a successful search that returned
+   * zero organic results -- the two are identical on the wire (an empty array) but mean
+   * opposite things, and only the second one is evidence of absence.
+   */
+  ok: boolean;
+  results: Array<{ title: string; snippet: string; link: string }>;
+}
+
+async function serpSearch(query: string, apiKey: string): Promise<SerpOutcome> {
   // Bound each SERP call so one slow provider response can't hang the whole
   // broker check (which the client renders as a spinner).
   const controller = new AbortController();
@@ -211,12 +222,20 @@ async function serpSearch(query: string, apiKey: string) {
     url.searchParams.set('api_key', apiKey);
     url.searchParams.set('num', '5');
     const res = await fetch(url.toString(), { method: 'GET', signal: controller.signal });
-    if (!res.ok) return [];
+    if (!res.ok) {
+      console.warn(`[free-broker-check] SERP ${res.status} for ${query.substring(0, 40)}`);
+      return { ok: false, results: [] };
+    }
     const json = await res.json();
     const organic = Array.isArray(json?.organic_results) ? json.organic_results : [];
-    return organic.slice(0, 3).map((r: any) => ({ title: r.title ?? '', snippet: r.snippet ?? '', link: r.link ?? '' }));
+    return {
+      ok: true,
+      results: organic.slice(0, 3).map((r: any) => ({ title: r.title ?? '', snippet: r.snippet ?? '', link: r.link ?? '' })),
+    };
   } catch {
-    return [];
+    // Includes the AbortError from the 6s timeout above, which fires often enough that
+    // treating it as "no listings" would be actively wrong.
+    return { ok: false, results: [] };
   } finally {
     clearTimeout(timeout);
   }
@@ -239,6 +258,12 @@ interface BrokerCheck {
    * result can never be rendered as an all-clear.
    */
   budgetExhausted: boolean;
+  /**
+   * True when a SERP call we did make came back as a failure rather than an answer, or
+   * the broker threw outright. Same consequence as budgetExhausted -- this broker was
+   * never actually checked, so it must not contribute to an all-clear.
+   */
+  serpFailed: boolean;
 }
 
 async function checkBroker(
@@ -250,6 +275,7 @@ async function checkBroker(
   const queries = buildQueries(user, broker.domain);
   let best: { score: ReturnType<typeof scoreSerpResult>; link: string } | null = null;
   let budgetExhausted = false;
+  let serpFailed = false;
 
   for (const query of queries) {
     // Cache first — no budget consumed. Keep it this way: cache hits are what let the
@@ -267,7 +293,23 @@ async function checkBroker(
         budgetExhausted = true;
         break;
       }
-      results = await serpSearch(query, apiKey);
+      const search = await serpSearch(query, apiKey);
+      if (!search.ok) {
+        // Do NOT write this empty list to serp_cache. scan-brokers computes the identical
+        // cache_key for the identical query and reads this same table on behalf of PAYING
+        // customers, and storeSerpCache() below gives a zero-result entry a 30-DAY TTL --
+        // so a timed-out anonymous check would hand a paid scan a "not found" on a broker
+        // nobody ever searched, for a month. scan-brokers guards its own failures with a
+        // 6h error TTL; the cheapest equivalent in here is to cache nothing at all and let
+        // the next caller do a real search.
+        // continue, not break: before this change a failed call returned [] and the loop
+        // simply moved on to the city-qualified query, which is often the one that finds
+        // the person. Breaking here would trade a real "we found you" reveal for nothing,
+        // and the budget cost is unchanged -- 2 queries per broker was always the ceiling.
+        serpFailed = true;
+        continue;
+      }
+      results = search.results;
       await storeSerpCache(supabase, broker.slug, query, results);
     } else {
       break;
@@ -292,6 +334,7 @@ async function checkBroker(
     return {
       result: { slug: broker.slug, name: broker.name, domain: broker.domain, status: 'unknown', confidence: null, profileUrl: null },
       budgetExhausted,
+      serpFailed,
     };
   }
   return {
@@ -304,6 +347,7 @@ async function checkBroker(
       profileUrl: best.score.status_v2 === 'found' ? best.link : null,
     },
     budgetExhausted,
+    serpFailed,
   };
 }
 
@@ -360,6 +404,7 @@ Deno.serve(async (req) => {
           return {
             result: { slug: broker.slug, name: broker.name, domain: broker.domain, status: 'unknown' as StatusV2, confidence: null, profileUrl: null },
             budgetExhausted: false,
+            serpFailed: true,
           };
         })
       )
@@ -367,6 +412,7 @@ Deno.serve(async (req) => {
 
     const results: BrokerResult[] = checks.map((c) => c.result);
     const budgetExhausted = checks.some((c) => c.budgetExhausted);
+    const serpFailed = checks.some((c) => c.serpFailed);
     if (budgetExhausted) {
       console.warn('[free-broker-check] free SERP bucket exhausted — returning degraded result');
     }
@@ -383,11 +429,11 @@ Deno.serve(async (req) => {
     // came back inconclusive (SERP failure / no indexed data). Only when at least one
     // broker was actually searched (found / possible / not_found) AND nothing was
     // skipped for budget is a zero-exposure result trustworthy.
-    // budgetExhausted is included even when some brokers did answer: a partial pass is
-    // exactly the case where "0 listings" would read as an all-clear and be wrong. The
-    // UI only swaps in the degraded copy when nothing was found, so this costs the
-    // "we found you on N sites" moment nothing.
-    const degraded = !serpApiKey || budgetExhausted || (foundCount + possibleCount + notFoundCount === 0);
+    // budgetExhausted and serpFailed are included even when some brokers did answer: a
+    // partial pass is exactly the case where "0 listings" would read as an all-clear and
+    // be wrong. The UI only swaps in the degraded copy when nothing was found, so this
+    // costs the "we found you on N sites" moment nothing.
+    const degraded = !serpApiKey || budgetExhausted || serpFailed || (foundCount + possibleCount + notFoundCount === 0);
 
     return new Response(JSON.stringify({
       results,
