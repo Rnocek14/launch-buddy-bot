@@ -147,12 +147,6 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log(`[validate-email-contact] Authenticated user: ${user.id}`);
 
-    // Check if user is admin (admins can update shared service_catalog rows)
-    const { data: isAdmin } = await supabase.rpc("has_role", {
-      _user_id: user.id,
-      _role: "admin",
-    });
-
     // Parse request body
     const body: ValidationRequest = await req.json();
     const { email, updateDatabase, contactId, serviceId } = body;
@@ -164,6 +158,63 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
+    // ---------------------------------------------------------------------------
+    // SECURITY GATE — DO NOT DELETE THIS AS "UNUSED".
+    //
+    // The MX lookup below is read-only and harmless, so ANY authenticated user may
+    // call this function to check an address. The DATABASE WRITES further down are a
+    // different matter, and they are admin-only:
+    //
+    //   * service_catalog is a GLOBAL catalog shared by every tenant. One row is "the"
+    //     privacy contact for a service for all users.
+    //   * privacy_contacts is ALSO global — it has no user_id column (it is keyed on
+    //     service_id) and its RLS policies are admin-only for select/insert/update/
+    //     delete. There is no such thing as "my own" privacy_contacts row, so a
+    //     non-admin verifying one is never a self-scoped write.
+    //
+    // send-deletion-request mails whichever address these rows hold, including the
+    // requesting user's name, email and account identifiers, and CCs the user. So an
+    // unauthenticated write here is a PII exfiltration primitive: point a major service
+    // at your own inbox and collect other people's deletion requests. This was not
+    // hypothetical — production had GitHub sitting on privacy@dropbox.com.
+    //
+    // A passing MX lookup proves only that the domain accepts mail. It does NOT prove
+    // the address belongs to that company or is a privacy inbox, so it cannot stand in
+    // for authorization.
+    //
+    // Non-admins who discover a contact are not stuck: manual_contact_submissions is
+    // the reviewed path (ContactDiscoveryDialog -> ManualContactReview).
+    // ---------------------------------------------------------------------------
+    if (updateDatabase) {
+      const { data: isAdmin, error: roleError } = await supabase.rpc("has_role", {
+        _user_id: user.id,
+        _role: "admin",
+      });
+
+      // Fail closed — if we cannot positively prove the caller is an admin, we do not write.
+      if (roleError || isAdmin !== true) {
+        console.error(
+          `[validate-email-contact] DENIED database write for non-admin user ${user.id} ` +
+            `(email=${email}, serviceId=${serviceId ?? "none"}, contactId=${contactId ?? "none"}` +
+            `, roleCheckError=${roleError?.message ?? "none"})`
+        );
+        return new Response(
+          JSON.stringify({
+            error: "Forbidden - admin role required to verify privacy contacts",
+            detail:
+              "Verifying a contact writes the shared service catalog. Re-send without " +
+              "updateDatabase for a read-only MX check, or submit the contact via " +
+              "manual_contact_submissions for admin review.",
+          }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      console.log(
+        `[validate-email-contact] Admin ${user.id} authorized for database write`
+      );
+    }
+
     console.log(`Validating email: ${email}`);
 
     // Perform MX validation
@@ -171,10 +222,12 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("Validation result:", validationResult);
 
-    // Update database if requested
+    // Update database if requested.
+    // Reaching here with updateDatabase set means the admin gate above passed.
     if (updateDatabase && validationResult.isValid) {
-      // Use service-role client for these mutations — we've already authenticated
-      // the user, and this avoids RLS issues for legitimate verification flows.
+      // Use service-role client for these mutations. This bypasses RLS entirely, which
+      // is exactly why the admin gate above has to exist — the gate is the ONLY thing
+      // standing between an ordinary signed-up user and the shared catalog rows.
       const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
       const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
