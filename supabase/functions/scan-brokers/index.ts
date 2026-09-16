@@ -1624,16 +1624,22 @@ Deno.serve(async (req) => {
 
       const { data: brokers } = await supabase
         .from('data_brokers')
-        .select('id, name, slug, priority, opt_out_difficulty')
+        .select('id, name, slug, priority, opt_out_difficulty, is_searchable')
         .eq('is_active', true)
         .order('priority');
 
-      // Same coverage figures the POST returns, recomputed from the broker list we
-      // already fetched (no extra round-trip on each poll) so the UI still has them
-      // after a reload, when only this endpoint is called.
+      // Same coverage figure the POST returns, recomputed from the broker list we already
+      // fetched (no extra round-trip on each poll) so the UI still has it after a reload,
+      // when only this endpoint is called.
+      //
+      // It has to be the SAME definition as the POST or the banner changes number when the
+      // page reloads. "Skipped" therefore means: a broker a scan WOULD have considered
+      // (is_active AND is_searchable) that has no detection pattern. is_searchable=false rows
+      // are enterprise aggregators with no public people-search — a scan never considers them,
+      // so they are not something we skipped.
       const activeBrokers = brokers || [];
       const skippedBrokerSlugs = activeBrokers
-        .filter((b: any) => !hasDetectionPattern(b.slug))
+        .filter((b: any) => b.is_searchable && !hasDetectionPattern(b.slug))
         .map((b: any) => b.slug);
 
       return new Response(

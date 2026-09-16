@@ -49,7 +49,7 @@ const Index = () => {
             // Schema answers are indexed and quoted verbatim, so they have to be
             // literally true: we find listings and hand over a guided opt-out —
             // we do not submit removals to brokers on the user's behalf.
-            text: `Footprint Finder is a digital privacy service that scans your Gmail or Outlook inbox to discover every account tied to your email and checks those addresses against known data breaches. On the Complete plan it also searches ${BROKER_COUNT_LABEL} people-search sites for listings of you and gives you a one-click guided opt-out for each one it finds, backed by step-by-step removal guides for ${GUIDED_OPTOUT_BROKER_COUNT} brokers. It emails you a monthly privacy report and alerts you when new exposures appear.`,
+            text: `Footprint Finder is a digital privacy service that scans your Gmail or Outlook inbox to discover every account tied to your email and checks those addresses against known data breaches. On the Complete plan it also searches ${BROKER_COUNT_LABEL} people-search sites for listings of you and gives you a one-click guided opt-out for each one it finds, backed by a removal page with a direct opt-out link for each of the ${GUIDED_OPTOUT_BROKER_COUNT} brokers it tracks. It emails you a monthly privacy report and alerts you when new exposures appear.`,
           },
         },
         {

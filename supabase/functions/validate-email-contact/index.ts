@@ -222,6 +222,17 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("Validation result:", validationResult);
 
+    // What the writes below ACTUALLY did. `databaseUpdated` used to be reported as
+    // `updateDatabase && isValid` no matter what happened, while both update errors were
+    // swallowed into console.error and a zero-row match (stale contactId, wrong serviceId)
+    // was indistinguishable from a write. So the handler could answer 200 / "updated" having
+    // changed nothing, and the callers — which toast "Contact Verified!" off
+    // validation.isValid — claimed a verification that does not exist in the database. The
+    // same silent-no-op failure the admin gate above refuses to make, so do not make it here.
+    const writeErrors: string[] = [];
+    let contactRowsWritten = 0;
+    let catalogRowsWritten = 0;
+
     // Update database if requested.
     // Reaching here with updateDatabase set means the admin gate above passed.
     if (updateDatabase && validationResult.isValid) {
@@ -233,45 +244,78 @@ const handler = async (req: Request): Promise<Response> => {
 
       if (contactId) {
         // Mark the discovered contact as MX-validated and verified
-        const { error: updateError } = await adminClient
+        // .select() so we can tell "row updated" from "no row matched that id".
+        const { data: updatedContacts, error: updateError } = await adminClient
           .from("privacy_contacts")
           .update({
             mx_validated: true,
             verified: true,
             last_validated_at: new Date().toISOString(),
           })
-          .eq("id", contactId);
+          .eq("id", contactId)
+          .select("id");
 
         if (updateError) {
           console.error("Error updating privacy_contacts:", updateError);
+          writeErrors.push(`privacy_contacts: ${updateError.message}`);
         } else {
-          console.log(`Updated privacy_contacts record: ${contactId}`);
+          contactRowsWritten = updatedContacts?.length ?? 0;
+          if (contactRowsWritten === 0) {
+            console.warn(
+              `[validate-email-contact] No privacy_contacts row matched id ${contactId} — nothing was verified`
+            );
+          } else {
+            console.log(`Updated privacy_contacts record: ${contactId}`);
+          }
         }
       }
 
       if (serviceId) {
         // Update shared service_catalog with verified privacy email
-        const { error: updateError } = await adminClient
+        const { data: updatedServices, error: updateError } = await adminClient
           .from("service_catalog")
           .update({
             contact_verified: true,
             privacy_email: email,
           })
-          .eq("id", serviceId);
+          .eq("id", serviceId)
+          .select("id");
 
         if (updateError) {
           console.error("Error updating service_catalog:", updateError);
+          writeErrors.push(`service_catalog: ${updateError.message}`);
         } else {
-          console.log(`Updated service_catalog record: ${serviceId}`);
+          catalogRowsWritten = updatedServices?.length ?? 0;
+          if (catalogRowsWritten === 0) {
+            console.warn(
+              `[validate-email-contact] No service_catalog row matched id ${serviceId} — nothing was verified`
+            );
+          } else {
+            console.log(`Updated service_catalog record: ${serviceId}`);
+          }
         }
       }
+    }
+
+    // Both writes are still attempted exactly as before; only the answer changes. A write that
+    // errored is reported as a failure rather than logged and dressed up as success.
+    if (writeErrors.length > 0) {
+      return new Response(
+        JSON.stringify({
+          error: "Failed to record contact verification",
+          details: writeErrors.join("; "),
+          validation: validationResult,
+        }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     return new Response(
       JSON.stringify({
         success: true,
         validation: validationResult,
-        databaseUpdated: updateDatabase && validationResult.isValid,
+        // The real outcome, not the request's intent.
+        databaseUpdated: contactRowsWritten > 0 || catalogRowsWritten > 0,
       }),
       {
         status: 200,

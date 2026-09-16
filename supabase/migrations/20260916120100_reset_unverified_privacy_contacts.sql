@@ -51,8 +51,16 @@ IMMUTABLE
 AS $$
   WITH normalized AS (
     SELECT
-      -- Everything right of the last '@', lowercased, trailing root dot stripped.
-      regexp_replace(lower(split_part(coalesce(p_email, ''), '@', 2)), '\.$', '') AS email_domain,
+      -- The label after the '@', lowercased. Stored addresses are not always bare: they get
+      -- padded with whitespace, wrapped as 'Privacy Team <privacy@github.com>', or carry a
+      -- legal trailing root dot. None of those are domain MISMATCHES, so normalize them away
+      -- -- otherwise a correct contact gets unverified over a formatting artifact and lands in
+      -- the admin re-review queue for no reason. (An address with two '@' is malformed; it
+      -- yields a nonsense domain here and is unverified, which is the safe direction.)
+      regexp_replace(
+        trim(lower(split_part(coalesce(p_email, ''), '@', 2))),
+        '[.>]+$', ''
+      ) AS email_domain,
       -- Catalog domains are stored bare ('github.com'), but tolerate a 'www.' prefix or a
       -- stray path so a formatting quirk cannot masquerade as a mismatch.
       regexp_replace(

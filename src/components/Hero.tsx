@@ -211,7 +211,7 @@ export const Hero = () => {
                 How is this different from data broker removal?
               </AccordionTrigger>
               <AccordionContent className="text-sm text-muted-foreground">
-                Data broker removal focuses on people-search/data broker sites. We focus on <strong>account discovery</strong> first — finding services tied to your email — then scan <strong>{AUTO_SCAN_BROKER_COUNT} people-search sites</strong> and walk you through each opt-out, with step-by-step guides for <strong>{GUIDED_OPTOUT_BROKER_COUNT} brokers</strong>. You stay in the loop on every request — no script quietly reporting a removal that never happened.
+                Data broker removal focuses on people-search/data broker sites. We focus on <strong>account discovery</strong> first — finding services tied to your email — then scan <strong>{AUTO_SCAN_BROKER_COUNT} people-search sites</strong> and walk you through each opt-out, backed by a removal page and direct opt-out link for <strong>{GUIDED_OPTOUT_BROKER_COUNT} brokers</strong>. You stay in the loop on every request — no script quietly reporting a removal that never happened.
               </AccordionContent>
             </AccordionItem>
           </Accordion>
