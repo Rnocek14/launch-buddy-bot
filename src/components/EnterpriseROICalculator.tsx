@@ -260,7 +260,7 @@ export function EnterpriseROICalculator({ onGetCustomAnalysis }: EnterpriseROICa
       pdf.setFontSize(10);
       pdf.setTextColor(100, 100, 100);
       pdf.text("Footprint Finder - Enterprise Data Privacy Management", margin, 280);
-      pdf.text("Contact: enterprise@footprintfinder.com", margin, 286);
+      pdf.text("Contact: enterprise@footprintfinder.co", margin, 286);
 
       // Download
       const fileName = inputs.companyName 

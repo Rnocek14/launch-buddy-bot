@@ -278,8 +278,8 @@ export const ShareResultDialog = ({
   };
 
   const handleShareToSocial = (platform: string) => {
-    const text = `I found ${serviceCount} hidden accounts in my digital footprint with a risk score of ${riskScore}. Check yours at ${shareUrl || 'footprintfinder.com'}`;
-    const url = shareUrl || "https://footprintfinder.com";
+    const text = `I found ${serviceCount} hidden accounts in my digital footprint with a risk score of ${riskScore}. Check yours at ${shareUrl || 'footprintfinder.co'}`;
+    const url = shareUrl || "https://footprintfinder.co";
     
     let shareUrlFinal = "";
     

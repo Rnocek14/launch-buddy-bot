@@ -402,8 +402,11 @@ export default function Parents() {
                 },
                 {
                   step: "3",
-                  title: "We handle removal",
-                  desc: "We send opt-out requests on their behalf and monitor monthly so listings don't come back.",
+                  title: "You get the removal list",
+                  // We do NOT submit broker opt-outs, and no cron re-checks brokers:
+                  // scheduled-rescan filters to tier 'pro' and rescans inboxes, not
+                  // broker listings. Both halves of the old copy were false.
+                  desc: "Every listing we find comes with a direct opt-out link and step-by-step instructions, so you can clear them in an evening.",
                   icon: CheckCircle2,
                 },
               ].map((item, i) => (

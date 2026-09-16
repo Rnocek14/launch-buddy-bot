@@ -157,6 +157,43 @@ function urlHasNameTokens(url: string, tokens: string[]): boolean {
   }
 }
 
+// US state codes -> full names, so a state can be corroborated by either spelling.
+const STATE_NAMES: Record<string, string> = {
+  AL:'alabama',AK:'alaska',AZ:'arizona',AR:'arkansas',CA:'california',CO:'colorado',
+  CT:'connecticut',DE:'delaware',FL:'florida',GA:'georgia',HI:'hawaii',ID:'idaho',
+  IL:'illinois',IN:'indiana',IA:'iowa',KS:'kansas',KY:'kentucky',LA:'louisiana',
+  ME:'maine',MD:'maryland',MA:'massachusetts',MI:'michigan',MN:'minnesota',
+  MS:'mississippi',MO:'missouri',MT:'montana',NE:'nebraska',NV:'nevada',
+  NH:'new hampshire',NJ:'new jersey',NM:'new mexico',NY:'new york',
+  NC:'north carolina',ND:'north dakota',OH:'ohio',OK:'oklahoma',OR:'oregon',
+  PA:'pennsylvania',RI:'rhode island',SC:'south carolina',SD:'south dakota',
+  TN:'tennessee',TX:'texas',UT:'utah',VT:'vermont',VA:'virginia',WA:'washington',
+  WV:'west virginia',WI:'wisconsin',WY:'wyoming',DC:'district of columbia',
+};
+
+/**
+ * Does this result actually mention the user's state?
+ *
+ * This was `text.includes(state.toLowerCase())` on a two-letter code, so for a
+ * California visitor it was `text.includes("ca")` — which fires on "because",
+ * "located", "scam", "Carlsbad", "vacation" and "background check". Roughly a
+ * dozen state codes are common English substrings (CA, IN, OR, ME, PA, LA, MD,
+ * DE, MS, MT, NE, OK), so those users got a free +0.15 on essentially every
+ * result, which is enough to carry a bare name match over the possible_match
+ * threshold and render a live link to a stranger's listing.
+ *
+ * Word-boundary the code, and accept the full state name as an alternative.
+ */
+function stateMatches(text: string, state: string): boolean {
+  const raw = state.trim().toLowerCase();
+  if (!raw) return false;
+  // Escape defensively: `state` arrives from the request body.
+  const safe = raw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  if (new RegExp(`\\b${safe}\\b`).test(text)) return true;
+  const full = STATE_NAMES[raw.toUpperCase()];
+  return full ? text.includes(full) : false;
+}
+
 function scoreSerpResult({ title, snippet, url, user }: { title: string; snippet: string; url: string; user: UserProfile }) {
   const text = `${title}\n${snippet}`.toLowerCase();
   const titleLower = title.toLowerCase();
@@ -167,7 +204,7 @@ function scoreSerpResult({ title, snippet, url, user }: { title: string; snippet
 
   if (text.includes(fullName)) { breakdown.name_match = 0.30; total += 0.30; }
   if (user.city && text.includes(user.city.toLowerCase())) { breakdown.city_match = 0.20; total += 0.20; }
-  if (user.state && text.includes(user.state.toLowerCase())) { breakdown.state_match = 0.15; total += 0.15; }
+  if (user.state && stateMatches(text, user.state)) { breakdown.state_match = 0.15; total += 0.15; }
   if (/\(?\d{3}\)?[-.\s]\d{3}[-.\s]\d{4}/.test(text)) { breakdown.phone_hint = 0.10; total += 0.10; }
   if (/\b\d{2}\s*(?:years?\s*old|y\.?o\.?)\b/i.test(text) || /\bage[:\s]+\d{2}/i.test(text)) { breakdown.age_hint = 0.15; total += 0.15; }
   if (/\b\d{1,6}\s+[a-z0-9.'-]{2,}\s+(st|street|ave|avenue|dr|drive|rd|road|ln|lane|blvd|boulevard|ct|court|cir|circle|pl|place|ter|terrace)\b/i.test(text)) { breakdown.address_hint = 0.10; total += 0.10; }
@@ -179,7 +216,11 @@ function scoreSerpResult({ title, snippet, url, user }: { title: string; snippet
   const nameInUrl = urlHasNameTokens(url, nameTokens);
   const hasStrongSignal = nameInTitle || nameInUrl || (!!breakdown.name_match && (!!breakdown.age_hint || !!breakdown.phone_hint));
 
-  const hasCorroborator = !!breakdown.city_match || !!breakdown.state_match || !!breakdown.age_hint || !!breakdown.phone_hint || !!breakdown.address_hint;
+  // state_match is deliberately NOT a corroborator. A state is shared by millions,
+  // so "same name, same state" is not evidence of the same person — and promoting it
+  // to possible_match now renders a clickable link to that listing. City, age, phone
+  // and address are person-specific; a state is not.
+  const hasCorroborator = !!breakdown.city_match || !!breakdown.age_hint || !!breakdown.phone_hint || !!breakdown.address_hint;
   const canBePossible = !!breakdown.name_match && hasCorroborator;
 
   let status_v2: StatusV2 = 'not_found';
