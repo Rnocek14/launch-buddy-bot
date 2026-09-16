@@ -10,9 +10,21 @@
 -- complete and family, and the Complete plan is sold as "Everything in Pro, plus:", so the
 -- intended behaviour is unlimited deletions for all three paid tiers.
 --
--- This migration only widens that one tier check. Everything else about the function -- the
--- SECURITY DEFINER context, the search_path pin, the free-tier row bootstrap and the free-tier
--- fallback -- is preserved as-is.
+-- Two things are widened here, and nothing else: the subscriptions.tier CHECK constraint (so a
+-- 'family' row can exist at all) and the tier gate inside get_remaining_deletions(). Everything
+-- else about the function -- the SECURITY DEFINER context, the search_path pin, the free-tier row
+-- bootstrap and the free-tier fallback -- is preserved as-is.
+
+-- The 'family' branch below is dead code without this: subscriptions_tier_check was last set by
+-- 20260114204932 to CHECK (tier = ANY (ARRAY['free','pro','complete'])), so the column physically
+-- cannot hold 'family'. check-subscription maps the Family price IDs to tier 'family' and then
+-- swallows the resulting constraint violation (it only logStep()s updateError/insertError), so a
+-- paying Family customer's row silently stays at its previous tier -- usually 'free' -- and they
+-- keep getting the 3/month cap. Widen the constraint first, then the tier gate below can actually
+-- be reached. No backfill is needed: check-subscription re-syncs the tier from Stripe on its next
+-- call, which now succeeds.
+ALTER TABLE public.subscriptions DROP CONSTRAINT IF EXISTS subscriptions_tier_check;
+ALTER TABLE public.subscriptions ADD CONSTRAINT subscriptions_tier_check CHECK (tier = ANY (ARRAY['free'::text, 'pro'::text, 'complete'::text, 'family'::text]));
 
 CREATE OR REPLACE FUNCTION public.get_remaining_deletions(p_user_id UUID)
 RETURNS INTEGER
