@@ -128,7 +128,7 @@ export default function Affiliates() {
               <span className="text-primary">promoting online privacy</span>
             </h1>
             <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto">
-              Privacy is a $4B market growing 20% per year. Join the Deleteist affiliate program and earn 40% recurring on every subscription you refer — for as long as they stay.
+              Privacy is a $4B market growing 20% per year. Join the Footprint Finder affiliate program and earn 40% recurring on every subscription you refer — for as long as they stay.
             </p>
             <div className="flex flex-wrap justify-center gap-3 pt-2">
               <Badge variant="outline" className="px-3 py-1">
@@ -230,7 +230,7 @@ export default function Affiliates() {
         <section className="container mx-auto px-4 py-16 max-w-5xl">
           <div className="grid md:grid-cols-2 gap-8 items-center">
             <div className="space-y-4">
-              <h2 className="text-3xl font-bold">Why Deleteist converts</h2>
+              <h2 className="text-3xl font-bold">Why Footprint Finder converts</h2>
               <ul className="space-y-3">
                 {[
                   "Free scan finds breaches & exposed data instantly — perfect hook",
@@ -415,7 +415,7 @@ export default function Affiliates() {
               },
               {
                 q: "Can I run paid ads?",
-                a: "Yes — except branded keywords (\"Deleteist\", \"Footprint Finder\"). We'll send full guidelines on approval.",
+                a: "Yes — except branded keywords (\"Footprint Finder\"). We'll send full guidelines on approval.",
               },
               {
                 q: "Do you provide creative assets?",
