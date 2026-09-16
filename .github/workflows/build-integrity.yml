@@ -18,6 +18,14 @@ on:
       - 'tsconfig*.json'
       - 'vite.config.ts'
       - '.github/workflows/build-integrity.yml'
+      # The suite asserts against edge-function and migration source (by import
+      # and by reading the files), so a change to either can break it while
+      # touching nothing above. Without these, the tests that guard the paid
+      # tiers and the broker gate would not run on the PRs most likely to
+      # break them.
+      - 'tests/**'
+      - 'supabase/functions/**'
+      - 'supabase/migrations/**'
   push:
     branches:
       - main
@@ -62,6 +70,28 @@ jobs:
       # project references, so --noEmit exits 0 without checking anything.
       - name: Typecheck
         run: npm run typecheck
+
+      # Nothing in CI ran the test suite before this, so a PR could delete every
+      # assertion in tests/ and still go green. Scoped to tests/ deliberately:
+      # the *.test.ts files under supabase/functions/ are written against
+      # Deno.test and error out under `bun test` (see below), so running the
+      # whole tree here would fail for a reason that has nothing to do with the
+      # change under review.
+      - name: Unit tests
+        run: bun test tests/
+
+      # The edge-function tests need the Deno runtime. Non-blocking because they
+      # have never run in CI and their current state is unknown; making them
+      # blocking is a follow-up, not a silent gate flip.
+      - name: Edge-function tests (Deno, non-blocking)
+        continue-on-error: true
+        run: |
+          if command -v deno >/dev/null 2>&1; then
+            deno test supabase/functions/_shared/*.test.ts \
+              supabase/functions/discover-privacy-contacts/*.test.ts --allow-env
+          else
+            echo "::notice::Deno not installed on this runner — skipping edge-function tests."
+          fi
 
       - name: Build (full prebuild -> vite -> postbuild, as the hosts run it)
         run: npm run build
