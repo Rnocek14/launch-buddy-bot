@@ -90,14 +90,58 @@ async function storeSerpCache(
 }
 
 // Budget governor — the real hard cost cap on this unauthenticated endpoint.
-async function consumeBudget(supabase: any): Promise<boolean> {
+// This spends the FREE bucket (consume_free_serp_quota / serp_free_usage_daily), NOT the
+// shared one scan-brokers spends for paying customers. This endpoint is verify_jwt=false
+// with no captcha, so scripted traffic against it used to be able to drain the single
+// daily counter and push every paid scan onto its budget_exhausted path. The two budgets
+// are separate so the worst a flood here can do is take the free check offline.
+// See supabase/migrations/20260916130300_separate_free_serp_quota.sql for the cap.
+async function consumeFreeBudget(supabase: any): Promise<boolean> {
   try {
-    const { data, error } = await supabase.rpc('consume_serp_quota', { p_count: 1 });
+    const { data, error } = await supabase.rpc('consume_free_serp_quota', { p_count: 1 });
     if (error) return false; // fail closed
     return data === true;
   } catch {
     return false;
   }
+}
+
+// ---- Best-effort per-IP speed bump ----
+// Honest about what this is: it is NOT the cost control. Edge functions run as many
+// short-lived isolates, so this Map is empty after every cold start and each concurrent
+// instance keeps its own copy — a distributed or merely patient caller walks straight
+// past it. The free SERP bucket in Postgres is the only counter that is atomic and shared
+// across instances, and that is what actually caps the spend. This exists to blunt the
+// cheapest attack (one host, one tight loop) and to stop an accidental client retry storm
+// before it reaches SerpApi at all.
+const IP_WINDOW_MS = 60_000;
+// Deliberately loose: carrier-grade NAT and office networks put many genuine visitors
+// behind one address, and the failure mode here is a real person being told to try again.
+// A scripted flood runs orders of magnitude above this; a human filling in a form does not.
+const IP_MAX_REQUESTS = 10;
+const ipHits = new Map<string, number[]>();
+
+function clientIp(req: Request): string | null {
+  // x-forwarded-for is "client, proxy1, proxy2" — the first entry is the caller.
+  const fwd = req.headers.get('x-forwarded-for');
+  const first = fwd?.split(',')[0]?.trim();
+  if (first) return first;
+  return req.headers.get('cf-connecting-ip')?.trim() || null;
+}
+
+function isRateLimited(ip: string): boolean {
+  const now = Date.now();
+  // Bound the map: a spray of spoofed addresses must not grow this isolate's memory
+  // without limit. Dropping the whole window is fine — the DB bucket is the real cap.
+  if (ipHits.size > 5000) ipHits.clear();
+  const recent = (ipHits.get(ip) ?? []).filter((t) => now - t < IP_WINDOW_MS);
+  if (recent.length >= IP_MAX_REQUESTS) {
+    ipHits.set(ip, recent);
+    return true;
+  }
+  recent.push(now);
+  ipHits.set(ip, recent);
+  return false;
 }
 
 function normalizeNameTokens(firstName: string, lastName: string): string[] {
@@ -187,26 +231,40 @@ interface BrokerResult {
   profileUrl: string | null;
 }
 
+interface BrokerCheck {
+  result: BrokerResult;
+  /**
+   * True when this broker stopped short because the FREE daily bucket was spent, i.e.
+   * there was work we chose not to do. The caller folds this into `degraded` so a thin
+   * result can never be rendered as an all-clear.
+   */
+  budgetExhausted: boolean;
+}
+
 async function checkBroker(
   broker: { slug: string; name: string; domain: string },
   user: UserProfile,
   apiKey: string | null,
   supabase: any,
-): Promise<BrokerResult> {
+): Promise<BrokerCheck> {
   const queries = buildQueries(user, broker.domain);
   let best: { score: ReturnType<typeof scoreSerpResult>; link: string } | null = null;
+  let budgetExhausted = false;
 
   for (const query of queries) {
-    // Cache first — no budget consumed.
+    // Cache first — no budget consumed. Keep it this way: cache hits are what let the
+    // free funnel keep working on a small bucket.
     let results: Array<{ title: string; snippet: string; link: string }> | null = null;
     const cached = await checkSerpCache(supabase, broker.slug, query);
     if (cached.hit && cached.results) {
       results = cached.results;
     } else if (apiKey) {
-      // Cache miss — consume budget before hitting SERP.
-      const allowed = await consumeBudget(supabase);
+      // Cache miss — consume free budget before hitting SERP.
+      const allowed = await consumeFreeBudget(supabase);
       if (!allowed) {
-        // Budget exhausted; bail with whatever we have.
+        // Free bucket exhausted (or the RPC failed and we failed closed). Bail with
+        // whatever we have, and flag it so the response degrades honestly.
+        budgetExhausted = true;
         break;
       }
       results = await serpSearch(query, apiKey);
@@ -231,15 +289,21 @@ async function checkBroker(
   }
 
   if (!best) {
-    return { slug: broker.slug, name: broker.name, domain: broker.domain, status: 'unknown', confidence: null, profileUrl: null };
+    return {
+      result: { slug: broker.slug, name: broker.name, domain: broker.domain, status: 'unknown', confidence: null, profileUrl: null },
+      budgetExhausted,
+    };
   }
   return {
-    slug: broker.slug,
-    name: broker.name,
-    domain: broker.domain,
-    status: best.score.status_v2,
-    confidence: Math.round(best.score.total * 100) / 100,
-    profileUrl: best.score.status_v2 === 'found' ? best.link : null,
+    result: {
+      slug: broker.slug,
+      name: broker.name,
+      domain: broker.domain,
+      status: best.score.status_v2,
+      confidence: Math.round(best.score.total * 100) / 100,
+      profileUrl: best.score.status_v2 === 'found' ? best.link : null,
+    },
+    budgetExhausted,
   };
 }
 
@@ -251,6 +315,19 @@ Deno.serve(async (req) => {
   if (req.method !== 'POST') {
     return new Response(JSON.stringify({ error: 'Method not allowed' }), {
       status: 405, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
+  // Cheapest possible check, before we parse a body or build a client. When the caller
+  // can't be identified we do NOT limit: a missing header must not collapse every visitor
+  // into one shared bucket and brick the free scan. The DB bucket still caps the spend.
+  const ip = clientIp(req);
+  if (ip && isRateLimited(ip)) {
+    // 429 with no results — supabase-js surfaces this as an error and the UI shows its
+    // "try again in a moment" state. Never a results payload, which would read as an
+    // all-clear.
+    return new Response(JSON.stringify({ error: 'Too many checks from this connection. Please try again in a minute.' }), {
+      status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Retry-After': '60' },
     });
   }
 
@@ -275,15 +352,24 @@ Deno.serve(async (req) => {
       state: parsed.data.state,
     };
 
-    // Run brokers concurrently — the budget RPC is atomic, so this is safe and fast.
-    const results: BrokerResult[] = await Promise.all(
+    // Run brokers concurrently — the budget RPC locks the day's row, so this is safe and fast.
+    const checks: BrokerCheck[] = await Promise.all(
       FREE_BROKERS.map((broker) =>
         checkBroker(broker, user, serpApiKey, supabase).catch((e) => {
           console.error(`[free-broker-check] ${broker.slug} failed:`, e);
-          return { slug: broker.slug, name: broker.name, domain: broker.domain, status: 'unknown' as StatusV2, confidence: null, profileUrl: null };
+          return {
+            result: { slug: broker.slug, name: broker.name, domain: broker.domain, status: 'unknown' as StatusV2, confidence: null, profileUrl: null },
+            budgetExhausted: false,
+          };
         })
       )
     );
+
+    const results: BrokerResult[] = checks.map((c) => c.result);
+    const budgetExhausted = checks.some((c) => c.budgetExhausted);
+    if (budgetExhausted) {
+      console.warn('[free-broker-check] free SERP bucket exhausted — returning degraded result');
+    }
 
     const foundCount = results.filter((r) => r.status === 'found').length;
     const possibleCount = results.filter((r) => r.status === 'possible_match').length;
@@ -292,11 +378,16 @@ Deno.serve(async (req) => {
 
     // "Degraded" = we could NOT meaningfully perform the check, so a zero result
     // must NOT be presented as a reassuring "you're clean". This happens when the
-    // SERP key is unset, or when every broker came back inconclusive (budget
-    // exhausted / SERP failure / no indexed data). Only when at least one broker
-    // was actually searched (found / possible / not_found) is a zero-exposure
-    // result trustworthy.
-    const degraded = !serpApiKey || (foundCount + possibleCount + notFoundCount === 0);
+    // SERP key is unset, when the free daily bucket ran out part-way through (we
+    // knowingly skipped searches we would otherwise have run), or when every broker
+    // came back inconclusive (SERP failure / no indexed data). Only when at least one
+    // broker was actually searched (found / possible / not_found) AND nothing was
+    // skipped for budget is a zero-exposure result trustworthy.
+    // budgetExhausted is included even when some brokers did answer: a partial pass is
+    // exactly the case where "0 listings" would read as an all-clear and be wrong. The
+    // UI only swaps in the degraded copy when nothing was found, so this costs the
+    // "we found you on N sites" moment nothing.
+    const degraded = !serpApiKey || budgetExhausted || (foundCount + possibleCount + notFoundCount === 0);
 
     return new Response(JSON.stringify({
       results,

@@ -201,7 +201,7 @@ export default function Parents() {
                           </Button>
                         )}
                         <p className="text-xs text-muted-foreground">
-                          We don't send a separate confirmation email, so keep this link handy.
+                          We don't send a separate confirmation email — sign in from this page.
                           If your scan isn't available once you're signed in, email{" "}
                           <a className="underline" href="mailto:support@footprintfinder.co">
                             support@footprintfinder.co
