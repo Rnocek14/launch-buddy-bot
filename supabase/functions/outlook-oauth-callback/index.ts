@@ -62,6 +62,23 @@ serve(async (req) => {
     const outlookProvider = new OutlookProvider();
     const connectionData = await outlookProvider.handleCallback(code, userId);
 
+    // Fail closed. OutlookProvider.handleCallback falls back to returning plain-text tokens
+    // when encryption throws (the usual trigger is a missing or malformed
+    // GMAIL_TOKEN_ENCRYPTION_KEY, which GO-LIVE.md requires before any user connects).
+    // A Microsoft refresh token is long-lived mailbox access, so drop the connection
+    // instead of persisting unencrypted credentials. Log why, never the tokens or the key.
+    if (connectionData.tokens_encrypted !== true) {
+      console.error('Outlook token encryption failed - refusing to store connection', {
+        userId,
+        email: connectionData.email,
+        encryptionKeyConfigured: Boolean(Deno.env.get('GMAIL_TOKEN_ENCRYPTION_KEY')),
+      });
+      return new Response(null, {
+        status: 302,
+        headers: { 'Location': `${baseUrl}/settings?error=${encodeURIComponent('Could not securely store your Outlook credentials, so nothing was saved. Please try again or contact support.')}` },
+      });
+    }
+
     console.log('Outlook callback successful, storing connection');
 
     const { data: existingConnection } = await supabase
