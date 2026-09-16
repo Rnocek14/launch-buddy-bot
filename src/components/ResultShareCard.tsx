@@ -95,14 +95,14 @@ export const ResultShareCard = ({
           {/* CTA */}
           <div className="pt-4">
             <div className="text-white text-3xl font-semibold">Scan yours at</div>
-            <div className="text-white text-4xl font-bold mt-2">footprintfinder.com</div>
+            <div className="text-white text-4xl font-bold mt-2">footprintfinder.co</div>
           </div>
         </div>
 
         {/* QR Code - positioned relative to card, not content stack */}
         <div className="absolute bottom-16 right-16 bg-white p-4 rounded-2xl shadow-lg z-20">
           <QRCodeSVG 
-            value="https://footprintfinder.com" 
+            value="https://footprintfinder.co" 
             size={128}
             bgColor="#ffffff"
             fgColor="#000000"
@@ -186,7 +186,7 @@ export const ResultShareCard = ({
         <div className="absolute bottom-16 left-16 right-16 text-center">
           <div className="bg-primary text-primary-foreground rounded-2xl px-12 py-6">
             <div className="text-2xl font-semibold">Get Your Digital Footprint Report</div>
-            <div className="text-3xl font-bold mt-1">footprintfinder.com</div>
+            <div className="text-3xl font-bold mt-1">footprintfinder.co</div>
           </div>
         </div>
       </div>
@@ -254,7 +254,7 @@ export const ResultShareCard = ({
         {/* CTA */}
         <div className="text-center">
           <div className="text-white text-3xl font-semibold mb-2">Take the challenge</div>
-          <div className="text-white text-5xl font-bold">footprintfinder.com</div>
+          <div className="text-white text-5xl font-bold">footprintfinder.co</div>
         </div>
       </div>
     </div>

@@ -2,7 +2,19 @@
 // Phase 1.2: Probe utilities for privacy contact discovery
 
 // -------------------- Config --------------------
-const int = (v?: string, d = 0) => Number.isFinite(Number(v)) ? Number(v) : d;
+// NOTE: an identical copy of int() lives in
+// supabase/functions/discover-privacy-contacts/index.ts — keep the two in sync.
+// They stay duplicated because this module reads Deno.env at import time, so it
+// is only safely loadable from a Deno runtime.
+// Blank is treated as unset: Number('') and Number('   ') are both 0 (and finite),
+// so an env var that is set-but-empty — common in deploy configs and CI — would
+// otherwise parse as 0 and silently collapse the clamps below to their floor.
+// An explicit '0' (and negative values) still parse normally.
+const int = (v?: string, d = 0) => {
+  if (v === undefined || v.trim() === '') return d;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : d;
+};
 export const PROBE_TIMEOUT_MS = Math.min(15000, Math.max(1500, int(Deno.env.get('PROBE_TIMEOUT_MS'), 4000)));
 export const SITEMAP_MAX_LOCS = Math.min(2000, Math.max(25, int(Deno.env.get('SITEMAP_MAX_LOCS'), 200))); // default 200
 export const SITEMAP_MAX_BYTES = Math.min(10_000_000, Math.max(200_000, int(Deno.env.get('SITEMAP_MAX_BYTES'), 5_000_000))); // default 5MB

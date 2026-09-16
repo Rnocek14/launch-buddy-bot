@@ -36,6 +36,13 @@ function sanitizeForEmail(text: string) {
     .substring(0, 500);
 }
 
+// Addresses are stored as typed. Compare them the way every real mail provider treats
+// them so a capitalisation difference cannot turn a user's own address into an
+// "unverified third party".
+function normalizeIdentifier(value: string | null | undefined) {
+  return (value ?? "").trim().toLowerCase();
+}
+
 function isEuJurisdiction(jurisdiction: string) {
   return jurisdiction.includes("EU") || jurisdiction === "GDPR";
 }
@@ -93,6 +100,34 @@ const handler = async (req: Request): Promise<Response> => {
     };
 
     console.log(`Processing deletion request for user: ${user.id}`);
+
+    // The address on the access token is the only identity Supabase has actually
+    // established. profiles.email is a mirror row the user can rewrite at will -- the
+    // "Users can update their own profile" policy carries no column restriction -- so it
+    // must never be what we assert to a third party, reply to, or CC. Trusting it would
+    // hand someone the same impersonation the identifier check below closes, without
+    // their ever touching user_identifiers.
+    const authEmail = user.email;
+
+    if (!authEmail) {
+      console.error(`User ${user.id} has no email address on their account`);
+      return jsonResponse(
+        {
+          error:
+            "Your account doesn't have an email address on file, so we can't send a deletion request on your behalf or receive the reply. Add an email address to your account and try again.",
+          error_code: "NO_ACCOUNT_EMAIL",
+        },
+        403,
+      );
+    }
+
+    /**
+     * A value is provably the caller's when it IS the address they authenticated with.
+     * That comes from the verified access token, so it is the one thing in this request
+     * the caller cannot fabricate.
+     */
+    const isCallerOwnEmail = (value: string | null | undefined) =>
+      normalizeIdentifier(value) === normalizeIdentifier(authEmail);
 
     const { data: authData, error: authError } = await supabase.rpc("is_authorized_agent", {
       user_uuid: user.id,
@@ -162,8 +197,21 @@ const handler = async (req: Request): Promise<Response> => {
     console.log(`User ${user.id} Gmail connection detected: ${!!gmailConnection}, but routing via Resend.`);
 
     let selectedIdentifier: any = null;
-    let identifierValue = account_identifier;
+    let identifierValue: string | null = null;
 
+    // THE GATE. Whatever lands in identifierValue is mailed to a real company, from our
+    // domain, as a formal demand naming the person it identifies. Owning the row proves
+    // nothing about the value: user_identifiers is filled straight from a free-text form
+    // and `verified` defaults to false, so an unchecked value lets this product be aimed
+    // at a third party -- type a stranger's email and we send a legal demand about them.
+    //
+    // A value is usable only when it is either
+    //   provably the caller's -- it equals the address on their access token -- or
+    //   already trusted    -- the stored row carries verified = true.
+    //
+    // Both entry points run the same gate. The raw `account_identifier` string has to be
+    // gated too: leaving it open would be the same attack with one less step, since the
+    // caller could simply omit identifier_id.
     if (identifier_id) {
       const { data: identifierData, error: identifierError } = await supabase
         .from("user_identifiers")
@@ -177,9 +225,99 @@ const handler = async (req: Request): Promise<Response> => {
         return jsonResponse({ error: "Invalid or unauthorized identifier" }, 400);
       }
 
+      const provablyOwn = isCallerOwnEmail(identifierData.value);
+
+      if (!identifierData.verified && !provablyOwn) {
+        console.warn(
+          `Refusing unverified identifier ${identifierData.id} (type ${identifierData.type}) for user ${user.id}`,
+        );
+        return jsonResponse(
+          {
+            error:
+              `We only send requests that name an identifier we can confirm belongs to you, because the request goes to another company under your name. ` +
+              `"${identifierData.value}" isn't confirmed, so we can't use it. Use your account email (${authEmail}) instead — pick it from the list, or add it in Settings if it isn't there. ` +
+              `It's the only identifier we can confirm today.`,
+            error_code: "IDENTIFIER_NOT_VERIFIED",
+            requiresVerifiedIdentifier: true,
+            identifierId: identifierData.id,
+            // Same field name as the free-text branch, so the dialog only has to learn one.
+            suggestedIdentifier: authEmail,
+          },
+          403,
+        );
+      }
+
+      // It is demonstrably theirs, so record that. Keeps the Settings badge honest and
+      // means the address still works here after they change the email on their account.
+      // Best-effort: this is bookkeeping, and failing it must not block a request we have
+      // already established is legitimate.
+      if (!identifierData.verified) {
+        const { error: verifyError } = await supabase
+          .from("user_identifiers")
+          .update({ verified: true })
+          .eq("id", identifierData.id)
+          .eq("user_id", user.id);
+
+        if (verifyError) {
+          console.error("Failed to record identifier verification (non-critical):", verifyError);
+        }
+      }
+
       selectedIdentifier = identifierData;
       identifierValue = identifierData.value;
       console.log(`Using identifier: ${identifierData.type} - ${identifierData.value}`);
+    } else if (account_identifier?.trim()) {
+      const candidate = account_identifier.trim();
+
+      if (isCallerOwnEmail(candidate)) {
+        identifierValue = candidate;
+        console.log(`Using supplied account identifier (matches account email) for user ${user.id}`);
+      } else {
+        // Not their account address, so it is only usable if it is one of their own rows
+        // that already carries verified = true. Matched by value against the stored rows
+        // rather than taken on trust, and the letter then carries the STORED value, not
+        // the caller's spelling of it.
+        const { data: verifiedIdentifiers, error: verifiedLookupError } = await supabase
+          .from("user_identifiers")
+          .select("*")
+          .eq("user_id", user.id)
+          .eq("verified", true);
+
+        if (verifiedLookupError) {
+          console.error("Verified identifier lookup failed:", verifiedLookupError);
+          return jsonResponse({ error: "Unable to check your saved identifiers" }, 500);
+        }
+
+        const match = (verifiedIdentifiers || []).find(
+          (row: any) => normalizeIdentifier(row.value) === normalizeIdentifier(candidate),
+        );
+
+        if (!match) {
+          console.warn(`Refusing unconfirmed account_identifier for user ${user.id}`);
+          // Do NOT tell them to clear the box. This branch is only reachable from the
+          // free-text field, which DeletionRequestDialog renders only when the user has no
+          // saved identifiers -- and that dialog disables "Review & Send" while both the
+          // box and the dropdown are empty. "Leave it empty and we'll use your account
+          // email" is true of this function but impossible in the UI, so it would strand
+          // the user on the one screen where this refusal actually fires. Name the value
+          // that does work and hand it back in a field the dialog can prefill from.
+          return jsonResponse(
+            {
+              error:
+                `We only send requests that name an identifier we can confirm belongs to you, because the request goes to another company under your name. ` +
+                `We can't confirm "${candidate}", so we can't put it in the letter. Type your account email (${authEmail}) in that box instead — it's the only identifier we can confirm today.`,
+              error_code: "IDENTIFIER_NOT_VERIFIED",
+              requiresVerifiedIdentifier: true,
+              suggestedIdentifier: authEmail,
+            },
+            403,
+          );
+        }
+
+        selectedIdentifier = match;
+        identifierValue = match.value;
+        console.log(`Using supplied account identifier (matched verified ${match.type}) for user ${user.id}`);
+      }
     }
 
     const { data: service, error: serviceError } = await supabase
@@ -282,14 +420,18 @@ const handler = async (req: Request): Promise<Response> => {
       authorization.signature_data?.text || profile.full_name || "Authorized User",
     );
     const sanitizedServiceName = sanitizeForEmail(service.name);
+    // Every address the letter asserts comes from authEmail, never profile.email: the
+    // profile row is user-writable, so reading it here would put an address of the
+    // caller's choosing into a demand we send under our own domain. The empty-identifier
+    // fallback is the account email for the same reason.
     const personalizedBody = String(template.body_template || "")
       .replace(/\{\{user_full_name\}\}/g, sanitizeForEmail(profile.full_name || "User"))
       .replace(/\{\{full_name\}\}/g, sanitizeForEmail(profile.full_name || "User"))
-      .replace(/\{\{user_email\}\}/g, sanitizeForEmail(profile.email || user.email || ""))
-      .replace(/\{\{email\}\}/g, sanitizeForEmail(profile.email || user.email || ""))
+      .replace(/\{\{user_email\}\}/g, sanitizeForEmail(authEmail))
+      .replace(/\{\{email\}\}/g, sanitizeForEmail(authEmail))
       .replace(
         /\{\{account_identifier\}\}/g,
-        sanitizeForEmail(identifierValue || profile.email || user.email || ""),
+        sanitizeForEmail(identifierValue || authEmail),
       )
       .replace(/\{\{jurisdiction\}\}/g, sanitizeForEmail(jurisdiction))
       .replace(/\{\{signature\}\}/g, signature)
@@ -430,10 +572,10 @@ const handler = async (req: Request): Promise<Response> => {
       const emailResponse = await resend.emails.send({
         from: RESEND_FROM,
         to: [recipientEmail],
-        cc: [profile.email || user.email!],
+        cc: [authEmail],
         subject,
         text: personalizedBody,
-        reply_to: profile.email || user.email!,
+        reply_to: authEmail,
       });
 
       if (!emailResponse.data?.id) {
@@ -539,7 +681,7 @@ const handler = async (req: Request): Promise<Response> => {
           Authorization: `Bearer ${serviceRoleKey}`,
         },
         body: {
-          user_email: profile.email || user.email,
+          user_email: authEmail,
           user_name: profile.full_name || "User",
           service_name: service.name,
           request_id: deletionRequest?.id || "unknown",

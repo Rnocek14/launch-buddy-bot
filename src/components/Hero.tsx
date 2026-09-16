@@ -7,6 +7,7 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { HeroScanAnimation } from "./HeroScanAnimation";
+import { AUTO_SCAN_BROKER_COUNT, GUIDED_OPTOUT_BROKER_COUNT } from "@/config/brokers";
 
 export const Hero = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -78,7 +79,7 @@ export const Hero = () => {
             </h1>
 
             <p className="text-lg sm:text-xl text-muted-foreground mb-6 leading-relaxed">
-              Data brokers publish your home address, phone number, age, and relatives' names — and sell them to anyone with $20. We find every site exposing you, and monitor as new ones appear.
+              Data brokers publish your home address, phone number, age, and relatives' names — and sell them to anyone with $20. We search {AUTO_SCAN_BROKER_COUNT} people-search sites for your listing and hand you a one-click opt-out for every one we find.
             </p>
 
             {/* Elevated scan form — primary focal action */}
@@ -113,29 +114,34 @@ export const Hero = () => {
               Free scan in 30 seconds. No signup required. Email-only — no inbox access.
             </p>
 
-            {/* Calm typographic stat strip (non-alarmist) */}
+            {/* Capability facts, not research findings. This strip previously read
+                "Average exposure 47 broker sites / 8 breaches found / 120+ data points"
+                — presented as averages for a typical person, with no source behind any
+                of the three. Every figure here is checkable against the code: the two
+                counts come from config/brokers.ts, and the free check genuinely needs
+                no account (LiveBrokerCheck collects name + city + state only). */}
             <div className="mb-8 pt-6 border-t border-border flex flex-wrap gap-x-8 gap-y-4 justify-center lg:justify-start">
               <div className="space-y-1 text-left">
-                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Average exposure</p>
+                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Sites we check</p>
                 <div className="flex items-baseline gap-2">
-                  <span className="text-2xl font-semibold text-foreground">47</span>
-                  <span className="text-sm text-muted-foreground">broker sites</span>
+                  <span className="text-2xl font-semibold text-foreground">{AUTO_SCAN_BROKER_COUNT}</span>
+                  <span className="text-sm text-muted-foreground">people-search sites</span>
                 </div>
               </div>
               <div className="w-px h-10 bg-border hidden sm:block self-center" aria-hidden />
               <div className="space-y-1 text-left">
-                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Data leaks</p>
+                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Opt-out links</p>
                 <div className="flex items-baseline gap-2">
-                  <span className="text-2xl font-semibold text-foreground">8</span>
-                  <span className="text-sm text-muted-foreground">breaches found</span>
+                  <span className="text-2xl font-semibold text-foreground">{GUIDED_OPTOUT_BROKER_COUNT}</span>
+                  <span className="text-sm text-muted-foreground">brokers covered</span>
                 </div>
               </div>
               <div className="w-px h-10 bg-border hidden sm:block self-center" aria-hidden />
               <div className="space-y-1 text-left">
-                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Public records</p>
+                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">To see your results</p>
                 <div className="flex items-baseline gap-2">
-                  <span className="text-2xl font-semibold text-foreground">120+</span>
-                  <span className="text-sm text-muted-foreground">data points</span>
+                  <span className="text-2xl font-semibold text-foreground">No</span>
+                  <span className="text-sm text-muted-foreground">signup or card</span>
                 </div>
               </div>
             </div>
@@ -164,7 +170,7 @@ export const Hero = () => {
               </div>
               <div className="flex items-center gap-2">
                 <Zap className="w-4 h-4 text-primary" />
-                <span className="text-muted-foreground">25+ Data Brokers</span>
+                <span className="text-muted-foreground">{AUTO_SCAN_BROKER_COUNT} Brokers Scanned</span>
               </div>
               <div className="flex items-center gap-2">
                 <Target className="w-4 h-4 text-primary" />
@@ -210,7 +216,7 @@ export const Hero = () => {
                 How is this different from data broker removal?
               </AccordionTrigger>
               <AccordionContent className="text-sm text-muted-foreground">
-                Data broker removal focuses on people-search/data broker sites. We focus on <strong>account discovery</strong> first — finding services tied to your email — and then guiding cleanup.
+                Data broker removal focuses on people-search/data broker sites. We focus on <strong>account discovery</strong> first — finding services tied to your email — then scan <strong>{AUTO_SCAN_BROKER_COUNT} people-search sites</strong> and walk you through each opt-out, backed by a removal page and direct opt-out link for <strong>{GUIDED_OPTOUT_BROKER_COUNT} brokers</strong>. You stay in the loop on every request — no script quietly reporting a removal that never happened.
               </AccordionContent>
             </AccordionItem>
           </Accordion>

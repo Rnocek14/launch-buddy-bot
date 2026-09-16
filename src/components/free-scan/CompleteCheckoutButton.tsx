@@ -4,6 +4,7 @@ import { Loader2, Shield, ArrowRight } from "lucide-react";
 import { startCheckout, type CheckoutSource } from "@/lib/checkout";
 import { STRIPE_PRICES } from "@/config/pricing";
 import { useToast } from "@/hooks/use-toast";
+import { QuickCheckoutEmailDialog } from "@/components/QuickCheckoutEmailDialog";
 
 type Interval = "annual" | "monthly";
 
@@ -28,6 +29,7 @@ export function CompleteCheckoutButton({ email, source, label = "Remove My Infor
   const { toast } = useToast();
   const [interval, setInterval] = useState<Interval>("annual");
   const [loading, setLoading] = useState(false);
+  const [needsEmail, setNeedsEmail] = useState(false);
 
   const price = interval === "annual" ? ANNUAL : MONTHLY;
 
@@ -40,7 +42,11 @@ export function CompleteCheckoutButton({ email, source, label = "Remove My Infor
       toast({ title: "Couldn't start checkout", description: res.message, variant: "destructive" });
       setLoading(false);
     } else if (res.status === "needs_email") {
-      toast({ title: "Email needed", description: "We need your email to start checkout.", variant: "destructive" });
+      // The broker check runs before this page asks for an email, so reaching the
+      // CTA without one is now the normal path rather than an error. A destructive
+      // toast here dead-ended the highest-intent visitor on the page; collect the
+      // address in one field and continue straight to Stripe instead.
+      setNeedsEmail(true);
       setLoading(false);
     }
     // "redirecting" -> browser navigates away
@@ -100,6 +106,16 @@ export function CompleteCheckoutButton({ email, source, label = "Remove My Infor
       <p className="text-[11px] text-center text-muted-foreground">
         Complete plan · broker removal included · account auto-created after payment · 30-day refund · cancel anytime
       </p>
+
+      <QuickCheckoutEmailDialog
+        open={needsEmail}
+        onOpenChange={setNeedsEmail}
+        priceId={price.id}
+        source={source}
+        tier="complete"
+        title="Where should we send your results?"
+        description="One field, then straight to secure checkout. We create your account after payment."
+      />
     </div>
   );
 }

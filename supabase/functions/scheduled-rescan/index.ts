@@ -6,7 +6,7 @@ import { decrypt } from "../_shared/encryption.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-email-secret',
 };
 
 interface RescanResult {
@@ -21,6 +21,22 @@ interface RescanResult {
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
+  }
+
+  // This endpoint runs with the service role and spends real money on every hit
+  // (Gmail/Outlook API calls, token refreshes, Resend sends), so an open URL is a
+  // denial-of-wallet. verify_jwt stays false because the only caller is the
+  // pg_cron job, which has no user JWT to present — the shared secret is the
+  // caller check instead. Same header/env var as send-welcome-email.
+  const internalSecret = Deno.env.get('EMAIL_SECRET');
+  const receivedSecret = req.headers.get('x-email-secret');
+
+  if (!internalSecret || receivedSecret !== internalSecret) {
+    console.error('[SCHEDULED-RESCAN] Invalid or missing email secret — refusing request');
+    return new Response(
+      JSON.stringify({ error: 'Forbidden: Invalid secret' }),
+      { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
   }
 
   const startTime = Date.now();
@@ -117,10 +133,12 @@ serve(async (req) => {
 
         console.log(`[SCHEDULED-RESCAN] User ${profile.id}: ${result.totalNew} new, ${result.totalReappeared} reappeared`);
 
-        // Fire-and-forget: alert function will diff and only send if something is new
+        // Fire-and-forget: alert function will diff and only send if something is new.
+        // Forward the shared secret — send-exposure-alert now rejects unauthenticated callers.
         try {
           await supabase.functions.invoke('send-exposure-alert', {
             body: { userId: profile.id, triggerSource: 'scheduled_rescan' },
+            headers: { 'x-email-secret': internalSecret },
           });
         } catch (alertErr) {
           console.error(`[SCHEDULED-RESCAN] Alert dispatch failed for ${profile.id}:`, alertErr);

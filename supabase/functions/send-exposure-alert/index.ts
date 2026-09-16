@@ -5,7 +5,7 @@ import { RESEND_FROM } from "../_shared/resend.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-email-secret",
 };
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
@@ -16,9 +16,50 @@ interface AlertRequest {
   triggerSource?: string; // 'scheduled_rescan' | 'manual_scan' | 'broker_scan'
 }
 
+/**
+ * This endpoint runs with the service role and takes the target userId straight
+ * from the request body, so an open URL lets anyone mail an arbitrary user about
+ * their own exposures. verify_jwt stays false because every caller is a machine
+ * with no user JWT to present, so we accept either of two internal credentials:
+ *
+ *   1. x-email-secret — the same shared secret send-welcome-email checks, sent by
+ *      scheduled-rescan and by any future pg_cron job.
+ *   2. The service role key, which supabase.functions.invoke() puts on the wire
+ *      when one edge function calls another with a service-role client — that is
+ *      how scan-brokers dispatches alerts. Anyone holding that key already owns the
+ *      database, so accepting it is not weaker than accepting the shared secret.
+ *
+ * Both the `apikey` and `Authorization` headers are checked for (2) because
+ * supabase-js only falls back to sending the key as a bearer token for legacy JWT
+ * keys; on a new-format key (sb_secret_*) it sends `apikey` alone. Matching either
+ * keeps internal alerting working across a key rotation.
+ */
+function isInternalCaller(req: Request): boolean {
+  const emailSecret = Deno.env.get("EMAIL_SECRET");
+  if (emailSecret && req.headers.get("x-email-secret") === emailSecret) {
+    return true;
+  }
+
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (serviceKey) {
+    if (req.headers.get("Authorization") === `Bearer ${serviceKey}`) return true;
+    if (req.headers.get("apikey") === serviceKey) return true;
+  }
+
+  return false;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
+  }
+
+  if (!isInternalCaller(req)) {
+    console.error("[ALERT] Invalid or missing internal credential — refusing request");
+    return new Response(
+      JSON.stringify({ error: "Forbidden: Invalid secret" }),
+      { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
   }
 
   try {

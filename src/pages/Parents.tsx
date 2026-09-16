@@ -25,11 +25,19 @@ import { useToast } from "@/hooks/use-toast";
 import { PARENT_SCAN_FEATURES, STRIPE_PRICES } from "@/config/pricing";
 import { useSEO } from "@/hooks/useSEO";
 
+// Post-checkout states. "ready" means the server actually confirmed the payment and
+// provisioned an account — nothing here claims delivery we cannot back up.
+type PurchasePhase = "idle" | "finalizing" | "ready" | "needs_support";
+
 export default function Parents() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [parentEmail, setParentEmail] = useState("");
   const [purchaseLoading, setPurchaseLoading] = useState(false);
+  const [purchasePhase, setPurchasePhase] = useState<PurchasePhase>("idle");
+  const [purchaseEmail, setPurchaseEmail] = useState("");
+  const [purchaseRef, setPurchaseRef] = useState("");
+  const [magicLink, setMagicLink] = useState<string | null>(null);
   const { toast } = useToast();
 
   useSEO({
@@ -52,18 +60,63 @@ export default function Parents() {
     },
   });
 
+  // Post-checkout. create-parent-scan-payment returns the buyer here with
+  // ?purchase=success&session_id=cs_..., and this used to fire a toast telling them to
+  // check an inbox nothing was ever sent to. Resolve the session for real instead:
+  // finalize-payment re-reads it from Stripe (so it does not wait on the webhook),
+  // provisions or finds the buyer's account and returns a one-time sign-in link. The
+  // retries cover a transient failure, not webhook lag.
   useEffect(() => {
     const status = searchParams.get("purchase");
-    if (status === "success") {
-      trackEvent("parent_scan_purchase_success", {});
-      toast({
-        title: "Payment received 🎉",
-        description: "Check your inbox — we'll email instructions to start the parent scan.",
-      });
-    } else if (status === "cancelled") {
+    if (status === "cancelled") {
       trackEvent("parent_scan_purchase_cancelled", {});
+      return;
     }
-  }, [searchParams, toast]);
+    if (status !== "success") return;
+
+    trackEvent("parent_scan_purchase_success", {});
+
+    const sessionId = searchParams.get("session_id");
+    setPurchaseRef(sessionId ?? "");
+    if (!sessionId) {
+      setPurchasePhase("needs_support");
+      return;
+    }
+
+    let cancelled = false;
+    setPurchasePhase("finalizing");
+
+    (async () => {
+      let result: any = null;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        if (attempt > 0) {
+          await new Promise((r) => setTimeout(r, attempt * 1500));
+          if (cancelled) return;
+        }
+        const res = await supabase.functions.invoke("finalize-payment", {
+          body: { sessionId },
+        });
+        if (cancelled) return;
+        if (!res.error && res.data?.ok) {
+          result = res.data;
+          break;
+        }
+      }
+
+      if (!result?.ok) {
+        setPurchasePhase("needs_support");
+        return;
+      }
+
+      setPurchaseEmail(result.email || "");
+      setMagicLink(result.magicLink || null);
+      setPurchasePhase("ready");
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [searchParams]);
 
   const handleScan = (e: React.FormEvent) => {
     e.preventDefault();
@@ -109,6 +162,86 @@ export default function Parents() {
       <Navbar />
 
       <main className="pt-24">
+        {/* POST-CHECKOUT STATUS — only ever states what the server confirmed */}
+        {purchasePhase !== "idle" && (
+          <section className="px-4 pt-4">
+            <div className="container max-w-3xl mx-auto">
+              <Card className="border-primary/30 bg-primary/5">
+                <CardContent className="p-6">
+                  {purchasePhase === "finalizing" && (
+                    <div className="flex items-center gap-3">
+                      <Loader2 className="w-5 h-5 animate-spin text-primary shrink-0" />
+                      <p className="text-sm">
+                        Confirming your payment and setting up your account...
+                      </p>
+                    </div>
+                  )}
+
+                  {purchasePhase === "ready" && (
+                    <div className="flex items-start gap-3">
+                      <CheckCircle2 className="w-5 h-5 text-accent shrink-0 mt-0.5" />
+                      <div className="space-y-3">
+                        <div>
+                          <p className="font-semibold">
+                            Payment confirmed — your Parent Protection Scan is recorded on your account
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            {purchaseEmail
+                              ? `Your account is ${purchaseEmail}. `
+                              : ""}
+                            Sign in below to continue — no password needed.
+                          </p>
+                        </div>
+                        {magicLink && (
+                          <Button asChild size="lg" className="gap-2">
+                            <a href={magicLink}>
+                              Sign in and continue
+                              <ArrowRight className="w-4 h-4" />
+                            </a>
+                          </Button>
+                        )}
+                        {/* Deliberately blunt. The one-time purchase is recorded and the
+                            scan back end honours it, but the dashboard still only offers a
+                            start-scan button to Complete/Family subscribers, so for now the
+                            reliable route really is support. Say that here rather than let
+                            the buyer discover it on a page that offers them an upgrade. */}
+                        <p className="text-xs text-muted-foreground">
+                          We don't send a confirmation email, so keep this reference
+                          {purchaseRef ? `: ${purchaseRef}` : " from your Stripe receipt"}. Starting
+                          the scan isn't self-serve for one-time purchases yet — if you don't see
+                          it after signing in, email{" "}
+                          <a className="underline" href="mailto:support@footprintfinder.co">
+                            support@footprintfinder.co
+                          </a>{" "}
+                          with that reference and we'll run it and send you the results.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {purchasePhase === "needs_support" && (
+                    <div className="flex items-start gap-3">
+                      <AlertTriangle className="w-5 h-5 text-destructive shrink-0 mt-0.5" />
+                      <div className="space-y-1">
+                        <p className="font-semibold">We couldn't finish setting up your account</p>
+                        <p className="text-sm text-muted-foreground">
+                          If Stripe charged you, the payment is safe — the failure is on our side.
+                          Email{" "}
+                          <a className="underline" href="mailto:support@footprintfinder.co">
+                            support@footprintfinder.co
+                          </a>
+                          {purchaseRef ? ` with reference ${purchaseRef}` : " with your receipt"} and
+                          we'll finish your scan by hand or refund you.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </section>
+        )}
+
         {/* HERO */}
         <section className="px-4 py-16 md:py-24">
           <div className="container max-w-5xl mx-auto">
@@ -269,8 +402,11 @@ export default function Parents() {
                 },
                 {
                   step: "3",
-                  title: "We handle removal",
-                  desc: "We send opt-out requests on their behalf and monitor monthly so listings don't come back.",
+                  title: "You get the removal list",
+                  // We do NOT submit broker opt-outs, and no cron re-checks brokers:
+                  // scheduled-rescan filters to tier 'pro' and rescans inboxes, not
+                  // broker listings. Both halves of the old copy were false.
+                  desc: "Every listing we find comes with a direct opt-out link and step-by-step instructions, so you can clear them in an evening.",
                   icon: CheckCircle2,
                 },
               ].map((item, i) => (

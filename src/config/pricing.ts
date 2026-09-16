@@ -8,6 +8,8 @@
  * - Complete: 5 emails, unlimited deletions, broker scanning
  */
 
+import { AUTO_SCAN_BROKER_COUNT, GUIDED_OPTOUT_BROKER_COUNT } from "@/config/brokers";
+
 export const STRIPE_PRICES = {
   // Legacy prices (for grandfathered users)
   LEGACY_PRO_ANNUAL: {
@@ -172,20 +174,30 @@ export const FREE_FEATURES = [
 export const PRO_FEATURES = [
   "Everything in Free, plus:",
   "Unlimited deletion requests",
-  "Deep AI Scan (finds 2-3× more accounts)",
+  "Deep AI Scan (reads your full inbox history, not just recent mail)",
   "Connect and scan up to 3 email addresses",
   "Complete inbox history analysis",
   "Priority deletion processing",
   "Monthly automatic rescans",
 ] as const;
 
+// Every line here has to be literally true of the shipped product. We scan the
+// brokers the engine has detection patterns for, then hand the user a one-click
+// guided opt-out — we do not submit removals on their behalf, and there is no
+// scheduled broker rescan job yet, so neither is advertised.
+// GUIDED_OPTOUT_BROKER_COUNT is the size of the broker directory, and every row
+// in it carries an opt_out_url and a difficulty rating — but only 45 of those
+// rows carry `instructions`, and /remove-broker/:slug falls back to "follow the
+// on-site instructions" for the rest. So this number can be attached to the
+// opt-out link, never to a "step-by-step guide" claim.
 export const COMPLETE_FEATURES = [
   "Everything in Pro, plus:",
-  "Data Broker Scanning (20+ sites)",
-  "Guided opt-out instructions",
+  `Data broker scan across ${AUTO_SCAN_BROKER_COUNT} people-search sites`,
+  "One-click guided opt-out for every listing we find",
+  `Opt-out link and difficulty rating for ${GUIDED_OPTOUT_BROKER_COUNT} brokers`,
+  "Re-run your broker scan any time",
   "Connect up to 5 email addresses",
   "Priority email support",
-  "Monthly broker rescans",
 ] as const;
 
 export const FAMILY_FEATURES = [
@@ -200,7 +212,7 @@ export const FAMILY_FEATURES = [
 
 export const PARENT_SCAN_FEATURES = [
   "One-time deep scan of their email",
-  "Full data broker check (20+ sites)",
+  `Data broker check across ${AUTO_SCAN_BROKER_COUNT} sites`,
   "Breach exposure report",
   "Printable PDF action plan",
   "Senior-friendly explanations",

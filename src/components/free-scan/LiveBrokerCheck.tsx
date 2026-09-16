@@ -3,12 +3,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-  Search, Loader2, CheckCircle2, AlertTriangle, Building2,
+  Search, Loader2, CheckCircle2, AlertTriangle, Building2, ExternalLink,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { trackEvent } from "@/lib/analytics";
 import { CompleteCheckoutButton } from "./CompleteCheckoutButton";
-import { BROKER_COUNT_LABEL } from "@/config/brokers";
+import { persistScanIdentity } from "@/lib/checkout";
+import { AUTO_SCAN_BROKER_COUNT } from "@/config/brokers";
 
 type BrokerStatus = "found" | "possible_match" | "not_found" | "unknown";
 
@@ -19,6 +20,8 @@ interface BrokerResult {
   status: BrokerStatus;
   confidence: number | null;
   profileUrl: string | null;
+  /** Personal-data signals the scorer found, e.g. ['street address','phone number']. */
+  evidence?: string[];
 }
 
 interface LiveBrokerCheckProps {
@@ -66,6 +69,9 @@ export function LiveBrokerCheck({ email, onResults }: LiveBrokerCheckProps) {
         throw new Error(fnError?.message || "Check failed");
       }
       const brokerResults = data.results as BrokerResult[];
+      // Carry the identity across checkout. Without this the paid scan re-asks for
+      // the same three fields, or runs against the buyer's email local-part.
+      persistScanIdentity({ fullName: fullName.trim(), city: city.trim(), state });
       setResults(brokerResults);
       setDegraded(Boolean(data.degraded));
       const confirmedCount = brokerResults.filter((r) => r.status === "found").length;
@@ -127,17 +133,48 @@ export function LiveBrokerCheck({ email, onResults }: LiveBrokerCheckProps) {
 
           <div className="divide-y divide-border">
             {results.map((r) => (
-              <div key={r.slug} className="flex items-center gap-3 px-6 py-3.5">
-                {r.status === "found" && <CheckCircle2 className="w-5 h-5 text-red-600 dark:text-red-400 shrink-0" />}
-                {r.status === "possible_match" && <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0" />}
+              <div key={r.slug} className="flex items-start gap-3 px-6 py-3.5">
+                {r.status === "found" && <CheckCircle2 className="w-5 h-5 mt-0.5 text-red-600 dark:text-red-400 shrink-0" />}
+                {r.status === "possible_match" && <AlertTriangle className="w-5 h-5 mt-0.5 text-amber-500 shrink-0" />}
                 {(r.status === "not_found" || r.status === "unknown") && (
-                  <div className="w-5 h-5 rounded-full border-2 border-muted-foreground/30 shrink-0" />
+                  <div className="w-5 h-5 mt-0.5 rounded-full border-2 border-muted-foreground/30 shrink-0" />
                 )}
                 <div className="flex-1 min-w-0">
                   <span className="font-medium">{r.name}</span>
                   <span className="text-xs text-muted-foreground ml-2">{r.domain}</span>
+
+                  {/* The evidence is the product. The scorer already knows this page
+                      publishes the visitor's address or phone; saying so plainly is both
+                      more honest and more persuasive than a grey "Listed" label. */}
+                  {r.evidence && r.evidence.length > 0 && (
+                    <div className="mt-1.5 flex flex-wrap gap-1.5">
+                      {r.evidence.map((e) => (
+                        <span
+                          key={e}
+                          className="text-[11px] font-medium rounded px-1.5 py-0.5 bg-red-500/10 text-red-700 dark:text-red-300"
+                        >
+                          {e}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* A link the visitor can open is the single most convincing thing on
+                      this page. It was fetched, passed to the browser and never rendered. */}
+                  {r.profileUrl && (
+                    <a
+                      href={r.profileUrl}
+                      target="_blank"
+                      rel="noopener noreferrer nofollow"
+                      onClick={() => trackEvent("broker_profile_opened", { broker: r.slug, status: r.status })}
+                      className="mt-1.5 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+                    >
+                      See the listing
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
+                  )}
                 </div>
-                <span className="text-xs font-medium">
+                <span className="text-xs font-medium shrink-0">
                   {r.status === "found" && <span className="text-red-600 dark:text-red-400">Listed</span>}
                   {r.status === "possible_match" && <span className="text-amber-600 dark:text-amber-400">Possible match</span>}
                   {r.status === "not_found" && <span className="text-muted-foreground">Not found</span>}
@@ -151,11 +188,15 @@ export function LiveBrokerCheck({ email, onResults }: LiveBrokerCheckProps) {
               dead-end the highest-intent user with no way forward. */}
           <div className="px-6 py-6 bg-gradient-to-b from-primary/5 to-primary/10 border-t border-border space-y-3">
               <p className="text-sm text-muted-foreground">
+                {/* We do not submit broker opt-outs for the user. RemediationSection
+                    opens each broker's opt-out page and the user confirms when it is
+                    done, so this copy promises a guided removal, never an automatic
+                    one. Nothing here may say "we remove you". */}
                 {exposedCount > 0
-                  ? `These are just ${results.length} of ${BROKER_COUNT_LABEL} sites we remove you from. Your full plan scans and removes you from all of them — plus continuous monitoring so you don't reappear.`
+                  ? `These are just ${results.length} of the ${AUTO_SCAN_BROKER_COUNT} sites we check. Your full plan scans all of them and walks you through a one-click opt-out for every listing we find.`
                   : degraded
-                    ? `We couldn't fully check these ${results.length} public sites right now — people-search sites list most US adults, so this isn't an all-clear. Your full plan scans ${BROKER_COUNT_LABEL} sites, removes your listings, and monitors so you don't reappear.`
-                    : `Good news — no confirmed listings on these ${results.length} sites today. But new listings appear constantly. Your full plan monitors ${BROKER_COUNT_LABEL} sites and removes you automatically the moment you show up.`}
+                    ? `We couldn't fully check these ${results.length} public sites right now — people-search sites list most US adults, so this isn't an all-clear. Your full plan scans all ${AUTO_SCAN_BROKER_COUNT} sites and gives you a guided opt-out for whatever turns up.`
+                    : `Good news — no confirmed listings on these ${results.length} sites today. But new listings appear constantly. Your full plan checks all ${AUTO_SCAN_BROKER_COUNT} sites whenever you re-run it, with a guided opt-out for anything new.`}
               </p>
               <CompleteCheckoutButton email={email} source="broker_exposure" />
             </div>

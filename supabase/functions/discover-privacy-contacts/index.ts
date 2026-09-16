@@ -29,7 +29,18 @@ const corsHeaders = {
 
 // Circuit-breaker toggles with safe parsing
 const bool = (v?: string) => (v ?? '').toLowerCase() === 'true';
-const int = (v?: string, d = 0) => Number.isFinite(Number(v)) ? Number(v) : d;
+// NOTE: an identical copy of int() lives in supabase/functions/_shared/probes.ts —
+// keep the two in sync. They stay duplicated because probes.ts reads Deno.env at
+// import time, so the helper is not a runtime-agnostic utility worth sharing.
+// Blank is treated as unset: Number('') and Number('   ') are both 0 (and finite),
+// so an env var that is set-but-empty — common in deploy configs and CI — would
+// otherwise parse as 0 and silently collapse DOMAIN_BUDGET_MS and friends below to
+// their clamp floor. An explicit '0' (and negative values) still parse normally.
+const int = (v?: string, d = 0) => {
+  if (v === undefined || v.trim() === '') return d;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : d;
+};
 
 const DISABLE_METRICS = bool(Deno.env.get('DISCOVERY_DISABLE_METRICS'));
 const DOMAIN_BUDGET_MS = Math.min(60000, Math.max(3000, int(Deno.env.get('DISCOVERY_DOMAIN_BUDGET_MS'), 25000)));

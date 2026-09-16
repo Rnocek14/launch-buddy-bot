@@ -1,8 +1,16 @@
 import { describe, it, expect } from 'vitest';
 
-// Mirror the parsing logic from the edge function
+// Mirrors the parsing logic from the edge functions. Keep in sync with the two
+// real implementations: supabase/functions/_shared/probes.ts and
+// supabase/functions/discover-privacy-contacts/index.ts.
 const bool = (v?: string) => (v ?? '').toLowerCase() === 'true';
-const int  = (v?: string, d = 0) => Number.isFinite(Number(v)) ? Number(v) : d;
+// Blank (undefined / '' / whitespace-only) falls back to the default; an explicit
+// '0' and negative values still parse. See the real implementations for why.
+const int  = (v?: string, d = 0) => {
+  if (v === undefined || v.trim() === '') return d;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : d;
+};
 const clampBudget = (v?: string) =>
   Math.min(60000, Math.max(3000, int(v, 25000)));
 
@@ -50,6 +58,7 @@ describe('env parsing', () => {
     it('should use default for invalid values', () => {
       expect(clampBudget(undefined)).toBe(25000);
       expect(clampBudget('')).toBe(25000);
+      expect(clampBudget('   ')).toBe(25000);
       expect(clampBudget('not-a-number')).toBe(25000);
       expect(clampBudget('NaN')).toBe(25000);
     });
@@ -65,6 +74,7 @@ describe('env parsing', () => {
     it('should use default for invalid values', () => {
       expect(int(undefined)).toBe(0);
       expect(int('', 100)).toBe(100);
+      expect(int('   ', 100)).toBe(100);
       expect(int('abc', 50)).toBe(50);
     });
 

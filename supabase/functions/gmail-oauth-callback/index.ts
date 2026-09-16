@@ -116,8 +116,7 @@ serve(async (req: Request): Promise<Response> => {
     
     let encryptedAccessToken: string;
     let encryptedRefreshToken: string | null;
-    let tokensEncrypted = true;
-    
+
     try {
       encryptedAccessToken = await encrypt(tokens.access_token);
       encryptedRefreshToken = tokens.refresh_token ? await encrypt(tokens.refresh_token) : null;
@@ -143,25 +142,23 @@ serve(async (req: Request): Promise<Response> => {
       });
       
     } catch (encryptError) {
-      console.error('❌ Token encryption or validation failed:', encryptError);
-      
-      const plainAccessDetection = detectTokenEncryption(tokens.access_token, 'gmail');
-      const plainRefreshDetection = tokens.refresh_token 
-        ? detectTokenEncryption(tokens.refresh_token, 'gmail')
-        : { isEncrypted: false, confidence: 'high', reason: 'No refresh token' };
-      
-      if (plainAccessDetection.isEncrypted || (tokens.refresh_token && plainRefreshDetection.isEncrypted)) {
-        console.error('CRITICAL: Original tokens from Google appear encrypted!');
-        return new Response(null, {
-          status: 302,
-          headers: { Location: `${baseUrl}/settings?error=${encodeURIComponent('Token format error - please try reconnecting')}` },
-        });
-      }
-      
-      encryptedAccessToken = tokens.access_token;
-      encryptedRefreshToken = tokens.refresh_token || null;
-      tokensEncrypted = false;
-      console.warn('⚠️ Storing tokens as plain text due to encryption failure');
+      // Fail closed. A Google refresh token is long-lived access to the user's mailbox
+      // metadata, so a connection we cannot encrypt is abandoned rather than persisted in
+      // plain text. The usual trigger is a missing or malformed GMAIL_TOKEN_ENCRYPTION_KEY
+      // on this function (GO-LIVE.md requires it to be set before any user connects).
+      // Log the reason but never the tokens or the key.
+      console.error('❌ Token encryption failed - refusing to store Gmail connection', {
+        userId,
+        email: profile.email,
+        reason: encryptError instanceof Error ? encryptError.message : String(encryptError),
+        encryptionKeyConfigured: Boolean(Deno.env.get('GMAIL_TOKEN_ENCRYPTION_KEY')),
+        hasRefreshToken: Boolean(tokens.refresh_token),
+      });
+
+      return new Response(null, {
+        status: 302,
+        headers: { Location: `${baseUrl}/settings?error=${encodeURIComponent('Could not securely store your Gmail credentials, so nothing was saved. Please try again or contact support.')}` },
+      });
     }
 
     const { data: existingConnection } = await supabase
@@ -179,7 +176,7 @@ serve(async (req: Request): Promise<Response> => {
           access_token: encryptedAccessToken,
           refresh_token: encryptedRefreshToken,
           token_expires_at: expiresAt.toISOString(),
-          tokens_encrypted: tokensEncrypted,
+          tokens_encrypted: true,
         })
         .eq("id", existingConnection.id);
 
@@ -207,7 +204,7 @@ serve(async (req: Request): Promise<Response> => {
           access_token: encryptedAccessToken,
           refresh_token: encryptedRefreshToken,
           token_expires_at: expiresAt.toISOString(),
-          tokens_encrypted: tokensEncrypted,
+          tokens_encrypted: true,
           is_primary: isFirstConnection,
           account_label: profile.email,
         });

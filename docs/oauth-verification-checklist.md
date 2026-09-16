@@ -1,6 +1,6 @@
 # Google + Microsoft OAuth Verification Checklist
 
-Submission path for Deleteist (footprintfinder.co) to clear the "unverified app" warning on Gmail and Outlook consent screens.
+Submission path for Footprint Finder (footprintfinder.co) to clear the "unverified app" warning on Gmail and Outlook consent screens.
 
 **Realistic timeline:** 2–4 weeks (Google), ~1 week (Microsoft). **Cost: $0.**
 
@@ -27,7 +27,7 @@ Verified in code: `supabase/functions/_shared/email-providers/gmail.ts` line 63 
 Cloud Console → APIs & Services → OAuth consent screen:
 
 - [ ] **User type**: External, Production
-- [ ] **App name**: Deleteist
+- [ ] **App name**: Footprint Finder
 - [ ] **User support email**: support@footprintfinder.co (must be deliverable)
 - [ ] **App logo**: upload `src/assets/footprint-finder-icon.png` (120×120 PNG, ≤1MB)
 - [ ] **App domain**: footprintfinder.co (must be verified in Search Console under same Google account)
@@ -39,10 +39,15 @@ Cloud Console → APIs & Services → OAuth consent screen:
 
 ### Step 2 — Scopes (lock to exactly these)
 
-- `openid`
 - `https://www.googleapis.com/auth/userinfo.email`
 - `https://www.googleapis.com/auth/userinfo.profile`
 - `https://www.googleapis.com/auth/gmail.metadata` ← sensitive (NOT restricted)
+
+These are exactly the three scopes requested in
+`supabase/functions/_shared/email-providers/gmail.ts` (`getOAuthUrl`). Note there is no
+`openid` — this flow reads the profile via the userinfo endpoint rather than an ID token.
+If you ever add `openid` here, add it to `gmail.ts` in the same change: the consent screen
+and the code must not drift apart.
 
 Do NOT add `gmail.readonly`, `gmail.send`, `gmail.modify`, or any other Gmail scope. Adding any of those triggers CASA.
 
@@ -50,13 +55,13 @@ Do NOT add `gmail.readonly`, `gmail.send`, `gmail.modify`, or any other Gmail sc
 
 For `gmail.metadata`:
 
-> Deleteist helps users discover, audit, and request deletion of online accounts tied to their email address. We use `gmail.metadata` to read **only message headers** (sender domain, sender display name, subject line, `List-Unsubscribe` header, message date). The Gmail API enforces that this scope **cannot** access message bodies, attachments, or snippets — only headers — which matches our privacy promise to users. Extracted sender domains are stored server-side as a list of services the user has accounts with, which the user can view, manage, and request deletion for from their dashboard. We never send email on the user's behalf, never modify or delete messages, and never share data with third parties. Users can disconnect at any time, which immediately deletes all stored metadata.
+> Footprint Finder helps users discover, audit, and request deletion of online accounts tied to their email address. We use `gmail.metadata` to read **only message headers** (sender domain, sender display name, subject line, `List-Unsubscribe` header, message date). The Gmail API enforces that this scope **cannot** access message bodies, attachments, or snippets — only headers — which matches our privacy promise to users. Extracted sender domains are stored server-side as a list of services the user has accounts with, which the user can view, manage, and request deletion for from their dashboard. We never send email on the user's behalf, never modify or delete messages, and never share data with third parties. Users can disconnect at any time, which immediately deletes all stored metadata.
 
 ### Step 4 — Privacy policy paragraph (required)
 
 Google specifically rejects apps whose privacy policies don't mention "Google user data" by name. Add this to `/privacy`:
 
-> **Google user data.** Deleteist accesses Google user data via the Gmail API using the `gmail.metadata` scope. This scope, enforced by Google, allows us to read only email headers (sender, subject, date, List-Unsubscribe) — never message bodies, attachments, or content snippets. We use this metadata solely to identify services you have accounts with so we can help you manage or delete them. We do not transfer Google user data to third parties except as needed to provide the service, and we never use it for advertising. You can disconnect Google access at any time from Settings, which immediately deletes all stored metadata. Our use of information received from Google APIs adheres to the [Google API Services User Data Policy](https://developers.google.com/terms/api-services-user-data-policy), including the Limited Use requirements.
+> **Google user data.** Footprint Finder accesses Google user data via the Gmail API using the `gmail.metadata` scope. This scope, enforced by Google, allows us to read only email headers (sender, subject, date, List-Unsubscribe) — never message bodies, attachments, or content snippets. We use this metadata solely to identify services you have accounts with so we can help you manage or delete them. We do not transfer Google user data to third parties except as needed to provide the service, and we never use it for advertising. You can disconnect Google access at any time from Settings, which immediately deletes all stored metadata. Our use of information received from Google APIs adheres to the [Google API Services User Data Policy](https://developers.google.com/terms/api-services-user-data-policy), including the Limited Use requirements.
 
 ### Step 5 — Demo video (2–4 min, unlisted YouTube)
 
@@ -114,7 +119,7 @@ Once publisher is verified, consent screen shows "Verified by [Publisher]". No s
 | Domain verified in Google Search Console | ☐ |
 | Consent screen branded | ☐ |
 | Scopes locked to `gmail.metadata` only | ☐ |
-| Privacy policy mentions Google user data + Limited Use | ☐ |
+| Privacy policy mentions Google user data + Limited Use | ☑ done — `src/pages/PrivacyPolicy.tsx` (Limited Use disclosure + all four required bullets) |
 | Demo video uploaded | ☐ |
 | Google verification submitted | ☐ |
 | Google verification approved | ☐ |
@@ -128,4 +133,10 @@ Once publisher is verified, consent screen shows "Verified by [Publisher]". No s
 - Reviewer **will** test your privacy policy URL. Must be reachable, must mention Gmail/Google by name, must link to revocation instructions.
 - Reviewer **will** check that `/privacy` and `/terms` are linked from the OAuth consent screen AND visible inside the app footer.
 - Changing scopes after approval triggers re-review. Lock scopes before submitting.
+- **There are two separate Google OAuth flows in this app.** `src/pages/Auth.tsx` signs users
+  in through Supabase's own Google provider (`openid email profile`), while
+  `supabase/functions/_shared/email-providers/gmail.ts` runs our own client for the Gmail
+  connect. Verification applies per OAuth client — confirm in Cloud Console which client ID
+  you are submitting, and that it is the one in `GOOGLE_OAUTH_CLIENT_ID` used by the Gmail
+  flow. Submitting the wrong client means the "unverified app" warning never goes away.
 - If you ever need full message bodies in the future, you'll need to upgrade to `gmail.readonly` AND pay for CASA Tier 2. Avoid this — `gmail.metadata` is sufficient for the current product.

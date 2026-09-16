@@ -285,6 +285,33 @@ const brokerPatterns: Record<string, {
   },
 };
 
+// data_brokers holds far more rows than we have detection patterns for. Only the
+// slugs above can be checked with a real network request; every other listed broker
+// is manual-opt-out-only. Scanning must never touch them, because a broker we never
+// requested cannot honestly be reported to a paying customer as "clean".
+const SCANNABLE_BROKER_SLUGS = new Set(Object.keys(brokerPatterns));
+
+function hasDetectionPattern(slug: string): boolean {
+  return SCANNABLE_BROKER_SLUGS.has(slug);
+}
+
+// Tiers that include data broker scanning.
+// Mirrors TIER_LIMITS in src/config/pricing.ts: complete and family have
+// brokerScanning: true, free and pro do not.
+const BROKER_SCAN_TIERS = new Set(['complete', 'family']);
+
+// The $39 one-time Parent Protection Scan (parent_scan_orders) is the second way in. Its
+// buyers have no subscriptions row at all, so the tier gate above would 403 a customer who
+// has already paid. The entitlement is deliberately one-shot: 'paid' buys exactly one scan
+// run and flips to 'consumed' the moment that run is claimed.
+//
+// A consumed order still passes the gate, for two reasons that are fulfilment, not a free
+// pass: GET (reading the report they bought) must keep working forever, and a retry_failed
+// POST — which only re-requests brokers that errored, never a fresh sweep — must keep
+// working long enough to actually finish the scan that was paid for. That retry window is
+// bounded; after it, the order is spent.
+const PARENT_SCAN_RETRY_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
+
 interface UserProfile {
   firstName: string;
   lastName: string;
@@ -908,14 +935,19 @@ async function scanBrokerV2(
   const pattern = brokerPatterns[slug];
   
   if (!pattern) {
-    console.log(`No pattern for broker: ${slug}`);
+    // Defence in depth: the scan loop already filters these out. If one still reaches
+    // here we must NOT say 'not_found' — the caller maps that to status 'clean', which
+    // would claim the broker was checked when no request was ever made. 'unknown' maps
+    // to 'error' instead, which the status CHECK constraint allows.
+    // No ErrorCode member describes "we never attempted this", so error_code stays null.
+    console.log(`No pattern for broker: ${slug} — skipping, not reporting clean`);
     return {
       brokerId: null,
       slug,
-      status_v2: 'not_found',
+      status_v2: 'unknown',
       error_code: null,
       http_status: null,
-      error_detail: 'No pattern configured',
+      error_detail: 'No detection pattern configured — broker not auto-checked',
       detection_method: 'direct',
       confidence: null,
       confidence_breakdown: null,
@@ -1206,7 +1238,7 @@ Deno.serve(async (req) => {
 
     const userId = user.id;
 
-    // Check if user has Complete subscription
+    // Access path 1: a subscription whose tier includes broker scanning (Complete or Family)
     const { data: subscription } = await supabase
       .from('subscriptions')
       .select('tier, status')
@@ -1214,9 +1246,74 @@ Deno.serve(async (req) => {
       .eq('status', 'active')
       .single();
 
-    if (!subscription || subscription.tier !== 'complete') {
+    const hasSubscriptionAccess = !!subscription && BROKER_SCAN_TIERS.has(subscription.tier);
+
+    // Access path 2: a paid one-time Parent Protection Scan order (see PARENT_SCAN_RETRY_WINDOW_MS).
+    // Prefer the oldest unspent order, so a customer who bought two scans spends one per run;
+    // otherwise fall back to the most recently consumed one, which still grants read access.
+    let parentScanOrder: { id: string; status: string; consumed_at: string | null } | null = null;
+    if (!hasSubscriptionAccess) {
+      const { data: orders } = await supabase
+        .from('parent_scan_orders')
+        .select('id, status, consumed_at')
+        .eq('user_id', userId)
+        .in('status', ['paid', 'consumed'])
+        .order('created_at', { ascending: true });
+
+      const list = (orders || []) as { id: string; status: string; consumed_at: string | null }[];
+      parentScanOrder =
+        list.find((o) => o.status === 'paid') ??
+        [...list].reverse().find((o) => o.status === 'consumed') ??
+        null;
+
+      // Guest-checkout safety net. When the webhook cannot resolve a user it still records
+      // the order (a row with a null user_id beats a dropped purchase), and the account
+      // finalize-payment creates a moment later would never see that entitlement. Adopt it
+      // here by matching the verified email on the JWT against the purchaser email Stripe
+      // gave us. The claim is one-way: the row gets a user_id, nothing else changes.
+      //
+      // It also runs when the user already has an order but it is spent: a customer buying
+      // a second scan (for the other parent) as a guest leaves a fresh 'paid' row
+      // unattached, and stopping at their own 'consumed' row would tell someone who has
+      // just paid again that their scan "has already been used" — the same take-the-money
+      // failure, one purchase later.
+      if ((!parentScanOrder || parentScanOrder.status !== 'paid') && user.email) {
+        const { data: orphanRows } = await supabase
+          .from('parent_scan_orders')
+          .select('id, status, consumed_at')
+          .is('user_id', null)
+          .eq('purchaser_email', user.email.toLowerCase())
+          .in('status', ['paid', 'consumed'])
+          .order('created_at', { ascending: true })
+          .limit(10);
+
+        const orphans = (orphanRows || []) as { id: string; status: string; consumed_at: string | null }[];
+        // Prefer an unspent orphan. Once the user already holds a consumed order there is
+        // nothing to gain from adopting another consumed one, so only 'paid' is claimed.
+        let orphaned = orphans.find((o) => o.status === 'paid') ?? null;
+        if (!orphaned && !parentScanOrder) {
+          orphaned = [...orphans].reverse().find((o) => o.status === 'consumed') ?? null;
+        }
+
+        if (orphaned) {
+          const { data: adopted } = await supabase
+            .from('parent_scan_orders')
+            .update({ user_id: userId })
+            .eq('id', orphaned.id)
+            .is('user_id', null)
+            .select('id, status, consumed_at')
+            .maybeSingle();
+          if (adopted) {
+            console.log(`[PARENT-SCAN] adopted order ${adopted.id} for user ${userId}`);
+            parentScanOrder = adopted as { id: string; status: string; consumed_at: string | null };
+          }
+        }
+      }
+    }
+
+    if (!hasSubscriptionAccess && !parentScanOrder) {
       return new Response(
-        JSON.stringify({ error: 'Complete subscription required for broker scanning' }),
+        JSON.stringify({ error: 'Complete or Family subscription, or a Parent Protection Scan purchase, required for broker scanning' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -1302,6 +1399,17 @@ Deno.serve(async (req) => {
       // Determine which brokers to scan
       let brokers: { id: string; slug: string }[] | null = null;
       let brokerCount = 0;
+      let skippedBrokers: { id: string; slug: string }[] = [];
+      let listedCount = 0;
+
+      // Split candidates into brokers we can actually check and brokers we merely list.
+      // Only the first group is ever scanned or counted; the second is reported back so
+      // the UI can say "N more sites we list but don't auto-check yet" instead of
+      // silently folding them into the clean total.
+      const partitionByPatternSupport = (candidates: { id: string; slug: string }[]) => ({
+        scannable: candidates.filter((b) => hasDetectionPattern(b.slug)),
+        skipped: candidates.filter((b) => !hasDetectionPattern(b.slug)),
+      });
 
       if (retryFailedOnly) {
         // Only re-scan brokers whose last result for this user is in an error state
@@ -1328,18 +1436,106 @@ Deno.serve(async (req) => {
           .eq('is_searchable', true)
           .in('id', failedIds);
 
-        brokers = filtered || [];
+        const retryCandidates = filtered || [];
+        const retrySplit = partitionByPatternSupport(retryCandidates);
+        brokers = retrySplit.scannable;
+        skippedBrokers = retrySplit.skipped;
+        listedCount = retryCandidates.length;
         brokerCount = brokers.length;
-        console.log(`[RETRY] Re-scanning ${brokerCount} previously-failed brokers for user ${userId}`);
+
+        // Pattern-less brokers can be sitting in an error state from an older build.
+        // Retrying them would achieve nothing, so if that is all there is, say so.
+        if (brokerCount === 0) {
+          return new Response(
+            JSON.stringify({
+              error: 'No failed brokers to retry',
+              skipped_brokers: skippedBrokers.length,
+            }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        console.log(`[RETRY] Re-scanning ${brokerCount} previously-failed brokers for user ${userId} (${skippedBrokers.length} skipped: no detection pattern)`);
       } else {
         // Get all active + searchable brokers (skip enterprise aggregators with no public people-search)
-        const { data: all, count } = await supabase
+        const { data: all } = await supabase
           .from('data_brokers')
-          .select('id, slug', { count: 'exact' })
+          .select('id, slug')
           .eq('is_active', true)
           .eq('is_searchable', true);
-        brokers = all || [];
-        brokerCount = count || 0;
+        const candidates = all || [];
+        const split = partitionByPatternSupport(candidates);
+        brokers = split.scannable;
+        skippedBrokers = split.skipped;
+        listedCount = candidates.length;
+        // total_brokers must reflect real coverage, not the size of the broker directory
+        brokerCount = brokers.length;
+        console.log(`Broker coverage: ${brokerCount} auto-checkable of ${listedCount} listed (${skippedBrokers.length} manual opt-out only)`);
+      }
+
+      // Refuse to start a sweep with nothing in it. The data_brokers read above swallows
+      // its error into an empty list, so a transient DB failure would otherwise create a
+      // 0-broker scan that completes immediately with found_count 0 — which every surface
+      // renders as "all clean" — while spending the one-time Parent Scan entitlement and
+      // starting a 5-minute cooldown. Charging $39 for a scan that checked nothing, and
+      // calling the result clean, are the two worst outcomes this function has.
+      // (The retry path returns its own 'No failed brokers to retry' above, so this only
+      // ever fires on a full sweep.)
+      if (!brokers || brokerCount === 0) {
+        console.error('[SCAN-BROKERS] refusing to start: no scannable brokers returned');
+        return new Response(
+          JSON.stringify({
+            error: 'No data brokers are available to scan right now. Nothing was charged or used — please try again in a few minutes.',
+          }),
+          { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Spend the one-time entitlement, if that is how this user got through the gate.
+      //
+      // Claimed BEFORE the scan row is created and released again below if that insert
+      // fails, so the customer is never charged a scan that never started. The update is
+      // conditional on status still being 'paid', which is what makes two concurrent POSTs
+      // safe: exactly one of them flips the row, the other sees zero rows updated and is
+      // told the entitlement is spent rather than getting a second scan for free.
+      let claimedOrderId: string | null = null;
+      if (!hasSubscriptionAccess && parentScanOrder) {
+        if (parentScanOrder.status === 'paid') {
+          const { data: claimed } = await supabase
+            .from('parent_scan_orders')
+            .update({ status: 'consumed', consumed_at: new Date().toISOString() })
+            .eq('id', parentScanOrder.id)
+            .eq('status', 'paid')
+            .select('id')
+            .maybeSingle();
+
+          if (!claimed) {
+            return new Response(
+              JSON.stringify({ error: 'Your one-time Parent Protection Scan has already been used' }),
+              { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+          claimedOrderId = claimed.id;
+        } else {
+          // Already consumed. Finishing the scan it paid for (retrying only the brokers that
+          // errored) stays allowed inside the retry window; a fresh full sweep does not.
+          const consumedAtMs = parentScanOrder.consumed_at
+            ? new Date(parentScanOrder.consumed_at).getTime()
+            : 0;
+          const withinRetryWindow =
+            consumedAtMs > 0 && Date.now() - consumedAtMs < PARENT_SCAN_RETRY_WINDOW_MS;
+
+          if (!retryFailedOnly || !withinRetryWindow) {
+            return new Response(
+              JSON.stringify({
+                error: 'Your one-time Parent Protection Scan has already been used. Your results stay available, or subscribe for ongoing monitoring.',
+                parent_scan_spent: true,
+              }),
+              { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+          console.log(`[PARENT-SCAN] retry of failed brokers for spent order ${parentScanOrder.id}`);
+        }
       }
 
       // Create scan record
@@ -1360,10 +1556,26 @@ Deno.serve(async (req) => {
 
       if (scanError || !newScan) {
         console.error('Error creating scan:', scanError);
+        // Give the entitlement back — nothing was delivered, so nothing was spent.
+        if (claimedOrderId) {
+          await supabase
+            .from('parent_scan_orders')
+            .update({ status: 'paid', consumed_at: null })
+            .eq('id', claimedOrderId);
+        }
         return new Response(
           JSON.stringify({ error: 'Failed to create scan' }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
+      }
+
+      // Link the order to the scan it bought, so a refund or support query can see exactly
+      // what was delivered for the $39.
+      if (claimedOrderId) {
+        await supabase
+          .from('parent_scan_orders')
+          .update({ broker_scan_id: newScan.id })
+          .eq('id', claimedOrderId);
       }
 
       console.log(`Created broker scan ${newScan.id} for user ${userId} (${userProfile.firstName} ${userProfile.lastName}), SERP API: ${serpApiKey ? 'configured' : 'not configured'}`);
@@ -1493,6 +1705,12 @@ Deno.serve(async (req) => {
         JSON.stringify({
           message: 'Scan started',
           scan: newScan,
+          // Honest coverage numbers: total_brokers is what we will actually request,
+          // skipped_brokers is what we list but cannot auto-check yet.
+          total_brokers: brokerCount,
+          listed_brokers: listedCount,
+          skipped_brokers: skippedBrokers.length,
+          skipped_broker_slugs: skippedBrokers.map((b) => b.slug),
         }),
         { status: 202, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -1564,15 +1782,31 @@ Deno.serve(async (req) => {
 
       const { data: brokers } = await supabase
         .from('data_brokers')
-        .select('id, name, slug, priority, opt_out_difficulty')
+        .select('id, name, slug, priority, opt_out_difficulty, is_searchable')
         .eq('is_active', true)
         .order('priority');
 
+      // Same coverage figure the POST returns, recomputed from the broker list we already
+      // fetched (no extra round-trip on each poll) so the UI still has it after a reload,
+      // when only this endpoint is called.
+      //
+      // It has to be the SAME definition as the POST or the banner changes number when the
+      // page reloads. "Skipped" therefore means: a broker a scan WOULD have considered
+      // (is_active AND is_searchable) that has no detection pattern. is_searchable=false rows
+      // are enterprise aggregators with no public people-search — a scan never considers them,
+      // so they are not something we skipped.
+      const activeBrokers = brokers || [];
+      const skippedBrokerSlugs = activeBrokers
+        .filter((b: any) => b.is_searchable && !hasDetectionPattern(b.slug))
+        .map((b: any) => b.slug);
+
       return new Response(
-        JSON.stringify({ 
+        JSON.stringify({
           scan,
           results: results || [],
-          brokers: brokers || [],
+          brokers: activeBrokers,
+          skipped_brokers: skippedBrokerSlugs.length,
+          skipped_broker_slugs: skippedBrokerSlugs,
         }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );

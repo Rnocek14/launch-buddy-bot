@@ -133,7 +133,7 @@ export default function Enterprise() {
               <ArrowRight className="w-4 h-4" />
             </Button>
             <Button size="lg" variant="outline" className="gap-2" asChild>
-              <a href="mailto:enterprise@footprintfinder.com">
+              <a href="mailto:enterprise@footprintfinder.co">
                 <Headphones className="w-4 h-4" />
                 Schedule Demo
               </a>

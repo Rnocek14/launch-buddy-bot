@@ -90,14 +90,58 @@ async function storeSerpCache(
 }
 
 // Budget governor — the real hard cost cap on this unauthenticated endpoint.
-async function consumeBudget(supabase: any): Promise<boolean> {
+// This spends the FREE bucket (consume_free_serp_quota / serp_free_usage_daily), NOT the
+// shared one scan-brokers spends for paying customers. This endpoint is verify_jwt=false
+// with no captcha, so scripted traffic against it used to be able to drain the single
+// daily counter and push every paid scan onto its budget_exhausted path. The two budgets
+// are separate so the worst a flood here can do is take the free check offline.
+// See supabase/migrations/20260916130300_separate_free_serp_quota.sql for the cap.
+async function consumeFreeBudget(supabase: any): Promise<boolean> {
   try {
-    const { data, error } = await supabase.rpc('consume_serp_quota', { p_count: 1 });
+    const { data, error } = await supabase.rpc('consume_free_serp_quota', { p_count: 1 });
     if (error) return false; // fail closed
     return data === true;
   } catch {
     return false;
   }
+}
+
+// ---- Best-effort per-IP speed bump ----
+// Honest about what this is: it is NOT the cost control. Edge functions run as many
+// short-lived isolates, so this Map is empty after every cold start and each concurrent
+// instance keeps its own copy — a distributed or merely patient caller walks straight
+// past it. The free SERP bucket in Postgres is the only counter that is atomic and shared
+// across instances, and that is what actually caps the spend. This exists to blunt the
+// cheapest attack (one host, one tight loop) and to stop an accidental client retry storm
+// before it reaches SerpApi at all.
+const IP_WINDOW_MS = 60_000;
+// Deliberately loose: carrier-grade NAT and office networks put many genuine visitors
+// behind one address, and the failure mode here is a real person being told to try again.
+// A scripted flood runs orders of magnitude above this; a human filling in a form does not.
+const IP_MAX_REQUESTS = 10;
+const ipHits = new Map<string, number[]>();
+
+function clientIp(req: Request): string | null {
+  // x-forwarded-for is "client, proxy1, proxy2" — the first entry is the caller.
+  const fwd = req.headers.get('x-forwarded-for');
+  const first = fwd?.split(',')[0]?.trim();
+  if (first) return first;
+  return req.headers.get('cf-connecting-ip')?.trim() || null;
+}
+
+function isRateLimited(ip: string): boolean {
+  const now = Date.now();
+  // Bound the map: a spray of spoofed addresses must not grow this isolate's memory
+  // without limit. Dropping the whole window is fine — the DB bucket is the real cap.
+  if (ipHits.size > 5000) ipHits.clear();
+  const recent = (ipHits.get(ip) ?? []).filter((t) => now - t < IP_WINDOW_MS);
+  if (recent.length >= IP_MAX_REQUESTS) {
+    ipHits.set(ip, recent);
+    return true;
+  }
+  recent.push(now);
+  ipHits.set(ip, recent);
+  return false;
 }
 
 function normalizeNameTokens(firstName: string, lastName: string): string[] {
@@ -113,6 +157,43 @@ function urlHasNameTokens(url: string, tokens: string[]): boolean {
   }
 }
 
+// US state codes -> full names, so a state can be corroborated by either spelling.
+const STATE_NAMES: Record<string, string> = {
+  AL:'alabama',AK:'alaska',AZ:'arizona',AR:'arkansas',CA:'california',CO:'colorado',
+  CT:'connecticut',DE:'delaware',FL:'florida',GA:'georgia',HI:'hawaii',ID:'idaho',
+  IL:'illinois',IN:'indiana',IA:'iowa',KS:'kansas',KY:'kentucky',LA:'louisiana',
+  ME:'maine',MD:'maryland',MA:'massachusetts',MI:'michigan',MN:'minnesota',
+  MS:'mississippi',MO:'missouri',MT:'montana',NE:'nebraska',NV:'nevada',
+  NH:'new hampshire',NJ:'new jersey',NM:'new mexico',NY:'new york',
+  NC:'north carolina',ND:'north dakota',OH:'ohio',OK:'oklahoma',OR:'oregon',
+  PA:'pennsylvania',RI:'rhode island',SC:'south carolina',SD:'south dakota',
+  TN:'tennessee',TX:'texas',UT:'utah',VT:'vermont',VA:'virginia',WA:'washington',
+  WV:'west virginia',WI:'wisconsin',WY:'wyoming',DC:'district of columbia',
+};
+
+/**
+ * Does this result actually mention the user's state?
+ *
+ * This was `text.includes(state.toLowerCase())` on a two-letter code, so for a
+ * California visitor it was `text.includes("ca")` — which fires on "because",
+ * "located", "scam", "Carlsbad", "vacation" and "background check". Roughly a
+ * dozen state codes are common English substrings (CA, IN, OR, ME, PA, LA, MD,
+ * DE, MS, MT, NE, OK), so those users got a free +0.15 on essentially every
+ * result, which is enough to carry a bare name match over the possible_match
+ * threshold and render a live link to a stranger's listing.
+ *
+ * Word-boundary the code, and accept the full state name as an alternative.
+ */
+function stateMatches(text: string, state: string): boolean {
+  const raw = state.trim().toLowerCase();
+  if (!raw) return false;
+  // Escape defensively: `state` arrives from the request body.
+  const safe = raw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  if (new RegExp(`\\b${safe}\\b`).test(text)) return true;
+  const full = STATE_NAMES[raw.toUpperCase()];
+  return full ? text.includes(full) : false;
+}
+
 function scoreSerpResult({ title, snippet, url, user }: { title: string; snippet: string; url: string; user: UserProfile }) {
   const text = `${title}\n${snippet}`.toLowerCase();
   const titleLower = title.toLowerCase();
@@ -123,7 +204,7 @@ function scoreSerpResult({ title, snippet, url, user }: { title: string; snippet
 
   if (text.includes(fullName)) { breakdown.name_match = 0.30; total += 0.30; }
   if (user.city && text.includes(user.city.toLowerCase())) { breakdown.city_match = 0.20; total += 0.20; }
-  if (user.state && text.includes(user.state.toLowerCase())) { breakdown.state_match = 0.15; total += 0.15; }
+  if (user.state && stateMatches(text, user.state)) { breakdown.state_match = 0.15; total += 0.15; }
   if (/\(?\d{3}\)?[-.\s]\d{3}[-.\s]\d{4}/.test(text)) { breakdown.phone_hint = 0.10; total += 0.10; }
   if (/\b\d{2}\s*(?:years?\s*old|y\.?o\.?)\b/i.test(text) || /\bage[:\s]+\d{2}/i.test(text)) { breakdown.age_hint = 0.15; total += 0.15; }
   if (/\b\d{1,6}\s+[a-z0-9.'-]{2,}\s+(st|street|ave|avenue|dr|drive|rd|road|ln|lane|blvd|boulevard|ct|court|cir|circle|pl|place|ter|terrace)\b/i.test(text)) { breakdown.address_hint = 0.10; total += 0.10; }
@@ -135,14 +216,28 @@ function scoreSerpResult({ title, snippet, url, user }: { title: string; snippet
   const nameInUrl = urlHasNameTokens(url, nameTokens);
   const hasStrongSignal = nameInTitle || nameInUrl || (!!breakdown.name_match && (!!breakdown.age_hint || !!breakdown.phone_hint));
 
-  const hasCorroborator = !!breakdown.city_match || !!breakdown.state_match || !!breakdown.age_hint || !!breakdown.phone_hint || !!breakdown.address_hint;
+  // state_match is deliberately NOT a corroborator. A state is shared by millions,
+  // so "same name, same state" is not evidence of the same person — and promoting it
+  // to possible_match now renders a clickable link to that listing. City, age, phone
+  // and address are person-specific; a state is not.
+  const hasCorroborator = !!breakdown.city_match || !!breakdown.age_hint || !!breakdown.phone_hint || !!breakdown.address_hint;
   const canBePossible = !!breakdown.name_match && hasCorroborator;
 
   let status_v2: StatusV2 = 'not_found';
   if (total >= CONFIDENCE_THRESHOLDS.FOUND && hasStrongSignal) status_v2 = 'found';
   else if (total >= CONFIDENCE_THRESHOLDS.POSSIBLE_MATCH && canBePossible) status_v2 = 'possible_match';
 
-  return { total, status_v2 };
+  // The breakdown is the whole point of the free check: it is literal evidence that
+  // this page publishes the visitor's phone number, age or street address. It used to
+  // be computed here and thrown away one call below the checkout button. Surface only
+  // the personal-data signals — name/city/state merely say "this is you", which the
+  // result row already communicates.
+  const evidence: string[] = [];
+  if (breakdown.address_hint) evidence.push('street address');
+  if (breakdown.phone_hint) evidence.push('phone number');
+  if (breakdown.age_hint) evidence.push('age');
+
+  return { total, status_v2, evidence };
 }
 
 function buildQueries(user: UserProfile, domain: string): string[] {
@@ -155,7 +250,18 @@ function buildQueries(user: UserProfile, domain: string): string[] {
   return queries;
 }
 
-async function serpSearch(query: string, apiKey: string) {
+interface SerpOutcome {
+  /**
+   * False when the call never produced an answer: non-2xx from SerpApi, a network error,
+   * or the 6s abort below. This MUST stay distinct from a successful search that returned
+   * zero organic results -- the two are identical on the wire (an empty array) but mean
+   * opposite things, and only the second one is evidence of absence.
+   */
+  ok: boolean;
+  results: Array<{ title: string; snippet: string; link: string }>;
+}
+
+async function serpSearch(query: string, apiKey: string): Promise<SerpOutcome> {
   // Bound each SERP call so one slow provider response can't hang the whole
   // broker check (which the client renders as a spinner).
   const controller = new AbortController();
@@ -167,12 +273,20 @@ async function serpSearch(query: string, apiKey: string) {
     url.searchParams.set('api_key', apiKey);
     url.searchParams.set('num', '5');
     const res = await fetch(url.toString(), { method: 'GET', signal: controller.signal });
-    if (!res.ok) return [];
+    if (!res.ok) {
+      console.warn(`[free-broker-check] SERP ${res.status} for ${query.substring(0, 40)}`);
+      return { ok: false, results: [] };
+    }
     const json = await res.json();
     const organic = Array.isArray(json?.organic_results) ? json.organic_results : [];
-    return organic.slice(0, 3).map((r: any) => ({ title: r.title ?? '', snippet: r.snippet ?? '', link: r.link ?? '' }));
+    return {
+      ok: true,
+      results: organic.slice(0, 3).map((r: any) => ({ title: r.title ?? '', snippet: r.snippet ?? '', link: r.link ?? '' })),
+    };
   } catch {
-    return [];
+    // Includes the AbortError from the 6s timeout above, which fires often enough that
+    // treating it as "no listings" would be actively wrong.
+    return { ok: false, results: [] };
   } finally {
     clearTimeout(timeout);
   }
@@ -185,6 +299,24 @@ interface BrokerResult {
   status: StatusV2;
   confidence: number | null;
   profileUrl: string | null;
+  /** Personal-data signals found in the listing, e.g. ['street address','phone number']. */
+  evidence: string[];
+}
+
+interface BrokerCheck {
+  result: BrokerResult;
+  /**
+   * True when this broker stopped short because the FREE daily bucket was spent, i.e.
+   * there was work we chose not to do. The caller folds this into `degraded` so a thin
+   * result can never be rendered as an all-clear.
+   */
+  budgetExhausted: boolean;
+  /**
+   * True when a SERP call we did make came back as a failure rather than an answer, or
+   * the broker threw outright. Same consequence as budgetExhausted -- this broker was
+   * never actually checked, so it must not contribute to an all-clear.
+   */
+  serpFailed: boolean;
 }
 
 async function checkBroker(
@@ -192,24 +324,45 @@ async function checkBroker(
   user: UserProfile,
   apiKey: string | null,
   supabase: any,
-): Promise<BrokerResult> {
+): Promise<BrokerCheck> {
   const queries = buildQueries(user, broker.domain);
   let best: { score: ReturnType<typeof scoreSerpResult>; link: string } | null = null;
+  let budgetExhausted = false;
+  let serpFailed = false;
 
   for (const query of queries) {
-    // Cache first — no budget consumed.
+    // Cache first — no budget consumed. Keep it this way: cache hits are what let the
+    // free funnel keep working on a small bucket.
     let results: Array<{ title: string; snippet: string; link: string }> | null = null;
     const cached = await checkSerpCache(supabase, broker.slug, query);
     if (cached.hit && cached.results) {
       results = cached.results;
     } else if (apiKey) {
-      // Cache miss — consume budget before hitting SERP.
-      const allowed = await consumeBudget(supabase);
+      // Cache miss — consume free budget before hitting SERP.
+      const allowed = await consumeFreeBudget(supabase);
       if (!allowed) {
-        // Budget exhausted; bail with whatever we have.
+        // Free bucket exhausted (or the RPC failed and we failed closed). Bail with
+        // whatever we have, and flag it so the response degrades honestly.
+        budgetExhausted = true;
         break;
       }
-      results = await serpSearch(query, apiKey);
+      const search = await serpSearch(query, apiKey);
+      if (!search.ok) {
+        // Do NOT write this empty list to serp_cache. scan-brokers computes the identical
+        // cache_key for the identical query and reads this same table on behalf of PAYING
+        // customers, and storeSerpCache() below gives a zero-result entry a 30-DAY TTL --
+        // so a timed-out anonymous check would hand a paid scan a "not found" on a broker
+        // nobody ever searched, for a month. scan-brokers guards its own failures with a
+        // 6h error TTL; the cheapest equivalent in here is to cache nothing at all and let
+        // the next caller do a real search.
+        // continue, not break: before this change a failed call returned [] and the loop
+        // simply moved on to the city-qualified query, which is often the one that finds
+        // the person. Breaking here would trade a real "we found you" reveal for nothing,
+        // and the budget cost is unchanged -- 2 queries per broker was always the ceiling.
+        serpFailed = true;
+        continue;
+      }
+      results = search.results;
       await storeSerpCache(supabase, broker.slug, query, results);
     } else {
       break;
@@ -231,15 +384,29 @@ async function checkBroker(
   }
 
   if (!best) {
-    return { slug: broker.slug, name: broker.name, domain: broker.domain, status: 'unknown', confidence: null, profileUrl: null };
+    return {
+      result: { slug: broker.slug, name: broker.name, domain: broker.domain, status: 'unknown', confidence: null, profileUrl: null, evidence: [] },
+      budgetExhausted,
+      serpFailed,
+    };
   }
   return {
-    slug: broker.slug,
-    name: broker.name,
-    domain: broker.domain,
-    status: best.score.status_v2,
-    confidence: Math.round(best.score.total * 100) / 100,
-    profileUrl: best.score.status_v2 === 'found' ? best.link : null,
+    result: {
+      slug: broker.slug,
+      name: broker.name,
+      domain: broker.domain,
+      status: best.score.status_v2,
+      confidence: Math.round(best.score.total * 100) / 100,
+      // Also returned for possible_match: the visitor can open it and judge for
+      // themselves, which is more honest than asserting a match we are unsure of.
+      profileUrl:
+        best.score.status_v2 === 'found' || best.score.status_v2 === 'possible_match'
+          ? best.link
+          : null,
+      evidence: best.score.evidence,
+    },
+    budgetExhausted,
+    serpFailed,
   };
 }
 
@@ -251,6 +418,19 @@ Deno.serve(async (req) => {
   if (req.method !== 'POST') {
     return new Response(JSON.stringify({ error: 'Method not allowed' }), {
       status: 405, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
+  // Cheapest possible check, before we parse a body or build a client. When the caller
+  // can't be identified we do NOT limit: a missing header must not collapse every visitor
+  // into one shared bucket and brick the free scan. The DB bucket still caps the spend.
+  const ip = clientIp(req);
+  if (ip && isRateLimited(ip)) {
+    // 429 with no results — supabase-js surfaces this as an error and the UI shows its
+    // "try again in a moment" state. Never a results payload, which would read as an
+    // all-clear.
+    return new Response(JSON.stringify({ error: 'Too many checks from this connection. Please try again in a minute.' }), {
+      status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Retry-After': '60' },
     });
   }
 
@@ -275,15 +455,26 @@ Deno.serve(async (req) => {
       state: parsed.data.state,
     };
 
-    // Run brokers concurrently — the budget RPC is atomic, so this is safe and fast.
-    const results: BrokerResult[] = await Promise.all(
+    // Run brokers concurrently — the budget RPC locks the day's row, so this is safe and fast.
+    const checks: BrokerCheck[] = await Promise.all(
       FREE_BROKERS.map((broker) =>
         checkBroker(broker, user, serpApiKey, supabase).catch((e) => {
           console.error(`[free-broker-check] ${broker.slug} failed:`, e);
-          return { slug: broker.slug, name: broker.name, domain: broker.domain, status: 'unknown' as StatusV2, confidence: null, profileUrl: null };
+          return {
+            result: { slug: broker.slug, name: broker.name, domain: broker.domain, status: 'unknown' as StatusV2, confidence: null, profileUrl: null, evidence: [] },
+            budgetExhausted: false,
+            serpFailed: true,
+          };
         })
       )
     );
+
+    const results: BrokerResult[] = checks.map((c) => c.result);
+    const budgetExhausted = checks.some((c) => c.budgetExhausted);
+    const serpFailed = checks.some((c) => c.serpFailed);
+    if (budgetExhausted) {
+      console.warn('[free-broker-check] free SERP bucket exhausted — returning degraded result');
+    }
 
     const foundCount = results.filter((r) => r.status === 'found').length;
     const possibleCount = results.filter((r) => r.status === 'possible_match').length;
@@ -292,11 +483,16 @@ Deno.serve(async (req) => {
 
     // "Degraded" = we could NOT meaningfully perform the check, so a zero result
     // must NOT be presented as a reassuring "you're clean". This happens when the
-    // SERP key is unset, or when every broker came back inconclusive (budget
-    // exhausted / SERP failure / no indexed data). Only when at least one broker
-    // was actually searched (found / possible / not_found) is a zero-exposure
-    // result trustworthy.
-    const degraded = !serpApiKey || (foundCount + possibleCount + notFoundCount === 0);
+    // SERP key is unset, when the free daily bucket ran out part-way through (we
+    // knowingly skipped searches we would otherwise have run), or when every broker
+    // came back inconclusive (SERP failure / no indexed data). Only when at least one
+    // broker was actually searched (found / possible / not_found) AND nothing was
+    // skipped for budget is a zero-exposure result trustworthy.
+    // budgetExhausted and serpFailed are included even when some brokers did answer: a
+    // partial pass is exactly the case where "0 listings" would read as an all-clear and
+    // be wrong. The UI only swaps in the degraded copy when nothing was found, so this
+    // costs the "we found you on N sites" moment nothing.
+    const degraded = !serpApiKey || budgetExhausted || serpFailed || (foundCount + possibleCount + notFoundCount === 0);
 
     return new Response(JSON.stringify({
       results,

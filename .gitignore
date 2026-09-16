@@ -25,3 +25,9 @@ dist-ssr
 
 # tsc -b (npm run typecheck) build info
 *.tsbuildinfo
+
+# Local env files (the app reads Supabase config from src/integrations/supabase/client.ts,
+# not from here -- see GO-LIVE.md section 6). Never commit real keys.
+.env
+.env.local
+.env.*.local
