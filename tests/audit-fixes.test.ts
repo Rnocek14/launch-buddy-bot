@@ -301,20 +301,43 @@ describe("scan-brokers migration: clears the phantom clean rows and nothing else
 // FIX 1b — Family tier may run broker scans
 // ---------------------------------------------------------------------------
 describe("scan-brokers: the subscription gate accepts Complete AND Family", () => {
-  /** The `if (...)` guarding the broker-scan 403, whichever shape it has. */
+  /**
+   * Whether the shipped source denies broker scanning to a subscription of this tier.
+   *
+   * There are now two ways in — a qualifying subscription, or a paid one-time Parent
+   * Protection Scan order — so the 403's own condition reads
+   * `!hasSubscriptionAccess && !parentScanOrder` and cannot be decided from a tier
+   * alone. The tier POLICY lives entirely in the hasSubscriptionAccess expression, so
+   * that is what is lifted and evaluated here. The second path has its own test below,
+   * so neither can be dropped without something going red.
+   */
   function shippedGate(): (subscription: { tier: string } | null) => boolean {
     const src = scanSrc();
-    const errAt = src.search(/subscription required for broker scanning/);
-    if (errAt < 0) throw new Error("broker-scan subscription 403 not found");
+    const assignAt = src.search(/const hasSubscriptionAccess\s*=/);
+    if (assignAt < 0) throw new Error("broker-scan subscription access expression not found");
+    const eqAt = src.indexOf("=", assignAt);
+    const expr = src.slice(eqAt + 1, src.indexOf(";", eqAt)).trim();
+    const tiersSnippet = must(
+      src.match(/const BROKER_SCAN_TIERS = new Set\(\[[^\]]*\]\);/),
+      "BROKER_SCAN_TIERS",
+    )[0];
+    const tiers = evalSnippet<Set<string>>(tiersSnippet, "BROKER_SCAN_TIERS");
+    const allows = new Function("subscription", "BROKER_SCAN_TIERS", `return (${expr});`);
+    return (subscription) => !allows(subscription, tiers);
+  }
+
+  test("the 403 still requires BOTH access paths to be absent", () => {
+    const src = scanSrc();
+    const errAt = src.search(/required for broker scanning/);
+    expect(errAt).toBeGreaterThan(-1);
     const ifAt = src.lastIndexOf("if (", errAt);
     const cond = balancedParens(src, ifAt);
-    // BROKER_SCAN_TIERS is supplied when the shipped gate references it; the old
-    // gate compared tier to a single literal and simply ignores the extra arg.
-    const tiersSnippet = src.match(/const BROKER_SCAN_TIERS = new Set\(\[[^\]]*\]\);/);
-    const tiers = tiersSnippet ? evalSnippet<Set<string>>(tiersSnippet[0], "BROKER_SCAN_TIERS") : new Set<string>();
-    const fn = new Function("subscription", "BROKER_SCAN_TIERS", `return (${cond});`);
-    return (subscription) => Boolean(fn(subscription, tiers));
-  }
+    // A paying subscriber and a one-time Parent Scan buyer must each be enough on
+    // their own. If someone drops the entitlement path, this condition stops
+    // mentioning it and the $39 SKU silently 403s its own customers again.
+    expect(cond).toContain("hasSubscriptionAccess");
+    expect(cond).toContain("parentScanOrder");
+  });
 
   test("the tier set holds both paid scanning tiers and neither free nor pro", () => {
     const snippet = must(scanSrc().match(/const BROKER_SCAN_TIERS = new Set\(\[[^\]]*\]\);/), "BROKER_SCAN_TIERS")[0];
@@ -343,8 +366,18 @@ describe("scan-brokers: the subscription gate accepts Complete AND Family", () =
     }
   });
 
-  test("the 403 copy names Family so the message is not itself misleading", () => {
-    expect(scanSrc()).toMatch(/Complete or Family subscription required for broker scanning/);
+  test("the 403 copy names every way in, so the message is not itself misleading", () => {
+    // Asserted by intent rather than exact wording: the old copy said "Complete
+    // subscription required", which told a paying Family customer their own plan
+    // did not qualify. The message must name each route that actually grants
+    // access, so it stays truthful as routes are added.
+    const src = scanSrc();
+    const errAt = src.search(/required for broker scanning/);
+    expect(errAt).toBeGreaterThan(-1);
+    const message = src.slice(src.lastIndexOf("'", errAt) + 1, src.indexOf("'", errAt));
+    expect(message).toContain("Complete");
+    expect(message).toContain("Family");
+    expect(message).toMatch(/Parent Protection Scan/i);
   });
 });
 
