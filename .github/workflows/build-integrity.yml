@@ -78,7 +78,21 @@ jobs:
       # whole tree here would fail for a reason that has nothing to do with the
       # change under review.
       - name: Unit tests
-        run: bun test tests/
+        run: |
+          set -o pipefail
+          bun test tests/ 2>&1 | tee unit-test-output.log
+          # `bun test` exits 0 when its path argument matches nothing, so a
+          # green step is not by itself evidence the suite ran. Assert a
+          # non-zero pass count: otherwise a rename of tests/ would silently
+          # disable every assertion here and CI would stay green — the exact
+          # report-success-without-doing-the-work failure this branch exists
+          # to remove.
+          PASS=$(grep -oE '[0-9]+ pass' unit-test-output.log | head -1 | grep -oE '[0-9]+' || true)
+          if [ "${PASS:-0}" -lt 1 ]; then
+            echo "::error::bun test matched no tests — the suite did not run."
+            exit 1
+          fi
+          echo "unit tests: ${PASS} passing"
 
       # The edge-function tests need the Deno runtime. Non-blocking because they
       # have never run in CI and their current state is unknown; making them
