@@ -48,19 +48,61 @@ serve(async (req) => {
       auth: { persistSession: false },
     });
 
-    // Canonical list of all user-data tables and their user key
+    // Canonical list of all user-data tables and their user key.
+    //
+    // Ordered children-before-parents so an explicit delete never trips a
+    // foreign key from a row we have not removed yet.
+    //
+    // Tables are listed even when their FK already cascades: the cascade is a
+    // backstop, and an explicit delete is what makes this list auditable
+    // against the schema. To re-derive it, grep the migrations for every
+    // public table carrying a user-owned uuid column.
     const deletions: { table: string; column: string; value: string }[] = [
-      { table: "broker_scan_results", column: "user_id", value: userId },
-      { table: "broker_scans", column: "user_id", value: userId },
-      { table: "exposure_findings", column: "user_id", value: userId },
-      { table: "exposure_scans", column: "user_id", value: userId },
-      { table: "deletion_requests", column: "user_id", value: userId },
+      // Email subscription tree: audit rows reference email_subscriptions.
+      { table: "unsubscribe_audit_log", column: "user_id", value: userId },
       { table: "email_subscriptions", column: "user_id", value: userId },
       { table: "email_connections", column: "user_id", value: userId },
+
+      // Broker scans: results reference scans.
+      { table: "broker_scan_results", column: "user_id", value: userId },
+      { table: "broker_scans", column: "user_id", value: userId },
+
+      // Exposure monitoring: findings reference scans.
+      { table: "exposure_findings", column: "user_id", value: userId },
+      { table: "exposure_scans", column: "user_id", value: userId },
+      { table: "seen_findings", column: "user_id", value: userId },
+      { table: "exposure_alerts", column: "user_id", value: userId },
+
+      // Deletion requests reference user_identifiers, so they go first.
+      { table: "deletion_requests", column: "user_id", value: userId },
+      { table: "service_action_log", column: "user_id", value: userId },
+      { table: "service_submissions", column: "user_id", value: userId },
+      { table: "unmatched_domains", column: "user_id", value: userId },
       { table: "user_services", column: "user_id", value: userId },
       { table: "user_identifiers", column: "user_id", value: userId },
+
       { table: "challenge_participants", column: "user_id", value: userId },
       { table: "contact_discovery_failures", column: "user_id", value: userId },
+      { table: "manual_contact_submissions", column: "submitted_by", value: userId },
+
+      // Referrals: conversions reference referral_codes.
+      { table: "referral_conversions", column: "referred_user_id", value: userId },
+      { table: "referral_codes", column: "user_id", value: userId },
+      { table: "risk_score_history", column: "user_id", value: userId },
+
+      // Shared result pages live on public, unauthenticated URLs — the single
+      // most visible thing an erasure request expects to see taken down.
+      { table: "public_results", column: "user_id", value: userId },
+      // Each row's `query` is the user's own name/location, so these are
+      // personal data despite being an API audit log. Per-day SERP spend is
+      // tracked separately in serp_usage_daily and is unaffected.
+      { table: "serp_requests_log", column: "user_id", value: userId },
+
+      { table: "oauth_states", column: "user_id", value: userId },
+      { table: "organization_members", column: "user_id", value: userId },
+      { table: "user_roles", column: "user_id", value: userId },
+      { table: "user_authorizations", column: "user_id", value: userId },
+      { table: "subscriptions", column: "user_id", value: userId },
       { table: "analytics_events", column: "user_id", value: userId },
       { table: "profiles", column: "id", value: userId },
     ];
@@ -100,8 +142,12 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({
           success: false,
+          status: "failed",
           error: "Failed to delete authentication account. Please try again or contact support.",
           details: deleteAuthError.message,
+          request_ref: requestRef,
+          warnings,
+          errors,
         }),
         {
           status: 400,
@@ -112,10 +158,34 @@ serve(async (req) => {
 
     console.log(`[delete-user-account] ref=${requestRef} Auth user deleted`);
 
+    // `success` deliberately stays tied to "the auth account is gone", not to
+    // "every table was clean". The caller signs the user out and navigates away
+    // on success; flipping this to false on a partial cleanup would strand them
+    // in a live session whose auth user no longer exists, and tell them nothing
+    // was deleted when in fact their login is already destroyed.
+    //
+    // `status` is the honest discriminator, and `message` now follows it rather
+    // than claiming a clean sweep unconditionally.
+    const partial = errors.length > 0;
+
+    if (partial) {
+      console.error(
+        `[delete-user-account] ref=${requestRef} PARTIAL DELETION — ${errors.length} table(s) failed: ${errors.join("; ")}`
+      );
+    }
+
     return new Response(
       JSON.stringify({
         success: true,
-        message: "Account and all data deleted.",
+        status: partial ? "partial" : "deleted",
+        message: partial
+          ? `Account deleted, but ${errors.length} data store(s) could not be cleared and need manual cleanup. Quote ref ${requestRef} to support.`
+          : "Account and all data deleted.",
+        // Present only on a partial sweep, so a caller that surfaces `error`
+        // has accurate text to show instead of inventing reassurance.
+        ...(partial
+          ? { error: "Some data could not be deleted and has been flagged for manual cleanup." }
+          : {}),
         request_ref: requestRef,
         warnings,
         errors,
