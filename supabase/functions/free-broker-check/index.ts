@@ -186,7 +186,17 @@ function scoreSerpResult({ title, snippet, url, user }: { title: string; snippet
   if (total >= CONFIDENCE_THRESHOLDS.FOUND && hasStrongSignal) status_v2 = 'found';
   else if (total >= CONFIDENCE_THRESHOLDS.POSSIBLE_MATCH && canBePossible) status_v2 = 'possible_match';
 
-  return { total, status_v2 };
+  // The breakdown is the whole point of the free check: it is literal evidence that
+  // this page publishes the visitor's phone number, age or street address. It used to
+  // be computed here and thrown away one call below the checkout button. Surface only
+  // the personal-data signals — name/city/state merely say "this is you", which the
+  // result row already communicates.
+  const evidence: string[] = [];
+  if (breakdown.address_hint) evidence.push('street address');
+  if (breakdown.phone_hint) evidence.push('phone number');
+  if (breakdown.age_hint) evidence.push('age');
+
+  return { total, status_v2, evidence };
 }
 
 function buildQueries(user: UserProfile, domain: string): string[] {
@@ -248,6 +258,8 @@ interface BrokerResult {
   status: StatusV2;
   confidence: number | null;
   profileUrl: string | null;
+  /** Personal-data signals found in the listing, e.g. ['street address','phone number']. */
+  evidence: string[];
 }
 
 interface BrokerCheck {
@@ -332,7 +344,7 @@ async function checkBroker(
 
   if (!best) {
     return {
-      result: { slug: broker.slug, name: broker.name, domain: broker.domain, status: 'unknown', confidence: null, profileUrl: null },
+      result: { slug: broker.slug, name: broker.name, domain: broker.domain, status: 'unknown', confidence: null, profileUrl: null, evidence: [] },
       budgetExhausted,
       serpFailed,
     };
@@ -344,7 +356,13 @@ async function checkBroker(
       domain: broker.domain,
       status: best.score.status_v2,
       confidence: Math.round(best.score.total * 100) / 100,
-      profileUrl: best.score.status_v2 === 'found' ? best.link : null,
+      // Also returned for possible_match: the visitor can open it and judge for
+      // themselves, which is more honest than asserting a match we are unsure of.
+      profileUrl:
+        best.score.status_v2 === 'found' || best.score.status_v2 === 'possible_match'
+          ? best.link
+          : null,
+      evidence: best.score.evidence,
     },
     budgetExhausted,
     serpFailed,
@@ -402,7 +420,7 @@ Deno.serve(async (req) => {
         checkBroker(broker, user, serpApiKey, supabase).catch((e) => {
           console.error(`[free-broker-check] ${broker.slug} failed:`, e);
           return {
-            result: { slug: broker.slug, name: broker.name, domain: broker.domain, status: 'unknown' as StatusV2, confidence: null, profileUrl: null },
+            result: { slug: broker.slug, name: broker.name, domain: broker.domain, status: 'unknown' as StatusV2, confidence: null, profileUrl: null, evidence: [] },
             budgetExhausted: false,
             serpFailed: true,
           };

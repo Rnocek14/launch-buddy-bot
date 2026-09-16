@@ -151,9 +151,19 @@ export default function FreeScan() {
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
               {results
                 ? "Real breaches and estimated exposure — here's what we found."
-                : "Check breach databases and estimate your digital footprint. No signup required."}
+                : "See which people-search sites publish your details, and check your email against known breaches. No signup required."}
             </p>
           </div>
+
+          {/* The broker check runs on its own form and its own data, and it is the
+              only part of this page that reliably returns a real, personalized
+              result. It used to render inside the `results &&` guard below, so it
+              appeared only AFTER the breach lookup resolved — which races a 12s
+              timeout and is currently failing in production. The working feature
+              was gated behind the broken one. It leads now. */}
+          <section className="mb-12">
+            <LiveBrokerCheck email={email} onResults={setBrokerFindings} />
+          </section>
 
           {/* Scan Form */}
           {!results && !isScanning && (
@@ -211,12 +221,6 @@ export default function FreeScan() {
           {/* Results */}
           {results && (
             <div className="space-y-10 animate-fade-in">
-              {/* Hero: the real, personalized broker reveal — the strongest
-                  conversion moment. Front-loaded above the estimate summary. */}
-              <section>
-                <LiveBrokerCheck email={email} onResults={setBrokerFindings} />
-              </section>
-
               {/* The single-decision exposure summary + primary CTA. Reflects the
                   confirmed broker findings above once the check has run. */}
               <section>

@@ -3,7 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-  Search, Loader2, CheckCircle2, AlertTriangle, Building2,
+  Search, Loader2, CheckCircle2, AlertTriangle, Building2, ExternalLink,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { trackEvent } from "@/lib/analytics";
@@ -19,6 +19,8 @@ interface BrokerResult {
   status: BrokerStatus;
   confidence: number | null;
   profileUrl: string | null;
+  /** Personal-data signals the scorer found, e.g. ['street address','phone number']. */
+  evidence?: string[];
 }
 
 interface LiveBrokerCheckProps {
@@ -127,17 +129,48 @@ export function LiveBrokerCheck({ email, onResults }: LiveBrokerCheckProps) {
 
           <div className="divide-y divide-border">
             {results.map((r) => (
-              <div key={r.slug} className="flex items-center gap-3 px-6 py-3.5">
-                {r.status === "found" && <CheckCircle2 className="w-5 h-5 text-red-600 dark:text-red-400 shrink-0" />}
-                {r.status === "possible_match" && <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0" />}
+              <div key={r.slug} className="flex items-start gap-3 px-6 py-3.5">
+                {r.status === "found" && <CheckCircle2 className="w-5 h-5 mt-0.5 text-red-600 dark:text-red-400 shrink-0" />}
+                {r.status === "possible_match" && <AlertTriangle className="w-5 h-5 mt-0.5 text-amber-500 shrink-0" />}
                 {(r.status === "not_found" || r.status === "unknown") && (
-                  <div className="w-5 h-5 rounded-full border-2 border-muted-foreground/30 shrink-0" />
+                  <div className="w-5 h-5 mt-0.5 rounded-full border-2 border-muted-foreground/30 shrink-0" />
                 )}
                 <div className="flex-1 min-w-0">
                   <span className="font-medium">{r.name}</span>
                   <span className="text-xs text-muted-foreground ml-2">{r.domain}</span>
+
+                  {/* The evidence is the product. The scorer already knows this page
+                      publishes the visitor's address or phone; saying so plainly is both
+                      more honest and more persuasive than a grey "Listed" label. */}
+                  {r.evidence && r.evidence.length > 0 && (
+                    <div className="mt-1.5 flex flex-wrap gap-1.5">
+                      {r.evidence.map((e) => (
+                        <span
+                          key={e}
+                          className="text-[11px] font-medium rounded px-1.5 py-0.5 bg-red-500/10 text-red-700 dark:text-red-300"
+                        >
+                          {e}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* A link the visitor can open is the single most convincing thing on
+                      this page. It was fetched, passed to the browser and never rendered. */}
+                  {r.profileUrl && (
+                    <a
+                      href={r.profileUrl}
+                      target="_blank"
+                      rel="noopener noreferrer nofollow"
+                      onClick={() => trackEvent("broker_profile_opened", { broker: r.slug, status: r.status })}
+                      className="mt-1.5 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+                    >
+                      See the listing
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
+                  )}
                 </div>
-                <span className="text-xs font-medium">
+                <span className="text-xs font-medium shrink-0">
                   {r.status === "found" && <span className="text-red-600 dark:text-red-400">Listed</span>}
                   {r.status === "possible_match" && <span className="text-amber-600 dark:text-amber-400">Possible match</span>}
                   {r.status === "not_found" && <span className="text-muted-foreground">Not found</span>}
