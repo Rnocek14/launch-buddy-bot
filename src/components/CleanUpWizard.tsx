@@ -256,11 +256,21 @@ export function CleanUpWizard({
 
     for (const item of readyToSend) {
       try {
-        await supabase.functions.invoke("send-deletion-request", {
-          body: { serviceId: item.serviceId },
+        // The edge function destructures `service_id` (send-deletion-request/index.ts:114)
+        // and 400s on anything else. This posted `serviceId`, so every send failed.
+        const { data, error } = await supabase.functions.invoke("send-deletion-request", {
+          body: { service_id: item.serviceId },
         });
-        sent++;
-      } catch {
+        // invoke() resolves with { data, error } on a non-2xx rather than throwing, so a
+        // bare try/catch counted every failure as a success. Check the result explicitly.
+        if (error || data?.error) {
+          console.error("Deletion request failed", item.serviceId, error ?? data?.error);
+          failed++;
+        } else {
+          sent++;
+        }
+      } catch (err) {
+        console.error("Deletion request threw", item.serviceId, err);
         failed++;
       }
     }
