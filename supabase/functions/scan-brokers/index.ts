@@ -300,6 +300,18 @@ function hasDetectionPattern(slug: string): boolean {
 // brokerScanning: true, free and pro do not.
 const BROKER_SCAN_TIERS = new Set(['complete', 'family']);
 
+// The $39 one-time Parent Protection Scan (parent_scan_orders) is the second way in. Its
+// buyers have no subscriptions row at all, so the tier gate above would 403 a customer who
+// has already paid. The entitlement is deliberately one-shot: 'paid' buys exactly one scan
+// run and flips to 'consumed' the moment that run is claimed.
+//
+// A consumed order still passes the gate, for two reasons that are fulfilment, not a free
+// pass: GET (reading the report they bought) must keep working forever, and a retry_failed
+// POST — which only re-requests brokers that errored, never a fresh sweep — must keep
+// working long enough to actually finish the scan that was paid for. That retry window is
+// bounded; after it, the order is spent.
+const PARENT_SCAN_RETRY_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
+
 interface UserProfile {
   firstName: string;
   lastName: string;
@@ -1226,7 +1238,7 @@ Deno.serve(async (req) => {
 
     const userId = user.id;
 
-    // Check if user has a subscription that includes broker scanning (Complete or Family)
+    // Access path 1: a subscription whose tier includes broker scanning (Complete or Family)
     const { data: subscription } = await supabase
       .from('subscriptions')
       .select('tier, status')
@@ -1234,9 +1246,61 @@ Deno.serve(async (req) => {
       .eq('status', 'active')
       .single();
 
-    if (!subscription || !BROKER_SCAN_TIERS.has(subscription.tier)) {
+    const hasSubscriptionAccess = !!subscription && BROKER_SCAN_TIERS.has(subscription.tier);
+
+    // Access path 2: a paid one-time Parent Protection Scan order (see PARENT_SCAN_RETRY_WINDOW_MS).
+    // Prefer the oldest unspent order, so a customer who bought two scans spends one per run;
+    // otherwise fall back to the most recently consumed one, which still grants read access.
+    let parentScanOrder: { id: string; status: string; consumed_at: string | null } | null = null;
+    if (!hasSubscriptionAccess) {
+      const { data: orders } = await supabase
+        .from('parent_scan_orders')
+        .select('id, status, consumed_at')
+        .eq('user_id', userId)
+        .in('status', ['paid', 'consumed'])
+        .order('created_at', { ascending: true });
+
+      const list = (orders || []) as { id: string; status: string; consumed_at: string | null }[];
+      parentScanOrder =
+        list.find((o) => o.status === 'paid') ??
+        [...list].reverse().find((o) => o.status === 'consumed') ??
+        null;
+
+      // Guest-checkout safety net. When the webhook cannot resolve a user it still records
+      // the order (a row with a null user_id beats a dropped purchase), and the account
+      // finalize-payment creates a moment later would never see that entitlement. Adopt it
+      // here by matching the verified email on the JWT against the purchaser email Stripe
+      // gave us. The claim is one-way: the row gets a user_id, nothing else changes.
+      if (!parentScanOrder && user.email) {
+        const { data: orphaned } = await supabase
+          .from('parent_scan_orders')
+          .select('id, status, consumed_at')
+          .is('user_id', null)
+          .eq('purchaser_email', user.email.toLowerCase())
+          .in('status', ['paid', 'consumed'])
+          .order('created_at', { ascending: true })
+          .limit(1)
+          .maybeSingle();
+
+        if (orphaned) {
+          const { data: adopted } = await supabase
+            .from('parent_scan_orders')
+            .update({ user_id: userId })
+            .eq('id', orphaned.id)
+            .is('user_id', null)
+            .select('id, status, consumed_at')
+            .maybeSingle();
+          if (adopted) {
+            console.log(`[PARENT-SCAN] adopted order ${adopted.id} for user ${userId}`);
+            parentScanOrder = adopted as { id: string; status: string; consumed_at: string | null };
+          }
+        }
+      }
+    }
+
+    if (!hasSubscriptionAccess && !parentScanOrder) {
       return new Response(
-        JSON.stringify({ error: 'Complete or Family subscription required for broker scanning' }),
+        JSON.stringify({ error: 'Complete or Family subscription, or a Parent Protection Scan purchase, required for broker scanning' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -1396,6 +1460,53 @@ Deno.serve(async (req) => {
         console.log(`Broker coverage: ${brokerCount} auto-checkable of ${listedCount} listed (${skippedBrokers.length} manual opt-out only)`);
       }
 
+      // Spend the one-time entitlement, if that is how this user got through the gate.
+      //
+      // Claimed BEFORE the scan row is created and released again below if that insert
+      // fails, so the customer is never charged a scan that never started. The update is
+      // conditional on status still being 'paid', which is what makes two concurrent POSTs
+      // safe: exactly one of them flips the row, the other sees zero rows updated and is
+      // told the entitlement is spent rather than getting a second scan for free.
+      let claimedOrderId: string | null = null;
+      if (!hasSubscriptionAccess && parentScanOrder) {
+        if (parentScanOrder.status === 'paid') {
+          const { data: claimed } = await supabase
+            .from('parent_scan_orders')
+            .update({ status: 'consumed', consumed_at: new Date().toISOString() })
+            .eq('id', parentScanOrder.id)
+            .eq('status', 'paid')
+            .select('id')
+            .maybeSingle();
+
+          if (!claimed) {
+            return new Response(
+              JSON.stringify({ error: 'Your one-time Parent Protection Scan has already been used' }),
+              { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+          claimedOrderId = claimed.id;
+        } else {
+          // Already consumed. Finishing the scan it paid for (retrying only the brokers that
+          // errored) stays allowed inside the retry window; a fresh full sweep does not.
+          const consumedAtMs = parentScanOrder.consumed_at
+            ? new Date(parentScanOrder.consumed_at).getTime()
+            : 0;
+          const withinRetryWindow =
+            consumedAtMs > 0 && Date.now() - consumedAtMs < PARENT_SCAN_RETRY_WINDOW_MS;
+
+          if (!retryFailedOnly || !withinRetryWindow) {
+            return new Response(
+              JSON.stringify({
+                error: 'Your one-time Parent Protection Scan has already been used. Your results stay available, or subscribe for ongoing monitoring.',
+                parent_scan_spent: true,
+              }),
+              { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+          console.log(`[PARENT-SCAN] retry of failed brokers for spent order ${parentScanOrder.id}`);
+        }
+      }
+
       // Create scan record
       const { data: newScan, error: scanError } = await supabase
         .from('broker_scans')
@@ -1414,10 +1525,26 @@ Deno.serve(async (req) => {
 
       if (scanError || !newScan) {
         console.error('Error creating scan:', scanError);
+        // Give the entitlement back — nothing was delivered, so nothing was spent.
+        if (claimedOrderId) {
+          await supabase
+            .from('parent_scan_orders')
+            .update({ status: 'paid', consumed_at: null })
+            .eq('id', claimedOrderId);
+        }
         return new Response(
           JSON.stringify({ error: 'Failed to create scan' }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
+      }
+
+      // Link the order to the scan it bought, so a refund or support query can see exactly
+      // what was delivered for the $39.
+      if (claimedOrderId) {
+        await supabase
+          .from('parent_scan_orders')
+          .update({ broker_scan_id: newScan.id })
+          .eq('id', claimedOrderId);
       }
 
       console.log(`Created broker scan ${newScan.id} for user ${userId} (${userProfile.firstName} ${userProfile.lastName}), SERP API: ${serpApiKey ? 'configured' : 'not configured'}`);

@@ -160,6 +160,150 @@ const handler = async (req: Request): Promise<Response> => {
       }
     }
 
+    // Helper: resolve the Supabase user behind a checkout session, creating one if the
+    // buyer checked out as a guest. Same "pay first, account later" contract as
+    // finalize-payment: a paying customer's account is created confirmed, with no password,
+    // and they get in via the magic link the success page requests.
+    //
+    // profiles is consulted before auth.admin.listUsers because listUsers only reads the
+    // first page (200 users) — past that it silently misses an existing account and the
+    // createUser below fails on the duplicate email, stranding the purchase with no user_id.
+    async function resolveOrCreateUser(
+      email: string,
+      stripeCustomerId: string | null,
+      source: string,
+    ): Promise<string | null> {
+      if (!email) return null;
+      try {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("id")
+          .eq("email", email)
+          .limit(1)
+          .maybeSingle();
+        if (profile?.id) return profile.id as string;
+
+        const { data: list } = await supabase.auth.admin.listUsers({ page: 1, perPage: 200 });
+        const match = list?.users?.find((u) => (u.email ?? "").toLowerCase() === email);
+        if (match) return match.id;
+
+        const { data: created, error: createErr } = await supabase.auth.admin.createUser({
+          email,
+          email_confirm: true, // skip verification — they already paid
+          user_metadata: { source, stripe_customer_id: stripeCustomerId },
+        });
+        if (createErr || !created?.user) {
+          console.error(`[PARENT-SCAN] createUser failed for ${email}:`, createErr);
+          return null;
+        }
+        console.log(`[PARENT-SCAN] created user ${created.user.id} for ${email}`);
+        return created.user.id;
+      } catch (err) {
+        console.error(`[PARENT-SCAN] user resolution failed for ${email}:`, err);
+        return null;
+      }
+    }
+
+    // Helper: record the one-time Parent Protection Scan entitlement.
+    //
+    // Idempotency is not optional here: Stripe redelivers checkout.session.completed until
+    // it gets a 2xx, and the dashboard can replay it by hand. The insert is therefore an
+    // ON CONFLICT DO NOTHING on the checkout session id (supabase-js spells that
+    // upsert + ignoreDuplicates), so a redelivery neither creates a second entitlement nor
+    // resets an already-consumed one back to 'paid'. PostgREST returns only rows it actually
+    // inserted, so an empty array is the signal that this delivery was a duplicate.
+    async function recordParentScanOrder(session: Stripe.Checkout.Session) {
+      try {
+        const purchaserEmail = (session.customer_details?.email ?? "").toLowerCase().trim();
+        const scanTargetEmail = ((session.metadata?.parent_email as string | undefined) ?? "")
+          .toLowerCase()
+          .trim();
+
+        let userId = (session.metadata?.supabase_user_id as string | undefined) || null;
+        if (!userId) {
+          userId = await resolveOrCreateUser(
+            purchaserEmail,
+            (session.customer as string | null) ?? null,
+            "parent_scan_purchase",
+          );
+        }
+
+        // Record the money even if we could not resolve a user: an order row with a null
+        // user_id is a support-reconcilable record, whereas a dropped webhook is invisible.
+        const { data: inserted, error: insertErr } = await supabase
+          .from("parent_scan_orders")
+          .upsert(
+            {
+              stripe_checkout_session_id: session.id,
+              stripe_payment_intent_id: (session.payment_intent as string | null) ?? null,
+              stripe_customer_id: (session.customer as string | null) ?? null,
+              user_id: userId,
+              purchaser_email: purchaserEmail || null,
+              scan_target_email: scanTargetEmail || null,
+              affiliate_code: (session.metadata?.affiliate_code as string | undefined) ?? null,
+              amount_cents: session.amount_total ?? 0,
+              currency: session.currency ?? null,
+              status: "paid",
+              metadata: {
+                product: session.metadata?.product ?? null,
+                payment_status: session.payment_status,
+              },
+            },
+            { onConflict: "stripe_checkout_session_id", ignoreDuplicates: true },
+          )
+          .select("id");
+
+        if (insertErr) {
+          console.error("[PARENT-SCAN] order insert failed:", insertErr);
+          return;
+        }
+
+        if (!inserted || inserted.length === 0) {
+          console.log(`[PARENT-SCAN] order already recorded for session ${session.id} (redelivery)`);
+          // A later delivery may resolve a user the first one could not (e.g. the buyer
+          // signed up in between). Backfilling user_id is safe — it never touches status,
+          // so it cannot re-grant a consumed entitlement.
+          if (userId) {
+            await supabase
+              .from("parent_scan_orders")
+              .update({ user_id: userId })
+              .eq("stripe_checkout_session_id", session.id)
+              .is("user_id", null);
+          }
+          return;
+        }
+
+        console.log(
+          `[PARENT-SCAN] entitlement recorded for session ${session.id} (user: ${userId ?? "unresolved"})`,
+        );
+
+        // Same canonical `purchase` event the subscription branch emits, so this SKU shows
+        // up in paid-conversion analytics. Only on a first delivery — a redelivery returned
+        // above — so replays cannot inflate revenue.
+        try {
+          const { error: analyticsError } = await supabase.from("analytics_events").insert({
+            user_id: userId,
+            event: "purchase",
+            properties: {
+              tier: "parent_scan",
+              product: "parent_protection_scan",
+              one_time: true,
+              amount: session.amount_total != null ? session.amount_total / 100 : null,
+              currency: session.currency,
+              sessionId: session.id,
+            },
+          });
+          if (analyticsError) {
+            console.error("[ANALYTICS] parent scan purchase insert failed:", analyticsError);
+          }
+        } catch (err) {
+          console.error("[ANALYTICS] parent scan purchase event error:", err);
+        }
+      } catch (err) {
+        console.error("[PARENT-SCAN] order handling error:", err);
+      }
+    }
+
     // Handle different event types
     switch (event.type) {
       case "checkout.session.completed": {
@@ -316,6 +460,27 @@ const handler = async (req: Request): Promise<Response> => {
 
         // One-time payments (e.g. parent scan)
         if (session.mode === "payment") {
+          // create-parent-scan-payment stamps metadata.product = "parent_protection_scan"
+          // on the session it creates; that marker is the only thing separating this SKU
+          // from any future one-time product, so branch on it rather than on the amount.
+          if (session.metadata?.product === "parent_protection_scan") {
+            // "paid" is the card path; "no_payment_required" is a 100%-off coupon, which is
+            // still a completed order. An "unpaid" session means an async method (e.g. bank
+            // debit) that settles later on checkout.session.async_payment_succeeded — an
+            // event this function does not handle, so say so loudly rather than granting an
+            // entitlement for money that has not arrived.
+            if (
+              session.payment_status === "paid" ||
+              session.payment_status === "no_payment_required"
+            ) {
+              await recordParentScanOrder(session);
+            } else {
+              console.warn(
+                `[PARENT-SCAN] session ${session.id} completed with payment_status=${session.payment_status}; no entitlement recorded (async settlement is not handled)`,
+              );
+            }
+          }
+
           const affiliateCode = session.metadata?.affiliate_code;
           if (affiliateCode && session.amount_total) {
             await logAffiliateConversion({
