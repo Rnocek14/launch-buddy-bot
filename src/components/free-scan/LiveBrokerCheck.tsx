@@ -8,7 +8,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { trackEvent } from "@/lib/analytics";
 import { CompleteCheckoutButton } from "./CompleteCheckoutButton";
-import { BROKER_COUNT_LABEL } from "@/config/brokers";
+import { AUTO_SCAN_BROKER_COUNT } from "@/config/brokers";
 
 type BrokerStatus = "found" | "possible_match" | "not_found" | "unknown";
 
@@ -151,11 +151,15 @@ export function LiveBrokerCheck({ email, onResults }: LiveBrokerCheckProps) {
               dead-end the highest-intent user with no way forward. */}
           <div className="px-6 py-6 bg-gradient-to-b from-primary/5 to-primary/10 border-t border-border space-y-3">
               <p className="text-sm text-muted-foreground">
+                {/* We do not submit broker opt-outs for the user. RemediationSection
+                    opens each broker's opt-out page and the user confirms when it is
+                    done, so this copy promises a guided removal, never an automatic
+                    one. Nothing here may say "we remove you". */}
                 {exposedCount > 0
-                  ? `These are just ${results.length} of ${BROKER_COUNT_LABEL} sites we remove you from. Your full plan scans and removes you from all of them — plus continuous monitoring so you don't reappear.`
+                  ? `These are just ${results.length} of the ${AUTO_SCAN_BROKER_COUNT} sites we check. Your full plan scans all of them and walks you through a one-click opt-out for every listing we find.`
                   : degraded
-                    ? `We couldn't fully check these ${results.length} public sites right now — people-search sites list most US adults, so this isn't an all-clear. Your full plan scans ${BROKER_COUNT_LABEL} sites, removes your listings, and monitors so you don't reappear.`
-                    : `Good news — no confirmed listings on these ${results.length} sites today. But new listings appear constantly. Your full plan monitors ${BROKER_COUNT_LABEL} sites and removes you automatically the moment you show up.`}
+                    ? `We couldn't fully check these ${results.length} public sites right now — people-search sites list most US adults, so this isn't an all-clear. Your full plan scans all ${AUTO_SCAN_BROKER_COUNT} sites and gives you a guided opt-out for whatever turns up.`
+                    : `Good news — no confirmed listings on these ${results.length} sites today. But new listings appear constantly. Your full plan checks all ${AUTO_SCAN_BROKER_COUNT} sites whenever you re-run it, with a guided opt-out for anything new.`}
               </p>
               <CompleteCheckoutButton email={email} source="broker_exposure" />
             </div>
