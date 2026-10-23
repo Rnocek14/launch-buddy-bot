@@ -1,189 +1,54 @@
+import { AlertTriangle, CheckCircle2, Database, ShieldAlert } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Shield, AlertTriangle, Database, Building2, Eye, CheckCircle2 } from "lucide-react";
-import { Link } from "react-router-dom";
-import { IcebergEstimate } from "@/lib/icebergEstimate";
-import { CompleteCheckoutButton } from "./CompleteCheckoutButton";
-
-interface BrokerFindings {
-  confirmedCount: number;
-  possibleCount: number;
-}
 
 interface ExposureSummaryProps {
   email: string;
   breachCount: number;
-  estimate: IcebergEstimate;
-  /** Real findings from the live broker check. When present, the summary
-   *  switches from estimates to confirmed reality. */
-  brokerFindings?: BrokerFindings | null;
-  /** When the breach lookup failed (e.g. HIBP unavailable), we must NOT
-   *  render a confident "0 known breaches" — show an unknown state instead. */
   breachError?: string | null;
 }
 
 /**
- * The dominant, single-decision results header.
- * Leads with the exposure count, explains what it means and what we remove,
- * then offers ONE primary action. Everything else on the page is secondary.
+ * First contact with the product must represent observations, not invented
+ * exposure counts. A failed HIBP request is UNKNOWN, never zero breaches.
+ * Broker findings are shown separately only after an actual broker check.
  */
-export function ExposureSummary({ email, breachCount, estimate, brokerFindings, breachError }: ExposureSummaryProps) {
-  const hasReality = !!brokerFindings && (brokerFindings.confirmedCount + brokerFindings.possibleCount) > 0;
-  // Confirmed breaches are real signal too. Only assert "Exposure detected" when
-  // we actually found something — otherwise the red alarm over a screen of
-  // ~estimates reads as manufactured to a skeptical privacy audience.
-  const hasBreaches = !breachError && breachCount > 0;
-  const hasRealSignal = hasReality || hasBreaches;
-
-  // When the breach lookup failed we don't know the real count — never imply "clean".
-  const breachValue: string | number = breachError ? "—" : breachCount;
-  const breachSub = breachError
-    ? "breach check unavailable — try again shortly"
-    : "from public breach databases";
-
+export function ExposureSummary({ email, breachCount, breachError }: ExposureSummaryProps) {
+  const unavailable = Boolean(breachError);
   return (
-    <Card className="overflow-hidden border-2 border-primary/30 bg-gradient-to-b from-background to-primary/5">
-      <CardContent className="p-0">
-        {/* Headline */}
-        <div className="px-6 pt-8 pb-6 text-center border-b border-border">
-          {hasRealSignal ? (
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-destructive/10 border border-destructive/20 mb-4">
-              <AlertTriangle className="w-3.5 h-3.5 text-destructive" />
-              <span className="text-xs font-semibold uppercase tracking-wide text-destructive">
-                Exposure detected
-              </span>
-            </div>
-          ) : (
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 mb-4">
-              <AlertTriangle className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
-              <span className="text-xs font-semibold uppercase tracking-wide text-amber-600 dark:text-amber-400">
-                Estimated exposure
-              </span>
-            </div>
-          )}
-          <h2 className="text-3xl md:text-4xl font-bold mb-2">
-            {hasReality
-              ? "We found your information online"
-              : hasBreaches
-                ? "We found your exposure"
-                : "Here's your estimated exposure"}
-          </h2>
-          <p className="text-muted-foreground">
-            {hasRealSignal ? (
-              <>Here's what's exposed for <span className="font-medium text-foreground">{email}</span></>
-            ) : (
-              <>Based on <span className="font-medium text-foreground">{email}</span> — run the free listings check below to confirm what's real</>
-            )}
-          </p>
-        </div>
-
-        {/* The three numbers — confirmed reality after the broker check, estimates before */}
-        <div className="grid sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-border border-b border-border">
-          {hasReality ? (
-            <>
-              <StatBlock
-                icon={CheckCircle2}
-                value={brokerFindings!.confirmedCount}
-                label="confirmed listings"
-                sub="people-search sites listing you"
-              />
-              <StatBlock
-                icon={AlertTriangle}
-                value={brokerFindings!.possibleCount}
-                label="possible matches"
-                sub="likely you — needs review"
-              />
-              <StatBlock
-                icon={Database}
-                value={breachValue}
-                label="known breaches"
-                sub={breachSub}
-              />
-            </>
-          ) : (
-            <>
-              <StatBlock
-                icon={AlertTriangle}
-                value={breachValue}
-                label="known breaches"
-                sub={breachSub}
-              />
-              <StatBlock
-                icon={Database}
-                value={`~${estimate.brokerSites}`}
-                label="likely data broker records"
-                sub="people-search & marketing sites"
-              />
-              <StatBlock
-                icon={Building2}
-                value={`~${estimate.hiddenAccounts}`}
-                label="companies likely holding your info"
-                sub="accounts, signups & senders"
-              />
-            </>
-          )}
-        </div>
-
-        {/* What this means + what we remove */}
-        <div className="px-6 py-6 space-y-5">
-          <div className="flex items-start gap-3">
-            <Eye className="w-5 h-5 text-muted-foreground mt-0.5 shrink-0" />
-            <div>
-              <p className="font-semibold text-sm">What this means</p>
-              <p className="text-sm text-muted-foreground mt-1">
-                Your personal information may be accessible through people-search sites,
-                marketing databases, and breached records — exposing your name, address,
-                phone number, and more.
-              </p>
-            </div>
+    <Card className="overflow-hidden border-border bg-card shadow-sm">
+      <CardContent className="p-6 sm:p-9">
+        <div className="flex items-start gap-4">
+          <div className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl ${unavailable ? "bg-amber-500/10" : breachCount > 0 ? "bg-destructive/10" : "bg-secondary"}`}>
+            {unavailable
+              ? <ShieldAlert className="h-5 w-5 text-amber-700 dark:text-amber-400" aria-hidden />
+              : breachCount > 0
+                ? <AlertTriangle className="h-5 w-5 text-destructive" aria-hidden />
+                : <CheckCircle2 className="h-5 w-5 text-primary" aria-hidden />}
           </div>
-          <div className="flex items-start gap-3">
-            <Shield className="w-5 h-5 text-primary mt-0.5 shrink-0" />
-            <div>
-              <p className="font-semibold text-sm">We can remove it</p>
-              <p className="text-sm text-muted-foreground mt-1">
-                We'll identify and remove your information from major data brokers,
-                clean up exposed accounts, and continuously monitor for new exposure —
-                saving you dozens of hours of manual opt-outs.
-              </p>
-            </div>
+          <div className="min-w-0">
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Email breach lookup</p>
+            <h2 className="mt-2 text-2xl font-normal leading-tight text-foreground sm:text-3xl">
+              {unavailable
+                ? "We couldn't complete your breach check"
+                : breachCount > 0
+                  ? `${breachCount} known breach${breachCount === 1 ? "" : "es"} found`
+                  : "No known breaches found in this check"}
+            </h2>
+            <p className="mt-3 break-words text-sm leading-relaxed text-muted-foreground">
+              {unavailable
+                ? "The breach database wasn't available. We don't know whether this email is in any known breaches yet, and no exposure count has been estimated."
+                : breachCount > 0
+                  ? "These results were returned by the breach database for the email you entered. See the dated findings below."
+                  : "The lookup completed, but this email wasn't found in the checked breach records. That doesn't guarantee your information is private."}
+            </p>
+            <p className="mt-3 break-all text-xs text-muted-foreground">Checked email: {email}</p>
           </div>
         </div>
-
-        {/* The single dominant action */}
-        <div className="px-6 pb-8 space-y-3">
-          <CompleteCheckoutButton email={email} source="iceberg_panel" />
-          <div className="flex flex-wrap items-center justify-center gap-3 text-xs text-muted-foreground pt-1">
-            <Link to="/auth?intent=signup" className="underline hover:text-foreground">
-              Or create a free account first
-            </Link>
-            <span>·</span>
-            <Link to="/pricing" className="underline hover:text-foreground">
-              Compare plans
-            </Link>
-          </div>
+        <div className="mt-6 flex items-start gap-3 border-t border-border pt-5 text-sm text-muted-foreground">
+          <Database className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+          This check does not examine your inbox, identify account signups, or look up people-search listings. Those are separate, optional steps.
         </div>
       </CardContent>
     </Card>
-  );
-}
-
-function StatBlock({
-  icon: Icon,
-  value,
-  label,
-  sub,
-}: {
-  icon: React.ComponentType<{ className?: string }>;
-  value: string | number;
-  label: string;
-  sub: string;
-}) {
-  return (
-    <div className="px-5 py-6 text-center">
-      <Icon className="w-5 h-5 text-primary mx-auto mb-2" />
-      <div className="text-3xl font-bold">{value}</div>
-      <div className="text-sm font-medium mt-1">{label}</div>
-      <div className="text-[11px] text-muted-foreground mt-0.5">{sub}</div>
-    </div>
   );
 }
