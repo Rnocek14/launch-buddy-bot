@@ -58,7 +58,7 @@ export function BreachResults({ breaches, criticalCount, highCount, error }: Bre
               <p className="text-sm text-muted-foreground mt-1">
                 Breach databases only cover publicly leaked data. Most of your digital footprint — 
                 newsletters, free trials, old accounts — isn't tracked by any breach database. 
-                A secure inbox scan reveals the full picture.
+                An optional inbox metadata scan may help identify services you have interacted with.
               </p>
             </div>
           </CardContent>
@@ -143,8 +143,7 @@ export function BreachResults({ breaches, criticalCount, highCount, error }: Bre
               These are only <em>publicly reported</em> breaches
             </p>
             <p className="text-sm text-muted-foreground mt-1">
-              A deeper inbox scan typically uncovers 3–5× more services holding your data — 
-              including accounts that were never breached but still store your personal information.
+              An optional inbox metadata scan can help identify services you have interacted with, including some that have never appeared in a known breach.
             </p>
           </div>
         </CardContent>
