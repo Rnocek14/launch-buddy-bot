@@ -43,9 +43,15 @@ serve(async (req) => {
   }
 
   try {
-    const { email } = await req.json();
+    if (req.method !== "POST") {
+      return new Response(JSON.stringify({ error: "Method not allowed" }), {
+        status: 405,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const { email } = await req.json().catch(() => ({}));
 
-    if (!email || !email.includes("@")) {
+    if (typeof email !== "string" || email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
       return new Response(
         JSON.stringify({ error: "Valid email is required" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -71,30 +77,56 @@ serve(async (req) => {
     const hibpUrl = `https://haveibeenpwned.com/api/v3/breachedaccount/${encodeURIComponent(email)}?truncateResponse=false`;
 
     let breaches: HIBPBreach[] = [];
-    let hibpError: string | null = null;
 
     try {
+      // Cap upstream latency. The client separately caps the entire function
+      // request, so neither an upstream stall nor a lost response hangs the UI.
       const response = await fetch(hibpUrl, {
         headers: {
           "hibp-api-key": hibpApiKey,
           "User-Agent": "Deleteist-FreeScan",
+          "Accept": "application/json",
         },
+        signal: AbortSignal.timeout(8500),
       });
 
       if (response.status === 200) {
-        breaches = await response.json();
+        const payload = await response.json();
+        if (!Array.isArray(payload)) {
+          console.error("HIBP returned unexpected success payload");
+          throw new Error("Invalid breach provider payload");
+        }
+        breaches = payload as HIBPBreach[];
       } else if (response.status === 404) {
+        // HIBP documents 404 as "no breached account matches", not an error.
         breaches = [];
-      } else if (response.status === 429) {
-        hibpError = "Breach database is busy. Please try again in a moment.";
       } else {
-        const text = await response.text();
-        console.error(`HIBP error ${response.status}:`, text);
-        hibpError = "Could not check breaches right now";
+        // A provider outage, invalid key, or rate limit must never be
+        // converted into "0 known breaches" or a fabricated estimate.
+        const retryAfter = response.headers.get("retry-after");
+        console.error("HIBP request failed", {
+          status: response.status,
+          hasRetryAfter: Boolean(retryAfter),
+        });
+        const friendly = response.status === 429
+          ? "Breach database rate limit reached. Please try again shortly."
+          : response.status === 401 || response.status === 403
+            ? "Breach check configuration requires attention. Please try again later."
+            : "Breach database temporarily unavailable. Please try again later.";
+        return new Response(JSON.stringify({ error: friendly, checked: false }), {
+          status: 503,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       }
     } catch (err) {
-      console.error("HIBP fetch error:", err);
-      hibpError = "Breach check failed";
+      console.error("HIBP lookup failed:", err instanceof Error ? err.name : "unknown_error");
+      return new Response(JSON.stringify({
+        error: "Breach database unavailable. No results were verified. Please try again.",
+        checked: false,
+      }), {
+        status: 503,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     // Classify breaches by severity
@@ -125,6 +157,7 @@ serve(async (req) => {
 
     return new Response(
       JSON.stringify({
+        checked: true,
         breaches: classified,
         breachCount: classified.length,
         criticalCount: classified.filter((b) => b.severity === "critical").length,
