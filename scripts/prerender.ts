@@ -923,73 +923,68 @@ function staticRoutes(): Route[] {
   return [
     {
       path: "/",
-      title: "Footprint Finder — Monitor Your Digital Exposure",
+      title: "Footprint Finder — Make Sense of Your Online Privacy",
       description:
-        "Monthly scans for new breaches, broker listings, and forgotten accounts tied to your email — alerts you before damage is done.",
+        "Check known breaches for free. Optionally connect Gmail or Outlook to discover old accounts and manage privacy requests.",
       ogType: "website",
-      body: `<main><h1>Find out who has your personal information — and remove it</h1>${p(
-        "Footprint Finder scans your inbox to find every account, data-broker listing and breach tied to your email, then helps you remove it. Run a free scan in 60 seconds — no credit card, no password.",
+      body: `<main><h1>Your digital life, back in your hands</h1>${p(
+        "Forgotten accounts, old signups, and exposure are hard to track. Footprint Finder helps you understand what may be out there and take the next step, without promising universal deletion.",
       )}${p(
-        "The scan reads email metadata only: sender, subject and date. We never read, store or index message bodies. That metadata is enough to reconstruct the list of services holding your data, which is something no public-records search can do.",
-      )}<h2>What the scan finds</h2>${ul([
-        "Forgotten accounts — every service that has emailed you, including ones you signed up for years ago and never closed",
-        "Breach exposure — whether your address appears in known data breaches",
-        "Data-broker listings — where your name, address and phone are published across 25+ US people-search sites (Complete plan)",
-        "Mailing lists you can unsubscribe from in one click",
-      ])}<h2>Why removal is ongoing, not a one-off</h2>${p(
-        "Data brokers rebuild their databases from public records, marketing data and each other, so a listing you removed reappears within months. Forgotten accounts feed the same loop: one gets breached, your details circulate, and the brokers ingest them again. Monthly rescans and alerts exist because this is maintenance, not a fix.",
-      )}<h2>Pricing</h2>${p(
-        `Free to scan and see your exposure. Pro is ${FOOTPRINT_FINDER_PRICING.pro} for unlimited deletion requests, deep inbox scanning and monthly rescans. Complete is ${FOOTPRINT_FINDER_PRICING.complete} and adds data-broker removal. Family covers up to five people at ${FOOTPRINT_FINDER_PRICING.family}.`,
+        "Start with a free email breach lookup; no inbox connection is required. Optionally connect Gmail or Outlook with read-only access to email metadata for deeper account discovery.",
+      )}<h2>What you can do</h2>${ul([
+        "Check for known breaches tied to an email address. If the provider is unavailable, we say so and do not invent findings.",
+        "Opt in to metadata-only inbox discovery for services that have emailed you.",
+        "Use deletion-request tools for available verified privacy contacts and track requests separately from confirmed removals.",
+        "On eligible plans, search supported people-search sites and follow guided opt-out steps.",
+      ])}<h2>Clear plans</h2>${p(
+        `Pro starts at ${FOOTPRINT_FINDER_PRICING.pro}. Complete at ${FOOTPRINT_FINDER_PRICING.complete} adds supported broker searching and opt-out guidance. Family costs ${FOOTPRINT_FINDER_PRICING.family}.`,
       )}<h2>Start here</h2>${linkList([
-        { href: "/free-scan", label: "Run your free exposure scan" },
-        { href: "/best-data-removal-services", label: `Best data removal services in ${YEAR} — all ${BEST_SERVICES_RANKING.length} compared` },
-        { href: "/vs", label: "Compare Footprint Finder against DeleteMe, Incogni and others" },
+        { href: "/free-scan", label: "Free email breach check" },
+        { href: "/auth", label: "Create a free account" },
+        { href: "/pricing", label: "Compare privacy plans" },
         { href: "/remove-from", label: "Free data-broker opt-out guides" },
-        { href: "/guides/california-drop-delete-act", label: "California DROP: delete your data from every registered broker, free" },
-        { href: "/privacy-rights", label: "Your data deletion rights, state by state" },
-        { href: "/remove", label: "Remove personal data by type — SSN, address history, mugshots, court records" },
-        { href: "/guides", label: "Privacy and data removal guides" },
-        { href: "/delete", label: "How to delete your online accounts" },
-        { href: "/breach", label: "Recent data breaches and what to do" },
-        { href: "/parents", label: "Protect a parent from scam calls" },
-        { href: "/enterprise", label: "Shadow IT audits for businesses" },
-        { href: "/pricing", label: "Pricing" },
+        { href: "/privacy-rights", label: "Privacy rights by state" },
+        { href: "/delete", label: "How to delete old accounts" },
+        { href: "/guides", label: "Privacy removal guides" },
       ])}</main>`,
     },
     {
       path: "/free-scan",
-      title: "Free Digital Exposure Scan — See Where You're Exposed",
+      title: "Free Email Breach Check — Footprint Finder",
       description:
-        "Run a free 60-second scan to find data-broker listings, breaches and forgotten accounts tied to your email. No credit card, no password required.",
+        "Check an email address against known breach records, with no signup required. Failed lookups are labeled unavailable, never treated as zero.",
       ogType: "website",
-      body: `<main><h1>Free digital exposure scan</h1>${p(
-        "Enter your email and we'll show you where your personal information is exposed — across data brokers, known breaches and the accounts you've forgotten about. It takes about 60 seconds and costs nothing.",
+      body: `<main><h1>Check your email for known breaches</h1>${p(
+        "Enter an email address for a free lookup against known breach records. The check does not access an inbox or identify all your accounts or broker listings.",
       )}${p(
-        "There's no credit card and no password involved. Connecting an inbox is optional and uses read-only OAuth for metadata only — sender, subject and date, never message content. You can revoke access from your Google or Microsoft account settings at any time.",
-      )}<h2>What you'll see</h2>${ul([
-        "Which known breaches include your email address",
-        "Which people-search sites publish your name, address and phone",
-        "Which services still hold an account tied to your email",
-        "A risk score, and the specific steps to bring it down",
-      ])}${comparisonBridgeBlock()}${siteLinksBlock()}</main>`,
+        "When the breach provider is down or rate-limited, the result is unavailable — not zero and not an estimate. Try again later.",
+      )}<h2>After the check</h2>${ul([
+        "Review dated breach findings returned by the provider, if available.",
+        "Create a free account and optionally connect an inbox to discover service-account clues through message headers.",
+        "Optionally run a separate name-based people-search check. Matches may be inconclusive and need confirmation.",
+        "Use free opt-out guides; paid plans provide additional supported cleanup features.",
+      ])}${linkList([
+        { href: "/auth", label: "Create a free account" },
+        { href: "/pricing", label: "Compare plans" },
+        { href: "/remove-from", label: "People-search opt-out guides" },
+      ])}${siteLinksBlock()}</main>`,
     },
     {
       path: "/pricing",
       title: "Pricing — Free Scan, Pro & Complete Plans | Footprint Finder",
       description:
-        "Start free. Pro is $79/year, Complete is $129/year with data-broker removal, and Family covers five people at $179/year. No hidden tiers.",
+        "Start free. Pro is $79/year for expanded account discovery; Complete is $129/year and adds broker searches and guided opt-outs.",
       ogType: "website",
-      body: `<main><h1>Simple, transparent pricing</h1>${p(
-        "Try the entire product free before you pay anything. The free tier scans one email account and includes three deletion requests a month, so you can see your actual exposure before deciding whether a paid plan is worth it.",
+      body: `<main><h1>Simple, transparent privacy plans</h1>${p(
+        "Begin with a free email breach check. A free account lets you review supported account-discovery tools before choosing an optional paid plan.",
       )}<h2>Plans</h2>${ul([
-        "Free — one email account, three deletion requests a month, breach check. No data-broker scanning.",
-        `Pro, ${FOOTPRINT_FINDER_PRICING.pro} — up to three email accounts, unlimited deletion requests, deep inbox scan, monthly rescans. No data-broker scanning.`,
-        `Complete, ${FOOTPRINT_FINDER_PRICING.complete} — everything in Pro, plus data-broker scanning and removal across ${FOOTPRINT_FINDER_BROKER_COVERAGE}, and up to five email accounts.`,
-        `Family, ${FOOTPRINT_FINDER_PRICING.family} — everything in Complete, for up to five people.`,
-        "Parent Protection Scan, $39 one-time — a single deep scan of a parent's email, scam-focused, no subscription.",
+        "Free — known breach lookup and limited account discovery and request features.",
+        `Pro, ${FOOTPRINT_FINDER_PRICING.pro} — expanded email discovery, deletion-request tools and monthly inbox rescans.`,
+        `Complete, ${FOOTPRINT_FINDER_PRICING.complete} — Pro features plus supported people-search checks and guided opt-out instructions; removals are not automatic.`,
+        `Family, ${FOOTPRINT_FINDER_PRICING.family} — eligible privacy tools for supported family profiles.`,
       ])}${p(
-        "Data-broker removal is a Complete-tier feature. If broker listings are the only thing you care about, compare Complete against the dedicated removal services rather than our entry plan — and note that every broker opt-out is free to do yourself.",
-      )}${comparisonBridgeBlock()}${siteLinksBlock()}</main>`,
+        "Sending a deletion request does not mean data was removed. Some services require manual verification or form submission.",
+      )}${siteLinksBlock()}</main>`,
     },
     {
       path: "/parents",
