@@ -123,77 +123,56 @@ async function repairTokenState(
   connection: any,
   supabase: any
 ): Promise<void> {
-  console.log(`🔧 Attempting automatic token state repair for connection ${connectionId}`);
-  
+  // Historical connections may have mismatched token flags. Do not ever
+  // 'repair' them by marking plaintext credentials as safely stored.
   try {
-    // Try to decrypt tokens (which should fail if they're actually plain text)
-    const decryptedAccess = await decrypt(connection.access_token);
-    const decryptedRefresh = await decrypt(connection.refresh_token);
-    
-    console.log('✅ Successfully decrypted mislabeled tokens');
+    const accessIsEncrypted = detectTokenEncryption(connection.access_token, connection.provider).isEncrypted;
+    const refreshIsEncrypted = connection.refresh_token
+      ? detectTokenEncryption(connection.refresh_token, connection.provider).isEncrypted
+      : false;
 
-    // If we get here, tokens were encrypted! Re-encrypt them properly
-    const reencryptedAccess = await encrypt(decryptedAccess);
-    const reencryptedRefresh = await encrypt(decryptedRefresh);
+    const access = accessIsEncrypted
+      ? await decrypt(connection.access_token)
+      : connection.access_token;
+    const refresh = connection.refresh_token
+      ? (refreshIsEncrypted ? await decrypt(connection.refresh_token) : connection.refresh_token)
+      : null;
 
-    // Update database with correct flag
+    if (!access) throw new Error('Missing access token');
     const { error: updateError } = await supabase
       .from('email_connections')
       .update({
-        access_token: reencryptedAccess,
-        refresh_token: reencryptedRefresh,
+        access_token: await encrypt(access),
+        refresh_token: refresh ? await encrypt(refresh) : null,
+        access_token_encrypted: null,
+        refresh_token_encrypted: null,
         tokens_encrypted: true,
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
       })
       .eq('id', connectionId);
-
-    if (updateError) {
-      throw updateError;
-    }
-
-    console.log('✅ Token state repaired successfully - database updated');
+    if (updateError) throw updateError;
   } catch (error) {
-    // If decryption fails, tokens might actually be plain text (false positive detection)
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    
-    if (errorMessage.includes('Failed to decode base64') || errorMessage.includes('Invalid')) {
-      console.log('ℹ️ Decryption failed → verifying if tokens are actually plain text');
-      
-      // Verify tokens are really plain by checking format
-      const accessCheck = detectTokenEncryption(connection.access_token, connection.provider);
-      const refreshCheck = detectTokenEncryption(connection.refresh_token, connection.provider);
-      
-      if (!accessCheck.isEncrypted && !refreshCheck.isEncrypted) {
-        console.log('✅ Tokens confirmed as plain text, correcting database flag');
-        // Update flag to match reality - tokens are plain and working fine
-        await supabase
-          .from('email_connections')
-          .update({
-            tokens_encrypted: false,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', connectionId);
-        return; // No error, repair not needed
-      }
-    }
-    
-    // Real corruption - rethrow error
-    console.error('❌ Token repair failed with real corruption:', error);
-    
-    await supabase
-      .from('email_connections')
-      .update({
-        tokens_encrypted: false,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', connectionId);
-    
-    throw new Error('Token state corrupted beyond automatic repair - reconnection required');
+    console.error('Secure token repair failed:', error);
+    throw new Error('Email connection needs to be reconnected');
   }
 }
 
 async function processConnection(connection: any, user: any, maxResults: number, after: any, query: any, supabase: any, fullScan: boolean = false) {
   console.log(`Using ${connection.provider} connection: ${connection.email}`);
+
+  // Fail closed on legacy plaintext state unless we can migrate immediately.
+  if (!connection.tokens_encrypted) {
+    await repairTokenState(connection.id, connection, supabase);
+    const { data: repaired, error: reloadError } = await supabase
+      .from('email_connections')
+      .select('*')
+      .eq('id', connection.id)
+      .single();
+    if (reloadError || !repaired?.tokens_encrypted) {
+      throw new Error('Please reconnect your email account to continue securely');
+    }
+    connection = repaired;
+  }
 
   // === LAYER 2: SMART TOKEN VALIDATION ===
   let tokenRepairStatus = 'none';
@@ -229,7 +208,8 @@ async function processConnection(connection: any, user: any, maxResults: number,
         }
       } catch (repairError) {
         tokenRepairStatus = 'failed';
-        console.error('❌ Auto-repair failed, proceeding with caution:', repairError);
+        console.error('Secure token repair failed:', repairError);
+        throw new Error('Please reconnect your email account to continue securely');
       }
     }
   } else {
