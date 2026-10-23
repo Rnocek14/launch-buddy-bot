@@ -2,7 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.79.0";
 import { getEmailProvider } from "../_shared/email-providers/factory.ts";
 import { ProviderType } from "../_shared/email-providers/types.ts";
-import { decrypt } from "../_shared/encryption.ts";
+import { decrypt, encrypt } from "../_shared/encryption.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -45,8 +45,8 @@ serve(async (req) => {
 
     const { data: proSubscriptions, error: subError } = await supabase
       .from('subscriptions')
-      .select('user_id')
-      .eq('tier', 'pro')
+      .select('user_id, tier')
+      .in('tier', ['pro', 'complete', 'family'])
       .eq('status', 'active');
 
     if (subError) {
@@ -66,6 +66,7 @@ serve(async (req) => {
     }
 
     const proUserIds = proSubscriptions.map(s => s.user_id);
+    const connectionLimits = new Map(proSubscriptions.map(s => [s.user_id, s.tier === 'family' ? 25 : s.tier === 'complete' ? 5 : 3]));
     console.log(`[SCHEDULED-RESCAN] Found ${proUserIds.length} Pro users`);
 
     // Get profiles that haven't been rescanned recently
@@ -100,7 +101,7 @@ serve(async (req) => {
       console.log(`[SCHEDULED-RESCAN] Processing user: ${profile.id}`);
       
       try {
-        const result = await rescanUser(profile.id, supabase);
+        const result = await rescanUser(profile.id, supabase, connectionLimits.get(profile.id) ?? 3);
         results.push({
           userId: profile.id,
           email: profile.email || 'unknown',
@@ -181,14 +182,14 @@ serve(async (req) => {
   }
 });
 
-async function rescanUser(userId: string, supabase: any): Promise<{ totalNew: number; totalReappeared: number }> {
-  // Get user's email connections (up to 3 for Pro)
+async function rescanUser(userId: string, supabase: any, maxConnections: number): Promise<{ totalNew: number; totalReappeared: number }> {
+  // Respect the subscribed plan's email connection limit
   const { data: connections, error: connError } = await supabase
     .from('email_connections')
     .select('*')
     .eq('user_id', userId)
     .order('is_primary', { ascending: false })
-    .limit(3);
+    .limit(maxConnections);
 
   if (connError) {
     throw new Error(`Failed to fetch connections: ${connError.message}`);
@@ -256,7 +257,7 @@ async function processConnection(
     if (connection.tokens_encrypted) {
       if (connection.refresh_token_encrypted) {
         const encryptedBase64 = btoa(String.fromCharCode(...connection.refresh_token_encrypted));
-        refreshToken = await decrypt(encryptedBase64);
+        refreshToken = encryptedBase64;
       } else {
         refreshToken = connection.refresh_token;
       }
@@ -269,22 +270,20 @@ async function processConnection(
       connection.tokens_encrypted || false
     );
 
-    // Update connection with new tokens
-    const updateData: any = {
+    // Provider refresh returns plaintext. Encrypt every rotated token before persisting.
+    const updateData = {
+      access_token: await encrypt(tokenData.access_token),
+      refresh_token: await encrypt(tokenData.refresh_token),
+      access_token_encrypted: null,
+      refresh_token_encrypted: null,
+      tokens_encrypted: true,
       token_expires_at: tokenData.expires_at,
     };
-
-    if (connection.tokens_encrypted) {
-      const encryptedAccessToken = await decrypt(tokenData.access_token);
-      updateData.access_token_encrypted = Uint8Array.from(atob(encryptedAccessToken), c => c.charCodeAt(0));
-    } else {
-      updateData.access_token = tokenData.access_token;
-    }
-
-    await supabase
+    const { error: updateError } = await supabase
       .from('email_connections')
       .update(updateData)
       .eq('id', connection.id);
+    if (updateError) throw new Error('Could not securely save refreshed email tokens');
 
     accessToken = tokenData.access_token;
     console.log(`[SCHEDULED-RESCAN] Token refreshed for ${connection.email}`);
