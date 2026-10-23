@@ -1,32 +1,21 @@
-import { Star, Shield, Users, TrendingUp } from "lucide-react";
+import { Check, KeyRound, LockKeyhole } from "lucide-react";
 
-const proofItems = [
-  { icon: Users, text: "2,400+ accounts discovered", bold: "2,400+" },
-  { icon: Shield, text: "169 services tracked", bold: "169" },
-  { icon: TrendingUp, text: "500+ deletion requests sent", bold: "500+" },
-  { icon: Star, text: "Free breach scan included", bold: "Free" },
+const points = [
+  { icon: LockKeyhole, title: "A free first step", detail: "Check known breaches without connecting an inbox" },
+  { icon: KeyRound, title: "Read-only discovery", detail: "Optional inbox scan uses metadata, not message bodies" },
+  { icon: Check, title: "No mystery removals", detail: "Requests sent and removals verified are different statuses" },
 ];
 
 export function SocialProofBar() {
   return (
-    <section className="border-y border-border bg-card py-4 overflow-hidden">
-      <div className="flex animate-scroll-left" style={{ width: "max-content" }}>
-        {/* Duplicate for seamless loop */}
-        {[...proofItems, ...proofItems].map((item, i) => {
-          const Icon = item.icon;
-          return (
-            <div
-              key={i}
-              className="flex items-center gap-2.5 px-8 whitespace-nowrap"
-            >
-              <Icon className="w-4 h-4 text-accent flex-shrink-0" />
-              <span className="text-sm text-foreground">
-                {item.text}
-              </span>
-              <span className="w-px h-4 bg-border mx-4" />
-            </div>
-          );
-        })}
+    <section aria-label="How your information is handled" className="border-y border-border bg-card/60 px-5 py-6 sm:px-8">
+      <div className="mx-auto grid max-w-6xl gap-6 md:grid-cols-3 md:gap-8">
+        {points.map(({ icon: Icon, title, detail }) => (
+          <div key={title} className="flex items-start gap-3">
+            <Icon className="mt-1 h-5 w-5 shrink-0 text-primary" aria-hidden />
+            <div><p className="text-sm font-semibold text-foreground">{title}</p><p className="mt-1 text-sm leading-relaxed text-muted-foreground">{detail}</p></div>
+          </div>
+        ))}
       </div>
     </section>
   );
