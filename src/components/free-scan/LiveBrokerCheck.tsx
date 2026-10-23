@@ -27,6 +27,21 @@ interface LiveBrokerCheckProps {
   onResults?: (findings: { confirmedCount: number; possibleCount: number }) => void;
 }
 
+// Broker profile URLs come from search results; allow only safe HTTPS URLs on
+// the listed broker's actual host. Never navigate to arbitrary search links.
+function safeListingUrl(url: string | null, brokerDomain: string): string | null {
+  if (!url) return null;
+  try {
+    const parsed = new URL(url);
+    const expectedHost = brokerDomain.toLowerCase().replace(/^www\./, "");
+    const host = parsed.hostname.toLowerCase();
+    return parsed.protocol === "https:" && (host === expectedHost || host.endsWith(`.${expectedHost}`))
+      ? parsed.href : null;
+  } catch {
+    return null;
+  }
+}
+
 const US_STATES = [
   "AL","AK","AZ","AR","CA","CO","CT","DE","FL","GA","HI","ID","IL","IN","IA","KS",
   "KY","LA","ME","MD","MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ","NM","NY",
@@ -142,6 +157,16 @@ export function LiveBrokerCheck({ email, onResults }: LiveBrokerCheckProps) {
                   {r.status === "not_found" && <span className="text-muted-foreground">Not found</span>}
                   {r.status === "unknown" && <span className="text-muted-foreground">Inconclusive</span>}
                 </span>
+                {safeListingUrl(r.profileUrl, r.domain) && (
+                  <a
+                    href={safeListingUrl(r.profileUrl, r.domain)!}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="shrink-0 text-xs text-primary underline underline-offset-4 hover:text-accent"
+                  >
+                    Review listing
+                  </a>
+                )}
               </div>
             ))}
           </div>
