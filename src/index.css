@@ -78,29 +78,29 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    /* Warm cream palette — inspired by Cloaked's editorial feel */
-    --background: 36 33% 97%;
+    /* Ownable warm paper palette: editorial, approachable, and distinct from competitors */
+    --background: 42 30% 97%;
     --foreground: 24 10% 10%;
 
-    --card: 36 25% 95%;
+    --card: 42 24% 99%;
     --card-foreground: 24 10% 10%;
 
-    --popover: 36 33% 97%;
+    --popover: 42 30% 97%;
     --popover-foreground: 24 10% 10%;
 
-    /* Deep warm brown-black primary — editorial, high-trust */
-    --primary: 24 9% 10%;
-    --primary-foreground: 36 33% 97%;
+    /* Deep evergreen for confident, reassuring actions */
+    --primary: 162 32% 22%;
+    --primary-foreground: 42 30% 97%;
     
     /* Warm secondary */
-    --secondary: 36 20% 93%;
+    --secondary: 42 20% 92%;
     --secondary-foreground: 24 9% 10%;
 
-    --muted: 36 12% 92%;
+    --muted: 42 14% 93%;
     --muted-foreground: 24 6% 36%;
 
-    /* Brand orange accent — #FF6A00 */
-    --accent: 25 100% 50%;
+    /* Restrained terracotta accent */
+    --accent: 18 62% 45%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 84% 60%;
@@ -108,17 +108,17 @@ All colors MUST be HSL.
 
     --border: 36 12% 88%;
     --input: 36 12% 88%;
-    --ring: 24 9% 10%;
+    --ring: 162 32% 22%;
 
-    --radius: 0.75rem;
+    --radius: 0.85rem;
     
     --gradient-primary: linear-gradient(135deg, hsl(24 9% 10%), hsl(25 100% 50%));
     --gradient-subtle: linear-gradient(180deg, hsl(36 33% 97%), hsl(36 25% 95%));
 
     --sidebar-background: 36 25% 95%;
     --sidebar-foreground: 24 10% 10%;
-    --sidebar-primary: 24 9% 10%;
-    --sidebar-primary-foreground: 36 33% 97%;
+    --sidebar-primary: 162 32% 22%;
+    --sidebar-primary-foreground: 42 30% 97%;
     --sidebar-accent: 36 20% 93%;
     --sidebar-accent-foreground: 24 9% 10%;
     --sidebar-border: 36 12% 88%;
