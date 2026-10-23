@@ -162,7 +162,7 @@ serve(async (req) => {
         breachCount: classified.length,
         criticalCount: classified.filter((b) => b.severity === "critical").length,
         highCount: classified.filter((b) => b.severity === "high").length,
-        error: hibpError,
+        error: null,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
