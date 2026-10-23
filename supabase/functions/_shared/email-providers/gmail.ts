@@ -203,15 +203,8 @@ export class GmailProvider implements EmailProvider {
       });
       if (pageToken) params.set('pageToken', pageToken);
 
-      if (filters?.after) {
-        const date = new Date(filters.after);
-        const gmailDate = `${date.getFullYear()}/${String(date.getMonth() + 1).padStart(2, '0')}/${String(date.getDate()).padStart(2, '0')}`;
-        params.append('q', `after:${gmailDate}`);
-      }
-      if (filters?.query) {
-        const existingQ = params.get('q');
-        params.set('q', existingQ ? `${existingQ} ${filters.query}` : filters.query);
-      }
+      // gmail.metadata does NOT allow messages.list?q. Filter headers and dates
+      // after fetching metadata instead, keeping the least-privilege OAuth scope.
 
       const response = await fetch(
         `https://gmail.googleapis.com/gmail/v1/users/me/messages?${params.toString()}`,
@@ -239,6 +232,8 @@ export class GmailProvider implements EmailProvider {
     const metadataHeaders = ['From', 'Subject', 'Date', 'List-Unsubscribe', 'List-Unsubscribe-Post'];
     const BATCH = 50;
     const messages: EmailMessage[] = [];
+    const afterMs = filters?.after ? new Date(filters.after).getTime() : null;
+    const queryText = (filters?.query || '').trim().toLowerCase();
 
     async function fetchOne(id: string): Promise<EmailMessage | null> {
       const detailUrl = new URL(`https://gmail.googleapis.com/gmail/v1/users/me/messages/${id}`);
@@ -255,6 +250,15 @@ export class GmailProvider implements EmailProvider {
         const from = headers.find((h: any) => h.name === 'From')?.value || '';
         const subject = headers.find((h: any) => h.name === 'Subject')?.value || '';
         const date = headers.find((h: any) => h.name === 'Date')?.value || '';
+        const receivedAt = Number(detail.internalDate) || Date.parse(date);
+        if (afterMs !== null && Number.isFinite(afterMs) && Number.isFinite(receivedAt) && receivedAt <= afterMs) {
+          return null;
+        }
+        // Header-only matching. Gmail's full-text search is unavailable under
+        // metadata scope, and message bodies are intentionally never fetched.
+        if (queryText && !(`${from} ${subject}`.toLowerCase().includes(queryText))) {
+          return null;
+        }
         const listUnsub = headers.find((h: any) => h.name.toLowerCase() === 'list-unsubscribe')?.value || '';
         const listUnsubPost = headers.find((h: any) => h.name.toLowerCase() === 'list-unsubscribe-post')?.value || '';
         const { url: unsubscribeUrl, mailto: unsubscribeMailto } = parseListUnsubscribe(listUnsub);
