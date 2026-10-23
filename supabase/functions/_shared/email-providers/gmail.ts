@@ -125,8 +125,10 @@ export class GmailProvider implements EmailProvider {
 
     return {
       email: profile.email,
-      access_token: tokens.access_token,
-      refresh_token: tokens.refresh_token,
+      // Store ciphertext in both token representations; never return plaintext
+      // as persistent connection data from a provider callback.
+      access_token: encryptedAccessToken,
+      refresh_token: encryptedRefreshToken,
       token_expires_at: expiresAt,
       provider_user_id: profile.id,
       tokens_encrypted: true,
