@@ -38,7 +38,8 @@ export const Hero = () => {
     setError("");
     persistGuestEmail(candidate);
     trackEvent("hero_cta_click");
-    navigate(`/free-scan?email=${encodeURIComponent(candidate)}`);
+    // Keep email addresses out of shareable URLs, browser history and referrers.
+    navigate("/free-scan", { state: { scanEmail: candidate } });
   };
 
   return (
