@@ -27,7 +27,7 @@ const getPrimaryPlans = (billingInterval: BillingInterval) => [
     cta: "Choose Pro",
     popular: true,
     icon: Star,
-    badge: billingInterval === "year" ? "Save 39%" : null,
+    badge: billingInterval === "year" ? "Save 49% annually" : null,
     monthlyEquivalent: billingInterval === "year" ? "Just $6.58/month" : null,
   },
   {
@@ -44,7 +44,7 @@ const getPrimaryPlans = (billingInterval: BillingInterval) => [
     cta: "Choose Complete",
     popular: false,
     icon: Crown,
-    badge: billingInterval === "year" ? "Best Value" : null,
+    badge: billingInterval === "year" ? "Annual plan" : null,
     monthlyEquivalent: billingInterval === "year" ? "Just $10.75/month" : null,
   },
 ];
@@ -78,7 +78,7 @@ const pricingFaq = [
   {
     question: "What's the difference between Pro and Complete?",
     answer:
-      "Pro gives you unlimited deletion requests and deep AI scanning for service accounts (Netflix, Uber, shopping sites). Complete adds data broker scanning — we check 20+ sites that sell your personal info and guide you through removal."
+      "Pro adds deeper discovery, monthly inbox rescans and deletion-request tools for service accounts. Complete adds searches across supported people-search sites plus guided opt-out steps; automated broker removal is not included."
   },
   {
     question: "Is there a free version?",
@@ -141,10 +141,10 @@ export const Pricing = () => {
       <div className="container max-w-6xl">
         <div className="text-center mb-8">
           <h2 className="text-4xl md:text-5xl font-bold mb-4">
-            Pick your protection
+            Choose your plan
           </h2>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Two plans cover almost everyone. Cancel anytime.
+            A straightforward way to find accounts, request cleanup, and review exposure. Cancel anytime.
           </p>
         </div>
 
@@ -165,7 +165,7 @@ export const Pricing = () => {
               >
                 {plan.popular ? (
                   <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary whitespace-nowrap text-[10px] sm:text-xs px-2 max-w-[90%] truncate">
-                    Most Popular {plan.badge ? `• ${plan.badge}` : ""}
+                    {plan.badge || "Account cleanup"}
                   </Badge>
                 ) : (
                   plan.badge && (
