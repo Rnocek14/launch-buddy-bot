@@ -7,8 +7,8 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { trackEvent } from "@/lib/analytics";
-import { CompleteCheckoutButton } from "./CompleteCheckoutButton";
-import { BROKER_COUNT_LABEL } from "@/config/brokers";
+
+import { Link } from "react-router-dom";
 
 type BrokerStatus = "found" | "possible_match" | "not_found" | "unknown";
 
@@ -34,8 +34,7 @@ const US_STATES = [
 ];
 
 export function LiveBrokerCheck({ email, onResults }: LiveBrokerCheckProps) {
-  // The personalized broker reveal is the strongest conversion moment, so the
-  // form shows by default — no intermediate "Check My Listings" click to bury it.
+  // Optional, separate from the email-only breach check.
   const [fullName, setFullName] = useState("");
   const [city, setCity] = useState("");
   const [state, setState] = useState("");
@@ -103,24 +102,24 @@ export function LiveBrokerCheck({ email, onResults }: LiveBrokerCheckProps) {
             </div>
             <h3 className="text-2xl font-bold">
               {exposedCount > 0
-                ? `We found you on ${exposedCount} site${exposedCount === 1 ? "" : "s"}`
+                ? `Found ${exposedCount} possible profile match${exposedCount === 1 ? "" : "es"}`
                 : degraded
                   ? "We couldn't finish checking every site"
                   : "No confirmed listings on the sites we checked"}
             </h3>
             {exposedCount > 0 ? (
               <p className="text-sm text-muted-foreground mt-1">
-                {found.length > 0 && <span className="text-foreground font-medium">{found.length} confirmed</span>}
+                {found.length > 0 && <span className="text-foreground font-medium">{found.length} higher-confidence match{found.length === 1 ? "" : "es"}</span>}
                 {found.length > 0 && possible.length > 0 && " · "}
                 {possible.length > 0 && <span>{possible.length} possible match{possible.length === 1 ? "" : "es"}</span>}
               </p>
             ) : degraded ? (
               <p className="text-sm text-muted-foreground mt-1">
-                A few sites were inconclusive just now — that isn't an all-clear. Your estimated exposure still stands.
+                The checked sites returned inconclusive results. We cannot determine whether your information is listed.
               </p>
             ) : (
               <p className="text-sm text-muted-foreground mt-1">
-                New listings appear all the time, so this can change week to week.
+                No likely matches were returned by the sites checked. Results are not a guarantee of absence.
               </p>
             )}
           </div>
@@ -138,7 +137,7 @@ export function LiveBrokerCheck({ email, onResults }: LiveBrokerCheckProps) {
                   <span className="text-xs text-muted-foreground ml-2">{r.domain}</span>
                 </div>
                 <span className="text-xs font-medium">
-                  {r.status === "found" && <span className="text-red-600 dark:text-red-400">Listed</span>}
+                  {r.status === "found" && <span className="text-red-600 dark:text-red-400">Likely match — verify</span>}
                   {r.status === "possible_match" && <span className="text-amber-600 dark:text-amber-400">Possible match</span>}
                   {r.status === "not_found" && <span className="text-muted-foreground">Not found</span>}
                   {r.status === "unknown" && <span className="text-muted-foreground">Inconclusive</span>}
@@ -147,18 +146,19 @@ export function LiveBrokerCheck({ email, onResults }: LiveBrokerCheckProps) {
             ))}
           </div>
 
-          {/* Always show a next step — a service failure or a clean scan must never
-              dead-end the highest-intent user with no way forward. */}
-          <div className="px-6 py-6 bg-gradient-to-b from-primary/5 to-primary/10 border-t border-border space-y-3">
-              <p className="text-sm text-muted-foreground">
-                {exposedCount > 0
-                  ? `These are just ${results.length} of ${BROKER_COUNT_LABEL} sites we remove you from. Your full plan scans and removes you from all of them — plus continuous monitoring so you don't reappear.`
-                  : degraded
-                    ? `We couldn't fully check these ${results.length} public sites right now — people-search sites list most US adults, so this isn't an all-clear. Your full plan scans ${BROKER_COUNT_LABEL} sites, removes your listings, and monitors so you don't reappear.`
-                    : `Good news — no confirmed listings on these ${results.length} sites today. But new listings appear constantly. Your full plan monitors ${BROKER_COUNT_LABEL} sites and removes you automatically the moment you show up.`}
-              </p>
-              <CompleteCheckoutButton email={email} source="broker_exposure" />
+          <div className="space-y-3 border-t border-border bg-secondary/30 px-6 py-6">
+            <p className="text-sm leading-relaxed text-muted-foreground">
+              {exposedCount > 0
+                ? "Review the sites shown above to confirm a match is yours. Listings are not removed by this search. Complete includes supported broker scanning and guided opt-out steps."
+                : degraded
+                  ? "The search was incomplete. Try again later or follow our free opt-out guides; no absence of listings has been established."
+                  : "This limited search returned no matching profiles. You can still review our free privacy guides or connect an inbox to discover service accounts."}
+            </p>
+            <div className="flex flex-wrap items-center gap-3">
+              <Button asChild><Link to="/auth?intent=signup">Create free account</Link></Button>
+              <Link to="/remove-from" className="text-sm text-primary underline underline-offset-4">Free broker opt-out guides</Link>
             </div>
+          </div>
         </CardContent>
       </Card>
     );
@@ -168,17 +168,16 @@ export function LiveBrokerCheck({ email, onResults }: LiveBrokerCheckProps) {
   return (
     <Card className="border-2 border-primary/30">
       <CardContent className="p-6">
-        <h3 className="text-xl font-bold mb-1">See exactly which sites list you</h3>
+        <h3 className="text-xl font-normal mb-1">Search a few public listings</h3>
         <p className="text-sm text-muted-foreground mb-5">
-          Enter your name and we'll check the top people-search sites for your real listings — about 10 seconds. We only use this to search; we don't store it.
+          Enter your name for a separate search of a few public people-search sites. Results may be incomplete or may refer to someone else. Your name and location are sent to our search providers.
         </p>
         <form onSubmit={runCheck} className="space-y-3">
           <Input
             placeholder="Full name (e.g. Jane Smith)"
             value={fullName}
             onChange={(e) => setFullName(e.target.value)}
-            autoFocus
-          />
+                      />
           <div className="grid grid-cols-2 gap-3">
             <Input placeholder="City (optional)" value={city} onChange={(e) => setCity(e.target.value)} />
             <select
