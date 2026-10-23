@@ -112,7 +112,7 @@ export const Navbar = () => {
             className="flex items-center gap-2 hover:opacity-80 transition-opacity"
           >
             <BrandMark className="w-9 h-9 text-foreground" />
-            <span className="font-bold text-xl">
+            <span className="font-semibold text-lg tracking-tight">
               Footprint <span className="text-accent">Finder</span>
             </span>
           </button>
@@ -223,7 +223,7 @@ export const Navbar = () => {
                   </Button>
                 </Link>
                 <Link to="/free-scan">
-                  <Button className="bg-accent hover:bg-accent/90 text-accent-foreground gap-2">
+                  <Button className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2">
                     <ScanSearch className="w-4 h-4" />
                     Free Scan
                   </Button>
@@ -325,7 +325,7 @@ export const Navbar = () => {
                         </Button>
                       </Link>
                       <Link to="/free-scan" onClick={closeMobileMenu}>
-                        <Button className="w-full bg-accent hover:bg-accent/90 text-accent-foreground gap-2">
+                        <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground gap-2">
                           <ScanSearch className="w-4 h-4" />
                           Free Scan
                         </Button>

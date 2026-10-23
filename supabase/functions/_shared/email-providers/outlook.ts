@@ -133,11 +133,8 @@ export class OutlookProvider implements EmailProvider {
         refreshTokenLength: encryptedRefreshToken.length
       });
     } catch (encryptError) {
-      console.error('Failed to encrypt Outlook tokens, storing as plain text:', encryptError);
-      // Store plain text as fallback
-      encryptedAccessToken = tokens.access_token;
-      encryptedRefreshToken = tokens.refresh_token;
-      tokensEncrypted = false;
+      console.error('Failed to encrypt Outlook OAuth tokens; rejecting connection:', encryptError);
+      throw new Error('Secure email connection could not be established. Please retry later.');
     }
 
     // Microsoft tokens typically expire in 1 hour (3600 seconds)

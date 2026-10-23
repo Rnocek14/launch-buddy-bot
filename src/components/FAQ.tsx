@@ -7,39 +7,28 @@ import {
 
 const faqs = [
   {
-    question: "How does Footprint Finder protect my privacy?",
-    answer:
-      "We scan email headers (sender names and subject lines) on our secure servers to identify services you've signed up for. We never read or store your email content. You stay in full control of your information and can disconnect at any time.",
+    question: "What does the free check show?",
+    answer: "We check your email address against known breach records. The free email check does not access your inbox or discover every account you've ever opened.",
   },
   {
-    question: "How does the Gmail scanning work?",
-    answer:
-      "When you connect your Gmail account, we securely sign in using Google's standard login process. We only read sender names and subject lines to identify services — never your email content. You can disconnect at any time from Settings.",
+    question: "What happens if I connect Gmail or Outlook?",
+    answer: "With your permission, we use read-only email metadata such as sender and subject headers to identify services you may have used. We do not read message bodies or attachments. You can disconnect in Settings.",
   },
   {
-    question: "Do you actually delete my accounts?",
-    answer:
-      "No—but we make it dramatically easier. We provide service-specific deletion links, pre-filled GDPR/CCPA request templates, and step-by-step guides. You maintain full control and execute deletions yourself through official channels.",
+    question: "Will Footprint Finder close my accounts automatically?",
+    answer: "No. When a service has a verified contact, you can authorize us to send a privacy request. Other services need you to use an official form or complete account steps yourself. A request being sent does not mean the account was deleted.",
   },
   {
-    question: "Is this legal? What about GDPR?",
-    answer:
-      "Absolutely legal. We're empowering you to exercise your existing rights under GDPR, CCPA, and similar privacy laws. We provide tools to request data deletion—which companies are legally required to honor in most jurisdictions.",
+    question: "Do you automatically remove data broker listings?",
+    answer: "We search supported people-search sites and provide opt-out instructions. Many removals require steps or verification from you. We do not promise unattended automatic removal across all brokers.",
   },
   {
-    question: "Will you sell my email or data?",
-    answer:
-      "Never. We're privacy-first by design, not marketing. We don't run ads, don't sell data, and don't track you. Our business model is simple: you pay for the tool, we build a better tool. That's it.",
+    question: "Are matches and removals guaranteed?",
+    answer: "No. A scan can miss records or return an uncertain match. Companies may request additional identity checks or refuse a request. We distinguish findings and requests from confirmed removal outcomes.",
   },
   {
-    question: "How long does a typical cleanup take?",
-    answer:
-      "It varies based on your digital footprint size. Most users complete 50-100 deletions in 2-4 weeks using our guided approach. We break it into manageable daily tasks rather than overwhelming you with everything at once.",
-  },
-  {
-    question: "What if a service doesn't respond to my deletion request?",
-    answer:
-      "If a service doesn't respond within 30 days, we provide escalation templates and guidance on filing complaints with regulatory authorities like the FTC, ICO, or your local data protection agency. We'll help you enforce your rights.",
+    question: "How is my personal information used?",
+    answer: "We use account information and limited metadata to provide the privacy dashboard. We do not sell personal data. Our privacy policy explains data handling, service providers, and deletion options.",
   },
 ];
 

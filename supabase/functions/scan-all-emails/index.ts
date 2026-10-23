@@ -2,7 +2,7 @@ const serve = Deno.serve;
 import { createClient } from "npm:@supabase/supabase-js@2.79.0";
 import { getEmailProvider } from "../_shared/email-providers/factory.ts";
 import { ProviderType } from "../_shared/email-providers/types.ts";
-import { decrypt } from "../_shared/encryption.ts";
+import { decrypt, encrypt } from "../_shared/encryption.ts";
 import {
   classifySubject,
   emptySignals,
@@ -193,7 +193,7 @@ async function processConnection(connection: any, user: any, maxResults: number,
       if (connection.refresh_token_encrypted) {
         // Bytea column is populated (Outlook-style)
         const encryptedBase64 = btoa(String.fromCharCode(...connection.refresh_token_encrypted));
-        refreshToken = await decrypt(encryptedBase64);
+        refreshToken = encryptedBase64;
       } else {
         // Only text column has encrypted data (Gmail-style)
         refreshToken = connection.refresh_token; // Already encrypted base64
@@ -207,23 +207,21 @@ async function processConnection(connection: any, user: any, maxResults: number,
       connection.tokens_encrypted || false
     );
     
-    // Update connection with new tokens
-    const updateData: any = {
+    // Provider refresh returns plaintext. Encrypt every rotated token before persisting.
+    const updateData = {
+      access_token: await encrypt(tokenData.access_token),
+      refresh_token: await encrypt(tokenData.refresh_token),
+      access_token_encrypted: null,
+      refresh_token_encrypted: null,
+      tokens_encrypted: true,
       token_expires_at: tokenData.expires_at,
     };
-
-    if (connection.tokens_encrypted) {
-      const encryptedAccessToken = await decrypt(tokenData.access_token);
-      updateData.access_token_encrypted = Uint8Array.from(atob(encryptedAccessToken), c => c.charCodeAt(0));
-    } else {
-      updateData.access_token = tokenData.access_token;
-    }
-
-    await supabase
+    const { error: updateError } = await supabase
       .from('email_connections')
       .update(updateData)
       .eq('id', connection.id);
-    
+    if (updateError) throw new Error('Could not securely save refreshed email tokens');
+
     accessToken = tokenData.access_token;
     console.log('Token refreshed successfully');
   }

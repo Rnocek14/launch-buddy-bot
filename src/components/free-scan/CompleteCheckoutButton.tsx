@@ -7,10 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 
 type Interval = "annual" | "monthly";
 
-// Annual is the value anchor. Monthly is the low-commitment rung for
-// price-sensitive visitors — the SAME Complete tier (broker removal included),
-// just a smaller upfront ask than $129/yr. We never downgrade this CTA to Pro,
-// which does NOT include broker scanning.
+// This checkout is optional. Broker opt-outs require user action.
 const ANNUAL = STRIPE_PRICES.COMPLETE_ANNUAL;
 const MONTHLY = STRIPE_PRICES.COMPLETE_MONTHLY;
 
@@ -24,7 +21,7 @@ interface Props {
   className?: string;
 }
 
-export function CompleteCheckoutButton({ email, source, label = "Remove My Information", className }: Props) {
+export function CompleteCheckoutButton({ email, source, label = "Explore Complete", className }: Props) {
   const { toast } = useToast();
   const [interval, setInterval] = useState<Interval>("annual");
   const [loading, setLoading] = useState(false);
@@ -98,7 +95,7 @@ export function CompleteCheckoutButton({ email, source, label = "Remove My Infor
         )}
       </Button>
       <p className="text-[11px] text-center text-muted-foreground">
-        Complete plan · broker removal included · account auto-created after payment · 30-day refund · cancel anytime
+        Complete includes supported people-search scans and guided opt-out instructions; removal is not automatic.
       </p>
     </div>
   );

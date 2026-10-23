@@ -1,219 +1,131 @@
-import { useEffect, useState, useCallback } from "react";
-import { Shield, Lock, AlertTriangle, Search, Zap, Target } from "lucide-react";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "./ui/accordion";
-import { trackEvent } from "@/lib/analytics";
+import { useEffect, useState } from "react";
+import { ArrowRight, Check, LockKeyhole, Mail, ShieldCheck, Search, FileText, Eye } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
-import { Button } from "./ui/button";
-import { Input } from "./ui/input";
+import { trackEvent } from "@/lib/analytics";
 import { supabase } from "@/integrations/supabase/client";
-import { HeroScanAnimation } from "./HeroScanAnimation";
+import { persistGuestEmail } from "@/lib/checkout";
+
+const examples = [
+  { icon: Mail, name: "Connected services", description: "Find accounts through inbox metadata" },
+  { icon: Search, name: "Exposure checks", description: "Review known breaches and broker results" },
+  { icon: FileText, name: "Cleanup requests", description: "Send requests and follow up in one place" },
+];
 
 export const Hero = () => {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
-    const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      setIsLoggedIn(!!session);
-    };
-    checkAuth();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
-      setIsLoggedIn(!!session);
+    let mounted = true;
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (mounted) setIsLoggedIn(!!session);
     });
-
-    return () => subscription.unsubscribe();
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
+      if (mounted) setIsLoggedIn(!!session);
+    });
+    return () => { mounted = false; subscription.unsubscribe(); };
   }, []);
 
-  const handleScan = (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-
-    if (!email || !email.includes("@")) {
-      setError("Please enter a valid email address");
+  const handleScan = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const candidate = email.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(candidate)) {
+      setError("Enter a valid email address to continue.");
       return;
     }
-
+    setError("");
+    persistGuestEmail(candidate);
     trackEvent("hero_cta_click");
-    const trimmed = email.trim();
-    // Persist for downstream quick-checkout (one less keystroke at upgrade time)
-    import("@/lib/checkout").then((m) => m.persistGuestEmail(trimmed));
-    navigate(`/free-scan?email=${encodeURIComponent(trimmed)}`);
+    // Keep email addresses out of shareable URLs, browser history and referrers.
+    navigate("/free-scan", { state: { scanEmail: candidate } });
   };
 
-  const handleFaqToggle = useCallback((value: string) => {
-    if (value) {
-      trackEvent("hero_faq_opened", { question: value });
-    }
-  }, []);
-
   return (
-    <section className="relative min-h-screen flex items-center justify-center px-6 sm:px-8 lg:px-12 py-24 lg:py-32 overflow-hidden">
-      {/* Gradient background */}
-      <div className="absolute inset-0 bg-gradient-to-br from-background via-secondary to-background opacity-50" />
-      
-      {/* Animated circles */}
-      <div className="absolute top-20 left-10 w-72 h-72 bg-accent/10 rounded-full blur-3xl animate-pulse" />
-      <div className="absolute bottom-20 right-10 w-96 h-96 bg-primary/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
-      
-      <div className="container relative z-10 max-w-7xl mx-auto">
-        <div className="grid lg:grid-cols-12 gap-10 lg:gap-12 items-center">
-          {/* Left: Copy */}
-          <div className="lg:col-span-7 text-center lg:text-left max-w-2xl mx-auto lg:mx-0">
-            {/* Badge */}
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-destructive/10 border border-destructive/20 mb-8">
-              <AlertTriangle className="w-4 h-4 text-destructive shrink-0" />
-              <span className="text-sm font-medium text-destructive">Your home address is probably public right now</span>
-            </div>
+    <section className="relative overflow-hidden bg-background pt-32 pb-16 md:pt-40 md:pb-28 px-5 sm:px-8">
+      <div className="mx-auto grid max-w-6xl gap-12 lg:grid-cols-[1.08fr_0.92fr] lg:gap-16 items-center">
+        <div className="max-w-2xl">
+          <p className="mb-6 inline-flex items-center gap-2 text-sm font-medium text-primary">
+            <span className="h-1.5 w-1.5 rounded-full bg-accent" />
+            A clearer way to take back your online privacy
+          </p>
+          <h1 className="max-w-[680px] text-[clamp(3rem,5.8vw,5.5rem)] leading-[1.04] tracking-[-0.045em] font-normal text-foreground">
+            Your digital life, <span className="italic text-primary">back in your hands.</span>
+          </h1>
+          <p className="mt-7 max-w-xl text-lg leading-relaxed text-muted-foreground sm:text-xl">
+            Forgotten accounts. Old sign-ups. Data exposure. Find the places your information may be held, then take practical steps to clean it up.
+          </p>
 
-            <h1 className="text-4xl sm:text-5xl lg:text-[3.75rem] font-normal mb-6 leading-[1.05] tracking-tight">
-              <span className="text-foreground">Your address. Your phone. Your family.</span>
-              <br />
-              <span className="text-accent">
-                All searchable online.
-              </span>
-            </h1>
-
-            <p className="text-lg sm:text-xl text-muted-foreground mb-6 leading-relaxed">
-              Data brokers publish your home address, phone number, age, and relatives' names — and sell them to anyone with $20. We find every site exposing you, and monitor as new ones appear.
-            </p>
-
-            {/* Elevated scan form — primary focal action */}
-            <div className="relative group max-w-xl mx-auto lg:mx-0 mb-4">
-              <div className="absolute -inset-1 bg-gradient-to-r from-accent to-primary rounded-2xl blur opacity-20 group-hover:opacity-30 group-focus-within:opacity-40 transition duration-1000" aria-hidden />
-              <div className="relative bg-card border border-border rounded-2xl shadow-xl p-2">
-                <form onSubmit={handleScan} className="flex flex-col sm:flex-row gap-2">
-                  <Input
-                    type="email"
-                    aria-label="Your email address"
-                    placeholder="Enter your email to start scan"
-                    value={email}
-                    onChange={(e) => { setEmail(e.target.value); setError(""); }}
-                    className="flex-1 h-14 text-lg px-5 bg-transparent border-0 shadow-none focus-visible:ring-0"
-                  />
-                  <Button type="submit" size="lg" className="relative overflow-hidden gap-2 h-14 text-lg px-8 bg-accent hover:bg-accent/90 text-accent-foreground whitespace-nowrap rounded-xl cta-shimmer focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
-                    <Search className="w-5 h-5" />
-                    Check My Exposure
-                  </Button>
-                </form>
-              </div>
-              {error && (
-                <p className="text-sm text-destructive flex items-center gap-2 mt-3 justify-center lg:justify-start">
-                  <AlertTriangle className="w-4 h-4" />
-                  {error}
-                </p>
-              )}
-            </div>
-
-            <p className="text-sm text-muted-foreground mb-3 flex items-center gap-2 justify-center lg:justify-start">
-              <Lock className="w-4 h-4 text-primary shrink-0" />
-              Free scan in 30 seconds. No signup required. Email-only — no inbox access.
-            </p>
-
-            {/* Calm typographic stat strip (non-alarmist) */}
-            <div className="mb-8 pt-6 border-t border-border flex flex-wrap gap-x-8 gap-y-4 justify-center lg:justify-start">
-              <div className="space-y-1 text-left">
-                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Average exposure</p>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-2xl font-semibold text-foreground">47</span>
-                  <span className="text-sm text-muted-foreground">broker sites</span>
-                </div>
-              </div>
-              <div className="w-px h-10 bg-border hidden sm:block self-center" aria-hidden />
-              <div className="space-y-1 text-left">
-                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Data leaks</p>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-2xl font-semibold text-foreground">8</span>
-                  <span className="text-sm text-muted-foreground">breaches found</span>
-                </div>
-              </div>
-              <div className="w-px h-10 bg-border hidden sm:block self-center" aria-hidden />
-              <div className="space-y-1 text-left">
-                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Public records</p>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-2xl font-semibold text-foreground">120+</span>
-                  <span className="text-sm text-muted-foreground">data points</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex flex-wrap gap-x-4 gap-y-2 mb-6 justify-center lg:justify-start items-center">
-              {isLoggedIn ? (
-                <Link to="/dashboard" className="text-sm text-primary hover:underline">
-                  Go to Dashboard →
-                </Link>
-              ) : (
-                <Link to="/auth" className="text-sm text-muted-foreground hover:text-primary">
-                  Already have an account? Sign in →
-                </Link>
-              )}
-              <span className="text-muted-foreground hidden sm:inline">|</span>
-              <Link to="/enterprise" className="text-sm text-muted-foreground hover:text-primary">
-                Enterprise solutions →
-              </Link>
-            </div>
-
-            {/* Social Proof */}
-            <div className="flex flex-wrap gap-x-6 gap-y-3 text-sm justify-center lg:justify-start">
-              <div className="flex items-center gap-2">
-                <Shield className="w-4 h-4 text-primary" />
-                <span className="text-muted-foreground">169+ Services Tracked</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Zap className="w-4 h-4 text-primary" />
-                <span className="text-muted-foreground">25+ Data Brokers</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Target className="w-4 h-4 text-primary" />
-                <span className="text-muted-foreground">GDPR / CCPA</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Mobile-only trust cue (animation hidden on mobile) */}
-          <div className="flex md:hidden justify-center lg:col-span-5">
-            <p className="text-xs text-muted-foreground border border-border rounded-full px-4 py-2">
-              ✓ Email-only · No inbox access · No content stored
+          <div className="mt-9 max-w-xl">
+            <form onSubmit={handleScan} className="flex flex-col gap-3 sm:flex-row" aria-label="Free breach scan">
+              <label htmlFor="hero-email" className="sr-only">Email address</label>
+              <input
+                id="hero-email"
+                type="email"
+                autoComplete="email"
+                placeholder="Your email address"
+                value={email}
+                onChange={(e) => { setEmail(e.target.value); setError(""); }}
+                aria-invalid={!!error}
+                aria-describedby={error ? "hero-error" : "hero-description"}
+                className="min-h-14 w-full flex-1 rounded-xl border border-border bg-white/90 px-4 text-base text-foreground outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/10 dark:bg-card"
+              />
+              <button type="submit" className="inline-flex min-h-14 items-center justify-center gap-2 rounded-xl bg-primary px-6 font-semibold text-primary-foreground transition hover:bg-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
+                Check my email <ArrowRight className="h-4 w-4" aria-hidden />
+              </button>
+            </form>
+            {error && <p id="hero-error" role="alert" className="mt-2 text-sm text-destructive">{error}</p>}
+            <p id="hero-description" className="mt-3 flex items-center gap-2 text-sm text-muted-foreground">
+              <LockKeyhole className="h-4 w-4 shrink-0" aria-hidden />
+              Free breach check. No account or inbox permission needed.
             </p>
           </div>
 
-          {/* Right: Animated scan preview (desktop only) */}
-          <div className="hidden md:flex lg:col-span-5 justify-center lg:justify-end">
-            <HeroScanAnimation />
+          <div className="mt-9 flex flex-wrap items-center gap-x-7 gap-y-3 text-sm text-muted-foreground">
+            <span className="inline-flex items-center gap-2"><Check className="h-4 w-4 text-primary" aria-hidden /> Start free</span>
+            <span className="inline-flex items-center gap-2"><Check className="h-4 w-4 text-primary" aria-hidden /> Understand your options</span>
+            <span className="inline-flex items-center gap-2"><Check className="h-4 w-4 text-primary" aria-hidden /> You stay in control</span>
           </div>
+          <p className="mt-7 text-sm text-muted-foreground">
+            Want to discover forgotten accounts too? <Link to="/auth" className="font-semibold text-primary underline underline-offset-4 hover:text-accent">Connect your inbox after signing in.</Link>
+          </p>
         </div>
 
-        {/* Mini FAQ */}
-        <div className="mt-16 max-w-2xl mx-auto">
-          <Accordion type="single" collapsible className="w-full" onValueChange={handleFaqToggle}>
-            <AccordionItem value="emails_read" className="border-border">
-              <AccordionTrigger className="text-sm text-foreground hover:no-underline">
-                Do you read my emails?
-              </AccordionTrigger>
-              <AccordionContent className="text-sm text-muted-foreground">
-                <strong>Free scan:</strong> uses only your email address — <strong>no inbox access</strong>. <strong>Optional deeper discovery:</strong> uses <strong>read-only access</strong> to scan <strong>sender metadata</strong> (who emailed you), <strong>never email content</strong>.
-              </AccordionContent>
-            </AccordionItem>
-            <AccordionItem value="data_stored" className="border-border">
-              <AccordionTrigger className="text-sm text-foreground hover:no-underline">
-                What data do you store?
-              </AccordionTrigger>
-              <AccordionContent className="text-sm text-muted-foreground">
-                We store the <strong>services discovered</strong> for your account so you can view them in your dashboard. We do <strong>not</strong> store email content or passwords.
-              </AccordionContent>
-            </AccordionItem>
-            <AccordionItem value="data_brokers" className="border-border">
-              <AccordionTrigger className="text-sm text-foreground hover:no-underline">
-                How is this different from data broker removal?
-              </AccordionTrigger>
-              <AccordionContent className="text-sm text-muted-foreground">
-                Data broker removal focuses on people-search/data broker sites. We focus on <strong>account discovery</strong> first — finding services tied to your email — and then guiding cleanup.
-              </AccordionContent>
-            </AccordionItem>
-          </Accordion>
+        <div className="relative mx-auto w-full max-w-[510px]" aria-label="Illustration of the privacy workspace">
+          <div className="pointer-events-none absolute -inset-8 rounded-[3rem] bg-secondary/70 blur-3xl" aria-hidden />
+          <div className="relative overflow-hidden rounded-[1.8rem] border border-border bg-card p-5 shadow-[0_25px_70px_-40px_rgba(23,38,35,0.4)] sm:p-7">
+            <div className="flex items-center justify-between border-b border-border pb-5">
+              <div className="flex items-center gap-3">
+                <span className="grid h-10 w-10 place-items-center rounded-xl bg-primary text-primary-foreground"><ShieldCheck className="h-5 w-5" aria-hidden /></span>
+                <div>
+                  <p className="text-sm font-semibold text-foreground">Your privacy workspace</p>
+                  <p className="text-xs text-muted-foreground">Find it. Review it. Take action.</p>
+                </div>
+              </div>
+              <span className="rounded-full border border-border bg-background px-2.5 py-1 text-[11px] text-muted-foreground">Illustration</span>
+            </div>
+            <div className="py-7">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-[0.15em] text-muted-foreground">An easier starting point</p>
+              <h2 className="font-display text-3xl leading-tight text-foreground">Less guessing.<br />More clarity.</h2>
+            </div>
+            <div className="space-y-3">
+              {examples.map(({ icon: Icon, name, description }) => (
+                <div key={name} className="flex items-center gap-4 rounded-xl border border-border bg-background px-4 py-4">
+                  <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-secondary text-primary"><Icon className="h-5 w-5" aria-hidden /></div>
+                  <div className="min-w-0">
+                    <p className="font-semibold text-foreground">{name}</p>
+                    <p className="mt-0.5 text-sm text-muted-foreground">{description}</p>
+                  </div>
+                  <ArrowRight className="ml-auto h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+                </div>
+              ))}
+            </div>
+            <div className="mt-5 flex items-start gap-2 rounded-xl bg-secondary/70 px-4 py-3 text-xs leading-relaxed text-muted-foreground">
+              <Eye className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />
+              We distinguish requests sent from removals confirmed. Results depend on the service and available evidence.
+            </div>
+          </div>
         </div>
       </div>
     </section>

@@ -143,25 +143,11 @@ serve(async (req: Request): Promise<Response> => {
       });
       
     } catch (encryptError) {
-      console.error('❌ Token encryption or validation failed:', encryptError);
-      
-      const plainAccessDetection = detectTokenEncryption(tokens.access_token, 'gmail');
-      const plainRefreshDetection = tokens.refresh_token 
-        ? detectTokenEncryption(tokens.refresh_token, 'gmail')
-        : { isEncrypted: false, confidence: 'high', reason: 'No refresh token' };
-      
-      if (plainAccessDetection.isEncrypted || (tokens.refresh_token && plainRefreshDetection.isEncrypted)) {
-        console.error('CRITICAL: Original tokens from Google appear encrypted!');
-        return new Response(null, {
-          status: 302,
-          headers: { Location: `${baseUrl}/settings?error=${encodeURIComponent('Token format error - please try reconnecting')}` },
-        });
-      }
-      
-      encryptedAccessToken = tokens.access_token;
-      encryptedRefreshToken = tokens.refresh_token || null;
-      tokensEncrypted = false;
-      console.warn('⚠️ Storing tokens as plain text due to encryption failure');
+      console.error('OAuth token encryption failed; refusing to store plaintext:', encryptError);
+      return new Response(null, {
+        status: 302,
+        headers: { Location: `${baseUrl}/settings?error=${encodeURIComponent('Secure Gmail connection failed. Please try again.')}` },
+      });
     }
 
     const { data: existingConnection } = await supabase

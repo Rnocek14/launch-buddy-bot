@@ -709,7 +709,7 @@ async function fetchWithBrowserless(url: string, timeout: number = 30000): Promi
 
   try {
     // Try Bearer token first (more common)
-    const response = await fetch(`https://chrome.browserless.io/content?token=${browserlessApiKey}`, {
+    const response = await fetch(`https://production-sfo.browserless.io/content?token=${browserlessApiKey}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -1214,7 +1214,7 @@ Deno.serve(async (req) => {
       .eq('status', 'active')
       .single();
 
-    if (!subscription || subscription.tier !== 'complete') {
+    if (!subscription || !['complete', 'family'].includes(subscription.tier)) {
       return new Response(
         JSON.stringify({ error: 'Complete subscription required for broker scanning' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

@@ -63,12 +63,12 @@ export const Footer = () => {
           <div className="flex flex-col gap-2">
             <div className="flex items-center gap-2">
               <BrandMark className="w-8 h-8 text-foreground" />
-              <span className="font-bold text-xl">
+              <span className="font-semibold text-lg tracking-tight">
                 Footprint <span className="text-accent">Finder</span>
               </span>
             </div>
             <p className="text-xs text-muted-foreground tracking-wide uppercase">
-              Find it. Remove it.{" "}
+              Find it. Review it.{" "}
               <span className="text-accent font-semibold">Protect</span> your privacy.
             </p>
             <a

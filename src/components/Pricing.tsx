@@ -22,12 +22,12 @@ const getPrimaryPlans = (billingInterval: BillingInterval) => [
         : STRIPE_PRICES.PRO_MONTHLY.id,
     price: billingInterval === "year" ? "$79" : "$12.99",
     period: billingInterval === "year" ? "/year" : "/month",
-    description: "Continuous monitoring + unlimited cleanup",
+    description: "Discover accounts and organize privacy requests",
     features: [...PRO_FEATURES],
-    cta: "Start Monitoring",
+    cta: "Choose Pro",
     popular: true,
     icon: Star,
-    badge: billingInterval === "year" ? "Save 39%" : null,
+    badge: billingInterval === "year" ? "Save 49% annually" : null,
     monthlyEquivalent: billingInterval === "year" ? "Just $6.58/month" : null,
   },
   {
@@ -39,12 +39,12 @@ const getPrimaryPlans = (billingInterval: BillingInterval) => [
         : STRIPE_PRICES.COMPLETE_MONTHLY.id,
     price: billingInterval === "year" ? "$129" : "$19.99",
     period: billingInterval === "year" ? "/year" : "/month",
-    description: "Full monitoring + data broker removal",
+    description: "Add broker searching and guided opt-outs",
     features: [...COMPLETE_FEATURES],
-    cta: "Get Complete Protection",
+    cta: "Choose Complete",
     popular: false,
     icon: Crown,
-    badge: billingInterval === "year" ? "Best Value" : null,
+    badge: billingInterval === "year" ? "Annual plan" : null,
     monthlyEquivalent: billingInterval === "year" ? "Just $10.75/month" : null,
   },
 ];
@@ -78,7 +78,7 @@ const pricingFaq = [
   {
     question: "What's the difference between Pro and Complete?",
     answer:
-      "Pro gives you unlimited deletion requests and deep AI scanning for service accounts (Netflix, Uber, shopping sites). Complete adds data broker scanning — we check 20+ sites that sell your personal info and guide you through removal."
+      "Pro adds deeper discovery, monthly inbox rescans and deletion-request tools for service accounts. Complete adds searches across supported people-search sites plus guided opt-out steps; automated broker removal is not included."
   },
   {
     question: "Is there a free version?",
@@ -100,37 +100,6 @@ const pricingFaq = [
     answer:
       "Yes. All payments are processed by Stripe. We never see or store your full card details on our servers."
   }
-];
-
-const competitors = [
-  {
-    name: "DeleteMe",
-    price: "$129/year",
-    focus: "Data brokers only",
-    description: "Removes you from data broker sites. Great for that, but doesn't handle service accounts.",
-    highlight: false,
-  },
-  {
-    name: "Incogni",
-    price: "$77/year",
-    focus: "Data brokers only",
-    description: "Similar to DeleteMe — focuses on data broker removal. No inbox scanning.",
-    highlight: false,
-  },
-  {
-    name: "Mine (SayMine)",
-    price: "Free–$99/year",
-    focus: "Account discovery",
-    description: "Closest to us. Scans your inbox, finds accounts. Less aggressive contact discovery.",
-    highlight: false,
-  },
-  {
-    name: "Footprint Finder",
-    price: "$79–$129/year",
-    focus: "Service accounts + brokers",
-    description: "Deep AI scan + data broker removal. The complete privacy solution at competitive pricing.",
-    highlight: true,
-  },
 ];
 
 export const Pricing = () => {
@@ -172,10 +141,10 @@ export const Pricing = () => {
       <div className="container max-w-6xl">
         <div className="text-center mb-8">
           <h2 className="text-4xl md:text-5xl font-bold mb-4">
-            Pick your protection
+            Choose your plan
           </h2>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Two plans cover almost everyone. Cancel anytime.
+            A straightforward way to find accounts, request cleanup, and review exposure. Cancel anytime.
           </p>
         </div>
 
@@ -196,7 +165,7 @@ export const Pricing = () => {
               >
                 {plan.popular ? (
                   <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary whitespace-nowrap text-[10px] sm:text-xs px-2 max-w-[90%] truncate">
-                    Most Popular {plan.badge ? `• ${plan.badge}` : ""}
+                    {plan.badge || "Account cleanup"}
                   </Badge>
                 ) : (
                   plan.badge && (
@@ -299,83 +268,6 @@ export const Pricing = () => {
             })}
           </div>
         </div>
-
-        {/* Named Competitor Comparison */}
-        <section className="mt-16">
-          <h2 className="text-2xl font-semibold mb-4">
-            How we compare to the competition
-          </h2>
-          <p className="text-sm text-muted-foreground mb-6">
-            There are several privacy services out there. Here's how Footprint Finder stacks up — honestly.
-          </p>
-
-          {/* Desktop table */}
-          <div className="hidden md:block overflow-hidden rounded-2xl border">
-            <div className="grid grid-cols-4 bg-muted/40 text-xs font-medium uppercase tracking-wide py-3 px-4 gap-3">
-              <div>Service</div>
-              <div>Price</div>
-              <div>Focus</div>
-              <div>Details</div>
-            </div>
-
-            {competitors.map((comp, index) => (
-              <div 
-                key={index} 
-                className={`grid grid-cols-4 border-t px-4 py-4 text-sm gap-3 ${
-                  comp.highlight ? "bg-accent/5" : ""
-                }`}
-              >
-                <div className="font-semibold flex items-center gap-2 flex-wrap">
-                  {comp.name}
-                  {comp.highlight && (
-                    <Badge className="text-xs bg-accent/20 text-accent-foreground hover:bg-accent/20">
-                      You are here
-                    </Badge>
-                  )}
-                </div>
-                <div className={comp.highlight ? "text-accent font-semibold" : "text-muted-foreground"}>
-                  {comp.price}
-                </div>
-                <div className="text-muted-foreground">{comp.focus}</div>
-                <div className="text-muted-foreground">{comp.description}</div>
-              </div>
-            ))}
-          </div>
-
-          {/* Mobile card stack */}
-          <div className="md:hidden space-y-3">
-            {competitors.map((comp, index) => (
-              <div
-                key={index}
-                className={`rounded-2xl border p-4 ${comp.highlight ? "bg-accent/5 border-accent/40" : ""}`}
-              >
-                <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-semibold">{comp.name}</span>
-                    {comp.highlight && (
-                      <Badge className="text-xs bg-accent/20 text-accent-foreground hover:bg-accent/20">
-                        You are here
-                      </Badge>
-                    )}
-                  </div>
-                  <span className={`text-sm ${comp.highlight ? "text-accent font-semibold" : "text-muted-foreground"}`}>
-                    {comp.price}
-                  </span>
-                </div>
-                <div className="text-xs uppercase tracking-wide text-muted-foreground mb-1">
-                  {comp.focus}
-                </div>
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  {comp.description}
-                </p>
-              </div>
-            ))}
-          </div>
-
-          <p className="text-xs text-muted-foreground mt-4">
-            <strong>Note:</strong> DeleteMe and Incogni focus on data brokers (sites that sell your personal info). Our Complete plan includes both service account discovery AND data broker removal.
-          </p>
-        </section>
 
         {/* Pricing FAQ */}
         <section className="mt-16 border-t pt-10">

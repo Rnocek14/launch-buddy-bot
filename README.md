@@ -16,9 +16,9 @@ Most people have hundreds of accounts they forgot about. Deleting them manually 
 - **Inbox scan** — OAuth-connected scan of Gmail or Outlook headers only (not content)
 - **Privacy risk score** — See how exposed you are based on discovered accounts
 - **One-click unsubscribe** — Detect and execute RFC 8058 List-Unsubscribe requests
-- **Deletion requests** — Generate and send GDPR/CCPA deletion requests via email
-- **Broker exposure scan** — Check if your name and email appear on people-search sites using a curated broker list
-- **Continuous monitoring** — Re-scan periodically to catch new exposures
+- **Deletion requests** — Request deletion by email when a verified privacy contact exists; form-based requests currently need user action
+- **Broker exposure scan** — Search a curated list of people-search sites; results can be uncertain and require manual verification
+- **Monitoring** — Paid plans include monthly inbox rescans; broker follow-up may require manual action
 
 ## Infrastructure
 
@@ -38,7 +38,7 @@ Most people have hundreds of accounts they forgot about. Deleting them manually 
 
 We request the minimum scopes necessary for each provider:
 
-- **Google** — `openid email profile` for identity and `gmail.readonly` for header-only metadata scans. We do not request `gmail.send`; deletion request emails are sent via Resend on the user's behalf.
+- **Google** — `openid email profile` for identity and `gmail.metadata` for header-only metadata scans. We do not request `gmail.send`; deletion request emails are sent via Resend on the user's behalf.
 - **Microsoft** — `openid email profile` for identity and `Mail.Read` for header-only metadata scans. We do not request `Mail.Send`.
 
 No other scopes are requested.

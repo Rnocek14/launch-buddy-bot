@@ -163,7 +163,7 @@ export const FREE_TIER_LIMITS = {
 export const FREE_FEATURES = [
   "Connect and scan 1 email account",
   "See all discovered services",
-  "Complete privacy contact details",
+  "Available privacy contact details",
   "Risk score & analytics",
   "3 deletion requests/month",
   "Shareable privacy report",
@@ -172,20 +172,20 @@ export const FREE_FEATURES = [
 export const PRO_FEATURES = [
   "Everything in Free, plus:",
   "Unlimited deletion requests",
-  "Deep AI Scan (finds 2-3× more accounts)",
+  "Deeper inbox discovery",
   "Connect and scan up to 3 email addresses",
-  "Complete inbox history analysis",
-  "Priority deletion processing",
+  "Expanded inbox history analysis",
+  "Request tracking and cleanup tools",
   "Monthly automatic rescans",
 ] as const;
 
 export const COMPLETE_FEATURES = [
   "Everything in Pro, plus:",
-  "Data Broker Scanning (20+ sites)",
+  "People-search broker scans (25+ supported targets)",
   "Guided opt-out instructions",
   "Connect up to 5 email addresses",
-  "Priority email support",
-  "Monthly broker rescans",
+  "Email support",
+  "Manual broker rescans and status reviews",
 ] as const;
 
 export const FAMILY_FEATURES = [
@@ -193,15 +193,15 @@ export const FAMILY_FEATURES = [
   "Protect parents, partner, kids, or housemates",
   "Each member gets their own private dashboard",
   "Up to 5 email accounts per member (25 total)",
-  "Data broker scanning for every member",
+  "Broker scans for supported family profiles",
   "Family privacy score & shared insights",
   "One bill, one subscription",
 ] as const;
 
 export const PARENT_SCAN_FEATURES = [
   "One-time deep scan of their email",
-  "Full data broker check (20+ sites)",
-  "Breach exposure report",
+  "Supported data broker search (25+ targets)",
+  "Known breach exposure report",
   "Printable PDF action plan",
   "Senior-friendly explanations",
   "No subscription required",
