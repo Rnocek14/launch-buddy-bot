@@ -30,6 +30,7 @@ const TEST_EMAIL = "scan-fixture@example.com";
 function harness({ key = "fake-test-api-key", fetchResponse, fetchError } = {}) {
   let handler;
   const calls = [];
+  const errors = [];
   const mockFetch = async (url, options) => {
     calls.push({ url, options });
     if (fetchError) throw fetchError;
@@ -47,7 +48,7 @@ function harness({ key = "fake-test-api-key", fetchResponse, fetchError } = {}) 
     URL,
     Map,
     Date,
-    console: { log() {}, warn() {}, error() {} },
+    console: { log() {}, warn() {}, error(...args) { errors.push(args.map(String).join(" ")); } },
     JSON,
     encodeURIComponent,
   };
@@ -60,10 +61,10 @@ function harness({ key = "fake-test-api-key", fetchResponse, fetchError } = {}) 
       ? { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email }) }
       : { method };
     const response = await handler(new Request("https://example.test/free-breach-check", options));
-    return { status: response.status, body: await response.json().catch(() => null), response };
+    return { status: response.status, body: await response.json().catch(() => null), response, errors };
   }
 
-  return { request, calls };
+  return { request, calls, errors };
 }
 
 test("200 with a real-looking provider finding returns only the finding and correct severity", async () => {
@@ -80,7 +81,7 @@ test("200 with a real-looking provider finding returns only the finding and corr
   }];
   const h = harness({ fetchResponse: new Response(JSON.stringify(providerPayload), { status: 200 }) });
   const result = await h.request();
-  assert.equal(result.status, 200);
+  assert.equal(result.status, 200, JSON.stringify(result.errors));
   assert.equal(result.body.checked, true);
   assert.equal(result.body.breachCount, 1);
   assert.equal(result.body.criticalCount, 1);
