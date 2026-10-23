@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useSearchParams } from "react-router-dom";
 import { FunctionsHttpError } from "@supabase/supabase-js";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
@@ -35,7 +35,8 @@ interface ScanResults {
 const validEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
 export default function FreeScan() {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const location = useLocation();
   const [email, setEmail] = useState("");
   const [isScanning, setIsScanning] = useState(false);
   const [results, setResults] = useState<ScanResults | null>(null);
@@ -112,9 +113,18 @@ export default function FreeScan() {
   }, [searchParams]);
 
   useEffect(() => {
+    const fromState = (location.state as { scanEmail?: string } | null)?.scanEmail?.trim();
     const fromUrl = searchParams.get("email")?.trim();
-    if (fromUrl && validEmail(fromUrl)) runScan(fromUrl);
-    // An email in the URL is only consumed when this screen first loads.
+    const candidate = fromState || fromUrl;
+    // Also sanitize old deep links that still use ?email= to keep the address
+    // out of the URL after the app starts; preserve unrelated campaign params.
+    if (fromUrl) {
+      const sanitized = new URLSearchParams(searchParams);
+      sanitized.delete("email");
+      setSearchParams(sanitized, { replace: true });
+    }
+    if (candidate && validEmail(candidate)) void runScan(candidate);
+    // Only consume the initial navigation state / URL once.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
