@@ -293,18 +293,19 @@ async function processConnection(connection: any, user: any, maxResults: number,
       false  // Tell provider token is NOT encrypted (we already decrypted it)
     );
 
-    // Update connection with new token
+    // Never persist plaintext refreshed tokens or keep a stale rotated refresh token.
     const { error: updateError } = await supabase
       .from('email_connections')
       .update({
-        access_token: tokenData.access_token,
+        access_token: await encrypt(tokenData.access_token),
+        refresh_token: await encrypt(tokenData.refresh_token),
+        access_token_encrypted: null,
+        refresh_token_encrypted: null,
+        tokens_encrypted: true,
         token_expires_at: tokenData.expires_at,
       })
       .eq('id', connection.id);
-
-    if (updateError) {
-      console.error('Error updating token:', updateError);
-    }
+    if (updateError) throw new Error('Could not securely save refreshed email tokens');
 
     accessToken = tokenData.access_token;
   }
