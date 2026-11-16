@@ -995,7 +995,7 @@ function staticRoutes(): Route[] {
       path: "/parents",
       title: "Protect Your Parents From Scams & Identity Theft",
       description:
-        "Your parents' phone numbers and addresses are published on data-broker sites, fueling scam calls. Find their exposure and remove it in minutes.",
+        "Your parents' phone numbers and addresses are published on data-broker sites, fueling scam calls. See what's exposed for free, then follow a simple printable plan to remove it.",
       ogType: "website",
       body: `<main><h1>Protect your parents from scams and identity theft</h1>${p(
         "Data brokers publish your parents' home address, phone number and the names of their relatives online — which is exactly the information a scam caller uses to sound credible. Someone who knows a target's street, their daughter's name and their approximate age is far harder to hang up on.",
@@ -1006,6 +1006,21 @@ function staticRoutes(): Route[] {
         "Breach exposure for their email address",
         "Accounts and subscriptions tied to their inbox",
         "A printable, plain-English action plan you can work through together",
+      ])}${siteLinksBlock()}</main>`,
+    },
+    {
+      path: "/protect",
+      title: "See What Scammers Can Find About You — Free Check",
+      description:
+        "A simple, free check for adults 60+. Enter your name and city to see which people-search sites show your address and phone number. No inbox access needed.",
+      ogType: "website",
+      body: `<main><h1>See what scammers can find about you</h1>${p(
+        "People-search websites publish names, home addresses, phone numbers and relatives' names. Scammers use those details to sound believable. This free check looks up your name and city on the biggest people-search sites and shows where you appear.",
+      )}<h2>How it works</h2>${ul([
+        "Type your full name",
+        "Type your city and state",
+        "Add an email address for your results — we never read your email",
+        "See which sites list you, and get help removing them",
       ])}${siteLinksBlock()}</main>`,
     },
     {

@@ -117,11 +117,12 @@ export default function Protect() {
     <div className="min-h-screen bg-background text-foreground">
       <Navbar />
       <main className="max-w-xl mx-auto px-5 pt-28 pb-20 text-lg leading-relaxed">
+        <h1 className="sr-only">Free check: see what scammers can find about you</h1>
         {step < 5 && <p className="font-mono text-sm text-muted-foreground mb-3">Step {Math.min(step, 3)} of 3 · Free · No inbox access</p>}
 
         {step === 1 && (
           <section>
-            <h1 className="text-3xl md:text-4xl mb-4">See what scammers can find about you</h1>
+            <h2 className="text-3xl md:text-4xl mb-4">See what scammers can find about you</h2>
             <p className="text-muted-foreground mb-8">Websites sell your address, phone number and relatives' names. Scammers use them to sound believable. Let's check — it takes about a minute.</p>
             <label htmlFor="p-name" className="block font-medium mb-2">What is your full name?</label>
             <Input id="p-name" className={big} value={name} onChange={(e) => setName(e.target.value)} placeholder="Mary Smith" autoComplete="name" onKeyDown={(e) => e.key === "Enter" && nextFromName()} />
@@ -132,7 +133,7 @@ export default function Protect() {
 
         {step === 2 && (
           <section>
-            <h1 className="text-3xl mb-6">Where do you live?</h1>
+            <h2 className="text-3xl mb-6">Where do you live?</h2>
             <label htmlFor="p-city" className="block font-medium mb-2">City</label>
             <Input id="p-city" className={big} value={city} onChange={(e) => setCity(e.target.value)} placeholder="Tampa" autoComplete="address-level2" />
             <label htmlFor="p-state" className="block font-medium mt-5 mb-2">State</label>
@@ -148,7 +149,7 @@ export default function Protect() {
 
         {step === 3 && (
           <section>
-            <h1 className="text-3xl mb-4">Where should we send your results?</h1>
+            <h2 className="text-3xl mb-4">Where should we send your results?</h2>
             <p className="text-muted-foreground mb-6">We only use this to send your results. We never read your email.</p>
             <label htmlFor="p-email" className="block font-medium mb-2">Email address</label>
             <Input id="p-email" type="email" className={big} value={email} onChange={(e) => setEmail(e.target.value)} placeholder="mary@example.com" autoComplete="email" />
@@ -161,7 +162,7 @@ export default function Protect() {
         {step === 4 && (
           <section className="text-center py-16" aria-live="polite">
             <Loader2 className="w-10 h-10 animate-spin mx-auto mb-6 text-accent" />
-            <h1 className="text-2xl">Checking people-search sites…</h1>
+            <h2 className="text-2xl">Checking people-search sites…</h2>
             <p className="text-muted-foreground mt-2">This takes about a minute. Please keep this page open.</p>
           </section>
         )}
@@ -170,13 +171,13 @@ export default function Protect() {
           <section aria-live="polite">
             {found.length > 0 ? (
               <>
-                <h1 className="text-3xl mb-4">We found you on {found.length} site{found.length === 1 ? "" : "s"}</h1>
+                <h2 className="text-3xl mb-4">We found you on {found.length} site{found.length === 1 ? "" : "s"}</h2>
                 <p className="text-muted-foreground mb-6">Anyone can look these up, including scammers.</p>
                 <Listings items={found} who="your" />
               </>
             ) : (
               <>
-                <h1 className="text-3xl mb-4">Good news so far</h1>
+                <h2 className="text-3xl mb-4">Good news so far</h2>
                 <p className="text-muted-foreground mb-8">We didn't find you on the sites we checked today. Listings often come back, so we can keep watching for you.</p>
               </>
             )}

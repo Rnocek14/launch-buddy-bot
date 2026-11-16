@@ -1256,14 +1256,14 @@ export const GUIDES: Guide[] = [
   {
     slug: "how-did-whitepages-get-my-information",
     category: "Discovery",
-    title: "How Did Whitepages Get My Information? (And How to Remove It)",
+    title: "How Did Whitepages Get My Information? 4 Sources + Free Removal",
     description:
-      "Whitepages got your data from public records, marketing lists and other brokers. How it built your profile — and how to remove yourself free.",
+      "Whitepages pulls from public records, phone directories, marketing lists and other people-search sites. See each source and remove your listing for free.",
     h1: "How Did Whitepages Get My Information?",
     primaryKeyword: "how did whitepages get my information",
     readTime: "5 min read",
     intro:
-      "Finding your name, address, phone number and relatives on Whitepages is unsettling — but you never gave them your data directly. Here's exactly where Whitepages gets your information and how to remove your listing for free.",
+      "Short answer: Whitepages got your information from four places — public records (property deeds, voter rolls, court filings), phone directory and carrier data, marketing lists bought from other companies, and other people-search sites. You never gave it to them directly. You can remove your listing for free with Whitepages' own opt-out, and it usually takes a few minutes.",
     sections: [
       {
         heading: "Where Whitepages gets your data",
