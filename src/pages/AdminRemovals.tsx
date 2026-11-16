@@ -22,8 +22,17 @@ export default function AdminRemovals() {
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>("open");
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
+  const [metrics, setMetrics] = useState({ waiting: 0, blocked: 0, failed: 0, oldest: null as string | null });
 
   const load = async () => {
+    const statuses = await Promise.all(["waiting", "needs_customer", "failed"].map((status) =>
+      supabase.from("broker_removal_requests").select("id", { count: "exact", head: true })
+        .in("status", status === "waiting" ? ["request_sent", "waiting"] : [status])));
+    const oldest = await supabase.from("broker_removal_requests").select("created_at")
+      .in("status", ["found", "request_sent", "waiting", "needs_customer"]).order("created_at").limit(1);
+    const deliveryFailures = await supabase.from("broker_removal_jobs").select("id", { count: "exact", head: true }).eq("status", "failed");
+    setMetrics({ waiting: statuses[0].count ?? 0, blocked: statuses[1].count ?? 0,
+      failed: (statuses[2].count ?? 0) + (deliveryFailures.count ?? 0), oldest: oldest.data?.[0]?.created_at ?? null });
     let q = (supabase as any).from("broker_removal_requests")
       .select("id,user_id,status,method,listing_url,notes,last_error,created_at,data_brokers(name,opt_out_url,instructions)")
       .order("created_at", { ascending: true }).limit(500);
@@ -53,7 +62,7 @@ export default function AdminRemovals() {
     const { data, error } = await supabase.functions.invoke("send-broker-removals", { body: {} });
     setBusy(false);
     toast(error ? { title: "Run failed", description: error.message, variant: "destructive" }
-      : { title: "Removal run finished", description: `${data.emailed} emailed · ${data.followUps} follow-ups · ${data.queued} queued · ${data.removed} confirmed removed · ${data.errors} errors` });
+      : { title: "Removal work queued", description: `${data.queued} added · ${data.removed} confirmed removed; email delivery runs separately.` });
     load();
   };
 
@@ -78,6 +87,11 @@ export default function AdminRemovals() {
             </Button>
           ))}
         </div>
+        <dl className="grid grid-cols-2 sm:grid-cols-4 gap-4 border-y border-border py-4 mb-6">
+          {[['Waiting for brokers', metrics.waiting], ['Needs customer', metrics.blocked], ['Failures to review', metrics.failed],
+            ['Oldest open request', metrics.oldest ? new Date(metrics.oldest).toLocaleDateString() : '—']].map(([label, value]) =>
+            <div key={label}><dt className="text-sm text-muted-foreground">{label}</dt><dd className="font-mono text-lg text-foreground">{value}</dd></div>)}
+        </dl>
         {rows.length === 0 && <p className="text-muted-foreground">Nothing here.</p>}
         <div className="divide-y divide-border border-y border-border">
           {rows.map((r) => (
@@ -97,7 +111,6 @@ export default function AdminRemovals() {
                 <div className="flex flex-wrap gap-2">
                   <Button size="sm" onClick={() => update(r, "request_sent")}>Mark submitted</Button>
                   <Button size="sm" variant="outline" onClick={() => update(r, "needs_customer")}>Needs customer</Button>
-                  <Button size="sm" variant="outline" onClick={() => update(r, "removed")}>Removed</Button>
                   <Button size="sm" variant="ghost" onClick={() => update(r, "failed")}>Couldn't remove</Button>
                 </div>
               </div>

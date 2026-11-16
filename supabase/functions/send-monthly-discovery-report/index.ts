@@ -2,11 +2,8 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.79.0";
 import { Resend } from "https://esm.sh/resend@3.0.0";
 import { resendFrom } from "../_shared/resend.ts";
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
+import { authorizeRemovalRun } from "../_shared/removal-auth.ts";
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -14,6 +11,10 @@ serve(async (req) => {
   }
 
   try {
+    if (req.method !== 'POST') return new Response(JSON.stringify({ error: 'POST required' }), { status: 405, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    if (!await authorizeRemovalRun(req, 'report')) return new Response(JSON.stringify({ error: 'Administrator authorization required' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    const body = await req.json();
+    if (!body || Array.isArray(body) || Object.keys(body).length > 0) return new Response(JSON.stringify({ error: 'Invalid report parameters' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
     const resendApiKey = Deno.env.get('RESEND_API_KEY');
@@ -105,9 +106,18 @@ serve(async (req) => {
 
       const newCount = newServices?.length || 0;
       const reappearedCount = reappearedServices?.length || 0;
+      const [removedResult, sentResult, waitingResult] = await Promise.all([
+        supabase.from('broker_removal_requests').select('id', { count: 'exact', head: true }).eq('user_id', profile.id).eq('status', 'removed').gte('removed_at', thirtyDaysAgo.toISOString()),
+        supabase.from('broker_removal_requests').select('id', { count: 'exact', head: true }).eq('user_id', profile.id).gte('sent_at', thirtyDaysAgo.toISOString()),
+        supabase.from('broker_removal_requests').select('id', { count: 'exact', head: true }).eq('user_id', profile.id).in('status', ['request_sent', 'waiting']),
+      ]);
+      if (removedResult.error || sentResult.error || waitingResult.error) continue;
+      const removedCount = removedResult.count ?? 0;
+      const sentCount = sentResult.count ?? 0;
+      const waitingCount = waitingResult.count ?? 0;
 
       // Only send if there's something to report
-      if (newCount === 0 && reappearedCount === 0) {
+      if (newCount === 0 && reappearedCount === 0 && removedCount === 0 && sentCount === 0 && waitingCount === 0) {
         continue;
       }
 
@@ -119,6 +129,9 @@ serve(async (req) => {
           
           <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
             <h2 style="margin-top: 0;">This Month's Activity</h2>
+            <p><strong>${removedCount}</strong> broker listings no longer found in a successful scan after a removal request</p>
+            <p><strong>${sentCount}</strong> broker requests submitted this month</p>
+            <p><strong>${waitingCount}</strong> broker requests awaiting confirmation</p>
             ${newCount > 0 ? `
               <div style="margin: 15px 0;">
                 <strong style="color: #059669; font-size: 24px;">${newCount}</strong>
@@ -169,7 +182,6 @@ serve(async (req) => {
           </div>
 
           <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e7eb; color: #6b7280; font-size: 14px;">
-            <p>Your digital footprint would have grown by ${Math.ceil((newCount / 200) * 100)}% this month without continuous monitoring.</p>
             <p>Keep your privacy protected with ongoing scans and deletion requests.</p>
           </div>
 
@@ -184,14 +196,15 @@ serve(async (req) => {
       `;
 
       try {
-        await resend.emails.send({
+        const result = await resend.emails.send({
           from: resendFrom("reports"),
           to: [profile.email],
-          subject: `Your Monthly Privacy Report: ${newCount} New Services Found`,
+          subject: `Your Monthly Privacy Report: ${removedCount} Broker Listings No Longer Found`,
           html: emailHtml,
         });
-
+        if (result.error) throw new Error(result.error.message);
         reportsSent++;
+        await new Promise(resolve => setTimeout(resolve, 1500));
         console.log(`Sent report to ${profile.email}`);
       } catch (emailError) {
         console.error(`Failed to send email to ${profile.email}:`, emailError);

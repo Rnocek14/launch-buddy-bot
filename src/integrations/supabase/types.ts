@@ -240,6 +240,89 @@ export type Database = {
         }
         Relationships: []
       }
+      broker_removal_callbacks: {
+        Row: {
+          created_at: string
+          expires_at: string
+          mode: string
+          token: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string
+          mode: string
+          token?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          mode?: string
+          token?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      broker_removal_jobs: {
+        Row: {
+          attempt: number
+          available_at: string
+          created_at: string
+          delivery_started_at: string | null
+          failure_count: number
+          id: string
+          last_error: string | null
+          lease_token: string | null
+          lease_until: string | null
+          payload: Json | null
+          provider_id: string | null
+          request_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          attempt: number
+          available_at?: string
+          created_at?: string
+          delivery_started_at?: string | null
+          failure_count?: number
+          id?: string
+          last_error?: string | null
+          lease_token?: string | null
+          lease_until?: string | null
+          payload?: Json | null
+          provider_id?: string | null
+          request_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          attempt?: number
+          available_at?: string
+          created_at?: string
+          delivery_started_at?: string | null
+          failure_count?: number
+          id?: string
+          last_error?: string | null
+          lease_token?: string | null
+          lease_until?: string | null
+          payload?: Json | null
+          provider_id?: string | null
+          request_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "broker_removal_jobs_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "broker_removal_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       broker_removal_requests: {
         Row: {
           attempts: number
@@ -308,6 +391,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      broker_removal_worker_state: {
+        Row: {
+          created_at: string
+          lease_token: string | null
+          lease_until: string | null
+          singleton: boolean
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          lease_token?: string | null
+          lease_until?: string | null
+          singleton?: boolean
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          lease_token?: string | null
+          lease_until?: string | null
+          singleton?: boolean
+          updated_at?: string
+        }
+        Relationships: []
       }
       broker_scan_results: {
         Row: {
@@ -2830,6 +2937,36 @@ export type Database = {
       }
     }
     Functions: {
+      arm_broker_removal_retry: { Args: never; Returns: undefined }
+      claim_broker_removal_jobs: {
+        Args: { p_limit?: number; p_token: string }
+        Returns: {
+          attempt: number
+          available_at: string
+          created_at: string
+          delivery_started_at: string | null
+          failure_count: number
+          id: string
+          last_error: string | null
+          lease_token: string | null
+          lease_until: string | null
+          payload: Json | null
+          provider_id: string | null
+          request_id: string
+          status: string
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "broker_removal_jobs"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      consume_removal_callback: {
+        Args: { p_mode: string; p_token: string }
+        Returns: boolean
+      }
       consume_serp_quota: { Args: { p_count?: number }; Returns: boolean }
       discovery_quarantine_cleanup: {
         Args: { max_age_days?: number }
@@ -2844,6 +2981,10 @@ export type Database = {
           domain: string
           removed: boolean
         }[]
+      }
+      finish_broker_removal_job: {
+        Args: { p_id: string; p_provider_id: string; p_token: string }
+        Returns: boolean
       }
       generate_affiliate_code: { Args: never; Returns: string }
       generate_referral_code: { Args: never; Returns: string }
@@ -2957,6 +3098,10 @@ export type Database = {
         Args: { org_id: string; user_uuid: string }
         Returns: boolean
       }
+      prepare_broker_removal_batch: {
+        Args: { p_limit?: number }
+        Returns: Json
+      }
       public_status_snapshot: { Args: never; Returns: Json }
       reset_monthly_deletion_counts: { Args: never; Returns: undefined }
       t2_queue_summary: {
@@ -2982,6 +3127,10 @@ export type Database = {
       }
       use_referral_code: { Args: { p_code: string }; Returns: Json }
       validate_referral_code: { Args: { p_code: string }; Returns: Json }
+      wake_broker_removal_worker: {
+        Args: { p_mode?: string }
+        Returns: undefined
+      }
     }
     Enums: {
       alpha_status: "pending" | "approved" | "rejected"
