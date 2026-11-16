@@ -181,7 +181,7 @@ export const PRO_FEATURES = [
 
 export const COMPLETE_FEATURES = [
   "Everything in Pro, plus:",
-  "Data Broker Scanning (20+ sites)",
+  "Data Broker Scanning (25+ sites)",
   "Guided opt-out instructions",
   "Connect up to 5 email addresses",
   "Priority email support",
@@ -200,7 +200,7 @@ export const FAMILY_FEATURES = [
 
 export const PARENT_SCAN_FEATURES = [
   "One-time deep scan of their email",
-  "Full data broker check (20+ sites)",
+  "Full data broker check (25+ sites)",
   "Breach exposure report",
   "Printable PDF action plan",
   "Senior-friendly explanations",

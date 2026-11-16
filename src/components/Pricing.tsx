@@ -65,7 +65,7 @@ const pricingFaq = [
   {
     question: "What's the difference between Pro and Complete?",
     answer:
-      "Pro gives you unlimited deletion requests and a full inbox scan for service accounts (Netflix, Uber, shopping sites). Complete adds data broker scanning — we check 20+ sites that sell your personal info and guide you through removal."
+      "Pro gives you unlimited deletion requests and a full inbox scan for service accounts (Netflix, Uber, shopping sites). Complete adds data broker scanning — we check 25+ sites that sell your personal info and guide you through removal."
   },
   {
     question: "Is there a free version?",

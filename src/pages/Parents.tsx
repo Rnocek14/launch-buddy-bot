@@ -35,7 +35,7 @@ export default function Parents() {
   useSEO({
     title: "Protect Parents from Online Scams — $39 Parent Scan",
     description:
-      "Adult children: scan your parent's email for scams, breaches, and shady subscriptions in 60 seconds. One-time $39, no recurring fee. Built for non-technical seniors.",
+      "Adult children: scan your parent's email for scams, breaches, and shady subscriptions in about 30 seconds. One-time $39, no recurring fee. Built for non-technical seniors.",
     canonical: "https://footprintfinder.co/parents",
     ogType: "website",
     jsonLd: {
@@ -125,7 +125,7 @@ export default function Parents() {
                 <p className="text-xl text-muted-foreground mb-8 leading-relaxed">
                   Their email and phone are sitting on dozens of data broker sites — exactly
                   where romance scammers, "tech support" callers, and Medicare fraudsters look first.
-                  Find out what's exposed in 60 seconds.
+                  Find out what's exposed in about 30 seconds.
                 </p>
 
                 <form onSubmit={handleScan} className="space-y-3">
@@ -210,22 +210,17 @@ export default function Parents() {
                 Your parents grew up trusting phone calls and printed letters. Scammers exploit that.
               </p>
             </div>
-            <div className="grid md:grid-cols-3 gap-6">
+            <div className="grid md:grid-cols-2 gap-6">
               {[
                 {
-                  stat: "$3.4B",
-                  label: "Lost by Americans 60+ to online fraud in 2023",
-                  source: "FBI IC3 Report",
+                  stat: "$4.9B",
+                  label: "Reported lost to fraud by Americans 60+ in 2024",
+                  source: "FBI IC3 2024 Report",
                 },
                 {
-                  stat: "8 in 10",
-                  label: "Seniors are listed on data broker sites without their knowledge",
-                  source: "Privacy Rights Clearinghouse",
-                },
-                {
-                  stat: "65%",
-                  label: "Of scam victims say their info was 'too easy to find online'",
-                  source: "AARP Fraud Watch",
+                  stat: "$83K",
+                  label: "Average reported loss per victim aged 60+ in 2024",
+                  source: "FBI IC3 2024 Report",
                 },
               ].map((item, i) => (
                 <Card key={i} className="text-center">
@@ -269,8 +264,8 @@ export default function Parents() {
                 },
                 {
                   step: "3",
-                  title: "We handle removal",
-                  desc: "We send opt-out requests on their behalf and monitor monthly so listings don't come back.",
+                  title: "Follow simple steps",
+                  desc: "The printable plan walks you through each opt-out in plain language. Want us to keep watching? Add monthly re-checks with Complete.",
                   icon: CheckCircle2,
                 },
               ].map((item, i) => (
@@ -380,7 +375,7 @@ export default function Parents() {
               Don't wait for the scam call.
             </h2>
             <p className="text-lg text-muted-foreground mb-8">
-              Run a free check on your parents' email right now. Takes 60 seconds.
+              Run a free check on your parents' email right now. Takes about 30 seconds.
             </p>
             <form onSubmit={handleScan} className="max-w-xl mx-auto">
               <div className="flex flex-col sm:flex-row gap-3">

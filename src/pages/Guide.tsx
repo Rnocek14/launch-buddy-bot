@@ -193,7 +193,7 @@ export default function Guide() {
                 }
               >
                 <Button size="lg" className="gap-2 cta-shimmer">
-                  Scan my exposure in 60 seconds
+                  Scan my exposure in about 30 seconds
                   <ArrowRight className="w-4 h-4" />
                 </Button>
               </Link>
