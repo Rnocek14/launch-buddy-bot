@@ -172,7 +172,7 @@ export const FREE_FEATURES = [
 export const PRO_FEATURES = [
   "Everything in Free, plus:",
   "Unlimited deletion requests",
-  "Deep AI Scan (finds 2-3× more accounts)",
+  "Full inbox scan for forgotten accounts",
   "Connect and scan up to 3 email addresses",
   "Complete inbox history analysis",
   "Priority deletion processing",

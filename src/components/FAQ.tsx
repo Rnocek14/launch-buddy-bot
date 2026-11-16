@@ -24,17 +24,17 @@ const faqs = [
   {
     question: "Is this legal? What about GDPR?",
     answer:
-      "Absolutely legal. We're empowering you to exercise your existing rights under GDPR, CCPA, and similar privacy laws. We provide tools to request data deletion—which companies are legally required to honor in most jurisdictions.",
+      "Yes. You're exercising your existing rights under GDPR, CCPA, and similar privacy laws. We send the request; whether a company must honor it depends on where you live and the law that applies.",
   },
   {
     question: "Will you sell my email or data?",
     answer:
-      "Never. We're privacy-first by design, not marketing. We don't run ads, don't sell data, and don't track you. Our business model is simple: you pay for the tool, we build a better tool. That's it.",
+      "No. We don't sell or share your data. You pay for the service; that's how we make money.",
   },
   {
     question: "How long does a typical cleanup take?",
     answer:
-      "It varies based on your digital footprint size. Most users complete 50-100 deletions in 2-4 weeks using our guided approach. We break it into manageable daily tasks rather than overwhelming you with everything at once.",
+      "It depends on how many accounts we find. Companies usually have 30 to 45 days to respond to a request, so most of the waiting is on their side. We break your list into small batches so it never feels like a pile.",
   },
   {
     question: "What if a service doesn't respond to my deletion request?",
@@ -45,42 +45,27 @@ const faqs = [
 
 export const FAQ = () => {
   return (
-    <section id="faq" className="py-24 px-4 bg-secondary/30">
-      <div className="container max-w-4xl">
-        <div className="text-center mb-16">
-          <h2 className="text-4xl md:text-5xl font-bold mb-4">
-            Common Questions
-          </h2>
-          <p className="text-xl text-muted-foreground">
-            Quick answers to help you get started with your digital cleanup
+    <section id="faq" className="border-b border-border px-5 sm:px-8 py-16 lg:py-24">
+      <div className="max-w-6xl mx-auto grid lg:grid-cols-12 gap-8 lg:gap-16">
+        <div className="lg:col-span-4">
+          <p className="section-label mb-4">07 / Questions</p>
+          <h2 className="text-3xl sm:text-4xl leading-tight text-foreground">What people ask before they start.</h2>
+          <p className="text-muted-foreground mt-4">
+            Something else? Email <a href="mailto:support@footprintfinder.co" className="text-foreground underline underline-offset-4">support@footprintfinder.co</a>.
           </p>
         </div>
-
-        <Accordion type="single" collapsible className="space-y-4">
+        <Accordion type="single" collapsible className="lg:col-span-8 border-t border-border">
           {faqs.map((faq, index) => (
-            <AccordionItem
-              key={index}
-              value={`item-${index}`}
-              className="border border-border/50 rounded-lg px-6 bg-card/50 backdrop-blur"
-            >
-              <AccordionTrigger className="text-left hover:no-underline py-6">
-                <span className="font-semibold text-lg pr-4">{faq.question}</span>
+            <AccordionItem key={index} value={`item-${index}`} className="border-b border-border">
+              <AccordionTrigger className="text-left hover:no-underline py-5">
+                <span className="font-medium text-lg text-foreground pr-4">{faq.question}</span>
               </AccordionTrigger>
-              <AccordionContent className="text-muted-foreground pb-6 leading-relaxed">
+              <AccordionContent className="text-muted-foreground pb-5 leading-relaxed text-base">
                 {faq.answer}
               </AccordionContent>
             </AccordionItem>
           ))}
         </Accordion>
-
-        <div className="text-center mt-12">
-          <p className="text-muted-foreground">
-            Still have questions?{" "}
-            <a href="/help" className="text-primary hover:text-accent transition-colors font-medium">
-              Contact our team
-            </a>
-          </p>
-        </div>
       </div>
     </section>
   );

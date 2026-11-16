@@ -1,10 +1,7 @@
 import { useState } from "react";
-import { Check, Crown, Shield, Star, Users, Loader2 } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
+import { Shield, Star, Crown, Loader2 } from "lucide-react";
 import { Button } from "./ui/button";
-import { Badge } from "./ui/badge";
 import { Link } from "react-router-dom";
-import { BillingToggle } from "./BillingToggle";
 import type { BillingInterval } from "@/config/pricing";
 import { FREE_FEATURES, PRO_FEATURES, COMPLETE_FEATURES, FAMILY_FEATURES, STRIPE_PRICES } from "@/config/pricing";
 import { startCheckout, type CheckoutSource } from "@/lib/checkout";
@@ -68,7 +65,7 @@ const pricingFaq = [
   {
     question: "What's the difference between Pro and Complete?",
     answer:
-      "Pro gives you unlimited deletion requests and deep AI scanning for service accounts (Netflix, Uber, shopping sites). Complete adds data broker scanning — we check 20+ sites that sell your personal info and guide you through removal."
+      "Pro gives you unlimited deletion requests and a full inbox scan for service accounts (Netflix, Uber, shopping sites). Complete adds data broker scanning — we check 20+ sites that sell your personal info and guide you through removal."
   },
   {
     question: "Is there a free version?",
@@ -102,7 +99,7 @@ const competitors = [
   },
   {
     name: "Incogni",
-    price: "$77/year",
+    price: "$95.88/year",
     focus: "Data brokers only",
     description: "Similar to DeleteMe — focuses on data broker removal. No inbox scanning.",
     highlight: false,
@@ -157,233 +154,99 @@ export const Pricing = () => {
     // redirecting -> page unloads
   };
 
+  const Row = ({ label, title, children }: { label: string; title: string; children: React.ReactNode }) => (
+    <div className="grid lg:grid-cols-12 gap-8 lg:gap-16 py-16 lg:py-20 border-b border-border">
+      <div className="lg:col-span-4">
+        <p className="section-label mb-4">{label}</p>
+        <h2 className="text-3xl sm:text-4xl leading-tight text-foreground">{title}</h2>
+      </div>
+      <div className="lg:col-span-8">{children}</div>
+    </div>
+  );
+
   return (
-    <section id="pricing" className="py-24 px-4">
-      <div className="container max-w-6xl">
-        <div className="text-center mb-8">
-          <h2 className="text-4xl md:text-5xl font-bold mb-4">
-            Pick your plan
-          </h2>
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Two plans cover almost everyone. Cancel anytime.
-          </p>
-        </div>
-
-        <BillingToggle value={billingInterval} onChange={setBillingInterval} />
-
-        {/* Primary plans — Pro + Complete, side by side */}
-        <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto">
-          {primaryPlans.map((plan, index) => {
-            const Icon = plan.icon;
-            return (
-              <Card
-                key={index}
-                className={`relative ${
-                  plan.popular
-                    ? "border-primary shadow-lg shadow-primary/10 md:scale-105 md:z-10"
-                    : "border-border/50"
-                }`}
+    <section id="pricing" className="px-5 sm:px-8">
+      <div className="max-w-6xl mx-auto">
+        <Row label="04 / Pricing" title="Two plans. Cancel anytime, full refund for 30 days.">
+          <div className="flex items-center gap-4 mb-6 font-mono text-sm" role="group" aria-label="Billing period">
+            {(["year", "month"] as BillingInterval[]).map((i) => (
+              <button
+                key={i}
+                type="button"
+                onClick={() => setBillingInterval(i)}
+                aria-pressed={billingInterval === i}
+                className={`pb-1 border-b-2 ${billingInterval === i ? "border-foreground text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
               >
-                {plan.popular ? (
-                  <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary whitespace-nowrap text-[10px] sm:text-xs px-2 max-w-[90%] truncate">
-                    Most Popular {plan.badge ? `• ${plan.badge}` : ""}
-                  </Badge>
-                ) : (
-                  plan.badge && (
-                    <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-primary to-accent whitespace-nowrap text-[10px] sm:text-xs px-2 max-w-[90%] truncate">
-                      {plan.badge}
-                    </Badge>
-                  )
-                )}
-                <CardHeader>
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className={`p-2 rounded-lg ${plan.popular ? 'bg-primary/10' : 'bg-muted'}`}>
-                      <Icon className={`w-5 h-5 ${plan.popular ? 'text-primary' : 'text-muted-foreground'}`} />
-                    </div>
-                    <CardTitle className="text-xl">{plan.name}</CardTitle>
-                  </div>
-                  <CardDescription>{plan.description}</CardDescription>
-                  <div className="mt-4">
-                    <span className="text-4xl font-bold">{plan.price}</span>
-                    {plan.period && (
-                      <span className="text-muted-foreground">{plan.period}</span>
-                    )}
-                    {plan.monthlyEquivalent && (
-                      <div className="text-sm text-muted-foreground mt-1">
-                        {plan.monthlyEquivalent}
-                      </div>
-                    )}
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <Button
-                    onClick={() => handlePlanClick(plan.priceId, plan.tier)}
-                    disabled={loadingPriceId === plan.priceId}
-                    className={`w-full mb-6 ${
-                      plan.popular ? "bg-primary hover:bg-primary/90" : ""
-                    }`}
-                    variant={plan.popular ? "default" : "outline"}
-                  >
-                    {loadingPriceId === plan.priceId ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Opening checkout…
-                      </>
-                    ) : (
-                      plan.cta
-                    )}
-                  </Button>
-                  <ul className="space-y-3">
-                    {plan.features.map((feature, i) => (
-                      <li key={i} className="flex items-start gap-2">
-                        <Check className="w-5 h-5 text-accent shrink-0 mt-0.5" />
-                        <span className="text-sm">{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-
-        <p className="text-center text-muted-foreground mt-8 text-sm">
-          No hidden fees • Cancel anytime • {billingInterval === "year" ? "Billed annually" : "Billed monthly"}
-        </p>
-
-        {/* Secondary plans — smaller, less visual weight */}
-        <div className="mt-16 pt-10 border-t">
-          <h3 className="text-center text-sm uppercase tracking-wide text-muted-foreground mb-6">
-            Not ready to pay?
-          </h3>
-          <div className="grid gap-4 max-w-md mx-auto">
-            {secondaryPlans.map((plan, index) => {
-              const Icon = plan.icon;
-              return (
-                <Card key={index} className="border-border/50">
-                  <CardContent className="p-5">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <Icon className="w-4 h-4 text-muted-foreground" />
-                        <span className="font-semibold">{plan.name}</span>
-                        {plan.badge && (
-                          <Badge variant="outline" className="text-[10px]">{plan.badge}</Badge>
-                        )}
-                      </div>
-                      <div className="text-right">
-                        <span className="font-semibold">{plan.price}</span>
-                        {plan.period && (
-                          <span className="text-xs text-muted-foreground">{plan.period}</span>
-                        )}
-                      </div>
-                    </div>
-                    <p className="text-sm text-muted-foreground mb-3">{plan.description}</p>
-                    <Link to={plan.ctaLink}>
-                      <Button variant="outline" size="sm" className="w-full">
-                        {plan.cta}
-                      </Button>
-                    </Link>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Named Competitor Comparison */}
-        <section className="mt-16">
-          <h2 className="text-2xl font-semibold mb-4">
-            How we compare to the competition
-          </h2>
-          <p className="text-sm text-muted-foreground mb-6">
-            There are several privacy services out there. Here's how Footprint Finder stacks up — honestly.
-          </p>
-
-          {/* Desktop table */}
-          <div className="hidden md:block overflow-hidden rounded-2xl border">
-            <div className="grid grid-cols-4 bg-muted/40 text-xs font-medium uppercase tracking-wide py-3 px-4 gap-3">
-              <div>Service</div>
-              <div>Price</div>
-              <div>Focus</div>
-              <div>Details</div>
-            </div>
-
-            {competitors.map((comp, index) => (
-              <div 
-                key={index} 
-                className={`grid grid-cols-4 border-t px-4 py-4 text-sm gap-3 ${
-                  comp.highlight ? "bg-accent/5" : ""
-                }`}
-              >
-                <div className="font-semibold flex items-center gap-2 flex-wrap">
-                  {comp.name}
-                  {comp.highlight && (
-                    <Badge className="text-xs bg-accent/20 text-accent-foreground hover:bg-accent/20">
-                      You are here
-                    </Badge>
-                  )}
-                </div>
-                <div className={comp.highlight ? "text-accent font-semibold" : "text-muted-foreground"}>
-                  {comp.price}
-                </div>
-                <div className="text-muted-foreground">{comp.focus}</div>
-                <div className="text-muted-foreground">{comp.description}</div>
-              </div>
+                {i === "year" ? "Yearly" : "Monthly"}
+              </button>
             ))}
+            {billingInterval === "year" && <span className="text-muted-foreground">· about 4 months free</span>}
           </div>
 
-          {/* Mobile card stack */}
-          <div className="md:hidden space-y-3">
-            {competitors.map((comp, index) => (
-              <div
-                key={index}
-                className={`rounded-2xl border p-4 ${comp.highlight ? "bg-accent/5 border-accent/40" : ""}`}
-              >
-                <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-semibold">{comp.name}</span>
-                    {comp.highlight && (
-                      <Badge className="text-xs bg-accent/20 text-accent-foreground hover:bg-accent/20">
-                        You are here
-                      </Badge>
-                    )}
-                  </div>
-                  <span className={`text-sm ${comp.highlight ? "text-accent font-semibold" : "text-muted-foreground"}`}>
-                    {comp.price}
-                  </span>
+          <div className="grid md:grid-cols-2 border-t border-l border-border">
+            {primaryPlans.map((plan) => (
+              <div key={plan.name} className="border-r border-b border-border p-6 flex flex-col">
+                <div className="flex items-baseline justify-between mb-1">
+                  <h3 className="text-xl font-display font-semibold text-foreground">{plan.name}</h3>
+                  {plan.popular && <span className="font-mono text-xs text-muted-foreground">most chosen</span>}
                 </div>
-                <div className="text-xs uppercase tracking-wide text-muted-foreground mb-1">
-                  {comp.focus}
-                </div>
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  {comp.description}
+                <p className="text-muted-foreground mb-5">{plan.description}</p>
+                <p className="mb-1">
+                  <span className="font-mono text-4xl text-foreground">{plan.price}</span>
+                  <span className="text-muted-foreground">{plan.period}</span>
                 </p>
+                <p className="font-mono text-xs text-muted-foreground mb-6 h-4">
+                  {plan.monthlyEquivalent ? plan.monthlyEquivalent.replace("Just ", "") : ""}
+                </p>
+                <ul className="mb-8 flex-1 border-t border-border">
+                  {plan.features.map((f) => (
+                    <li key={f} className="py-2 border-b border-border text-sm text-foreground">{f}</li>
+                  ))}
+                </ul>
+                <Button
+                  onClick={() => handlePlanClick(plan.priceId, plan.tier)}
+                  disabled={loadingPriceId === plan.priceId}
+                  variant={plan.popular ? "default" : "outline"}
+                  className="w-full h-12 rounded-none"
+                >
+                  {loadingPriceId === plan.priceId ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Opening checkout…</> : plan.cta}
+                </Button>
               </div>
             ))}
           </div>
 
-          <p className="text-xs text-muted-foreground mt-4">
-            <strong>Note:</strong> DeleteMe and Incogni focus on data brokers (sites that sell your personal info). Our Complete plan adds guided broker opt-outs on top of account discovery and cleanup.
-          </p>
-        </section>
+          {secondaryPlans.map((plan) => (
+            <p key={plan.name} className="mt-6 text-muted-foreground">
+              Not ready to pay? The <Link to={plan.ctaLink} className="text-foreground underline underline-offset-4">free scan</Link> shows breaches and broker listings for your email.
+            </p>
+          ))}
+        </Row>
 
-        {/* Pricing FAQ */}
-        <section className="mt-16 border-t pt-10">
-          <h2 className="text-2xl font-semibold mb-4">Pricing FAQ</h2>
-          <p className="text-sm text-muted-foreground mb-6">
-            Answers to the most common questions about our plans.
-          </p>
-          <div className="grid gap-6 md:grid-cols-2">
+        <Row label="05 / Compared" title="How we differ from the others.">
+          <div className="border-t border-border">
+            {competitors.map((comp) => (
+              <div key={comp.name} className="grid sm:grid-cols-12 gap-2 sm:gap-4 py-4 border-b border-border">
+                <div className="sm:col-span-3 font-medium text-foreground">
+                  {comp.name}{comp.highlight && <span className="font-mono text-xs text-muted-foreground ml-2">(us)</span>}
+                </div>
+                <div className="sm:col-span-2 font-mono text-sm text-foreground">{comp.price}</div>
+                <div className="sm:col-span-7 text-sm text-muted-foreground">{comp.description}</div>
+              </div>
+            ))}
+          </div>
+          <p className="font-mono text-xs text-muted-foreground mt-4">Prices from each company's public pricing page, checked Nov 2026.</p>
+        </Row>
+
+        <Row label="06 / Billing questions" title="The money part, plainly.">
+          <dl className="border-t border-border">
             {pricingFaq.map((item) => (
-              <div key={item.question}>
-                <h3 className="font-medium mb-1">{item.question}</h3>
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  {item.answer}
-                </p>
+              <div key={item.question} className="py-5 border-b border-border">
+                <dt className="font-medium text-foreground mb-1">{item.question}</dt>
+                <dd className="text-muted-foreground leading-relaxed">{item.answer}</dd>
               </div>
             ))}
-          </div>
-        </section>
+          </dl>
+        </Row>
       </div>
 
       {emailDialogPlan && (
