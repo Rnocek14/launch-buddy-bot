@@ -54,6 +54,7 @@ const routeDefaults: Record<string, Omit<SitemapEntry, "path">> = {
   "/": { changefreq: "weekly", priority: "1.0" },
   "/free-scan": { changefreq: "weekly", priority: "0.95" },
   "/parents": { changefreq: "weekly", priority: "0.9" },
+  "/protect": { changefreq: "weekly", priority: "0.8" },
   "/remove-from": { changefreq: "weekly", priority: "0.9" },
   "/pricing": { changefreq: "weekly", priority: "0.85" },
   "/vs": { changefreq: "monthly", priority: "0.85" },

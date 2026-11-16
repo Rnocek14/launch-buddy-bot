@@ -18,6 +18,7 @@ import Enterprise from "./pages/Enterprise";
 import { Navigate } from "react-router-dom";
 import Extension from "./pages/Extension";
 import Parents from "./pages/Parents";
+import Protect from "./pages/Protect";
 import LegacyBlogRedirect from "./pages/LegacyBlogRedirect";
 import RemoveBroker from "./pages/RemoveBroker";
 import RemoveBrokerIndex from "./pages/RemoveBrokerIndex";
@@ -97,6 +98,7 @@ const App = () => (
               <Route path="/demo" element={<Demo />} />
               <Route path="/free-scan" element={<FreeScan />} />
               <Route path="/parents" element={<Parents />} />
+              <Route path="/protect" element={<Protect />} />
               <Route path="/enterprise" element={<Enterprise />} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/admin" element={<Admin />} />

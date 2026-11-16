@@ -22,6 +22,7 @@ export type CheckoutSource =
   | "broker_exposure"
   | "subscription_status_card"
   | "parents_landing"
+  | "protect"
   | "navbar"
   | "other";
 
