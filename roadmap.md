@@ -15,5 +15,6 @@
 - [ ] Verify email-sending readiness and authorized end-to-end delivery (runtime Resend credential rejected; external Supabase session unavailable).
 - [ ] Certify full delivery capacity and extend monthly-report batching (requires isolated staging backend and provider quota verification).
 - [ ] Prepare first ad campaign: agree goal, audience, market, budget, research, and channel; approve creative and measurement before creation or spending.
+- [x] Research campaign and creator-distribution approaches for 5,000 paying subscribers; save sourced evidence, conditional economics, and staged test recommendations without authorizing spending.
 
 Public broker checks now complete all six searches. Authenticated Gmail behavior is covered by mocked provider regression tests, not a live account flow. Two unrelated existing env-parser tests still fail on blank values; not changed in this scan repair.
