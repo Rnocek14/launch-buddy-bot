@@ -217,7 +217,7 @@ export const Pricing = () => {
 
           {secondaryPlans.map((plan) => (
             <p key={plan.name} className="mt-6 text-muted-foreground">
-              Not ready to pay? The <Link to={plan.ctaLink} className="text-foreground underline underline-offset-4">free scan</Link> shows breaches and broker listings for your email.
+              Not ready to pay? The <Link to="/protect" className="text-foreground underline underline-offset-4">free name check</Link> shows which people-search sites list you.
             </p>
           ))}
         </Row>

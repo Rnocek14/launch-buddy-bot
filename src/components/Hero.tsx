@@ -35,33 +35,38 @@ export const Hero = () => {
     <section className="border-b border-border px-5 sm:px-8 pt-28 pb-16 lg:pt-36 lg:pb-24">
       <div className="max-w-6xl mx-auto grid lg:grid-cols-12 gap-12 lg:gap-16 items-start">
         <div className="lg:col-span-6">
-          <p className="section-label mb-6">Privacy cleanup · metadata only</p>
+          <p className="section-label mb-6">Data broker + forgotten account cleanup</p>
           <h1 className="text-[2.6rem] sm:text-6xl lg:text-[4.25rem] leading-[0.98] text-foreground mb-6">
-            Find out who has your data.{" "}
-            <span className="text-muted-foreground">Then make them delete it.</span>
+            See which sites are selling your address.{" "}
+            <span className="text-muted-foreground">Then get them to delete it.</span>
           </h1>
           <p className="text-lg text-muted-foreground leading-relaxed max-w-xl mb-8">
-            Footprint Finder checks breaches, data broker listings and the accounts tied to your email you forgot
-            about. We send the deletion requests for you, guide you through broker opt-outs, and re-check every month.
+            People-search sites publish names, home addresses, phone numbers and relatives. We show you where
+            you&apos;re listed, walk you through each removal, find old accounts tied to your email, and re-check every month.
           </p>
 
-          <form onSubmit={handleScan} className="flex flex-col sm:flex-row border border-foreground/80 bg-card max-w-xl">
-            <Input
-              type="email"
-              aria-label="Your email address"
-              placeholder="you@email.com"
-              value={email}
-              onChange={(e) => { setEmail(e.target.value); setError(""); }}
-              className="flex-1 h-14 text-base px-4 bg-transparent border-0 rounded-none shadow-none focus-visible:ring-0"
-            />
-            <Button type="submit" className="h-14 rounded-none px-7 text-base bg-accent hover:bg-accent/90 text-accent-foreground">
-              Run free scan →
-            </Button>
+          <Button asChild className="h-14 rounded-none px-8 text-base bg-accent hover:bg-accent/90 text-accent-foreground">
+            <Link to="/protect" onClick={() => trackEvent("hero_cta_click")}>Check my name free →</Link>
+          </Button>
+          <p className="font-mono text-xs text-muted-foreground mt-3">
+            Free · about a minute · name and city only, no inbox access
+          </p>
+
+          <form onSubmit={handleScan} className="mt-8 max-w-xl">
+            <label htmlFor="hero-email" className="text-sm text-muted-foreground">Or check an email address for known breaches</label>
+            <div className="mt-2 flex flex-col sm:flex-row border border-border bg-card">
+              <Input
+                id="hero-email"
+                type="email"
+                placeholder="you@email.com"
+                value={email}
+                onChange={(e) => { setEmail(e.target.value); setError(""); }}
+                className="flex-1 h-12 text-base px-4 bg-transparent border-0 rounded-none shadow-none focus-visible:ring-0"
+              />
+              <Button type="submit" variant="ghost" className="h-12 rounded-none px-6">Check email</Button>
+            </div>
           </form>
           {error && <p className="text-sm text-concern mt-2">{error}</p>}
-          <p className="font-mono text-xs text-muted-foreground mt-3">
-            Free · ~30 seconds · email address only, no inbox access
-          </p>
 
           <div className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted-foreground">
             {!isLoggedIn && <Link to="/auth" className="underline underline-offset-4 hover:text-foreground">Sign in</Link>}

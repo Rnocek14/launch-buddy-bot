@@ -26,9 +26,9 @@ const Index = () => {
   }, []);
 
   useSEO({
-    title: "Footprint Finder — Monitor Your Digital Exposure",
+    title: "Footprint Finder — Remove Your Address From People-Search Sites",
     description:
-      "Scan your inbox, find every account, breach, and broker listing tied to your email. Monthly rescans + real-time alerts. Free scan, no credit card.",
+      "Free check of which people-search sites list your name and address, guided removal, forgotten-account cleanup and monthly re-checks. No credit card.",
     canonical: "https://footprintfinder.co/",
     ogType: "website",
     jsonLd: {
