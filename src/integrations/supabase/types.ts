@@ -240,6 +240,75 @@ export type Database = {
         }
         Relationships: []
       }
+      broker_removal_requests: {
+        Row: {
+          attempts: number
+          broker_id: string
+          created_at: string
+          follow_up_at: string | null
+          id: string
+          last_error: string | null
+          listing_url: string | null
+          method: string
+          notes: string | null
+          removed_at: string | null
+          scan_result_id: string | null
+          sent_at: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          attempts?: number
+          broker_id: string
+          created_at?: string
+          follow_up_at?: string | null
+          id?: string
+          last_error?: string | null
+          listing_url?: string | null
+          method?: string
+          notes?: string | null
+          removed_at?: string | null
+          scan_result_id?: string | null
+          sent_at?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          attempts?: number
+          broker_id?: string
+          created_at?: string
+          follow_up_at?: string | null
+          id?: string
+          last_error?: string | null
+          listing_url?: string | null
+          method?: string
+          notes?: string | null
+          removed_at?: string | null
+          scan_result_id?: string | null
+          sent_at?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "broker_removal_requests_broker_id_fkey"
+            columns: ["broker_id"]
+            isOneToOne: false
+            referencedRelation: "data_brokers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "broker_removal_requests_scan_result_id_fkey"
+            columns: ["scan_result_id"]
+            isOneToOne: false
+            referencedRelation: "broker_scan_results"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       broker_scan_results: {
         Row: {
           broker_id: string
@@ -563,7 +632,9 @@ export type Database = {
       }
       data_brokers: {
         Row: {
+          contact_verified_at: string | null
           created_at: string
+          form_automation_enabled: boolean
           id: string
           instructions: string | null
           is_active: boolean | null
@@ -574,6 +645,8 @@ export type Database = {
           opt_out_time_estimate: string | null
           opt_out_url: string | null
           priority: string
+          privacy_email: string | null
+          removal_method: string
           requires_captcha: boolean | null
           requires_id: boolean | null
           requires_phone: boolean | null
@@ -583,7 +656,9 @@ export type Database = {
           website: string
         }
         Insert: {
+          contact_verified_at?: string | null
           created_at?: string
+          form_automation_enabled?: boolean
           id?: string
           instructions?: string | null
           is_active?: boolean | null
@@ -594,6 +669,8 @@ export type Database = {
           opt_out_time_estimate?: string | null
           opt_out_url?: string | null
           priority?: string
+          privacy_email?: string | null
+          removal_method?: string
           requires_captcha?: boolean | null
           requires_id?: boolean | null
           requires_phone?: boolean | null
@@ -603,7 +680,9 @@ export type Database = {
           website: string
         }
         Update: {
+          contact_verified_at?: string | null
           created_at?: string
+          form_automation_enabled?: boolean
           id?: string
           instructions?: string | null
           is_active?: boolean | null
@@ -614,6 +693,8 @@ export type Database = {
           opt_out_time_estimate?: string | null
           opt_out_url?: string | null
           priority?: string
+          privacy_email?: string | null
+          removal_method?: string
           requires_captcha?: boolean | null
           requires_id?: boolean | null
           requires_phone?: boolean | null

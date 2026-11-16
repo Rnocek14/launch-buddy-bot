@@ -57,6 +57,7 @@ import { PostCheckoutNextSteps } from "@/components/PostCheckoutNextSteps";
 import { PostCheckoutScanProgressStrip } from "@/components/PostCheckoutScanProgressStrip";
 import { LiveFindingsPreview } from "@/components/LiveFindingsPreview";
 import { RemediationSection } from "@/components/dashboard/RemediationSection";
+import { RemovalProgress } from "@/components/dashboard/RemovalProgress";
 
 interface Service {
   id: string;
@@ -1280,6 +1281,7 @@ export default function Dashboard() {
         ) : (
           <>
             {/* Score + single biggest problem + unified Needs Attention list */}
+            <RemovalProgress />
             <RemediationSection
               accounts={services as any}
               riskData={riskData}

@@ -59,6 +59,7 @@ if (typeof window !== "undefined") {
 const Auth = lazy(() => import("./pages/Auth"));
 const Admin = lazy(() => import("./pages/Admin"));
 const AdminAnalytics = lazy(() => import("./pages/AdminAnalytics"));
+const AdminRemovals = lazy(() => import("./pages/AdminRemovals"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const UnmatchedDomains = lazy(() => import("./pages/UnmatchedDomains"));
 const DeletionRequests = lazy(() => import("./pages/DeletionRequests"));
@@ -103,6 +104,7 @@ const App = () => (
               <Route path="/auth" element={<Auth />} />
               <Route path="/admin" element={<Admin />} />
               <Route path="/admin/analytics" element={<AdminAnalytics />} />
+              <Route path="/admin/removals" element={<AdminRemovals />} />
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/unmatched-domains" element={<UnmatchedDomains />} />
               <Route path="/deletion-requests" element={<DeletionRequests />} />
