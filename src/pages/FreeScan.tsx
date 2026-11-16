@@ -1,3 +1,4 @@
+import { OneTapRemoveBar } from "@/components/free-scan/OneTapRemoveBar";
 import { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Navbar } from "@/components/Navbar";
@@ -256,7 +257,7 @@ export default function FreeScan() {
               </section>
 
               {/* Try Again */}
-              <div className="text-center">
+              <div className="text-center pb-24">
                 <Button
                   variant="ghost"
                   onClick={() => {
@@ -268,6 +269,11 @@ export default function FreeScan() {
                   Check another email
                 </Button>
               </div>
+              <OneTapRemoveBar
+                email={email}
+                confirmedCount={brokerFindings?.confirmedCount ?? 0}
+                breachCount={results.breachCount}
+              />
             </div>
           )}
 
