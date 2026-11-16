@@ -35,6 +35,7 @@ export default {
           DEFAULT: "hsl(var(--muted))",
           foreground: "hsl(var(--muted-foreground))",
         },
+        concern: "hsl(var(--concern))",
         accent: {
           DEFAULT: "hsl(var(--accent))",
           foreground: "hsl(var(--accent-foreground))",
@@ -57,6 +58,11 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
+      },
+      fontFamily: {
+        display: ["var(--font-display)"],
+        mono: ["var(--font-mono)"],
+        sans: ["var(--font-body)"],
       },
       borderRadius: {
         lg: "var(--radius)",

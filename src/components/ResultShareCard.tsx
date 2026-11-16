@@ -49,8 +49,6 @@ export const ResultShareCard = ({
       >
         {/* Decorative background elements */}
         <div className="absolute inset-0 opacity-10 pointer-events-none">
-          <div className="absolute top-20 left-20 w-64 h-64 bg-white rounded-full blur-3xl" />
-          <div className="absolute bottom-20 right-20 w-64 h-64 bg-white rounded-full blur-3xl" />
         </div>
 
         {/* Content */}

@@ -68,8 +68,6 @@ export function OnboardingBanner({ remainingDeletions: propRemainingDeletions }:
 
   return (
     <Card className="relative border-primary/20 bg-gradient-to-br from-primary/5 via-accent/5 to-primary/5 overflow-hidden">
-      <div className="absolute top-0 right-0 w-32 h-32 bg-accent/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
-      <div className="absolute bottom-0 left-0 w-32 h-32 bg-primary/10 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2" />
       
       <CardContent className="relative pt-6 pb-5 px-6">
         <Button

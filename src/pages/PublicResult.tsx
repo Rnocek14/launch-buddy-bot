@@ -227,8 +227,6 @@ export default function PublicResult() {
           <div className="p-12 text-center space-y-6 relative">
             {/* Decorative background */}
             <div className="absolute inset-0 opacity-10">
-              <div className="absolute top-10 left-10 w-32 h-32 bg-white rounded-full blur-3xl" />
-              <div className="absolute bottom-10 right-10 w-32 h-32 bg-white rounded-full blur-3xl" />
             </div>
 
             <div className="relative z-10 space-y-6">
