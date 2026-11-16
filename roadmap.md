@@ -7,7 +7,10 @@
 - [x] Validate public scan flows, 35 targeted regression tests, and both Stripe checkouts.
 - [ ] Restore HIBP access with an active subscription key (requires owner).
 - [ ] Complete Google verification and authenticated Gmail consent/scan/disconnect checks (requires owner/provider access).
-- [ ] Compare competitor websites/capabilities and identify needed Footprint Finder updates.
+- [x] Compare competitor websites/capabilities and identify needed Footprint Finder updates.
+- [x] Automated broker removals: email sender, manual queue, auto-form hook (0 brokers enabled), rescan proof, dashboard progress.
+- [ ] Hand-verify broker privacy email addresses (enables automatic email requests).
+- [ ] Add removal counts to the monthly progress email.
 - [ ] Prepare first ad campaign: agree goal, audience, market, budget, research, and channel; approve creative and measurement before creation or spending.
 
 Public broker checks now complete all six searches. Authenticated Gmail behavior is covered by mocked provider regression tests, not a live account flow. Two unrelated existing env-parser tests still fail on blank values; not changed in this scan repair.
