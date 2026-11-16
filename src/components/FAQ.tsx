@@ -19,7 +19,7 @@ const faqs = [
   {
     question: "Do you actually delete my accounts?",
     answer:
-      "No—but we make it dramatically easier. We provide service-specific deletion links, pre-filled GDPR/CCPA request templates, and step-by-step guides. You maintain full control and execute deletions yourself through official channels.",
+      "For accounts tied to your email, we send the GDPR/CCPA deletion request to the company's privacy contact for you, from our own sending address, never from your inbox. Where a company only accepts requests through its own website, we give you the direct link and steps. For data broker listings on the Complete plan, we give you a guided opt-out for each site and re-check monthly that the listing is gone.",
   },
   {
     question: "Is this legal? What about GDPR?",

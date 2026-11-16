@@ -41,8 +41,8 @@ export const Hero = () => {
             <span className="text-muted-foreground">Then make them delete it.</span>
           </h1>
           <p className="text-lg text-muted-foreground leading-relaxed max-w-xl mb-8">
-            Footprint Finder checks breaches, data broker listings and the accounts tied to your email, then sends
-            deletion requests for you and keeps watching.
+            Footprint Finder checks breaches, data broker listings and the accounts tied to your email you forgot
+            about. We send the deletion requests for you, guide you through broker opt-outs, and re-check every month.
           </p>
 
           <form onSubmit={handleScan} className="flex flex-col sm:flex-row border border-foreground/80 bg-card max-w-xl">

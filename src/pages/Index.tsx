@@ -48,7 +48,7 @@ const Index = () => {
           name: "How much does Footprint Finder cost?",
           acceptedAnswer: {
             "@type": "Answer",
-            text: "Footprint Finder offers a free scan with no credit card required. Pro is $79/year and adds unlimited deletion requests, deep inbox scanning and monthly rescans. Complete is $129/year and adds data-broker scanning and removal. A Family plan covering up to 5 people is $179/year.",
+            text: "Footprint Finder offers a free scan with no credit card required. Pro is $79/year and adds unlimited deletion requests, deep inbox scanning and monthly rescans. Complete is $129/year and adds data-broker scanning and removal.",
           },
         },
         {

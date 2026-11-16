@@ -22,9 +22,9 @@ const getPrimaryPlans = (billingInterval: BillingInterval) => [
         : STRIPE_PRICES.PRO_MONTHLY.id,
     price: billingInterval === "year" ? "$79" : "$12.99",
     period: billingInterval === "year" ? "/year" : "/month",
-    description: "Continuous monitoring + unlimited cleanup",
+    description: "Find every forgotten account and send deletion requests for you",
     features: [...PRO_FEATURES],
-    cta: "Start Monitoring",
+    cta: "Start cleaning up",
     popular: true,
     icon: Star,
     badge: billingInterval === "year" ? "Save 39%" : null,
@@ -39,9 +39,9 @@ const getPrimaryPlans = (billingInterval: BillingInterval) => [
         : STRIPE_PRICES.COMPLETE_MONTHLY.id,
     price: billingInterval === "year" ? "$129" : "$19.99",
     period: billingInterval === "year" ? "/year" : "/month",
-    description: "Full monitoring + data broker removal",
+    description: "Everything in Pro, plus guided broker opt-outs",
     features: [...COMPLETE_FEATURES],
-    cta: "Get Complete Protection",
+    cta: "Add broker opt-outs",
     popular: false,
     icon: Crown,
     badge: billingInterval === "year" ? "Best Value" : null,
@@ -49,7 +49,7 @@ const getPrimaryPlans = (billingInterval: BillingInterval) => [
   },
 ];
 
-// Secondary plans shown in a smaller "Other options" row
+// Secondary plans shown in a smaller "Not ready to pay?" row
 const getSecondaryPlans = () => [
   {
     name: "Free",
@@ -60,17 +60,7 @@ const getSecondaryPlans = () => [
     cta: "Start Free",
     ctaLink: "/free-scan",
     icon: Shield,
-  },
-  {
-    name: "Family",
-    price: "$179",
-    period: "/year",
-    description: "Protect up to 5 family members",
-    features: [...FAMILY_FEATURES],
-    cta: "Protect My Family",
-    ctaLink: `/subscribe?tier=family&interval=year`,
-    icon: Users,
-    badge: "For Families",
+    badge: null as string | null,
   },
 ];
 
@@ -128,7 +118,7 @@ const competitors = [
     name: "Footprint Finder",
     price: "$79–$129/year",
     focus: "Service accounts + brokers",
-    description: "Deep AI scan + data broker removal. The complete privacy solution at competitive pricing.",
+    description: "Finds the accounts you forgot, sends deletion requests for you, plus guided broker opt-outs.",
     highlight: true,
   },
 ];
@@ -172,7 +162,7 @@ export const Pricing = () => {
       <div className="container max-w-6xl">
         <div className="text-center mb-8">
           <h2 className="text-4xl md:text-5xl font-bold mb-4">
-            Pick your protection
+            Pick your plan
           </h2>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
             Two plans cover almost everyone. Cancel anytime.
@@ -264,9 +254,9 @@ export const Pricing = () => {
         {/* Secondary plans — smaller, less visual weight */}
         <div className="mt-16 pt-10 border-t">
           <h3 className="text-center text-sm uppercase tracking-wide text-muted-foreground mb-6">
-            Other options
+            Not ready to pay?
           </h3>
-          <div className="grid sm:grid-cols-2 gap-4 max-w-3xl mx-auto">
+          <div className="grid gap-4 max-w-md mx-auto">
             {secondaryPlans.map((plan, index) => {
               const Icon = plan.icon;
               return (
@@ -373,7 +363,7 @@ export const Pricing = () => {
           </div>
 
           <p className="text-xs text-muted-foreground mt-4">
-            <strong>Note:</strong> DeleteMe and Incogni focus on data brokers (sites that sell your personal info). Our Complete plan includes both service account discovery AND data broker removal.
+            <strong>Note:</strong> DeleteMe and Incogni focus on data brokers (sites that sell your personal info). Our Complete plan adds guided broker opt-outs on top of account discovery and cleanup.
           </p>
         </section>
 
