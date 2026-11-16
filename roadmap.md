@@ -11,6 +11,7 @@
 - [x] Automated broker removals: email sender, manual queue, auto-form hook (0 brokers enabled), rescan proof, dashboard progress.
 - [x] Hand-verify broker privacy emails: 10 of 77 verified; others need web forms (queue).
 - [ ] Add removal counts to the monthly progress email.
+- [ ] Prepare staged growth upgrades: secure bounded removal processing, reliable reporting, and measured capacity gates (awaiting plan approval).
 - [ ] Prepare first ad campaign: agree goal, audience, market, budget, research, and channel; approve creative and measurement before creation or spending.
 
 Public broker checks now complete all six searches. Authenticated Gmail behavior is covered by mocked provider regression tests, not a live account flow. Two unrelated existing env-parser tests still fail on blank values; not changed in this scan repair.
