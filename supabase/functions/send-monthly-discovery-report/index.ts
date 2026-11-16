@@ -1,11 +1,9 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "npm:@supabase/supabase-js@2.79.0";
-import { Resend } from "https://esm.sh/resend@3.0.0";
+import { createClient } from "npm:@supabase/supabase-js@2";
 import { resendFrom } from "../_shared/resend.ts";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { authorizeRemovalRun } from "../_shared/removal-auth.ts";
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -24,7 +22,11 @@ serve(async (req) => {
     }
 
     const supabase = createClient(supabaseUrl, supabaseKey);
-    const resend = new Resend(resendApiKey);
+    const resend = { emails: { send: async (payload: unknown) => {
+      const response = await fetch('https://api.resend.com/emails', { method: 'POST', headers: { Authorization: `Bearer ${resendApiKey}`, 'Content-Type': 'application/json' }, body: JSON.stringify(payload), signal: AbortSignal.timeout(8000) });
+      if (!response.ok) throw new Error(`Email provider returned ${response.status}`);
+      return { error: null };
+    } } };
 
     // Get all active users with email
     const { data: profiles, error: profilesError } = await supabase

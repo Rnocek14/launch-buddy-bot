@@ -10,8 +10,10 @@
 - [x] Compare competitor websites/capabilities and identify needed Footprint Finder updates.
 - [x] Automated broker removals: email sender, manual queue, auto-form hook (0 brokers enabled), rescan proof, dashboard progress.
 - [x] Hand-verify broker privacy emails: 10 of 77 verified; others need web forms (queue).
-- [ ] Add removal counts to the monthly progress email.
-- [ ] Prepare staged growth upgrades: secure bounded removal processing, reliable reporting, and measured capacity gates (awaiting plan approval).
+- [x] Add removal counts to the monthly progress email (delivery remains blocked by email-service readiness).
+- [x] Implement protected bounded removal jobs, scan-proof guard, and isolated 100/1,000-customer SQL tests.
+- [ ] Verify email-sending readiness and authorized end-to-end delivery (runtime Resend credential rejected; external Supabase session unavailable).
+- [ ] Certify full delivery capacity and extend monthly-report batching (requires isolated staging backend and provider quota verification).
 - [ ] Prepare first ad campaign: agree goal, audience, market, budget, research, and channel; approve creative and measurement before creation or spending.
 
 Public broker checks now complete all six searches. Authenticated Gmail behavior is covered by mocked provider regression tests, not a live account flow. Two unrelated existing env-parser tests still fail on blank values; not changed in this scan repair.

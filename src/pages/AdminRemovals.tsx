@@ -37,6 +37,13 @@ export default function AdminRemovals() {
       .select("id,user_id,status,method,listing_url,notes,last_error,created_at,data_brokers(name,opt_out_url,instructions)")
       .order("created_at", { ascending: true }).limit(500);
     q = filter === "open" ? q.in("status", ["found", "needs_customer"]) : q.eq("status", filter);
+    if (filter === "failed") {
+      const jobs = await supabase.from("broker_removal_jobs").select("request_id,last_error").eq("status", "failed").order("created_at").limit(500);
+      const ids = jobs.data?.map(job => job.request_id) ?? [];
+      if (ids.length) q = (supabase as any).from("broker_removal_requests")
+        .select("id,user_id,status,method,listing_url,notes,last_error,created_at,data_brokers(name,opt_out_url,instructions)")
+        .or(`status.eq.failed,id.in.(${ids.join(',')})`).order("created_at").limit(500);
+    }
     const { data, error } = await q;
     if (error) toast({ title: "Couldn't load queue", description: error.message, variant: "destructive" });
     setRows(data ?? []);

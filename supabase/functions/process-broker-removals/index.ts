@@ -12,6 +12,7 @@ Deno.serve(async (req) => {
   if (req.method !== "POST") return json({ error: "POST required" }, 405);
   let admin: Awaited<ReturnType<typeof authorizeRemovalRun>> = null;
   const token = crypto.randomUUID();
+  let claimed = false;
   try {
     admin = await authorizeRemovalRun(req, "worker");
     if (!admin) return json({ error: "Administrator authorization required" }, 401);
@@ -26,6 +27,7 @@ Deno.serve(async (req) => {
       return json({ error: "Email-sending domain is not verified" }, 503);
     const { data: jobs, error } = await admin.rpc("claim_broker_removal_jobs", { p_token: token, p_limit: WORKER_BATCH_SIZE });
     if (error) throw error;
+    claimed = true;
     const summary = { sent: 0, failed: 0, skipped: 0, retrying: 0 };
     for (const job of jobs ?? []) {
       const patch = async (fields: Record<string, unknown>) => {
@@ -63,7 +65,9 @@ Deno.serve(async (req) => {
         const msg = buildRemovalEmail({ brokerName: broker.name, fullName, email: profile.email, listingUrl: request.listing_url, city: profile.city, state: profile.state, authorizedAt: authorization.authorized_at, followUp: job.attempt > 1 });
         const payload = job.payload ?? { from: RESEND_FROM, to: [broker.privacy_email], subject: msg.subject, text: msg.text, reply_to: profile.email };
         // Do not resend saved personal information after the customer's authorization/profile changes.
-        if (job.payload && JSON.stringify(job.payload) !== JSON.stringify({ from: RESEND_FROM, to: [broker.privacy_email], subject: msg.subject, text: msg.text, reply_to: profile.email })) {
+        const expected = { from: RESEND_FROM, to: [broker.privacy_email], subject: msg.subject, text: msg.text, reply_to: profile.email };
+        const saved = job.payload as typeof expected | null;
+        if (saved && (saved.from !== expected.from || saved.to?.[0] !== expected.to[0] || saved.subject !== expected.subject || saved.text !== expected.text || saved.reply_to !== expected.reply_to)) {
           await patch({ status: "failed", lease_until: null, last_error: "Delivery details changed; manual review required" }); summary.failed++; continue;
         }
         started = started ?? new Date().toISOString();
@@ -92,7 +96,7 @@ Deno.serve(async (req) => {
     console.error("removal worker failed", error);
     return json({ error: "Removal worker failed" }, 500);
   } finally {
-    if (admin) {
+    if (admin && claimed) {
       await admin.from("broker_removal_worker_state").update({ lease_until: null }).eq("singleton", true).eq("lease_token", token);
       await admin.rpc("arm_broker_removal_retry");
     }
