@@ -54,6 +54,7 @@ export default function FreeScan() {
 
   const runScan = useCallback(async (scanEmail: string) => {
     setIsScanning(true);
+    setBrokerFindings(null);
     setError("");
     const src = searchParams.get("src") || "direct";
     trackEvent("scan_started", { source: "free_scan", src });
@@ -73,7 +74,7 @@ export default function FreeScan() {
 
       if (__timeout) {
         console.warn("Breach check timed out");
-        breachData.error = "Breach check is taking longer than usual — showing your estimate";
+        breachData.error = "Breach check is taking longer than usual — please try again.";
       } else if (fnError) {
         console.warn("Breach check failed:", fnError);
         breachData.error = "Could not check breaches right now";
@@ -151,8 +152,8 @@ export default function FreeScan() {
             </h1>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
               {results
-                ? "Real breaches and estimated exposure — here's what we found."
-                : "Check breach databases and estimate your digital footprint. No signup required."}
+                ? "Breach lookup results, with a separate people-search check below."
+                : "Check your email against public breach records. No signup required."}
             </p>
           </div>
 
@@ -165,7 +166,7 @@ export default function FreeScan() {
                   Enter Your Email
                 </CardTitle>
                 <CardDescription>
-                  We'll check real breach databases and estimate your footprint
+                  We'll check public breach records using Have I Been Pwned
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -194,7 +195,7 @@ export default function FreeScan() {
 
                 <div className="mt-6 flex items-center justify-center gap-2 text-xs text-muted-foreground">
                   <Lock className="w-3 h-3" />
-                  <span>We don't store or share your email address</span>
+                  <span>Your email is sent to Have I Been Pwned for this lookup. No inbox access.</span>
                 </div>
               </CardContent>
             </Card>
@@ -205,7 +206,7 @@ export default function FreeScan() {
             <div className="text-center py-16">
               <div className="w-16 h-16 border-4 border-primary/30 border-t-primary rounded-full animate-spin mx-auto mb-6" />
               <p className="text-lg text-muted-foreground">{scanPhase}</p>
-              <p className="text-sm text-muted-foreground mt-2">Breach databases · Data brokers · Public records</p>
+              <p className="text-sm text-muted-foreground mt-2">Public breach database lookup · No inbox access</p>
             </div>
           )}
 
@@ -258,6 +259,7 @@ export default function FreeScan() {
 
               {/* Try Again */}
               <div className="text-center pb-24">
+                {results.breachError && <Button variant="outline" className="mb-4" onClick={() => runScan(email)}>Retry breach check</Button>}
                 <Button
                   variant="ghost"
                   onClick={() => {
@@ -285,7 +287,7 @@ export default function FreeScan() {
                   <Lock className="w-8 h-8 text-primary mx-auto mb-4" />
                   <h3 className="font-semibold mb-2">Privacy First</h3>
                   <p className="text-sm text-muted-foreground">
-                    Your email is checked against breach databases but never stored or shared.
+                    Your email is sent to Have I Been Pwned to look up public breaches. We do not access your inbox.
                   </p>
                 </CardContent>
               </Card>
@@ -294,7 +296,7 @@ export default function FreeScan() {
                   <Zap className="w-8 h-8 text-accent mx-auto mb-4" />
                   <h3 className="font-semibold mb-2">Real Data</h3>
                   <p className="text-sm text-muted-foreground">
-                    See actual breaches from verified databases plus estimated account exposure.
+                    See reported breaches when the source is available. Failed checks are marked unavailable, never zero.
                   </p>
                 </CardContent>
               </Card>

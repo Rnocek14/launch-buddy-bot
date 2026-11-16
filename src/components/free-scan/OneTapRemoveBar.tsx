@@ -45,7 +45,7 @@ export function OneTapRemoveBar({ email, confirmedCount, breachCount }: Props) {
           <p className="font-mono text-[11px] text-muted-foreground">$129/yr · 30-day refund · cancel anytime</p>
         </div>
         <Button onClick={go} disabled={loading} className="h-12 px-5 rounded-none bg-accent hover:bg-accent/90 text-accent-foreground shrink-0">
-          {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Remove it →"}
+          {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Get help →"}
         </Button>
       </div>
     </div>

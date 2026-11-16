@@ -11,16 +11,9 @@ export function WhatWeChecked({ breachCount, breachError }: WhatWeCheckedProps) 
     {
       icon: Database,
       name: "Have I Been Pwned",
-      detail: "850+ verified breach databases",
+      detail: "Public breach database lookup",
       status: breachError ? "unavailable" : "checked",
       result: breachError ? "Temporarily unavailable" : `${breachCount} breach${breachCount === 1 ? "" : "es"} found`,
-    },
-    {
-      icon: Mail,
-      name: "Email exposure",
-      detail: "Public mention scanning",
-      status: "checked",
-      result: "Email-only check complete (no inbox access)",
     },
   ];
 
@@ -29,7 +22,7 @@ export function WhatWeChecked({ breachCount, breachError }: WhatWeCheckedProps) 
       <div>
         <h3 className="text-lg font-semibold text-muted-foreground mb-1">What We Checked</h3>
         <p className="text-sm text-muted-foreground">
-          Real, verifiable sources — no estimates or guesses.
+          This email-only check uses Have I Been Pwned. The separate name check below searches public people-search results.
         </p>
       </div>
 
@@ -59,16 +52,16 @@ export function WhatWeChecked({ breachCount, breachError }: WhatWeCheckedProps) 
         })}
       </div>
 
-      <Card className="bg-amber-50/50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800">
+      <Card className="bg-muted/30 border-border">
         <CardContent className="p-4 flex items-start gap-3">
-          <Shield className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+          <Shield className="w-4 h-4 text-concern mt-0.5 shrink-0" />
           <div className="text-sm">
-            <p className="font-medium text-amber-800 dark:text-amber-300 mb-1">
-              This check only looks at public breach data
+            <p className="font-medium text-foreground mb-1">
+              No inbox access in this check
             </p>
-            <p className="text-amber-700 dark:text-amber-400/80">
-              It cannot see your accounts, data broker listings, or what's in your inbox. 
-              Sign up free to run a full scan.
+            <p className="text-muted-foreground">
+              Your email alone cannot reveal all your accounts or broker listings.
+              Connecting an inbox is a separate step that requires your permission.
             </p>
           </div>
         </CardContent>

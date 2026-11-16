@@ -24,7 +24,7 @@ interface Props {
   className?: string;
 }
 
-export function CompleteCheckoutButton({ email, source, label = "Remove My Information", className }: Props) {
+export function CompleteCheckoutButton({ email, source, label = "Get removal help", className }: Props) {
   const { toast } = useToast();
   const [interval, setInterval] = useState<Interval>("annual");
   const [loading, setLoading] = useState(false);
@@ -82,7 +82,7 @@ export function CompleteCheckoutButton({ email, source, label = "Remove My Infor
         size="lg"
         onClick={handle}
         disabled={loading}
-        className="w-full gap-2 cta-shimmer h-14 text-base"
+        className="w-full gap-2 min-h-14 h-auto py-3 text-base whitespace-normal"
       >
         {loading ? (
           <>
@@ -98,7 +98,7 @@ export function CompleteCheckoutButton({ email, source, label = "Remove My Infor
         )}
       </Button>
       <p className="text-[11px] text-center text-muted-foreground">
-        Complete plan · broker removal included · account auto-created after payment · 30-day refund · cancel anytime
+        Complete plan · guided broker opt-outs · account created after payment · 30-day refund · cancel anytime
       </p>
     </div>
   );

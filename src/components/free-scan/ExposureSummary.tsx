@@ -26,7 +26,7 @@ interface ExposureSummaryProps {
  * Leads with the exposure count, explains what it means and what we remove,
  * then offers ONE primary action. Everything else on the page is secondary.
  */
-export function ExposureSummary({ email, breachCount, estimate, brokerFindings, breachError }: ExposureSummaryProps) {
+export function ExposureSummary({ email, breachCount, brokerFindings, breachError }: ExposureSummaryProps) {
   const hasReality = !!brokerFindings && (brokerFindings.confirmedCount + brokerFindings.possibleCount) > 0;
   // Confirmed breaches are real signal too. Only assert "Exposure detected" when
   // we actually found something — otherwise the red alarm over a screen of
@@ -46,17 +46,17 @@ export function ExposureSummary({ email, breachCount, estimate, brokerFindings, 
         {/* Headline */}
         <div className="px-6 pt-8 pb-6 text-center border-b border-border">
           {hasRealSignal ? (
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-destructive/10 border border-destructive/20 mb-4">
-              <AlertTriangle className="w-3.5 h-3.5 text-destructive" />
-              <span className="text-xs font-semibold uppercase tracking-wide text-destructive">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-concern/10 border border-concern/20 mb-4">
+              <AlertTriangle className="w-3.5 h-3.5 text-concern" />
+              <span className="text-xs font-semibold uppercase tracking-wide text-concern">
                 Exposure detected
               </span>
             </div>
           ) : (
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 mb-4">
-              <AlertTriangle className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
-              <span className="text-xs font-semibold uppercase tracking-wide text-amber-600 dark:text-amber-400">
-                Estimated exposure
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-muted border border-border mb-4">
+              <AlertTriangle className="w-3.5 h-3.5 text-muted-foreground" />
+              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Check status
               </span>
             </div>
           )}
@@ -65,13 +65,13 @@ export function ExposureSummary({ email, breachCount, estimate, brokerFindings, 
               ? "We found your information online"
               : hasBreaches
                 ? "We found your exposure"
-                : "Here's your estimated exposure"}
+                : "Your breach check results"}
           </h2>
           <p className="text-muted-foreground">
             {hasRealSignal ? (
               <>Here's what's exposed for <span className="font-medium text-foreground">{email}</span></>
             ) : (
-              <>Based on <span className="font-medium text-foreground">{email}</span> — run the free listings check below to confirm what's real</>
+              <>Results for <span className="font-medium text-foreground">{email}</span> — check people-search listings separately below</>
             )}
           </p>
         </div>
@@ -82,13 +82,13 @@ export function ExposureSummary({ email, breachCount, estimate, brokerFindings, 
             <>
               <StatBlock
                 icon={CheckCircle2}
-                value={brokerFindings!.confirmedCount}
+                value={brokerFindings?.confirmedCount ?? 0}
                 label="confirmed listings"
                 sub="people-search sites listing you"
               />
               <StatBlock
                 icon={AlertTriangle}
-                value={brokerFindings!.possibleCount}
+                value={brokerFindings?.possibleCount ?? 0}
                 label="possible matches"
                 sub="likely you — needs review"
               />
@@ -109,15 +109,15 @@ export function ExposureSummary({ email, breachCount, estimate, brokerFindings, 
               />
               <StatBlock
                 icon={Database}
-                value={`~${estimate.brokerSites}`}
-                label="likely data broker records"
-                sub="people-search & marketing sites"
+                value="—"
+                label="broker listings"
+                sub="requires your name and location"
               />
               <StatBlock
                 icon={Building2}
-                value={`~${estimate.hiddenAccounts}`}
-                label="companies likely holding your info"
-                sub="accounts, signups & senders"
+                value="—"
+                label="email accounts"
+                sub="not checked without inbox permission"
               />
             </>
           )}
@@ -139,11 +139,11 @@ export function ExposureSummary({ email, breachCount, estimate, brokerFindings, 
           <div className="flex items-start gap-3">
             <Shield className="w-5 h-5 text-primary mt-0.5 shrink-0" />
             <div>
-              <p className="font-semibold text-sm">We can remove it</p>
+              <p className="font-semibold text-sm">What a paid plan covers</p>
               <p className="text-sm text-muted-foreground mt-1">
-                We'll identify and remove your information from major data brokers,
-                clean up exposed accounts, and continuously monitor for new exposure —
-                saving you dozens of hours of manual opt-outs.
+                Company deletion requests, guided broker opt-outs, and monthly rechecks.
+                Some sites require you to complete a form yourself. Past breach records
+                cannot be erased by removing a broker listing.
               </p>
             </div>
           </div>

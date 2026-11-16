@@ -56,10 +56,11 @@ export class GmailProvider implements EmailProvider {
   }
 
   getOAuthUrl(userId: string): string {
-    // Using gmail.metadata (sensitive scope) instead of gmail.readonly (restricted scope)
-    // to avoid CASA security assessment requirement. We only read message headers
+    // gmail.metadata is a restricted scope and can require a security assessment.
+    // We only read message headers
     // (From, Subject, Date, List-Unsubscribe) — never message bodies.
     const scopes = [
+      'openid',
       'https://www.googleapis.com/auth/gmail.metadata',
       'https://www.googleapis.com/auth/userinfo.email',
       'https://www.googleapis.com/auth/userinfo.profile'
@@ -188,6 +189,9 @@ export class GmailProvider implements EmailProvider {
   }
 
   async getMessages(accessToken: string, filters?: ScanFilters): Promise<EmailMessage[]> {
+    if (filters?.query) throw new Error('Custom Gmail searches are not supported with metadata-only permission.');
+    const after = filters?.after ? Date.parse(filters.after) : null;
+    if (after !== null && !Number.isFinite(after)) throw new Error('Invalid scan date');
     const targetCount = filters?.maxResults || 100;
     console.log(`Gmail: Fetching up to ${targetCount} messages`);
 
@@ -203,16 +207,6 @@ export class GmailProvider implements EmailProvider {
       });
       if (pageToken) params.set('pageToken', pageToken);
 
-      if (filters?.after) {
-        const date = new Date(filters.after);
-        const gmailDate = `${date.getFullYear()}/${String(date.getMonth() + 1).padStart(2, '0')}/${String(date.getDate()).padStart(2, '0')}`;
-        params.append('q', `after:${gmailDate}`);
-      }
-      if (filters?.query) {
-        const existingQ = params.get('q');
-        params.set('q', existingQ ? `${existingQ} ${filters.query}` : filters.query);
-      }
-
       const response = await fetch(
         `https://gmail.googleapis.com/gmail/v1/users/me/messages?${params.toString()}`,
         { headers: { Authorization: `Bearer ${accessToken}` } }
@@ -221,7 +215,7 @@ export class GmailProvider implements EmailProvider {
       if (!response.ok) {
         const error = await response.text();
         console.error('Gmail fetch messages error:', error);
-        throw new Error('Failed to fetch Gmail messages');
+        throw new Error(`Gmail listing failed [${response.status}]: ${error}`);
       }
 
       const data = await response.json();
@@ -249,8 +243,9 @@ export class GmailProvider implements EmailProvider {
         const r = await fetch(detailUrl.toString(), {
           headers: { Authorization: `Bearer ${accessToken}` },
         });
-        if (!r.ok) return null;
+        if (!r.ok) { const details = await r.text(); throw new Error(`Gmail metadata failed [${r.status}]: ${details}`); }
         const detail = await r.json();
+        if (after !== null && Number(detail.internalDate) <= after) return null;
         const headers = detail.payload?.headers || [];
         const from = headers.find((h: any) => h.name === 'From')?.value || '';
         const subject = headers.find((h: any) => h.name === 'Subject')?.value || '';
@@ -269,8 +264,8 @@ export class GmailProvider implements EmailProvider {
           unsubscribeMailto,
           hasOneClick: hasOneClick || undefined,
         };
-      } catch (_e) {
-        return null;
+      } catch (error) {
+        throw error;
       }
     }
 

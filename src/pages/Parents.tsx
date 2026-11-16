@@ -35,14 +35,14 @@ export default function Parents() {
   useSEO({
     title: "Protect Parents from Online Scams — $39 Parent Scan",
     description:
-      "Adult children: scan your parent's email for scams, breaches, and shady subscriptions in about 30 seconds. One-time $39, no recurring fee. Built for non-technical seniors.",
+      "Adult children: check your parent's email against public breach records, then search people-search listings by name. One-time $39, no recurring fee. Built for non-technical seniors.",
     canonical: "https://footprintfinder.co/parents",
     ogType: "website",
     jsonLd: {
       "@context": "https://schema.org",
       "@type": "Product",
       name: "Footprint Finder Parent Scan",
-      description: "One-time digital exposure scan for an elderly parent's email — finds scams, breaches, and risky accounts.",
+      description: "One-time exposure report and removal guidance for a parent. Not scam detection or automatic removal.",
       offers: {
         "@type": "Offer",
         price: "39",
@@ -69,7 +69,7 @@ export default function Parents() {
     e.preventDefault();
     if (!parentEmail.includes("@")) return;
     trackEvent("parents_scan_started", { email_domain: parentEmail.split("@")[1] });
-    navigate(`/free-scan?email=${encodeURIComponent(parentEmail)}&source=parents`);
+    navigate(`/free-scan?email=${encodeURIComponent(parentEmail)}&src=parents`);
   };
 
   const handlePurchaseParentScan = async () => {
@@ -114,18 +114,16 @@ export default function Parents() {
           <div className="container max-w-5xl mx-auto">
             <div className="grid md:grid-cols-2 gap-12 items-center">
               <div>
-                <Badge className="mb-4 bg-destructive/10 text-destructive border-destructive/20 hover:bg-destructive/10">
+                <Badge className="mb-4 bg-concern/10 text-concern border-concern/20 hover:bg-concern/10">
                   <AlertTriangle className="w-3 h-3 mr-1" />
-                  Seniors lose $3.4B/year to online scams
+                  Help protect a parent’s privacy
                 </Badge>
                 <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 leading-tight">
-                  Your parents are{" "}
-                  <span className="text-destructive">scammers' #1 target.</span>
+                  Your parents’ personal information{" "}
+                  <span className="text-concern">deserves a closer look.</span>
                 </h1>
                 <p className="text-xl text-muted-foreground mb-8 leading-relaxed">
-                  Their email and phone are sitting on dozens of data broker sites — exactly
-                  where romance scammers, "tech support" callers, and Medicare fraudsters look first.
-                  Find out what's exposed in about 30 seconds.
+                  Start with a free breach check. Then use their name and location to search for public listings. Unavailable checks are marked clearly; a matching listing is not proof of a scam.
                 </p>
 
                 <form onSubmit={handleScan} className="space-y-3">
@@ -145,7 +143,7 @@ export default function Parents() {
                   </div>
                   <p className="text-xs text-muted-foreground flex items-center gap-2">
                     <Lock className="w-3 h-3" />
-                    Free check · No signup · We don't store the email
+                    Free breach check · No signup · No inbox access
                   </p>
                 </form>
 
@@ -156,18 +154,18 @@ export default function Parents() {
                     <span>Built for adult children</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Heart className="w-4 h-4 text-destructive" />
+                    <Heart className="w-4 h-4 text-concern" />
                     <span>Senior-friendly</span>
                   </div>
                 </div>
               </div>
 
               {/* Visual scenario card */}
-              <Card className="border-destructive/20 bg-gradient-to-br from-destructive/5 to-transparent">
+              <Card className="border-concern/20 bg-gradient-to-br from-concern/5 to-transparent">
                 <CardContent className="p-6">
                   <div className="flex items-start gap-4 mb-6">
-                    <div className="w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center shrink-0">
-                      <Phone className="w-6 h-6 text-destructive" />
+                    <div className="w-12 h-12 rounded-full bg-concern/10 flex items-center justify-center shrink-0">
+                      <Phone className="w-6 h-6 text-concern" />
                     </div>
                     <div>
                       <p className="text-sm font-semibold mb-1">Tuesday, 2:47 PM</p>
@@ -179,60 +177,20 @@ export default function Parents() {
                   </div>
                   <div className="border-t pt-4 space-y-2 text-sm">
                     <div className="flex items-start gap-2">
-                      <AlertTriangle className="w-4 h-4 text-destructive mt-0.5 shrink-0" />
+                      <AlertTriangle className="w-4 h-4 text-concern mt-0.5 shrink-0" />
                       <p>
-                        <span className="font-semibold">How they got her info:</span> Name, address,
-                        and phone are listed on 8+ broker sites — free for any scammer to find.
+                        <span className="font-semibold">How they got her info:</span> Public listings can reveal names, addresses, and phone numbers. This is an illustrative scenario, not a real scan result.
                       </p>
                     </div>
                     <div className="flex items-start gap-2">
                       <CheckCircle2 className="w-4 h-4 text-accent mt-0.5 shrink-0" />
                       <p>
-                        <span className="font-semibold">How we stop it:</span> Remove her listings,
-                        monitor for new ones, alert you if she's exposed again.
+                        <span className="font-semibold">How we help:</span> Provide guided broker opt-outs. Complete adds monthly rechecks; removing listings does not prevent every scam.
                       </p>
                     </div>
                   </div>
                 </CardContent>
               </Card>
-            </div>
-          </div>
-        </section>
-
-        {/* THE STATS */}
-        <section className="px-4 py-16 bg-muted/30">
-          <div className="container max-w-5xl mx-auto">
-            <div className="text-center mb-12">
-              <h2 className="text-3xl md:text-4xl font-bold mb-3">
-                Why scammers love seniors
-              </h2>
-              <p className="text-lg text-muted-foreground">
-                Your parents grew up trusting phone calls and printed letters. Scammers exploit that.
-              </p>
-            </div>
-            <div className="grid md:grid-cols-2 gap-6">
-              {[
-                {
-                  stat: "$4.9B",
-                  label: "Reported lost to fraud by Americans 60+ in 2024",
-                  source: "FBI IC3 2024 Report",
-                },
-                {
-                  stat: "$83K",
-                  label: "Average reported loss per victim aged 60+ in 2024",
-                  source: "FBI IC3 2024 Report",
-                },
-              ].map((item, i) => (
-                <Card key={i} className="text-center">
-                  <CardContent className="p-6">
-                    <div className="text-4xl md:text-5xl font-bold text-destructive mb-3">
-                      {item.stat}
-                    </div>
-                    <p className="text-sm font-medium mb-2">{item.label}</p>
-                    <p className="text-xs text-muted-foreground">— {item.source}</p>
-                  </CardContent>
-                </Card>
-              ))}
             </div>
           </div>
         </section>
@@ -253,13 +211,13 @@ export default function Parents() {
                 {
                   step: "1",
                   title: "Enter their email",
-                  desc: "We scan breach databases and 20+ data broker sites for your parent's exposed info.",
+                  desc: "The free email check looks for public breaches. A separate name and location check searches six people-search sites.",
                   icon: Search,
                 },
                 {
                   step: "2",
                   title: "Get a clear report",
-                  desc: "See exactly which sites are exposing their address, phone, and family connections.",
+                  desc: "Review matching public listings, possible matches, and any sites that could not be checked.",
                   icon: Shield,
                 },
                 {
@@ -342,32 +300,6 @@ export default function Parents() {
           </div>
         </section>
 
-        {/* TESTIMONIAL-STYLE STORY */}
-        <section className="px-4 py-16 bg-muted/30">
-          <div className="container max-w-3xl mx-auto">
-            <Card className="border-primary/20">
-              <CardContent className="p-8 md:p-10">
-                <div className="flex items-start gap-4 mb-6">
-                  <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                    <Heart className="w-7 h-7 text-primary" />
-                  </div>
-                  <div>
-                    <p className="font-semibold text-lg">Why I built this</p>
-                    <p className="text-sm text-muted-foreground">
-                      A note from the founder
-                    </p>
-                  </div>
-                </div>
-                <blockquote className="text-lg leading-relaxed text-foreground/90 italic">
-                  "My mom almost wired $4,200 to a 'grandson in jail' scammer. They knew her name,
-                  her grandkids' names, and her zip code — all pulled from data broker sites in
-                  about 30 seconds. I built this so you don't have to get that phone call."
-                </blockquote>
-              </CardContent>
-            </Card>
-          </div>
-        </section>
-
         {/* FINAL CTA */}
         <section className="px-4 py-20">
           <div className="container max-w-3xl mx-auto text-center">
@@ -375,7 +307,7 @@ export default function Parents() {
               Don't wait for the scam call.
             </h2>
             <p className="text-lg text-muted-foreground mb-8">
-              Run a free check on your parents' email right now. Takes about 30 seconds.
+              Check your parent’s email against public breach records. No inbox connection required.
             </p>
             <form onSubmit={handleScan} className="max-w-xl mx-auto">
               <div className="flex flex-col sm:flex-row gap-3">
@@ -394,7 +326,7 @@ export default function Parents() {
               </div>
             </form>
             <p className="text-xs text-muted-foreground mt-4">
-              Free · No signup required · Results in under a minute
+              Free · No signup required · Availability depends on the source
             </p>
           </div>
         </section>

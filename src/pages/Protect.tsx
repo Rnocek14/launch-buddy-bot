@@ -4,15 +4,14 @@ import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Loader2 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { checkPublicBrokers, type BrokerResult } from "@/lib/brokerCheck";
 import { trackEvent } from "@/lib/analytics";
 import { startCheckout } from "@/lib/checkout";
 import { STRIPE_PRICES } from "@/config/pricing";
 import { useSEO } from "@/hooks/useSEO";
 import { useToast } from "@/hooks/use-toast";
 
-type Status = "found" | "possible_match" | "not_found" | "unknown";
-interface Result { slug: string; name: string; status: Status; exposed?: string[] }
+type Result = BrokerResult;
 
 const listJoin = (a: string[]) => a.length < 2 ? a.join("") : `${a.slice(0, -1).join(", ")} and ${a[a.length - 1]}`;
 
@@ -35,6 +34,8 @@ export default function Protect() {
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
   const [results, setResults] = useState<Result[] | null>(null);
+  const [incomplete, setIncomplete] = useState(false);
+  const [pIncomplete, setPIncomplete] = useState(false);
   const [paying, setPaying] = useState(false);
   const [parentOpen, setParentOpen] = useState(false);
   const [pName, setPName] = useState("");
@@ -56,28 +57,21 @@ export default function Protect() {
     if (!/^\S+@\S+\.\S+$/.test(email.trim())) return setError("Please type a valid email address.");
     setError(""); setStep(4);
     try {
-      const r = await check(name, city, state);
-      setResults(r);
+      const response = await checkPublicBrokers(name, city, state);
+      const r = response.results;
+      setResults(r); setIncomplete(response.incomplete);
       trackEvent("broker_check_completed", { source: "protect", found_count: r.filter(isHit).length });
     } catch {
-      setResults([]);
+      setResults([]); setIncomplete(true);
     }
     setStep(5);
-  };
-  const check = async (n: string, c: string, st: string): Promise<Result[]> => {
-    const parts = n.trim().split(/\s+/);
-    const { data, error: e } = await supabase.functions.invoke("free-broker-check", {
-      body: { firstName: parts[0], lastName: parts.slice(1).join(" "), city: c.trim(), state: st },
-    });
-    if (e || !data?.results) throw new Error("failed");
-    return data.results;
   };
   const runParent = async () => {
     if (pName.trim().split(/\s+/).length < 2) return setPError("Please type their first and last name.");
     if (!pCity.trim() || !pState) return setPError("Please type their city and pick their state.");
     setPError(""); setPLoading(true);
     trackEvent("protect_parent_check_started", {});
-    try { setPResults(await check(pName, pCity, pState)); }
+    try { const r = await checkPublicBrokers(pName, pCity, pState); setPResults(r.results); setPIncomplete(r.incomplete); }
     catch { setPError("We couldn't finish that check. Please try again in a minute."); }
     setPLoading(false);
   };
@@ -101,13 +95,14 @@ export default function Protect() {
         <li key={r.slug} className="border-b border-border py-4">
           <div className="flex justify-between gap-4">
             <span className="font-medium">{r.name}</span>
-            <span className="text-muted-foreground">{r.status === "found" ? "Listed" : "Likely listed"}</span>
+            <span className="text-muted-foreground">{r.status === "found" ? "Listed" : "Possible match"}</span>
           </div>
           <p className="text-base text-muted-foreground mt-1">
             {r.exposed && r.exposed.length > 0
-              ? `Anyone can see ${who} name, ${listJoin(r.exposed)}.`
-              : `Anyone can look up ${who} name here.`}
+              ? `Search result mentions a matching name, ${listJoin(r.exposed)}. Confirm the person before removal.`
+              : `A matching name appears here. Confirm the person before removal.`}
           </p>
+          {r.profileUrl && <a href={r.profileUrl} target="_blank" rel="noopener noreferrer" className="underline text-base">Review listing</a>}
         </li>
       ))}
     </ul>
@@ -149,8 +144,8 @@ export default function Protect() {
 
         {step === 3 && (
           <section>
-            <h2 className="text-3xl mb-4">Where should we send your results?</h2>
-            <p className="text-muted-foreground mb-6">We only use this to send your results. We never read your email.</p>
+            <h2 className="text-3xl mb-4">Your email address</h2>
+            <p className="text-muted-foreground mb-6">Results appear here, not by email. If you choose a paid plan, this address is used for checkout. No inbox access is needed.</p>
             <label htmlFor="p-email" className="block font-medium mb-2">Email address</label>
             <Input id="p-email" type="email" className={big} value={email} onChange={(e) => setEmail(e.target.value)} placeholder="mary@example.com" autoComplete="email" />
             {error && <p className="text-concern mt-3">{error}</p>}
@@ -171,20 +166,24 @@ export default function Protect() {
           <section aria-live="polite">
             {found.length > 0 ? (
               <>
-                <h2 className="text-3xl mb-4">We found you on {found.length} site{found.length === 1 ? "" : "s"}</h2>
-                <p className="text-muted-foreground mb-6">Anyone can look these up, including scammers.</p>
+                <h2 className="text-3xl mb-4">Matching listings on {found.length} site{found.length === 1 ? "" : "s"}</h2>
+                <p className="text-muted-foreground mb-6">These public results match your details. Possible matches need your confirmation.</p>
                 <Listings items={found} who="your" />
               </>
             ) : (
               <>
-                <h2 className="text-3xl mb-4">Good news so far</h2>
-                <p className="text-muted-foreground mb-8">We didn't find you on the sites we checked today. Listings often come back, so we can keep watching for you.</p>
+                <h2 className="text-3xl mb-4">{incomplete ? "We couldn’t finish your check" : "No matching listings found"}</h2>
+                <p className="text-muted-foreground mb-8">{incomplete ? "Some sites could not be checked. This is not an all-clear; please try again." : "No match appeared in these public search results. Other listings may still exist."}</p>
               </>
             )}
+            {incomplete && <Button variant="outline" className={`${big} w-full mb-4`} onClick={runCheck}>Try the check again</Button>}
+            {found.length > 0 && incomplete && <p className="text-concern mb-4">Some sites remain unchecked.</p>}
+            {(!incomplete || found.length > 0) && <>
             <Button className={`${big} w-full`} onClick={remove} disabled={paying}>
               {paying ? <Loader2 className="w-5 h-5 animate-spin" /> : found.length > 0 ? "Help me remove these" : "Keep watching for me"}
             </Button>
-            <p className="text-base text-muted-foreground mt-4">$129 a year. We send removal requests for you and guide you through any step a site makes you do yourself. We check again every month. Full refund within 30 days.</p>
+            <p className="text-base text-muted-foreground mt-4">$129 a year. We send company deletion requests and provide guided broker opt-outs. Some sites require you to complete their own form. We check again every month. Full refund within 30 days.</p>
+            </>}
 
             <div className="mt-10 border-t border-border pt-8">
               {!parentOpen && !pResults && (
@@ -216,22 +215,23 @@ export default function Protect() {
                 <section aria-live="polite">
                   {pFound.length > 0 ? (
                     <>
-                      <h2 className="text-2xl mb-4">{firstName(pName)} is on {pFound.length} site{pFound.length === 1 ? "" : "s"}</h2>
+                      <h2 className="text-2xl mb-4">Matching listings for {firstName(pName)} on {pFound.length} site{pFound.length === 1 ? "" : "s"}</h2>
                       <Listings items={pFound} who="their" />
-                      <p className="text-base text-muted-foreground mb-4">Removing a parent's listings is a separate plan in their name. Email us after you sign up and we'll set it up together.</p>
+                      <p className="text-base text-muted-foreground mb-4">Checkout covers one person, not both of you. Contact support before purchasing protection for a parent.</p>
                     </>
                   ) : (
                     <>
-                      <h2 className="text-2xl mb-2">Nothing found for {firstName(pName)} today</h2>
-                      <p className="text-muted-foreground">We didn't find them on the sites we checked. Listings can appear later.</p>
+                      <h2 className="text-2xl mb-2">{pIncomplete ? "Check incomplete for" : "No matching listings for"} {firstName(pName)}</h2>
+                      <p className="text-muted-foreground">{pIncomplete ? "Some sites could not be checked. This is not an all-clear." : "No match appeared in these public search results. Other listings may still exist."}</p>
                     </>
                   )}
+                  {pIncomplete && <Button variant="outline" className={`${big} w-full mt-4`} onClick={runParent} disabled={pLoading}>Try their check again</Button>}
                   <Button variant="ghost" className="w-full mt-2 text-lg" onClick={() => { setPResults(null); setPName(""); setPCity(""); setPState(""); }}>Check another person</Button>
                 </section>
               )}
             </div>
 
-            <p className="text-base mt-6">Questions? Email <a className="underline" href="mailto:support@footprintfinder.co">support@footprintfinder.co</a> — a real person answers.</p>
+            <p className="text-base mt-6">Questions? Email <a className="underline" href="mailto:support@footprintfinder.co">support@footprintfinder.co</a>.</p>
           </section>
         )}
       </main>

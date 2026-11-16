@@ -5,21 +5,11 @@ import { Input } from "@/components/ui/input";
 import {
   Search, Loader2, CheckCircle2, AlertTriangle, Building2,
 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { trackEvent } from "@/lib/analytics";
 import { CompleteCheckoutButton } from "./CompleteCheckoutButton";
 import { BROKER_COUNT_LABEL } from "@/config/brokers";
 
-type BrokerStatus = "found" | "possible_match" | "not_found" | "unknown";
-
-interface BrokerResult {
-  slug: string;
-  name: string;
-  domain: string;
-  status: BrokerStatus;
-  confidence: number | null;
-  profileUrl: string | null;
-}
+import { checkPublicBrokers, type BrokerResult } from "@/lib/brokerCheck";
 
 interface LiveBrokerCheckProps {
   email: string;
@@ -59,23 +49,18 @@ export function LiveBrokerCheck({ email, onResults }: LiveBrokerCheckProps) {
     const lastName = parts.slice(1).join(" ");
 
     try {
-      const { data, error: fnError } = await supabase.functions.invoke("free-broker-check", {
-        body: { firstName, lastName, city: city.trim(), state },
-      });
-      if (fnError || !data?.results) {
-        throw new Error(fnError?.message || "Check failed");
-      }
-      const brokerResults = data.results as BrokerResult[];
+      const response = await checkPublicBrokers(fullName, city, state);
+      const brokerResults = response.results;
       setResults(brokerResults);
-      setDegraded(Boolean(data.degraded));
+      setDegraded(response.incomplete);
       const confirmedCount = brokerResults.filter((r) => r.status === "found").length;
       const possibleCount = brokerResults.filter((r) => r.status === "possible_match").length;
       onResults?.({ confirmedCount, possibleCount });
       trackEvent("broker_check_completed", {
         source: "free_scan",
-        found_count: data.foundCount,
-        possible_count: data.possibleCount,
-        degraded: Boolean(data.degraded),
+        found_count: confirmedCount,
+        possible_count: possibleCount,
+        degraded: response.incomplete,
       });
     } catch (err: any) {
       console.error("free-broker-check error", err);
@@ -103,7 +88,7 @@ export function LiveBrokerCheck({ email, onResults }: LiveBrokerCheckProps) {
             </div>
             <h3 className="text-2xl font-bold">
               {exposedCount > 0
-                ? `We found you on ${exposedCount} site${exposedCount === 1 ? "" : "s"}`
+                ? `Matching listings on ${exposedCount} site${exposedCount === 1 ? "" : "s"}`
                 : degraded
                   ? "We couldn't finish checking every site"
                   : "No confirmed listings on the sites we checked"}
@@ -116,7 +101,7 @@ export function LiveBrokerCheck({ email, onResults }: LiveBrokerCheckProps) {
               </p>
             ) : degraded ? (
               <p className="text-sm text-muted-foreground mt-1">
-                A few sites were inconclusive just now — that isn't an all-clear. Your estimated exposure still stands.
+                Some sites could not be checked. This is not an all-clear; try the check again.
               </p>
             ) : (
               <p className="text-sm text-muted-foreground mt-1">
@@ -128,18 +113,19 @@ export function LiveBrokerCheck({ email, onResults }: LiveBrokerCheckProps) {
           <div className="divide-y divide-border">
             {results.map((r) => (
               <div key={r.slug} className="flex items-center gap-3 px-6 py-3.5">
-                {r.status === "found" && <CheckCircle2 className="w-5 h-5 text-red-600 dark:text-red-400 shrink-0" />}
-                {r.status === "possible_match" && <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0" />}
+                {r.status === "found" && <CheckCircle2 className="w-5 h-5 text-concern shrink-0" />}
+                {r.status === "possible_match" && <AlertTriangle className="w-5 h-5 text-concern shrink-0" />}
                 {(r.status === "not_found" || r.status === "unknown") && (
                   <div className="w-5 h-5 rounded-full border-2 border-muted-foreground/30 shrink-0" />
                 )}
                 <div className="flex-1 min-w-0">
                   <span className="font-medium">{r.name}</span>
-                  <span className="text-xs text-muted-foreground ml-2">{r.domain}</span>
+                  {r.profileUrl && <a href={r.profileUrl} target="_blank" rel="noopener noreferrer" className="block text-xs underline">Review listing</a>}
+                  <span className="block text-xs text-muted-foreground">{r.domain}</span>
                 </div>
                 <span className="text-xs font-medium">
-                  {r.status === "found" && <span className="text-red-600 dark:text-red-400">Listed</span>}
-                  {r.status === "possible_match" && <span className="text-amber-600 dark:text-amber-400">Possible match</span>}
+                  {r.status === "found" && <span className="text-concern">Listed</span>}
+                  {r.status === "possible_match" && <span className="text-concern">Possible match</span>}
                   {r.status === "not_found" && <span className="text-muted-foreground">Not found</span>}
                   {r.status === "unknown" && <span className="text-muted-foreground">Inconclusive</span>}
                 </span>
@@ -151,13 +137,10 @@ export function LiveBrokerCheck({ email, onResults }: LiveBrokerCheckProps) {
               dead-end the highest-intent user with no way forward. */}
           <div className="px-6 py-6 bg-gradient-to-b from-primary/5 to-primary/10 border-t border-border space-y-3">
               <p className="text-sm text-muted-foreground">
-                {exposedCount > 0
-                  ? `These are just ${results.length} of ${BROKER_COUNT_LABEL} sites we remove you from. Your full plan scans and removes you from all of them — plus continuous monitoring so you don't reappear.`
-                  : degraded
-                    ? `We couldn't fully check these ${results.length} public sites right now — people-search sites list most US adults, so this isn't an all-clear. Your full plan scans ${BROKER_COUNT_LABEL} sites, removes your listings, and monitors so you don't reappear.`
-                    : `Good news — no confirmed listings on these ${results.length} sites today. But new listings appear constantly. Your full plan monitors ${BROKER_COUNT_LABEL} sites and removes you automatically the moment you show up.`}
+                Complete provides guided broker opt-outs and monthly rechecks across {BROKER_COUNT_LABEL} sites. Some sites require you to submit their own form. Removal does not erase information from past breaches or guarantee listings never return.
               </p>
-              <CompleteCheckoutButton email={email} source="broker_exposure" />
+              {(!degraded || exposedCount > 0) && <CompleteCheckoutButton email={email} source="broker_exposure" />}
+              <Button variant="outline" className="w-full" onClick={() => { setResults(null); setError(""); }}>Check again</Button>
             </div>
         </CardContent>
       </Card>
@@ -170,18 +153,20 @@ export function LiveBrokerCheck({ email, onResults }: LiveBrokerCheckProps) {
       <CardContent className="p-6">
         <h3 className="text-xl font-bold mb-1">See exactly which sites list you</h3>
         <p className="text-sm text-muted-foreground mb-5">
-          Enter your name and we'll check the top people-search sites for your real listings — about 10 seconds. We only use this to search; we don't store it.
+          Enter your name to search six people-search sites for matching listings. This can take up to a minute. Search queries and public results are temporarily cached to reduce repeat searches.
         </p>
         <form onSubmit={runCheck} className="space-y-3">
           <Input
+            aria-label="Full name"
             placeholder="Full name (e.g. Jane Smith)"
             value={fullName}
             onChange={(e) => setFullName(e.target.value)}
             autoFocus
           />
           <div className="grid grid-cols-2 gap-3">
-            <Input placeholder="City (optional)" value={city} onChange={(e) => setCity(e.target.value)} />
+            <Input aria-label="City (optional)" placeholder="City (optional)" value={city} onChange={(e) => setCity(e.target.value)} />
             <select
+              aria-label="State (optional)"
               value={state}
               onChange={(e) => setState(e.target.value)}
               className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"

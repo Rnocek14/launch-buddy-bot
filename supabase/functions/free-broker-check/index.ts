@@ -1,10 +1,8 @@
-import { createClient } from 'npm:@supabase/supabase-js@2.79.0';
+import { createClient } from 'npm:@supabase/supabase-js@2';
 import { z } from 'npm:zod@3.23.8';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
+import { isBrokerDomain, noMatchStatus, parseSearchResponse } from './searchPolicy.ts';
 
 // ---- Lightweight top-funnel broker detection ----
 // Reuses the SERP scoring + cache + budget governor from scan-brokers,
@@ -48,7 +46,7 @@ function generateCacheKey(brokerSlug: string, query: string): string {
     hash = ((hash << 5) - hash) + canonical.charCodeAt(i);
     hash |= 0;
   }
-  return `serp_${brokerSlug}_${Math.abs(hash).toString(36)}`;
+  return `free_v2_serp_${brokerSlug}_${Math.abs(hash).toString(36)}`;
 }
 
 async function checkSerpCache(supabase: any, slug: string, query: string) {
@@ -76,7 +74,7 @@ async function storeSerpCache(
   try {
     const cacheKey = generateCacheKey(slug, query);
     const expiresAt = new Date();
-    const ttlDays = results.length === 0 ? 30 : 7;
+    const ttlDays = results.length === 0 ? 1 : 7;
     expiresAt.setTime(expiresAt.getTime() + ttlDays * 24 * 60 * 60 * 1000);
     await supabase.from('serp_cache').upsert({
       cache_key: cacheKey,
@@ -174,12 +172,10 @@ async function serpSearch(query: string, apiKey: string) {
     url.searchParams.set('api_key', apiKey);
     url.searchParams.set('num', '5');
     const res = await fetch(url.toString(), { method: 'GET', signal: controller.signal });
-    if (!res.ok) return [];
+    if (!res.ok) { const details = await res.text(); console.error(`[free-broker-check] provider HTTP ${res.status}: ${details.slice(0,500)}`); throw new Error(`Search provider HTTP ${res.status}`); }
     const json = await res.json();
-    const organic = Array.isArray(json?.organic_results) ? json.organic_results : [];
+    const organic = parseSearchResponse(json);
     return organic.slice(0, 3).map((r: any) => ({ title: r.title ?? '', snippet: r.snippet ?? '', link: r.link ?? '' }));
-  } catch {
-    return [];
   } finally {
     clearTimeout(timeout);
   }
@@ -200,11 +196,15 @@ async function checkBroker(
   user: UserProfile,
   apiKey: string | null,
   supabase: any,
+  deadline: number,
+  search: (query: string) => ReturnType<typeof serpSearch>,
 ): Promise<BrokerResult> {
   const queries = buildQueries(user, broker.domain);
   let best: { score: ReturnType<typeof scoreSerpResult>; link: string } | null = null;
 
+  let successfulQueries = 0;
   for (const query of queries) {
+    if (Date.now() > deadline) break;
     // Cache first — no budget consumed.
     let results: Array<{ title: string; snippet: string; link: string }> | null = null;
     const cached = await checkSerpCache(supabase, broker.slug, query);
@@ -217,19 +217,16 @@ async function checkBroker(
         // Budget exhausted; bail with whatever we have.
         break;
       }
-      results = await serpSearch(query, apiKey);
-      await storeSerpCache(supabase, broker.slug, query, results);
+      try { results = await search(query); await storeSerpCache(supabase, broker.slug, query, results); }
+      catch (error) { console.error(`[free-broker-check] ${broker.slug}:`, error instanceof Error ? error.message : 'unavailable'); break; }
     } else {
       break;
     }
 
+    if (!results) break;
+    successfulQueries++;
     for (const r of results) {
-      try {
-        const host = new URL(r.link).hostname.toLowerCase();
-        if (!host.includes(broker.domain.toLowerCase())) continue;
-      } catch {
-        continue;
-      }
+      if (!isBrokerDomain(r.link, broker.domain)) continue;
       const score = scoreSerpResult({ title: r.title, snippet: r.snippet, url: r.link, user });
       if (!best || score.total > best.score.total) best = { score, link: r.link };
     }
@@ -239,15 +236,15 @@ async function checkBroker(
   }
 
   if (!best) {
-    return { slug: broker.slug, name: broker.name, domain: broker.domain, status: 'unknown', confidence: null, profileUrl: null };
+    return { slug: broker.slug, name: broker.name, domain: broker.domain, status: noMatchStatus(successfulQueries, queries.length), confidence: null, profileUrl: null };
   }
   return {
     slug: broker.slug,
     name: broker.name,
     domain: broker.domain,
-    status: best.score.status_v2,
+    status: best.score.status_v2 === 'not_found' ? noMatchStatus(successfulQueries, queries.length) : best.score.status_v2,
     confidence: Math.round(best.score.total * 100) / 100,
-    profileUrl: best.score.status_v2 === 'found' ? best.link : null,
+    profileUrl: best.score.status_v2 !== 'not_found' ? best.link : null,
     exposed: best.score.status_v2 === 'not_found' ? [] : best.score.exposed,
   };
 }
@@ -264,10 +261,10 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
-    );
+    const url = Deno.env.get('SUPABASE_URL');
+    const key = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    if (!url || !key) throw new Error('Missing scan configuration');
+    const supabase = createClient(url, key);
     const serpApiKey = Deno.env.get('SERP_API_KEY') || null;
 
     const parsed = BodySchema.safeParse(await req.json().catch(() => ({})));
@@ -284,15 +281,22 @@ Deno.serve(async (req) => {
       state: parsed.data.state,
     };
 
-    // Run brokers concurrently — the budget RPC is atomic, so this is safe and fast.
-    const results: BrokerResult[] = await Promise.all(
-      FREE_BROKERS.map((broker) =>
-        checkBroker(broker, user, serpApiKey, supabase).catch((e) => {
-          console.error(`[free-broker-check] ${broker.slug} failed:`, e);
-          return { slug: broker.slug, name: broker.name, domain: broker.domain, status: 'unknown' as StatusV2, confidence: null, profileUrl: null };
-        })
-      )
-    );
+    const deadline = Date.now() + 43000;
+    let lastSearchAt = 0;
+    let providerUnavailable = false;
+    const search = async (query: string) => {
+      if (!serpApiKey || providerUnavailable) throw new Error('Search provider unavailable');
+      const wait = Math.max(0, 1500 - (Date.now() - lastSearchAt));
+      if (Date.now() + wait > deadline) throw new Error('Scan time limit reached');
+      if (wait) await new Promise(resolve => setTimeout(resolve, wait));
+      try { return await serpSearch(query, serpApiKey); }
+      catch (error) { providerUnavailable = true; throw error; }
+      finally { lastSearchAt = Date.now(); }
+    };
+    const results: BrokerResult[] = [];
+    for (const broker of FREE_BROKERS) {
+      results.push(await checkBroker(broker, user, serpApiKey, supabase, deadline, search));
+    }
 
     const foundCount = results.filter((r) => r.status === 'found').length;
     const possibleCount = results.filter((r) => r.status === 'possible_match').length;
@@ -305,7 +309,8 @@ Deno.serve(async (req) => {
     // exhausted / SERP failure / no indexed data). Only when at least one broker
     // was actually searched (found / possible / not_found) is a zero-exposure
     // result trustworthy.
-    const degraded = !serpApiKey || (foundCount + possibleCount + notFoundCount === 0);
+    const degraded = unknownCount > 0;
+    console.log(`[free-broker-check] found=${foundCount} possible=${possibleCount} notFound=${notFoundCount} unknown=${unknownCount} providerUnavailable=${providerUnavailable}`);
 
     return new Response(JSON.stringify({
       results,

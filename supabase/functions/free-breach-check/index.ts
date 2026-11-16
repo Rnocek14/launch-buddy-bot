@@ -1,9 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
+import { z } from 'npm:zod@3.23.8';
 
 // Simple in-memory rate limiter (per isolate)
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
@@ -43,15 +41,15 @@ serve(async (req) => {
   }
 
   try {
-    const { email } = await req.json();
-
-    if (!email || !email.includes("@")) {
+    const parsed = z.object({ email: z.string().trim().email().max(254) }).safeParse(await req.json().catch(() => ({})));
+    if (!parsed.success) {
       return new Response(
         JSON.stringify({ error: "Valid email is required" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
+    const { email } = parsed.data;
     if (isRateLimited(email)) {
       return new Response(
         JSON.stringify({ error: "Rate limited. Try again later." }),
@@ -75,9 +73,10 @@ serve(async (req) => {
 
     try {
       const response = await fetch(hibpUrl, {
+        signal: AbortSignal.timeout(10000),
         headers: {
           "hibp-api-key": hibpApiKey,
-          "User-Agent": "Deleteist-FreeScan",
+          "User-Agent": "FootprintFinder-FreeScan",
         },
       });
 

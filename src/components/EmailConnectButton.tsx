@@ -159,7 +159,7 @@ export function EmailConnectButton() {
 
       toast({
         title: "Primary Account Updated",
-        description: "This account will be used by default for scanning and sending",
+        description: "This account will be used by default for metadata scanning",
       });
     } catch (error: any) {
       console.error("Error setting primary:", error);
@@ -208,7 +208,7 @@ export function EmailConnectButton() {
 
       toast({
         title: "Account Disconnected",
-        description: `${connection?.email} has been disconnected`,
+        description: `${connection?.email} has been disconnected from Footprint Finder. You can also remove its permission in your Google or Microsoft account settings.`,
       });
     } catch (error: any) {
       console.error("Error disconnecting:", error);
@@ -249,7 +249,7 @@ export function EmailConnectButton() {
           <Alert className="bg-primary/5 border-primary/20">
             <Mail className="h-4 w-4 text-primary" />
             <AlertDescription className="ml-2">
-              Connect your email account to scan for services and send deletion requests. We support Gmail and Outlook/Microsoft 365.
+              Connect Gmail or Outlook to discover services from email metadata. We do not read message bodies or send email from your account.
             </AlertDescription>
           </Alert>
           
@@ -265,7 +265,7 @@ export function EmailConnectButton() {
             
             <TabsContent value="gmail" className="space-y-4 pt-4">
               <p className="text-sm text-muted-foreground">
-                Connect your Google/Gmail account to scan your inbox and send emails.
+                Connect Gmail for read-only access to sender, subject, and date headers. No message bodies and no sending permission.
               </p>
               <Button
                 onClick={() => handleConnect('gmail')}
@@ -279,7 +279,7 @@ export function EmailConnectButton() {
             
             <TabsContent value="outlook" className="space-y-4 pt-4">
               <p className="text-sm text-muted-foreground">
-                Connect your Microsoft/Outlook account to scan your inbox and send emails. Note: Gmail addresses can also be used as Microsoft accounts.
+                Connect Outlook for read-only email discovery. We process metadata only and do not send from your account.
               </p>
               <Button
                 onClick={() => handleConnect('outlook')}
@@ -334,6 +334,7 @@ export function EmailConnectButton() {
                         <Button
                           variant="ghost"
                           size="sm"
+                          aria-label={`Disconnect ${connection.email}`}
                           onClick={() => handleDisconnect(connection.id)}
                         >
                           <Trash2 className="h-4 w-4" />
@@ -384,6 +385,7 @@ export function EmailConnectButton() {
                         <Button
                           variant="ghost"
                           size="sm"
+                          aria-label={`Disconnect ${connection.email}`}
                           onClick={() => handleDisconnect(connection.id)}
                         >
                           <Trash2 className="h-4 w-4" />
