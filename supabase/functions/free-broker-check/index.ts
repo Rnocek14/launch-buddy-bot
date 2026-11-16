@@ -142,7 +142,14 @@ function scoreSerpResult({ title, snippet, url, user }: { title: string; snippet
   if (total >= CONFIDENCE_THRESHOLDS.FOUND && hasStrongSignal) status_v2 = 'found';
   else if (total >= CONFIDENCE_THRESHOLDS.POSSIBLE_MATCH && canBePossible) status_v2 = 'possible_match';
 
-  return { total, status_v2 };
+  const exposed: string[] = [];
+  if (breakdown.address_hint) exposed.push('home address');
+  else if (breakdown.city_match || breakdown.state_match) exposed.push('city and state');
+  if (breakdown.phone_hint) exposed.push('phone number');
+  if (breakdown.age_hint) exposed.push('age');
+  if (/\b(relatives?|related to|family members?|associates?)\b/i.test(text)) exposed.push('relatives');
+
+  return { total, status_v2, exposed };
 }
 
 function buildQueries(user: UserProfile, domain: string): string[] {
@@ -185,6 +192,7 @@ interface BrokerResult {
   status: StatusV2;
   confidence: number | null;
   profileUrl: string | null;
+  exposed?: string[];
 }
 
 async function checkBroker(
@@ -240,6 +248,7 @@ async function checkBroker(
     status: best.score.status_v2,
     confidence: Math.round(best.score.total * 100) / 100,
     profileUrl: best.score.status_v2 === 'found' ? best.link : null,
+    exposed: best.score.status_v2 === 'not_found' ? [] : best.score.exposed,
   };
 }
 

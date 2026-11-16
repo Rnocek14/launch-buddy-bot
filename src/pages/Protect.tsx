@@ -12,7 +12,9 @@ import { useSEO } from "@/hooks/useSEO";
 import { useToast } from "@/hooks/use-toast";
 
 type Status = "found" | "possible_match" | "not_found" | "unknown";
-interface Result { slug: string; name: string; status: Status }
+interface Result { slug: string; name: string; status: Status; exposed?: string[] }
+
+const listJoin = (a: string[]) => a.length < 2 ? a.join("") : `${a.slice(0, -1).join(", ")} and ${a[a.length - 1]}`;
 
 const STATES = ["AL","AK","AZ","AR","CA","CO","CT","DE","FL","GA","HI","ID","IL","IN","IA","KS","KY","LA","ME","MD","MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ","NM","NY","NC","ND","OH","OK","OR","PA","RI","SC","SD","TN","TX","UT","VT","VA","WA","WV","WI","WY"];
 
@@ -34,6 +36,13 @@ export default function Protect() {
   const [error, setError] = useState("");
   const [results, setResults] = useState<Result[] | null>(null);
   const [paying, setPaying] = useState(false);
+  const [parentOpen, setParentOpen] = useState(false);
+  const [pName, setPName] = useState("");
+  const [pCity, setPCity] = useState("");
+  const [pState, setPState] = useState("");
+  const [pLoading, setPLoading] = useState(false);
+  const [pError, setPError] = useState("");
+  const [pResults, setPResults] = useState<Result[] | null>(null);
 
   const nextFromName = () => {
     if (name.trim().split(/\s+/).length < 2) return setError("Please type your first and last name.");
@@ -46,18 +55,31 @@ export default function Protect() {
   const runCheck = async () => {
     if (!/^\S+@\S+\.\S+$/.test(email.trim())) return setError("Please type a valid email address.");
     setError(""); setStep(4);
-    const parts = name.trim().split(/\s+/);
     try {
-      const { data, error: e } = await supabase.functions.invoke("free-broker-check", {
-        body: { firstName: parts[0], lastName: parts.slice(1).join(" "), city: city.trim(), state },
-      });
-      if (e || !data?.results) throw new Error("failed");
-      setResults(data.results);
-      trackEvent("broker_check_completed", { source: "protect", found_count: data.foundCount });
+      const r = await check(name, city, state);
+      setResults(r);
+      trackEvent("broker_check_completed", { source: "protect", found_count: r.filter(isHit).length });
     } catch {
       setResults([]);
     }
     setStep(5);
+  };
+  const check = async (n: string, c: string, st: string): Promise<Result[]> => {
+    const parts = n.trim().split(/\s+/);
+    const { data, error: e } = await supabase.functions.invoke("free-broker-check", {
+      body: { firstName: parts[0], lastName: parts.slice(1).join(" "), city: c.trim(), state: st },
+    });
+    if (e || !data?.results) throw new Error("failed");
+    return data.results;
+  };
+  const runParent = async () => {
+    if (pName.trim().split(/\s+/).length < 2) return setPError("Please type their first and last name.");
+    if (!pCity.trim() || !pState) return setPError("Please type their city and pick their state.");
+    setPError(""); setPLoading(true);
+    trackEvent("protect_parent_check_started", {});
+    try { setPResults(await check(pName, pCity, pState)); }
+    catch { setPError("We couldn't finish that check. Please try again in a minute."); }
+    setPLoading(false);
   };
   const remove = async () => {
     setPaying(true);
@@ -68,7 +90,28 @@ export default function Protect() {
     }
   };
 
-  const found = (results ?? []).filter((r) => r.status === "found" || r.status === "possible_match");
+  const isHit = (r: Result) => r.status === "found" || r.status === "possible_match";
+  const found = (results ?? []).filter(isHit);
+  const pFound = (pResults ?? []).filter(isHit);
+  const firstName = (n: string) => n.trim().split(/\s+/)[0] || "them";
+
+  const Listings = ({ items, who }: { items: Result[]; who: string }) => (
+    <ul className="border-t border-border mb-8">
+      {items.map((r) => (
+        <li key={r.slug} className="border-b border-border py-4">
+          <div className="flex justify-between gap-4">
+            <span className="font-medium">{r.name}</span>
+            <span className="text-muted-foreground">{r.status === "found" ? "Listed" : "Likely listed"}</span>
+          </div>
+          <p className="text-base text-muted-foreground mt-1">
+            {r.exposed && r.exposed.length > 0
+              ? `Anyone can see ${who} name, ${listJoin(r.exposed)}.`
+              : `Anyone can look up ${who} name here.`}
+          </p>
+        </li>
+      ))}
+    </ul>
+  );
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -129,14 +172,7 @@ export default function Protect() {
               <>
                 <h1 className="text-3xl mb-4">We found you on {found.length} site{found.length === 1 ? "" : "s"}</h1>
                 <p className="text-muted-foreground mb-6">Anyone can look these up, including scammers.</p>
-                <ul className="border-t border-border mb-8">
-                  {found.map((r) => (
-                    <li key={r.slug} className="border-b border-border py-4 flex justify-between gap-4">
-                      <span className="font-medium">{r.name}</span>
-                      <span className="text-muted-foreground">{r.status === "found" ? "Listed" : "Likely listed"}</span>
-                    </li>
-                  ))}
-                </ul>
+                <Listings items={found} who="your" />
               </>
             ) : (
               <>
@@ -148,6 +184,52 @@ export default function Protect() {
               {paying ? <Loader2 className="w-5 h-5 animate-spin" /> : found.length > 0 ? "Help me remove these" : "Keep watching for me"}
             </Button>
             <p className="text-base text-muted-foreground mt-4">$129 a year. We send removal requests for you and guide you through any step a site makes you do yourself. We check again every month. Full refund within 30 days.</p>
+
+            <div className="mt-10 border-t border-border pt-8">
+              {!parentOpen && !pResults && (
+                <>
+                  <h2 className="text-2xl mb-2">Worried about a parent?</h2>
+                  <p className="text-muted-foreground mb-5">Scammers often target parents and grandparents. Check them for free too.</p>
+                  <Button variant="outline" className={`${big} w-full`} onClick={() => { setParentOpen(true); trackEvent("protect_parent_open", {}); }}>Check a parent too</Button>
+                </>
+              )}
+              {parentOpen && !pResults && (
+                <section>
+                  <h2 className="text-2xl mb-5">Your parent's details</h2>
+                  <label htmlFor="pp-name" className="block font-medium mb-2">Their full name</label>
+                  <Input id="pp-name" className={big} value={pName} onChange={(e) => setPName(e.target.value)} placeholder="Robert Smith" />
+                  <label htmlFor="pp-city" className="block font-medium mt-5 mb-2">Their city</label>
+                  <Input id="pp-city" className={big} value={pCity} onChange={(e) => setPCity(e.target.value)} placeholder="Orlando" />
+                  <label htmlFor="pp-state" className="block font-medium mt-5 mb-2">Their state</label>
+                  <select id="pp-state" value={pState} onChange={(e) => setPState(e.target.value)} className={`${big} w-full rounded-md border border-input bg-background px-3`}>
+                    <option value="">Choose their state</option>
+                    {STATES.map((s) => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                  {pError && <p className="text-concern mt-3">{pError}</p>}
+                  <Button className={`${big} w-full mt-6`} onClick={runParent} disabled={pLoading}>
+                    {pLoading ? <><Loader2 className="w-5 h-5 animate-spin mr-2" />Checking… about a minute</> : "Check them now"}
+                  </Button>
+                </section>
+              )}
+              {pResults && (
+                <section aria-live="polite">
+                  {pFound.length > 0 ? (
+                    <>
+                      <h2 className="text-2xl mb-4">{firstName(pName)} is on {pFound.length} site{pFound.length === 1 ? "" : "s"}</h2>
+                      <Listings items={pFound} who="their" />
+                      <p className="text-base text-muted-foreground mb-4">Removing a parent's listings is a separate plan in their name. Email us after you sign up and we'll set it up together.</p>
+                    </>
+                  ) : (
+                    <>
+                      <h2 className="text-2xl mb-2">Nothing found for {firstName(pName)} today</h2>
+                      <p className="text-muted-foreground">We didn't find them on the sites we checked. Listings can appear later.</p>
+                    </>
+                  )}
+                  <Button variant="ghost" className="w-full mt-2 text-lg" onClick={() => { setPResults(null); setPName(""); setPCity(""); setPState(""); }}>Check another person</Button>
+                </section>
+              )}
+            </div>
+
             <p className="text-base mt-6">Questions? Email <a className="underline" href="mailto:support@footprintfinder.co">support@footprintfinder.co</a> — a real person answers.</p>
           </section>
         )}
